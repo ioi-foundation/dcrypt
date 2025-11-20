@@ -52,14 +52,6 @@ name = "kyber"
 harness = false
 
 [[bench]]
-name = "ecdh_p192"
-harness = false
-
-[[bench]]
-name = "ecdh_p224"
-harness = false
-
-[[bench]]
 name = "ecdh_p256"
 harness = false
 

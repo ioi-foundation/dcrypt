@@ -32,8 +32,7 @@ Add `dcrypt` to your project's `Cargo.toml`.
 
 ```toml
 [dependencies]
-dcrypt = { version = "0.1.0", features = ["hybrid", "aes-gcm"] }
-rand = "0.8"
+dcrypt = { version = "1.0" }
 ```
 
 ### Example 1: Hybrid Post-Quantum Key Exchange

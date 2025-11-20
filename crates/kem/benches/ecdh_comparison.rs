@@ -10,8 +10,6 @@ use rand::rngs::OsRng;
 // Import all ECDH implementations
 use dcrypt_kem::ecdh::b283k::EcdhB283k;
 use dcrypt_kem::ecdh::k256::EcdhK256;
-use dcrypt_kem::ecdh::p192::EcdhP192;
-use dcrypt_kem::ecdh::p224::EcdhP224;
 use dcrypt_kem::ecdh::p256::EcdhP256;
 use dcrypt_kem::ecdh::p384::EcdhP384;
 use dcrypt_kem::ecdh::p521::EcdhP521;
@@ -19,14 +17,6 @@ use dcrypt_kem::ecdh::p521::EcdhP521;
 fn bench_ecdh_keypair_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-Keypair-Comparison");
     let mut rng = OsRng;
-
-    group.bench_function("P-192", |b| {
-        b.iter(|| EcdhP192::keypair(&mut rng).unwrap());
-    });
-
-    group.bench_function("P-224", |b| {
-        b.iter(|| EcdhP224::keypair(&mut rng).unwrap());
-    });
 
     group.bench_function("P-256", |b| {
         b.iter(|| EcdhP256::keypair(&mut rng).unwrap());
@@ -56,21 +46,12 @@ fn bench_ecdh_encapsulate_comparison(c: &mut Criterion) {
     let mut rng = OsRng;
 
     // Pre-generate public keys for each curve
-    let (pk_p192, _) = EcdhP192::keypair(&mut rng).unwrap();
-    let (pk_p224, _) = EcdhP224::keypair(&mut rng).unwrap();
     let (pk_p256, _) = EcdhP256::keypair(&mut rng).unwrap();
     let (pk_p384, _) = EcdhP384::keypair(&mut rng).unwrap();
     let (pk_p521, _) = EcdhP521::keypair(&mut rng).unwrap();
     let (pk_k256, _) = EcdhK256::keypair(&mut rng).unwrap();
     let (pk_b283k, _) = EcdhB283k::keypair(&mut rng).unwrap();
 
-    group.bench_function("P-192", |b| {
-        b.iter(|| EcdhP192::encapsulate(&mut rng, &pk_p192).unwrap());
-    });
-
-    group.bench_function("P-224", |b| {
-        b.iter(|| EcdhP224::encapsulate(&mut rng, &pk_p224).unwrap());
-    });
 
     group.bench_function("P-256", |b| {
         b.iter(|| EcdhP256::encapsulate(&mut rng, &pk_p256).unwrap());
@@ -100,12 +81,6 @@ fn bench_ecdh_decapsulate_comparison(c: &mut Criterion) {
     let mut rng = OsRng;
 
     // Pre-generate keypairs and ciphertexts for each curve
-    let (pk_p192, sk_p192) = EcdhP192::keypair(&mut rng).unwrap();
-    let (ct_p192, _) = EcdhP192::encapsulate(&mut rng, &pk_p192).unwrap();
-
-    let (pk_p224, sk_p224) = EcdhP224::keypair(&mut rng).unwrap();
-    let (ct_p224, _) = EcdhP224::encapsulate(&mut rng, &pk_p224).unwrap();
-
     let (pk_p256, sk_p256) = EcdhP256::keypair(&mut rng).unwrap();
     let (ct_p256, _) = EcdhP256::encapsulate(&mut rng, &pk_p256).unwrap();
 
@@ -120,14 +95,6 @@ fn bench_ecdh_decapsulate_comparison(c: &mut Criterion) {
 
     let (pk_b283k, sk_b283k) = EcdhB283k::keypair(&mut rng).unwrap();
     let (ct_b283k, _) = EcdhB283k::encapsulate(&mut rng, &pk_b283k).unwrap();
-
-    group.bench_function("P-192", |b| {
-        b.iter(|| EcdhP192::decapsulate(&sk_p192, &ct_p192).unwrap());
-    });
-
-    group.bench_function("P-224", |b| {
-        b.iter(|| EcdhP224::decapsulate(&sk_p224, &ct_p224).unwrap());
-    });
 
     group.bench_function("P-256", |b| {
         b.iter(|| EcdhP256::decapsulate(&sk_p256, &ct_p256).unwrap());
@@ -164,9 +131,8 @@ fn bench_ecdh_throughput_comparison(c: &mut Criterion) {
     let mut rng = OsRng;
 
     // Use different iteration counts based on curve performance
+    // Deprecated curves (P-192, P-224) removed from benchmark
     let configs = [
-        ("P-192", 100), // Fast curve, more iterations
-        ("P-224", 100), // Fast curve, more iterations
         ("P-256", 100), // Fast curve, more iterations
         ("P-384", 50),  // Medium curve, fewer iterations
         ("P-521", 20),  // Slower curve, fewer iterations
@@ -178,20 +144,7 @@ fn bench_ecdh_throughput_comparison(c: &mut Criterion) {
     for (curve_name, iterations) in configs {
         group.bench_function(curve_name, |b| {
             b.iter(|| match curve_name {
-                "P-192" => {
-                    for _ in 0..iterations {
-                        let (pk, sk) = EcdhP192::keypair(&mut rng).unwrap();
-                        let (ct, _) = EcdhP192::encapsulate(&mut rng, &pk).unwrap();
-                        let _ = EcdhP192::decapsulate(&sk, &ct).unwrap();
-                    }
-                }
-                "P-224" => {
-                    for _ in 0..iterations {
-                        let (pk, sk) = EcdhP224::keypair(&mut rng).unwrap();
-                        let (ct, _) = EcdhP224::encapsulate(&mut rng, &pk).unwrap();
-                        let _ = EcdhP224::decapsulate(&sk, &ct).unwrap();
-                    }
-                }
+
                 "P-256" => {
                     for _ in 0..iterations {
                         let (pk, sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -239,24 +192,6 @@ fn print_ecdh_sizes() {
     println!("\n=== ECDH-KEM Key and Ciphertext Sizes ===\n");
 
     let mut rng = OsRng;
-
-    // P-192
-    let (pk_p192, sk_p192) = EcdhP192::keypair(&mut rng).unwrap();
-    let (ct_p192, ss_p192) = EcdhP192::encapsulate(&mut rng, &pk_p192).unwrap();
-    println!("P-192:");
-    println!("  Public key:    {:3} bytes", pk_p192.as_ref().len());
-    println!("  Secret key:    {:3} bytes", sk_p192.as_ref().len());
-    println!("  Ciphertext:    {:3} bytes", ct_p192.as_ref().len());
-    println!("  Shared secret: {:3} bytes", ss_p192.as_ref().len());
-
-    // P-224
-    let (pk_p224, sk_p224) = EcdhP224::keypair(&mut rng).unwrap();
-    let (ct_p224, ss_p224) = EcdhP224::encapsulate(&mut rng, &pk_p224).unwrap();
-    println!("\nP-224:");
-    println!("  Public key:    {:3} bytes", pk_p224.as_ref().len());
-    println!("  Secret key:    {:3} bytes", sk_p224.as_ref().len());
-    println!("  Ciphertext:    {:3} bytes", ct_p224.as_ref().len());
-    println!("  Shared secret: {:3} bytes", ss_p224.as_ref().len());
 
     // P-256
     let (pk_p256, sk_p256) = EcdhP256::keypair(&mut rng).unwrap();
