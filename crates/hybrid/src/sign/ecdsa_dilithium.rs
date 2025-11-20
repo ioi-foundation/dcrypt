@@ -1,11 +1,11 @@
-// File: dcrypt-hybrid/src/sign/ecdsa_dilithium.rs
+// File: crates/hybrid/src/sign/ecdsa_dilithium.rs
 //! ECDSA + Dilithium hybrid signature scheme
 //!
 //! This module implements a hybrid signature scheme that combines ECDSA and Dilithium.
 
 use dcrypt_api::{Signature as SignatureTrait, Result};
-use sign::traditional::ecdsa::EcdsaP384;
-use sign::pq::dilithium::Dilithium3;
+use dcrypt_sign::ecdsa::EcdsaP384;
+use dcrypt_sign::dilithium::Dilithium3;
 use zeroize::Zeroize;
 use rand::{CryptoRng, RngCore};
 
@@ -48,11 +48,7 @@ impl AsRef<[u8]> for HybridSecretKey {
     }
 }
 
-impl AsMut<[u8]> for HybridSecretKey {
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.ecdsa_sk.as_mut()
-    }
-}
+// REMOVED: AsMut<[u8]> for HybridSecretKey - Inner keys do not support mutable access for security
 
 impl AsRef<[u8]> for HybridSignature {
     fn as_ref(&self) -> &[u8] {

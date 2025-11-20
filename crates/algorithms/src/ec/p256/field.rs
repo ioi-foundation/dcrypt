@@ -8,8 +8,18 @@ use subtle::{Choice, ConditionallySelectable};
 ///
 /// Internally stored as 8 little-endian 32-bit limbs for efficient arithmetic.
 /// All operations maintain the invariant that values are reduced modulo p.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldElement(pub(crate) [u32; 8]);
+
+impl ConditionallySelectable for FieldElement {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let mut out = [0u32; 8];
+        for i in 0..8 {
+            out[i] = u32::conditional_select(&a.0[i], &b.0[i], choice);
+        }
+        FieldElement(out)
+    }
+}
 
 impl FieldElement {
     /* -------------------------------------------------------------------- */
@@ -452,5 +462,36 @@ impl FieldElement {
     /// Returns the NIST P-256 prime modulus for use in reduction operations.
     pub(crate) fn get_modulus() -> Self {
         FieldElement(Self::MOD_LIMBS)
+    }
+}
+
+#[cfg(test)]
+mod field_constants_tests {
+    use super::*;
+
+    #[test]
+    fn test_modulus_is_correct() {
+        // The correct secp256k1 prime in hex:
+        // p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+
+        // Convert MOD_LIMBS to bytes for comparison
+        let mut mod_bytes = [0u8; 32];
+        for (i, &limb) in FieldElement::MOD_LIMBS.iter().enumerate() {
+            let limb_bytes = limb.to_be_bytes();
+            let offset = (7 - i) * 4;
+            mod_bytes[offset..offset + 4].copy_from_slice(&limb_bytes);
+        }
+
+        // Expected prime as bytes
+        let expected_bytes: [u8; 32] = [
+            0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF,
+        ];
+
+        assert_eq!(
+            mod_bytes, expected_bytes,
+            "MOD_LIMBS does not encode the correct NIST P-256 prime"
+        );
     }
 }

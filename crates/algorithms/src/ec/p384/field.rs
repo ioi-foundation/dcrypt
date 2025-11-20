@@ -8,8 +8,18 @@ use subtle::{Choice, ConditionallySelectable};
 ///
 /// Internally stored as 12 little-endian 32-bit limbs for efficient arithmetic.
 /// All operations maintain the invariant that values are reduced modulo p.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldElement(pub(crate) [u32; 12]);
+
+impl ConditionallySelectable for FieldElement {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let mut out = [0u32; 12];
+        for i in 0..12 {
+            out[i] = u32::conditional_select(&a.0[i], &b.0[i], choice);
+        }
+        FieldElement(out)
+    }
+}
 
 impl FieldElement {
     /* -------------------------------------------------------------------- */

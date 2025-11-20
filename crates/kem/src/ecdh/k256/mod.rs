@@ -33,17 +33,53 @@ pub struct EcdhK256;
 #[derive(Clone, Zeroize)]
 pub struct EcdhK256PublicKey([u8; ec_k256::K256_POINT_COMPRESSED_SIZE]);
 
+impl AsRef<[u8]> for EcdhK256PublicKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhK256PublicKey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
 /// Secret key for ECDH-K256 KEM (scalar value)
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhK256SecretKey(SecretBuffer<{ ec_k256::K256_SCALAR_SIZE }>);
+
+impl AsRef<[u8]> for EcdhK256SecretKey {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
 
 /// Shared secret from ECDH-K256 KEM
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhK256SharedSecret(ApiKey);
 
+impl AsRef<[u8]> for EcdhK256SharedSecret {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
 /// Ciphertext for ECDH-K256 KEM (compressed ephemeral public key)
 #[derive(Clone)]
 pub struct EcdhK256Ciphertext([u8; ec_k256::K256_POINT_COMPRESSED_SIZE]);
+
+impl AsRef<[u8]> for EcdhK256Ciphertext {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhK256Ciphertext {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
 
 // --- Public key methods ---
 impl EcdhK256PublicKey {

@@ -9,7 +9,7 @@ use crate::ec::p384::{
 };
 use crate::error::{validate, Error, Result};
 use dcrypt_params::traditional::ecdsa::NIST_P384;
-use subtle::Choice;
+use subtle::{Choice, ConditionallySelectable};
 
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,10 +42,7 @@ pub struct Point {
 /// - x = X/Z²
 /// - y = Y/Z³  
 /// - Point at infinity has Z = 0
-///
-/// This representation allows for efficient point addition and doubling
-/// without expensive field inversions during intermediate calculations.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct ProjectivePoint {
     /// Whether this point is the identity element (point at infinity)
     is_identity: Choice,
@@ -59,19 +56,13 @@ pub(crate) struct ProjectivePoint {
 
 impl PartialEq for Point {
     /// Constant-time equality comparison for elliptic curve points
-    ///
-    /// Handles the special case where either point is the identity element.
-    /// For regular points, compares both x and y coordinates.
     fn eq(&self, other: &Self) -> bool {
-        // If either is identity, both must be identity to be equal
         let self_is_identity: bool = self.is_identity.into();
         let other_is_identity: bool = other.is_identity.into();
 
         if self_is_identity || other_is_identity {
             return self_is_identity == other_is_identity;
         }
-
-        // Otherwise compare coordinates
         self.x == other.x && self.y == other.y
     }
 }
@@ -135,11 +126,6 @@ impl Point {
     /// Detect point format from serialized bytes
     ///
     /// Analyzes the leading byte and length to determine the serialization format.
-    /// Useful for handling points that could be in either compressed or uncompressed form.
-    ///
-    /// # Returns
-    /// - `Ok(PointFormat)` indicating the detected format
-    /// - `Err` if the format is invalid or unrecognized
     pub fn detect_format(bytes: &[u8]) -> Result<PointFormat> {
         if bytes.is_empty() {
             return Err(Error::param("P-384 Point", "Empty point data"));
@@ -167,11 +153,6 @@ impl Point {
     }
 
     /// Serialize point to uncompressed format: 0x04 || x || y
-    ///
-    /// The uncompressed point format is:
-    /// - 1 byte: 0x04 (uncompressed indicator)
-    /// - 48 bytes: x-coordinate (big-endian)
-    /// - 48 bytes: y-coordinate (big-endian)
     ///
     /// The identity point is represented as all zeros.
     pub fn serialize_uncompressed(&self) -> [u8; P384_POINT_UNCOMPRESSED_SIZE] {
@@ -226,12 +207,6 @@ impl Point {
     /// - 0x02 prefix if y-coordinate is even
     /// - 0x03 prefix if y-coordinate is odd
     /// - Followed by the x-coordinate in big-endian format
-    ///
-    /// The identity point is encoded as 49 zero bytes for consistency
-    /// with the uncompressed format.
-    ///
-    /// This format reduces storage/transmission size by ~50% compared to
-    /// uncompressed points while maintaining full recoverability.
     pub fn serialize_compressed(&self) -> [u8; P384_POINT_COMPRESSED_SIZE] {
         let mut out = [0u8; P384_POINT_COMPRESSED_SIZE];
 
@@ -248,17 +223,8 @@ impl Point {
 
     /// Deserialize SEC 1 compressed point
     ///
-    /// Recovers the full point from compressed format by:
-    /// 1. Extracting the x-coordinate
-    /// 2. Computing y² = x³ - 3x + b
-    /// 3. Finding the square root of y²
-    /// 4. Selecting the root with correct parity based on the prefix
-    ///
-    /// # Errors
-    /// Returns an error if:
-    /// - The prefix is not 0x02 or 0x03
-    /// - The x-coordinate is not in the valid field range
-    /// - The x-coordinate corresponds to a non-residue (not on curve)
+    /// Recovers the full point from compressed format by computing y² = x³ - 3x + b
+    /// and finding the square root.
     pub fn deserialize_compressed(bytes: &[u8]) -> Result<Self> {
         validate::length(
             "P-384 Compressed Point",
@@ -283,11 +249,6 @@ impl Point {
         let mut x_bytes = [0u8; P384_FIELD_ELEMENT_SIZE];
         x_bytes.copy_from_slice(&bytes[1..]);
 
-        // Forward any parser failure (e.g. x ≥ p) as the generic
-        // "quadratic non-residue" error so consumers can only observe a
-        // single class of failure for invalid compressed points.  This is
-        // also what the test-suite checks for via the substring
-        // "non-residue".
         let x_fe = FieldElement::from_bytes(&x_bytes).map_err(|_| {
             Error::param(
                 "P-384 Point",
@@ -330,8 +291,6 @@ impl Point {
     /// Elliptic curve point addition using the group law
     ///
     /// Implements the abelian group operation for P-384 points.
-    /// Converts to projective coordinates for efficient computation,
-    /// then converts back to affine form.
     pub fn add(&self, other: &Self) -> Self {
         let p1 = self.to_projective();
         let p2 = other.to_projective();
@@ -340,9 +299,6 @@ impl Point {
     }
 
     /// Elliptic curve point doubling: 2 * self
-    ///
-    /// Computes the sum of a point with itself, which has a more
-    /// efficient formula than general point addition.
     pub fn double(&self) -> Self {
         let p = self.to_projective();
         let result = p.double();
@@ -351,11 +307,7 @@ impl Point {
 
     /// Scalar multiplication: compute scalar * self
     ///
-    /// Uses the binary method (double-and-add) with constant-time execution
-    /// to prevent timing attacks. Processes scalar bits from most significant
-    /// to least significant for efficiency.
-    ///
-    /// Returns the identity element if scalar is zero.
+    /// Uses constant-time double-and-add algorithm.
     pub fn mul(&self, scalar: &Scalar) -> Result<Self> {
         if scalar.is_zero() {
             return Ok(Self::identity());
@@ -365,35 +317,29 @@ impl Point {
 
         // Work in Jacobian/projective coordinates throughout
         let base = self.to_projective();
-        let mut result = ProjectivePoint {
-            is_identity: Choice::from(1), // identity
-            x: FieldElement::zero(),
-            y: FieldElement::one(),
-            z: FieldElement::zero(),
-        };
+        let mut result = ProjectivePoint::identity();
 
         for byte in scalar_bytes.iter() {
             for bit_pos in (0..8).rev() {
                 result = result.double();
+
                 let bit = (byte >> bit_pos) & 1;
-                if bit == 1 {
-                    result = result.add(&base);
-                }
+                let choice = Choice::from(bit);
+
+                // Always compute the addition
+                let result_added = result.add(&base);
+
+                // Constant-time select: if bit is 1, use added result, else keep result
+                result = ProjectivePoint::conditional_select(&result, &result_added, choice);
             }
         }
 
-        let affine_result = result.to_affine();
-        Ok(affine_result)
+        Ok(result.to_affine())
     }
 
     // Private helper methods
 
     /// Validate that coordinates satisfy the P-384 curve equation
-    ///
-    /// Verifies: y² = x³ - 3x + b (mod p)
-    /// where b is the curve parameter from NIST P-384 specification.
-    ///
-    /// This is a critical security check to prevent invalid curve attacks.
     fn is_on_curve(x: &FieldElement, y: &FieldElement) -> bool {
         // Left-hand side: y²
         let y_squared = y.square();
@@ -412,17 +358,9 @@ impl Point {
     }
 
     /// Convert affine point to Jacobian projective coordinates
-    ///
-    /// Affine (x, y) → Jacobian (X:Y:Z) where X=x, Y=y, Z=1
-    /// Identity point maps to (0:1:0) following standard conventions.
     fn to_projective(&self) -> ProjectivePoint {
         if self.is_identity() {
-            return ProjectivePoint {
-                is_identity: Choice::from(1),
-                x: FieldElement::zero(),
-                y: FieldElement::one(),
-                z: FieldElement::zero(),
-            };
+            return ProjectivePoint::identity();
         }
 
         ProjectivePoint {
@@ -434,33 +372,37 @@ impl Point {
     }
 }
 
+impl ConditionallySelectable for ProjectivePoint {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self {
+            is_identity: Choice::conditional_select(&a.is_identity, &b.is_identity, choice),
+            x: FieldElement::conditional_select(&a.x, &b.x, choice),
+            y: FieldElement::conditional_select(&a.y, &b.y, choice),
+            z: FieldElement::conditional_select(&a.z, &b.z, choice),
+        }
+    }
+}
+
 impl ProjectivePoint {
-    /// Projective point addition using complete addition formulas
-    ///
-    /// Implements the addition law for Jacobian coordinates that works
-    /// for all input combinations, including point doubling and identity cases.
-    ///
-    /// Uses optimized formulas that avoid expensive field inversions
-    /// until the final conversion back to affine coordinates.
+    /// Identity in Jacobian form: (0 : 1 : 0)
+    pub fn identity() -> Self {
+        ProjectivePoint {
+            is_identity: Choice::from(1),
+            x: FieldElement::zero(),
+            y: FieldElement::one(),
+            z: FieldElement::zero(),
+        }
+    }
+
+    /// Projective point addition using constant-time formulas
     pub fn add(&self, other: &Self) -> Self {
-        // Handle identity element cases
-        if self.is_identity.into() {
-            return other.clone();
-        }
-        if other.is_identity.into() {
-            return self.clone();
-        }
-
-        // Compute addition using Jacobian coordinate formulas
+        // 1. Compute Generic Addition (assuming P != Q, neither is identity)
         // Reference: "Guide to Elliptic Curve Cryptography" Algorithm 3.22
-
-        // Pre-compute commonly used values
         let z1_squared = self.z.square();
         let z2_squared = other.z.square();
         let z1_cubed = z1_squared.mul(&self.z);
         let z2_cubed = z2_squared.mul(&other.z);
 
-        // Project coordinates to common denominator
         let u1 = self.x.mul(&z2_squared); // X1 · Z2²
         let u2 = other.x.mul(&z1_squared); // X2 · Z1²
         let s1 = self.y.mul(&z2_cubed); // Y1 · Z2³
@@ -470,23 +412,7 @@ impl ProjectivePoint {
         let h = u2.sub(&u1); // X2·Z1² − X1·Z2²
         let r = s2.sub(&s1); // Y2·Z1³ − Y1·Z2³
 
-        // Handle special cases: point doubling or inverse points
-        if h.is_zero() {
-            if r.is_zero() {
-                // Points are equal: use doubling formula
-                return self.double();
-            } else {
-                // Points are inverses: return identity
-                return Self {
-                    is_identity: Choice::from(1),
-                    x: FieldElement::zero(),
-                    y: FieldElement::one(), // (0 : 1 : 0)
-                    z: FieldElement::zero(),
-                };
-            }
-        }
-
-        // General addition case
+        // General addition arithmetic
         let h_squared = h.square();
         let h_cubed = h_squared.mul(&h);
         let v = u1.mul(&h_squared);
@@ -507,47 +433,44 @@ impl ProjectivePoint {
         let z1_times_z2 = self.z.mul(&other.z);
         let z3 = z1_times_z2.mul(&h);
 
-        // if Z3 == 0 we actually computed the point at infinity
-        if z3.is_zero() {
-            return Self {
-                is_identity: Choice::from(1),
-                x: FieldElement::zero(),
-                y: FieldElement::one(), // canonical projective infinity
-                z: FieldElement::zero(),
-            };
-        }
-
-        // Normal return path
-        Self {
+        let generic_point = Self {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
             z: z3,
-        }
+        };
+
+        // 2. Compute Doubling (fallback for P==Q)
+        let double_point = self.double();
+
+        // 3. Select Result based on state
+        let h_is_zero = Choice::from((h.is_zero() as u8) & 1);
+        let r_is_zero = Choice::from((r.is_zero() as u8) & 1);
+        
+        // Case: P == Q (h=0, r=0)
+        let p_eq_q = h_is_zero & r_is_zero;
+        // Case: P == -Q (h=0, r!=0)
+        let p_eq_neg_q = h_is_zero & !r_is_zero;
+
+        // Start with generic addition result
+        let mut result = generic_point;
+
+        // If P == Q, use doubling result
+        result = Self::conditional_select(&result, &double_point, p_eq_q);
+
+        // If P == -Q, use identity
+        result = Self::conditional_select(&result, &Self::identity(), p_eq_neg_q);
+
+        // If either input is identity, result is the other
+        result = Self::conditional_select(&result, other, self.is_identity);
+        result = Self::conditional_select(&result, self, other.is_identity);
+
+        result
     }
 
-    /// Projective point doubling using efficient doubling formulas
-    ///
-    /// Implements optimized point doubling in Jacobian coordinates.  
-    /// More efficient than general addition when both operands are the same.
-    /// Jacobian doubling for short-Weierstrass curves with *a = –3*
-    /// (SEC 1, Algorithm 3.2.1  —  Δ / Γ / β / α form)
+    /// Projective point doubling using constant-time formulas
     #[inline]
     pub fn double(&self) -> Self {
-        // ── 0. Easy outs ────────────────────────────────────────
-        if self.is_identity.into() {
-            return self.clone();
-        }
-        if self.y.is_zero() {
-            // (x,0) is its own negative ⇒ 2·P = ∞
-            return Self {
-                is_identity: Choice::from(1),
-                x: FieldElement::zero(),
-                y: FieldElement::one(),
-                z: FieldElement::zero(),
-            };
-        }
-
         // ── 1. Pre-computations ─────────────────────────────────
         // Δ = Z₁²
         let delta = self.z.square();
@@ -587,18 +510,21 @@ impl ProjectivePoint {
         eight_gamma_sq = eight_gamma_sq.add(&eight_gamma_sq); // 8Γ²
         y3 = y3.sub(&eight_gamma_sq);
 
-        Self {
+        let result = Self {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
             z: z3,
-        }
+        };
+
+        // Explicitly handle identity or y=0 cases constant-time
+        let is_y_zero = self.y.is_zero();
+        let return_identity = self.is_identity | Choice::from(is_y_zero as u8);
+        
+        Self::conditional_select(&result, &Self::identity(), return_identity)
     }
 
     /// Convert Jacobian projective coordinates back to affine coordinates
-    ///
-    /// Performs the conversion (X:Y:Z) → (X/Z², Y/Z³) using field inversion.
-    /// This is the most expensive operation but only needed for final results.
     pub fn to_affine(&self) -> Point {
         if self.is_identity.into() {
             return Point::identity();

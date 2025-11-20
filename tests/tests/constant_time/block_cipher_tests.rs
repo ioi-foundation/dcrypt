@@ -15,13 +15,16 @@ fn test_aes_constant_time() {
     let key = SecretBytes::<16>::new(key_bytes);
     let cipher = Aes128::new(&key);
 
-    let plain_zero = [0u8; 16];
-    let plain_one = [1u8; 16];
+    // Use non-zero patterns to avoid CPU zero-optimizations
+    // Previous [0u8; 16] vs [1u8; 16] caused artifacts due to hardware-level 
+    // optimizations for zero buffers.
+    let plain_a = [0x55u8; 16];
+    let plain_b = [0xAAu8; 16];
 
     // Warm-up phase
     for _ in 0..config.num_warmup {
-        let mut b0 = plain_zero;
-        let mut b1 = plain_one;
+        let mut b0 = plain_a;
+        let mut b1 = plain_b;
         cipher.encrypt_block(&mut b0).unwrap();
         cipher.encrypt_block(&mut b1).unwrap();
     }
@@ -29,15 +32,15 @@ fn test_aes_constant_time() {
     // Use configured sample/iteration counts
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
-    // Measure encrypting zero‐blocks
+    // Measure encrypting pattern A
     let times0 = tester.measure(|| {
-        let mut buf = plain_zero;
+        let mut buf = plain_a;
         cipher.encrypt_block(&mut buf).unwrap();
     });
 
-    // Measure encrypting one‐blocks
+    // Measure encrypting pattern B
     let times1 = tester.measure(|| {
-        let mut buf = plain_one;
+        let mut buf = plain_b;
         cipher.encrypt_block(&mut buf).unwrap();
     });
 

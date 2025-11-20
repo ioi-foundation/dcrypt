@@ -34,17 +34,53 @@ pub struct EcdhP384;
 #[derive(Clone, Zeroize)]
 pub struct EcdhP384PublicKey([u8; ec_p384::P384_POINT_COMPRESSED_SIZE]);
 
+impl AsRef<[u8]> for EcdhP384PublicKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhP384PublicKey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
 /// Secret key for ECDH-P384 KEM (scalar value)
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhP384SecretKey(SecretBuffer<{ ec_p384::P384_SCALAR_SIZE }>);
+
+impl AsRef<[u8]> for EcdhP384SecretKey {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
 
 /// Shared secret from ECDH-P384 KEM
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhP384SharedSecret(ApiKey);
 
+impl AsRef<[u8]> for EcdhP384SharedSecret {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
 /// Ciphertext for ECDH-P384 KEM (compressed ephemeral public key)
 #[derive(Clone)]
 pub struct EcdhP384Ciphertext([u8; ec_p384::P384_POINT_COMPRESSED_SIZE]);
+
+impl AsRef<[u8]> for EcdhP384Ciphertext {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhP384Ciphertext {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
 
 // --- Public key methods ---
 impl EcdhP384PublicKey {
@@ -242,11 +278,8 @@ impl Kem for EcdhP384 {
         secret_key_recipient: &Self::SecretKey,
         ciphertext_ephemeral_pk: &Self::Ciphertext,
     ) -> ApiResult<Self::SharedSecret> {
-        let scalar_result = ec_p384::Scalar::from_secret_buffer(secret_key_recipient.0.clone());
-        let sk_r_scalar = match scalar_result {
-            Ok(scalar) => scalar,
-            Err(e) => return Err(ApiError::from(KemError::from(e))),
-        };
+        let sk_r_scalar = ec_p384::Scalar::from_secret_buffer(secret_key_recipient.0.clone())
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         let q_e_point = ec_p384::Point::deserialize_compressed(&ciphertext_ephemeral_pk.0)
             .map_err(|e| ApiError::from(KemError::from(e)))?;
         if q_e_point.is_identity() {

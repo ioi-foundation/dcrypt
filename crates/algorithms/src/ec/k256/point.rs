@@ -8,7 +8,7 @@ use crate::ec::k256::{
     scalar::Scalar,
 };
 use crate::error::{validate, Error, Result};
-use subtle::Choice;
+use subtle::{Choice, ConditionallySelectable};
 
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,7 +29,7 @@ pub struct Point {
     pub(crate) y: FieldElement,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct ProjectivePoint {
     is_identity: Choice,
     x: FieldElement,
@@ -125,12 +125,10 @@ impl Point {
             K256_POINT_UNCOMPRESSED_SIZE,
         )?;
 
-        // Check for identity (all zeros)
         if bytes.iter().all(|&b| b == 0) {
             return Ok(Self::identity());
         }
 
-        // Check format byte
         if bytes[0] != 0x04 {
             return Err(Error::param(
                 "K256 Point",
@@ -138,13 +136,11 @@ impl Point {
             ));
         }
 
-        // Extract coordinates
         let mut x_bytes = [0u8; K256_FIELD_ELEMENT_SIZE];
         let mut y_bytes = [0u8; K256_FIELD_ELEMENT_SIZE];
         x_bytes.copy_from_slice(&bytes[1..33]);
         y_bytes.copy_from_slice(&bytes[33..65]);
 
-        // Create point and validate it's on the curve
         Self::new_uncompressed(&x_bytes, &y_bytes)
     }
 
@@ -182,7 +178,7 @@ impl Point {
         x_bytes.copy_from_slice(&bytes[1..]);
         let x_fe = FieldElement::from_bytes(&x_bytes)
             .map_err(|_| Error::param("K256 Point", "Invalid x-coordinate"))?;
-        // y^2 = x^3 + 7
+        
         let rhs = {
             let x3 = x_fe.square().mul(&x_fe);
             let mut seven = [0u32; 8];
@@ -212,31 +208,7 @@ impl Point {
 
     /// Double a point (add it to itself).
     pub fn double(&self) -> Self {
-        // Identity or Y = 0 are special-cases
-        if self.is_identity() || self.y.is_zero() {
-            return Self::identity();
-        }
-
-        // λ = (3·x²) / (2·y)
-        let x_sq = self.x.square();
-        let three_x_sq = x_sq.add(&x_sq).add(&x_sq); // 3·x²
-        let two_y = self.y.double(); // 2·y
-        let inv_two_y = two_y
-            .invert() // constant-time
-            .expect("2·y ≠ 0 for non-identity point");
-        let lambda = three_x_sq.mul(&inv_two_y);
-
-        // x₂ = λ² − 2·x₁
-        let x3 = lambda.square().sub(&self.x.double());
-
-        // y₂ = λ·(x₁ − x₂) − y₁
-        let y3 = lambda.mul(&self.x.sub(&x3)).sub(&self.y);
-
-        Point {
-            is_identity: Choice::from(0),
-            x: x3,
-            y: y3,
-        }
+        self.to_projective().double().to_affine()
     }
 
     /// Scalar multiplication: compute scalar * self.
@@ -249,12 +221,14 @@ impl Point {
         let scalar_bytes = scalar.as_secret_buffer().as_ref();
         let base = self.to_projective();
         let mut result = ProjectivePoint::identity();
+
         for byte in scalar_bytes.iter() {
             for bit_pos in (0..8).rev() {
                 result = result.double();
-                if (byte >> bit_pos) & 1 == 1 {
-                    result = result.add(&base);
-                }
+                let bit = (byte >> bit_pos) & 1;
+                let choice = Choice::from(bit);
+                let result_added = result.add(&base);
+                result = ProjectivePoint::conditional_select(&result, &result_added, choice);
             }
         }
         Ok(result.to_affine())
@@ -276,9 +250,20 @@ impl Point {
         }
         ProjectivePoint {
             is_identity: Choice::from(0),
-            x: self.x.clone(),
-            y: self.y.clone(),
+            x: self.x,
+            y: self.y,
             z: FieldElement::one(),
+        }
+    }
+}
+
+impl ConditionallySelectable for ProjectivePoint {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self {
+            is_identity: Choice::conditional_select(&a.is_identity, &b.is_identity, choice),
+            x: FieldElement::conditional_select(&a.x, &b.x, choice),
+            y: FieldElement::conditional_select(&a.y, &b.y, choice),
+            z: FieldElement::conditional_select(&a.z, &b.z, choice),
         }
     }
 }
@@ -294,13 +279,7 @@ impl ProjectivePoint {
     }
 
     pub fn add(&self, other: &Self) -> Self {
-        if self.is_identity.into() {
-            return other.clone();
-        }
-        if other.is_identity.into() {
-            return self.clone();
-        }
-
+        // Constant-time add with no early returns
         let z1_sq = self.z.square();
         let z2_sq = other.z.square();
         let u1 = self.x.mul(&z2_sq);
@@ -309,39 +288,90 @@ impl ProjectivePoint {
         let s2 = other.y.mul(&z1_sq).mul(&self.z);
 
         let h = u2.sub(&u1);
-        if h.is_zero() {
-            if s1 == s2 {
-                return self.double();
-            } else {
-                return Self::identity();
-            }
-        }
-
         let r = s2.sub(&s1);
+        
+        // Generic addition
         let h_sq = h.square();
         let h_cu = h_sq.mul(&h);
         let v = u1.mul(&h_sq);
 
         let r_sq = r.square();
         let two_v = v.add(&v);
-        let x3 = r_sq.sub(&h_cu).sub(&two_v);
+        let mut x3 = r_sq.sub(&h_cu);
+        x3 = x3.sub(&two_v);
 
         let v_minus_x3 = v.sub(&x3);
-        let y3 = r.mul(&v_minus_x3).sub(&s1.mul(&h_cu));
+        let mut y3 = r.mul(&v_minus_x3);
+        let s1_h_cu = s1.mul(&h_cu);
+        y3 = y3.sub(&s1_h_cu);
 
-        let z3 = self.z.mul(&other.z).mul(&h);
+        let mut z3 = self.z.mul(&other.z);
+        z3 = z3.mul(&h);
 
-        ProjectivePoint {
+        let generic = ProjectivePoint {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
             z: z3,
-        }
+        };
+
+        // Double (fallback for P==Q)
+        let double = self.double();
+
+        // Select results
+        let h_is_zero = Choice::from((h.is_zero() as u8) & 1);
+        let r_is_zero = Choice::from((r.is_zero() as u8) & 1);
+        let p_eq_q = h_is_zero & r_is_zero;
+        let p_eq_neg_q = h_is_zero & !r_is_zero;
+
+        let mut result = Self::conditional_select(&generic, &double, p_eq_q);
+        result = Self::conditional_select(&result, &Self::identity(), p_eq_neg_q);
+        result = Self::conditional_select(&result, other, self.is_identity);
+        result = Self::conditional_select(&result, self, other.is_identity);
+
+        result
     }
 
     pub fn double(&self) -> Self {
-        // Reuse the *correct* affine doubling
-        self.to_affine().double().to_projective()
+        // Jacobian doubling for a = 0 (y^2 = x^3 + 7)
+        
+        let y_sq = self.y.square();
+        let mut s = self.x.mul(&y_sq);
+        s = s.add(&s); // 2s
+        s = s.add(&s); // 4s -> S = 4*x*y^2
+        
+        let x_sq = self.x.square();
+        let mut m = x_sq.add(&x_sq);
+        m = m.add(&x_sq); // M = 3*x^2 (a=0)
+
+        let mut x3 = m.square();
+        let s_plus_s = s.add(&s);
+        x3 = x3.sub(&s_plus_s); // X3 = M^2 - 2S
+
+        let mut y3 = s.sub(&x3);
+        y3 = m.mul(&y3);
+        
+        let y_sq_sq = y_sq.square();
+        let mut eight_y4 = y_sq_sq.add(&y_sq_sq); // 2
+        eight_y4 = eight_y4.add(&eight_y4); // 4
+        eight_y4 = eight_y4.add(&eight_y4); // 8
+        y3 = y3.sub(&eight_y4); // Y3 = M(S - X3) - 8Y^4
+
+        let mut z3 = self.y.mul(&self.z);
+        z3 = z3.add(&z3); // Z3 = 2*Y*Z
+
+        let result = ProjectivePoint {
+            is_identity: Choice::from(0),
+            x: x3,
+            y: y3,
+            z: z3,
+        };
+
+        // Explicitly handle identity or y=0 cases constant-time
+        let is_y_zero = self.y.is_zero();
+        let return_identity = self.is_identity | Choice::from(is_y_zero as u8);
+        
+        Self::conditional_select(&result, &Self::identity(), return_identity)
     }
 
     pub fn to_affine(&self) -> Point {

@@ -6,7 +6,7 @@ use crate::ec::b283k::{
     scalar::Scalar,
 };
 use crate::error::{validate, Error, Result};
-use subtle::Choice;
+use subtle::{Choice, ConditionallySelectable};
 
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,7 +20,7 @@ pub enum PointFormat {
 }
 
 /// A point on the sect283k1 elliptic curve
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Point {
     pub(crate) is_identity: Choice,
     pub(crate) x: FieldElement,
@@ -41,6 +41,16 @@ impl PartialEq for Point {
 }
 
 impl Eq for Point {}
+
+impl ConditionallySelectable for Point {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        Self {
+            is_identity: Choice::conditional_select(&a.is_identity, &b.is_identity, choice),
+            x: FieldElement::conditional_select(&a.x, &b.x, choice),
+            y: FieldElement::conditional_select(&a.y, &b.y, choice),
+        }
+    }
+}
 
 impl Point {
     /// Create a new point from uncompressed coordinates.
@@ -135,20 +145,14 @@ impl Point {
             });
         }
 
-        // y^2 + xy = x^3 + 1 => y^2 + xy + (x^3 + 1) = 0
-        // Let z = y/x. z^2*x^2 + x*z*x + x^3 + 1 = 0 => z^2*x^2 + x^2*z + x^3 + 1 = 0
-        // z^2 + z = x + 1/x^2
         let rhs = x.add(&x.square().invert().unwrap());
 
-        // Step 1: Check existence of a solution
         if rhs.trace() != 0 {
             return Err(Error::param("B283k Point", "Cannot decompress point"));
         }
 
-        // Step 2: Solve z^2 + z = rhs using half-trace
         let mut z = Self::half_trace(&rhs);
 
-        // Step 3: Choose the root whose LSB matches ~y_P
         if z.trace() != (tag as u64 - 2) {
             z = z.add(&FieldElement::one());
         }
@@ -161,63 +165,91 @@ impl Point {
         })
     }
 
-    /// Return the half-trace of `a` in GF(2^283).
-    ///
-    /// For odd m, the half-trace Htr(a) = sum_{i=0}^{(m-1)/2} a^{2^{2i}}
-    /// satisfies Htr(a)^2 + Htr(a) = a when Tr(a) = 0.
     fn half_trace(a: &FieldElement) -> FieldElement {
-        // m = 283 → (m-1)/2 = 141
-        let mut ht = *a; // a^{2^{0}}
+        let mut ht = *a;
         let mut t = *a;
         for _ in 0..141 {
-            t = t.square(); // a^{2^{2k+1}}
-            t = t.square(); // a^{2^{2k+2}} = a^{2^{2(k+1)}}
-            ht = ht.add(&t); // accumulate a^{2^{2(k+1)}}
+            t = t.square();
+            t = t.square();
+            ht = ht.add(&t);
         }
         ht
     }
 
-    /// Add two points using the group law for binary elliptic curves.
+    /// Constant-time Affine addition.
+    /// Computes both addition and doubling paths and selects valid one.
+    /// Handles division-by-zero safely via dummy inversion.
     pub fn add(&self, other: &Self) -> Self {
-        if self.is_identity() {
-            return other.clone();
-        }
-        if other.is_identity() {
-            return self.clone();
-        }
-
-        if self.x == other.x {
-            if self.y == other.y {
-                return self.double();
-            } else {
-                return Self::identity();
-            }
-        }
-
-        let lambda = (self.y.add(&other.y)).mul(&(self.x.add(&other.x)).invert().unwrap());
+        // 1. Calculate flags
+        let x_eq = self.x == other.x;
+        let y_eq = self.y == other.y;
+        
+        // P == Q: x1 == x2 AND y1 == y2
+        let p_eq_q = Choice::from((x_eq && y_eq) as u8);
+        // P == -Q: x1 == x2 AND y1 != y2 (in binary field characteristic 2)
+        let p_eq_neg_q = Choice::from((x_eq && !y_eq) as u8);
+        
+        // 2. Compute Generic Addition (valid when x1 != x2)
+        // lambda = (y1 + y2) / (x1 + x2)
+        let sum_y = self.y.add(&other.y);
+        let sum_x = self.x.add(&other.x);
+        
+        // Safe inversion: if sum_x is zero (x1 == x2), invert 1 instead.
+        // This produces garbage result, but we won't select it in that case.
+        let sum_x_is_zero = Choice::from(sum_x.is_zero() as u8);
+        let denom = FieldElement::conditional_select(&sum_x, &FieldElement::one(), sum_x_is_zero);
+        let inv_denom = denom.invert().unwrap_or(FieldElement::zero());
+        
+        let lambda = sum_y.mul(&inv_denom);
         let x3 = lambda.square().add(&lambda).add(&self.x).add(&other.x);
         let y3 = lambda.mul(&(self.x.add(&x3))).add(&x3).add(&self.y);
-        Point {
+        
+        let generic = Point {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
-        }
+        };
+
+        // 3. Compute Doubling (valid when P == Q)
+        let double = self.double();
+
+        // 4. Select Result
+        // Start with Generic. If P==Q, switch to Double.
+        let mut result = Self::conditional_select(&generic, &double, p_eq_q);
+        
+        // If P == -Q, the result must be Identity.
+        result = Self::conditional_select(&result, &Self::identity(), p_eq_neg_q);
+        
+        // If either input is identity, result is the other one.
+        result = Self::conditional_select(&result, other, self.is_identity);
+        result = Self::conditional_select(&result, self, other.is_identity);
+
+        result
     }
 
-    /// Double a point (add it to itself).
+    /// Constant-time Affine doubling.
+    /// Computes doubling formula safely, handling the P at infinity case
+    /// without branching.
     pub fn double(&self) -> Self {
-        if self.is_identity() || self.x.is_zero() {
-            return Self::identity();
-        }
-
-        let lambda = self.x.add(&self.y.mul(&self.x.invert().unwrap()));
+        // lambda = x + y/x
+        // Safe inversion: if x is zero, invert 1
+        let x_is_zero = Choice::from(self.x.is_zero() as u8);
+        let denom = FieldElement::conditional_select(&self.x, &FieldElement::one(), x_is_zero);
+        let inv_x = denom.invert().unwrap_or(FieldElement::zero());
+        
+        let term = self.y.mul(&inv_x);
+        let lambda = self.x.add(&term);
+        
         let x2 = lambda.square().add(&lambda);
         let y2 = self.x.square().add(&lambda.mul(&x2)).add(&x2);
-        Point {
+
+        let result = Point {
             is_identity: Choice::from(0),
             x: x2,
             y: y2,
-        }
+        };
+
+        Self::conditional_select(&result, &Self::identity(), self.is_identity)
     }
 
     /// Scalar multiplication: compute scalar * self.
@@ -233,9 +265,16 @@ impl Point {
 
         for byte in scalar_bytes.iter().rev() {
             for i in 0..8 {
-                if (byte >> i) & 1 == 1 {
-                    res = res.add(&temp);
-                }
+                let bit = (byte >> i) & 1;
+                let choice = Choice::from(bit);
+
+                // Unconditionally compute addition
+                let res_added = res.add(&temp);
+                
+                // Constant-time select
+                res = Point::conditional_select(&res, &res_added, choice);
+
+                // Unconditionally double
                 temp = temp.double();
             }
         }
@@ -243,7 +282,6 @@ impl Point {
     }
 
     fn is_on_curve(x: &FieldElement, y: &FieldElement) -> bool {
-        // y^2 + xy = x^3 + 1
         let y_sq = y.square();
         let xy = x.mul(y);
         let lhs = y_sq.add(&xy);

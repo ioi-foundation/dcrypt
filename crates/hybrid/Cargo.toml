@@ -44,6 +44,16 @@ serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand_chacha = { workspace = true }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "hybrid_kem"
+harness = false
+
+[[bench]]
+name = "hybrid_sign"
+harness = false
 
 [package.metadata.release]
 publish = true
+

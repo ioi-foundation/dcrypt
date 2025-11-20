@@ -6,8 +6,18 @@ use crate::error::{Error, Result};
 use subtle::{Choice, ConditionallySelectable};
 
 /// secp256k1 field element representing values in F_p
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldElement(pub(crate) [u32; 8]);
+
+impl ConditionallySelectable for FieldElement {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let mut out = [0u32; 8];
+        for i in 0..8 {
+            out[i] = u32::conditional_select(&a.0[i], &b.0[i], choice);
+        }
+        FieldElement(out)
+    }
+}
 
 impl FieldElement {
     /// The secp256k1 prime modulus: p = 2^256 - 2^32 - 977
@@ -106,7 +116,7 @@ impl FieldElement {
     /// Negate a field element modulo p.
     pub fn negate(&self) -> Self {
         if self.is_zero() {
-            return self.clone();
+            return *self;
         }
         FieldElement(Self::MOD_LIMBS).sub(self)
     }
@@ -181,7 +191,7 @@ impl FieldElement {
 
     fn pow(&self, exp_be: &[u8]) -> Result<Self> {
         let mut result = Self::one();
-        let base = self.clone();
+        let base = *self;
         for &byte in exp_be.iter() {
             for i in (0..8).rev() {
                 result = result.square();

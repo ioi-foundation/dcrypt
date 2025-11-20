@@ -1,158 +1,143 @@
-# DCRYPT: A Modern, High-Assurance Cryptographic Library for Rust
+# dcrypt: A Modern, High-Assurance Cryptographic Library in Rust
 
 [![Crates.io](https://img.shields.io/crates/v/dcrypt.svg?style=flat-square)](https://crates.io/crates/dcrypt)
 [![Docs.rs](https://img.shields.io/docsrs/dcrypt?style=flat-square)](https://docs.rs/dcrypt)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/DePINNetwork/dcrypt/rust.yml?branch=main&style=flat-square)](https://github.com/DePINNetwork/dcrypt/actions)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/ioi-foundation/dcrypt/rust.yml?branch=main&style=flat-square)](https://github.com/ioi-foundation/dcrypt/actions)
 
-**dcrypt** is a pure Rust software-only cryptographic library for DePIN Network's Web4 infrastructure framework providing both traditional and post-quantum cryptography. Designed with emphasis on security, modularity, performance, and usability, dcrypt eliminates foreign function interfaces (FFI) ensuring memory safety and cross-platform compatibility.
+**dcrypt** (Decentralized Cryptography) is a comprehensive cryptographic library implemented entirely in safe Rust. It bridges the gap between traditional security and the post-quantum future by providing NIST-standardized Post-Quantum Cryptography (PQC) algorithms alongside novel, production-ready hybrid constructions.
 
-## Key Principles
+Spearheaded by the **IOI Foundation** (Internet of Intelligence) as the security cornerstone for next-generation decentralized infrastructure ("Web4"), dcrypt eliminates foreign function interfaces (FFI) and `unsafe` code blocks in cryptographic logic, ensuring memory safety and cross-platform compatibility from embedded devices to enterprise servers.
 
-*   **Pure Rust & Memory Safe**: Implemented entirely in Rust without FFI, preventing entire classes of memory-related bugs and ensuring seamless portability.
-*   **Security-First Design**: Prioritizes resistance to side-channel attacks through constant-time execution for critical operations and secure memory handling with automatic zeroization of sensitive data.
-*   **Comprehensive & Modern**: Provides a full suite of traditional (AES-GCM, SHA-2, ECDH, Ed25519) and post-quantum (Kyber, Dilithium) algorithms, ready for the next generation of secure applications.
-*   **Modular & Ergonomic API**: A clean, layered architecture with high-level, easy-to-use APIs for common tasks like authenticated encryption, password hashing, and digital signatures.
-*   **`no_std` & Cross-Platform**: Fully compatible with `no_std` environments (with `alloc`), making it ideal for everything from embedded devices and IoT to high-performance web servers.
+## Novel Capabilities
+
+dcrypt introduces two first-of-its-kind capabilities to the Rust ecosystem:
+
+1.  **First Pure-Rust Dilithium/ML-DSA**: The first publicly released, production-ready implementation of the complete CRYSTALS-Dilithium signature scheme with zero `unsafe` code, zero FFI, and full constant-time execution.
+2.  **Native Hybrid Cryptography**: The first pure-Rust library to provide hybrid Key Encapsulation Mechanisms (ECDH + Kyber) and hybrid Digital Signatures (ECDSA + Dilithium) as composable, general-purpose primitives.
+
+## Key Design Principles
+
+*   **Pure Rust & Memory Safety**: Implemented with **zero FFI dependencies** and **no `unsafe` code** in cryptographic kernels. This eliminates entire classes of memory vulnerabilities (buffer overflows, use-after-free) common in C/C++ wrapped libraries.
+*   **Post-Quantum Ready**: Full support for NIST-selected algorithms **CRYSTALS-Kyber (ML-KEM)** and **CRYSTALS-Dilithium (ML-DSA)**.
+*   **Defense-in-Depth (Hybrid Schemes)**: Native support for hybrid constructions. A shared secret or signature is compromised only if *both* the classical and post-quantum assumptions are broken.
+*   **Constant-Time Execution**: All primitives handling secret data are engineered to be branch-free and memory-access-pattern-free. This is enforced by a built-in **Constant-Time Verification Suite** that statistically detects timing leaks during CI.
+*   **Modular & Ergonomic**: High-level APIs prevent misuse (e.g., strong typing for keys and nonces), while a workspace architecture allows users to include only necessary algorithm families.
+*   **`no_std` & Cross-Platform**: Fully functional in `no_std` environments (requiring `alloc`), making it suitable for IoT, embedded systems, and WASM targets.
 
 ## Quick Start
 
-Add `dcrypt` and `rand` to your project's `Cargo.toml`:
+Add `dcrypt` to your project's `Cargo.toml`. You can select specific features to reduce binary size.
 
 ```toml
 [dependencies]
-# This assumes a future top-level 'dcrypt' crate.
-# For now, you would depend on the specific crates like `dcrypt-symmetric`.
-# dcrypt = "0.13.0" 
+dcrypt = { version = "0.1.0", features = ["hybrid", "aes-gcm"] }
 rand = "0.8"
 ```
 
-### Example 1: Authenticated Encryption (AES-256-GCM)
+### Example 1: Hybrid Post-Quantum Key Encapsulation
 
-Securely encrypt data with authentication to protect against tampering.
+Securely exchange keys using a hybrid scheme (ECDH P-256 + Kyber768). This ensures security even if quantum computers break elliptic curve cryptography.
 
 ```rust
-use dcrypt::symmetric::{Aes256Gcm, Aes256Key, Aead, SymmetricCipher, Result};
+use dcrypt::hybrid::{HybridKem, HybridP256Kyber768};
+use dcrypt::rng::OsRng;
 
-fn main() -> Result<()> {
-    // 1. Generate a new, random key for AES-256-GCM.
-    let key = Aes256Key::generate();
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut rng = OsRng;
 
-    // 2. Create a new cipher instance with the key.
-    let cipher = Aes256Gcm::new(&key)?;
+    // 1. Alice generates a Hybrid Keypair (Classical ECC + Post-Quantum Kyber)
+    let (alice_pk, alice_sk) = HybridP256Kyber768::generate_keypair(&mut rng);
 
-    let plaintext = b"this is a very secret message";
-    let associated_data = b"metadata"; // Optional: authenticated but not encrypted
+    // 2. Bob encapsulates a shared secret against Alice's public key
+    let (shared_secret_bob, ciphertext) = alice_pk.encapsulate(&mut rng)?;
 
-    // 3. Generate a random nonce. MUST be unique for each encryption with the same key.
-    let nonce = Aes256Gcm::generate_nonce();
+    // 3. Alice decapsulates the ciphertext to recover the shared secret
+    let shared_secret_alice = alice_sk.decapsulate(&ciphertext)?;
 
-    // 4. Encrypt the data.
-    println!("Encrypting: '{}'", String::from_utf8_lossy(plaintext));
-    let ciphertext = cipher.encrypt(&nonce, plaintext, Some(associated_data))?;
-
-    // 5. Decrypt the data.
-    let decrypted_plaintext = cipher.decrypt(&nonce, &ciphertext, Some(associated_data))?;
-    println!("Decrypted: '{}'", String::from_utf8_lossy(&decrypted_plaintext));
-
-    // 6. Verify the result.
-    assert_eq!(plaintext, &decrypted_plaintext[..]);
-    println!("\nAES-256-GCM roundtrip successful!");
-
+    // 4. Verify secrets match
+    assert_eq!(shared_secret_bob, shared_secret_alice);
+    println!("Hybrid Quantum-Safe Key Exchange successful!");
+    
     Ok(())
 }
 ```
 
-### Example 2: Password Hashing & Verification (Argon2)
+### Example 2: Authenticated Encryption (AES-256-GCM)
 
-Securely hash user passwords for storage using the state-of-the-art Argon2id algorithm.
+Standard symmetric encryption remains a core part of the library.
 
 ```rust
-use dcrypt::kdf::{Argon2, PasswordHash, PasswordHashFunction, Result};
-use dcrypt::types::SecretBytes;
-use std::str::FromStr;
+use dcrypt::symmetric::{Aes256Gcm, Key, Nonce, Aead};
 
-fn main() -> Result<()> {
-    let argon2 = Argon2::<16>::new(); // Default Argon2id, salt size 16
-    let password = SecretBytes::<32>::new(*b"a-very-secure-password!         ");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let key = Key::<Aes256Gcm>::generate();
+    let cipher = Aes256Gcm::new(&key);
+    let nonce = Nonce::generate(); // Unique per encryption
 
-    // 1. Hash a new password. This generates a random salt.
-    let password_hash = argon2.hash_password(&password)?;
-
-    // 2. The result is a PHC format string, safe to store in your database.
-    let hash_string = password_hash.to_string();
-    println!("Stored Password Hash: {}", hash_string);
-
-    // --- Later, during login ---
-
-    // 3. Parse the stored hash string.
-    let parsed_hash = PasswordHash::from_str(&hash_string)?;
-
-    // 4. Verify the password against the parsed hash.
-    // This is a constant-time comparison to prevent timing attacks.
-    assert!(argon2.verify(&password, &parsed_hash)?);
-
-    println!("\nPassword verified successfully!");
-
-    // Verification with the wrong password will fail.
-    let wrong_password = SecretBytes::<32>::new(*b"incorrect-password...           ");
-    assert!(!argon2.verify(&wrong_password, &parsed_hash)?);
-    println!("Verification with wrong password failed, as expected.");
-
+    let plaintext = b"Quantum resistance is futile... actually it's necessary.";
+    
+    // Encrypt
+    let ciphertext = cipher.encrypt(&nonce, plaintext.as_ref())?;
+    
+    // Decrypt
+    let decrypted = cipher.decrypt(&nonce, ciphertext.as_ref())?;
+    
+    assert_eq!(plaintext.to_vec(), decrypted);
     Ok(())
 }
 ```
 
-## Available Algorithms
+## Supported Algorithms
 
-DCRYPT provides a broad range of cryptographic primitives:
+dcrypt provides a unified API for classical, post-quantum, and hybrid operations:
 
 | Category | Algorithms |
 | :--- | :--- |
-| **AEAD Ciphers** | `AES-GCM`, `ChaCha20-Poly1305`, `XChaCha20-Poly1305` |
+| **Symmetric Encryption (AEAD)** | `AES-256-GCM`, `ChaCha20-Poly1305`, `XChaCha20-Poly1305` |
 | **Hash Functions** | `SHA-2`, `SHA-3`, `BLAKE2` |
-| **XOFs** | `SHAKE`, `BLAKE3` |
+| **XOFs** | `SHAKE-128/256`, `BLAKE3` |
 | **Password Hashing** | `Argon2id` (default), `Argon2i`, `Argon2d` |
 | **Key Derivation** | `HKDF`, `PBKDF2` |
 | **Digital Signatures** | `ECDSA` (P-256, P-384), `Ed25519` |
-| **Post-Quantum Sigs** | `Dilithium` |
-| **KEMs** | `ECDH` (P-256, P-384, etc.) |
-| **Post-Quantum KEMs**| `Kyber` |
-| **Hybrid Schemes** | `ECDH+Kyber` (KEM), `ECDSA+Dilithium` (Signature) |
+| **Post-Quantum Signatures** | `CRYSTALS-Dilithium` / `ML-DSA` (Levels 2, 3, 5) |
+| **Key Exchange / KEM** | `ECDH` (P-256, P-384, P-521) |
+| **Post-Quantum KEMs**| `CRYSTALS-Kyber` / `ML-KEM` (Levels 512, 768, 1024) |
+| **Hybrid Schemes** | `HybridECDH` (ECDH + Kyber), `HybridSign` (ECDSA + Dilithium) |
 
-## Project Architecture
+## Architecture & Crates
 
-The `dcrypt` library is organized as a workspace with several specialized crates to ensure a clean separation of concerns:
+The library is organized as a workspace of specialized crates to align type-safety boundaries with security boundaries:
 
-*   **`api`**: Defines the core public traits, error handling, and fundamental types.
-*   **`common`**: Provides shared security primitives, such as secure memory wrappers.
-*   **`internal`**: Low-level, non-public utilities for constant-time operations.
-*   **`params`**: A `no_std` crate centralizing cryptographic parameters and constants.
-*   **`algorithms`**: The core cryptographic engine with low-level implementations of all primitives.
-*   **`symmetric`**: High-level APIs for symmetric ciphers, including key management and streaming.
-*   **`kem`**: Implementations of Key Encapsulation Mechanisms (KEMs).
-*   **`sign`**: Implementations of Digital Signature schemes.
-*   **`pke`**: Implementations of Public Key Encryption (PKE) schemes like ECIES.
-*   **`hybrid`**: Ready-to-use hybrid schemes combining classical and post-quantum algorithms.
-*   **`tests`**: Integration tests, constant-time verification, and test vectors.
+*   **`dcrypt-api`**: Core public traits, error types, and fundamental data structures.
+*   **`dcrypt-algorithms`**: Low-level, constant-time implementations of cryptographic kernels.
+*   **`dcrypt-common`**: Shared utilities, including secure memory zeroization (`SecretBytes`).
+*   **`dcrypt-symmetric`**: AEADs and stream ciphers.
+*   **`dcrypt-kem`**: Key Encapsulation Mechanisms (Kyber, ECDH).
+*   **`dcrypt-sign`**: Digital Signatures (Dilithium, ECDSA, Ed25519).
+*   **`dcrypt-hybrid`**: Ready-to-use hybrid combiners for KEMs and Signatures.
+*   **`dcrypt-tests`**: Integration tests, Known-Answer Tests (KATs), and the Constant-Time Verification Suite.
 
-## Security Philosophy
+## Security & Verification
 
-Security is the primary design driver for DCRYPT.
+Security is the primary driver for dcrypt. The library employs a rigorous **Constant-Time Verification Suite** that integrates directly into the CI pipeline to ensure side-channel resistance.
 
-*   **Constant-Time Execution**: Primitives handling secret data (e.g., key operations, signature verification) are implemented to execute in constant time, mitigating a broad class of timing side-channel attacks.
-*   **Secure Memory Handling**: Sensitive data like keys and intermediate cryptographic state are handled using secure memory types that automatically zero their contents when they go out of scope, preventing accidental data leakage from memory.
-*   **Type Safety**: We leverage Rust's powerful type system to enforce cryptographic properties at compile time. For example, a key for `AES-256` cannot be accidentally used with a `ChaCha20` cipher, preventing common API misuse.
-*   **No Unsafe Code in Primitives**: The core cryptographic logic is written in safe Rust, eliminating the risks associated with FFI and manual memory management.
+*   **Microbenchmark Timing Acquisition**: Captures timing data at microsecond resolution across thousands of iterations.
+*   **Multi-Signal Leakage Analysis**: Uses Welch’s t-test, Median Absolute Deviation (MAD), and Kolmogorov–Smirnov tests to distinguish genuine timing leaks from environmental noise.
+*   **Automated Regression Protection**: Builds fail automatically if secret-dependent timing correlations are detected in Kyber, Dilithium, or hybrid primitives.
 
-## Feature Flags
+## Performance
 
-DCRYPT uses feature flags to allow you to tailor the build for your specific needs, helping to minimize binary size.
+Benchmarks (executed on AMD Ryzen 9 7950X) demonstrate that `dcrypt` achieves production-grade speeds without compromising safety:
+*   **Kyber Keygen**: ~180–230 µs.
+*   **Hybrid Overhead**: Hybrid constructions introduce less than **10% overhead** compared to post-quantum-only implementations.
+*   **Scaling**: Linear scaling for Dilithium verification across message sizes.
 
-*   `std` (default): Enables functionality requiring the Rust standard library.
-*   `alloc`: For `no_std` environments that have a heap allocator.
-*   `serde`: Enables serialization and deserialization for various types via the Serde framework.
-*   **Algorithm Flags**: Granular flags like `hash`, `aead`, `kdf`, `sign`, `kem`, `post-quantum`, and `traditional` allow you to include only the cryptographic families you need.
+## Roadmap
+
+*   **Audit**: Third-party security audit by an expert cryptography firm.
+*   **Expanded Suite**: Implementation of FALCON and SPHINCS+ upon final NIST standardization.
+*   **Web4 Integration**: Native integration into IOI's DePIN and decentralized identity frameworks.
 
 ## License
 

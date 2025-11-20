@@ -33,17 +33,53 @@ pub struct EcdhP521;
 #[derive(Clone, Zeroize)]
 pub struct EcdhP521PublicKey([u8; ec_p521::P521_POINT_COMPRESSED_SIZE]);
 
+impl AsRef<[u8]> for EcdhP521PublicKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhP521PublicKey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
 /// Secret key for ECDH-P521 KEM (scalar value)
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhP521SecretKey(SecretBuffer<{ ec_p521::P521_SCALAR_SIZE }>);
+
+impl AsRef<[u8]> for EcdhP521SecretKey {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
 
 /// Shared secret from ECDH-P521 KEM
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhP521SharedSecret(ApiKey);
 
+impl AsRef<[u8]> for EcdhP521SharedSecret {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
 /// Ciphertext for ECDH-P521 KEM (compressed ephemeral public key)
 #[derive(Clone)]
 pub struct EcdhP521Ciphertext([u8; ec_p521::P521_POINT_COMPRESSED_SIZE]);
+
+impl AsRef<[u8]> for EcdhP521Ciphertext {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhP521Ciphertext {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
 
 // --- Public key methods ---
 impl EcdhP521PublicKey {

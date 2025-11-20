@@ -34,17 +34,53 @@ pub struct EcdhP256;
 #[derive(Clone, Zeroize)]
 pub struct EcdhP256PublicKey([u8; ec_p256::P256_POINT_COMPRESSED_SIZE]);
 
+impl AsRef<[u8]> for EcdhP256PublicKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhP256PublicKey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
 /// Secret key for ECDH-P-256 KEM (scalar value)
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhP256SecretKey(SecretBuffer<{ ec_p256::P256_SCALAR_SIZE }>);
+
+impl AsRef<[u8]> for EcdhP256SecretKey {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
 
 /// Shared secret from ECDH-P-256 KEM
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhP256SharedSecret(ApiKey);
 
+impl AsRef<[u8]> for EcdhP256SharedSecret {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
 /// Ciphertext for ECDH-P-256 KEM (compressed ephemeral public key)
 #[derive(Clone)]
 pub struct EcdhP256Ciphertext([u8; ec_p256::P256_POINT_COMPRESSED_SIZE]);
+
+impl AsRef<[u8]> for EcdhP256Ciphertext {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhP256Ciphertext {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
 
 // --- Public key methods ---
 impl EcdhP256PublicKey {
@@ -284,38 +320,6 @@ impl Kem for EcdhP256 {
             .map_err(|e| ApiError::from(KemError::from(e)))?;
         let shared_secret = EcdhP256SharedSecret(ApiKey::new(&ss_bytes));
         Ok(shared_secret)
-    }
-}
-
-impl EcdhP256 {
-    pub fn validate_public_key(key: &EcdhP256PublicKey) -> ApiResult<()> {
-        let point = ec_p256::Point::deserialize_compressed(&key.0)
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
-        if point.is_identity() {
-            return Err(ApiError::InvalidKey {
-                context: "validate_public_key",
-                #[cfg(feature = "std")]
-                message: "Public key is the identity point".to_string(),
-            });
-        }
-        Ok(())
-    }
-    pub fn validate_secret_key(key: &EcdhP256SecretKey) -> ApiResult<()> {
-        let _ = ec_p256::Scalar::from_secret_buffer(key.0.clone())
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
-        Ok(())
-    }
-    pub fn validate_ciphertext(ct: &EcdhP256Ciphertext) -> ApiResult<()> {
-        let point = ec_p256::Point::deserialize_compressed(&ct.0)
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
-        if point.is_identity() {
-            return Err(ApiError::InvalidCiphertext {
-                context: "validate_ciphertext",
-                #[cfg(feature = "std")]
-                message: "Ciphertext contains identity point".to_string(),
-            });
-        }
-        Ok(())
     }
 }
 

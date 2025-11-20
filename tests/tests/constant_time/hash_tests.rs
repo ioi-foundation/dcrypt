@@ -8,21 +8,24 @@ use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, Timing
 #[test]
 fn test_sha256_constant_time() {
     let config = TestConfig::for_hash();
-    let data_zeros = [0u8; 64];
-    let data_ones = [1u8; 64];
+    
+    // Use non-zero patterns to avoid CPU zero-optimization artifacts
+    // 0x55 = 01010101, 0xAA = 10101010 (alternating bits)
+    let data_a = [0x55u8; 64];
+    let data_b = [0xAAu8; 64];
 
     for _ in 0..config.num_warmup {
-        let _ = Sha256::digest(&data_zeros);
-        let _ = Sha256::digest(&data_ones);
+        let _ = Sha256::digest(&data_a);
+        let _ = Sha256::digest(&data_b);
     }
 
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let t1 = tester.measure(|| {
-        let _ = Sha256::digest(&data_zeros);
+        let _ = Sha256::digest(&data_a);
     });
     let t2 = tester.measure(|| {
-        let _ = Sha256::digest(&data_ones);
+        let _ = Sha256::digest(&data_b);
     });
 
     // Use instance method instead of associated function
@@ -84,21 +87,24 @@ fn test_sha256_constant_time() {
 #[test]
 fn test_sha3_256_constant_time() {
     let config = TestConfig::for_hash();
-    let data_zeros = [0u8; 136]; // SHA3-256 rate block size
-    let data_ones = [1u8; 136];
+    
+    // Use non-zero patterns to avoid CPU zero-optimization artifacts
+    // 0x55 = 01010101, 0xAA = 10101010 (alternating bits)
+    let data_a = [0x55u8; 136]; // SHA3-256 rate block size
+    let data_b = [0xAAu8; 136];
 
     for _ in 0..config.num_warmup {
-        let _ = Sha3_256::digest(&data_zeros);
-        let _ = Sha3_256::digest(&data_ones);
+        let _ = Sha3_256::digest(&data_a);
+        let _ = Sha3_256::digest(&data_b);
     }
 
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let t1 = tester.measure(|| {
-        let _ = Sha3_256::digest(&data_zeros);
+        let _ = Sha3_256::digest(&data_a);
     });
     let t2 = tester.measure(|| {
-        let _ = Sha3_256::digest(&data_ones);
+        let _ = Sha3_256::digest(&data_b);
     });
 
     // Use instance method instead of associated function

@@ -3,10 +3,21 @@
 
 use crate::ec::b283k::constants::B283K_FIELD_ELEMENT_SIZE;
 use crate::error::{Error, Result};
+use subtle::{Choice, ConditionallySelectable};
 
 /// A field element in GF(2^283) represented by 5 u64 limbs (320 bits).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldElement(pub(crate) [u64; 5]);
+
+impl ConditionallySelectable for FieldElement {
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let mut out = [0u64; 5];
+        for i in 0..5 {
+            out[i] = u64::conditional_select(&a.0[i], &b.0[i], choice);
+        }
+        FieldElement(out)
+    }
+}
 
 impl FieldElement {
     // The irreducible polynomial for sect283k1: f(x) = x^283 + x^12 + x^7 + x^5 + 1

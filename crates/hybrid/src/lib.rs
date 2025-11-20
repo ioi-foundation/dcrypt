@@ -1,3 +1,4 @@
+// File: crates/hybrid/src/lib.rs
 //! # dcrypt-hybrid
 //!
 //! Hybrid cryptographic schemes for the dcrypt library.
@@ -14,3 +15,4 @@
 extern crate alloc;
 
 pub mod kem;
+pub mod sign;

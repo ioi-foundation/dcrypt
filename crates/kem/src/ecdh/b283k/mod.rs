@@ -33,17 +33,53 @@ pub struct EcdhB283k;
 #[derive(Clone, Zeroize)]
 pub struct EcdhB283kPublicKey([u8; ec_b283k::B283K_POINT_COMPRESSED_SIZE]);
 
+impl AsRef<[u8]> for EcdhB283kPublicKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhB283kPublicKey {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
+
 /// Secret key for ECDH-B283k KEM (scalar value)
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhB283kSecretKey(SecretBuffer<{ ec_b283k::B283K_SCALAR_SIZE }>);
+
+impl AsRef<[u8]> for EcdhB283kSecretKey {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
 
 /// Shared secret from ECDH-B283k KEM
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct EcdhB283kSharedSecret(ApiKey);
 
+impl AsRef<[u8]> for EcdhB283kSharedSecret {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
+    }
+}
+
 /// Ciphertext for ECDH-B283k KEM (compressed ephemeral public key)
 #[derive(Clone)]
 pub struct EcdhB283kCiphertext([u8; ec_b283k::B283K_POINT_COMPRESSED_SIZE]);
+
+impl AsRef<[u8]> for EcdhB283kCiphertext {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl AsMut<[u8]> for EcdhB283kCiphertext {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
 
 // --- Public key methods ---
 impl EcdhB283kPublicKey {

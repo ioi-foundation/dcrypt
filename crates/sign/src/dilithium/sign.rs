@@ -372,19 +372,27 @@ where
         .squeeze(&mut c_tilde_seed_recomputed)
         .map_err(SignError::from_algo)?;
 
-    if !bool::from(c_tilde_seed_sig.ct_eq(&c_tilde_seed_recomputed)) {
+    // 1. Check challenge equality (Constant Time)
+    let challenge_match = c_tilde_seed_sig.ct_eq(&c_tilde_seed_recomputed);
+
+    // 2. Verify hint count (Always execute to prevent timing leaks)
+    let mut total_ones = 0usize;
+    for row in &h_hint_poly.polys {
+        total_ones += row.coeffs.iter().filter(|&&b| b == 1).count();
+    }
+    let hints_valid = total_ones <= P::OMEGA_PARAM as usize;
+
+    // 3. Return errors if necessary (Branching)
+    // We check challenge match first to maintain error precedence,
+    // but the timing leak is plugged because the hint counting loop above ran regardless.
+    if !bool::from(challenge_match) {
         return Err(SignError::Verification {
             algorithm: P::NAME,
             details: "Verification failed: challenge mismatch".into(),
         });
     }
 
-    // Verify hint count
-    let mut total_ones = 0usize;
-    for row in &h_hint_poly.polys {
-        total_ones += row.coeffs.iter().filter(|&&b| b == 1).count();
-    }
-    if total_ones > P::OMEGA_PARAM as usize {
+    if !hints_valid {
         return Err(SignError::Verification {
             algorithm: P::NAME,
             details: "Verification failed: too many hints in signature".into(),
