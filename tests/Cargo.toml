@@ -8,15 +8,15 @@ repository.workspace = true
 license.workspace = true
 
 [dependencies]
-dcrypt-kem = { path = "../crates/kem", version = "=0.14.0-beta.7" }
-dcrypt-sign = { path = "../crates/sign", version = "=0.14.0-beta.7" }
-dcrypt-algorithms = { path = "../crates/algorithms", version = "=0.14.0-beta.7" }
-dcrypt-params = { path = "../crates/params", version = "=0.14.0-beta.7" }
-dcrypt-symmetric = { path = "../crates/symmetric", version = "=0.14.0-beta.7" }
-dcrypt-hybrid = { path = "../crates/hybrid", version = "=0.14.0-beta.7" }
-dcrypt-api = { version = "=0.14.0-beta.7", path = "../crates/api" }
-dcrypt-common = { path = "../crates/common" , version = "=0.14.0-beta.7" }
-dcrypt-internal = { path = "../crates/internal" , version = "=0.14.0-beta.7" }
+dcrypt-kem = { path = "../crates/kem", version = "=1.0.0" }
+dcrypt-sign = { path = "../crates/sign", version = "=1.0.0" }
+dcrypt-algorithms = { path = "../crates/algorithms", version = "=1.0.0" }
+dcrypt-params = { path = "../crates/params", version = "=1.0.0" }
+dcrypt-symmetric = { path = "../crates/symmetric", version = "=1.0.0" }
+dcrypt-hybrid = { path = "../crates/hybrid", version = "=1.0.0" }
+dcrypt-api = { version = "=1.0.0", path = "../crates/api" }
+dcrypt-common = { path = "../crates/common" , version = "=1.0.0" }
+dcrypt-internal = { path = "../crates/internal" , version = "=1.0.0" }
 rand = { workspace = true }
 rand_chacha = { workspace = true }
 statrs = "0.16"

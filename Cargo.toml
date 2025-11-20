@@ -12,18 +12,18 @@ keywords.workspace = true
 
 [dependencies]
 # Core dependencies (always included)
-dcrypt-api = { version = "=0.14.0-beta.7", path = "crates/api" }
-dcrypt-common = { version = "=0.14.0-beta.7", path = "crates/common" }
-dcrypt-internal = { version = "=0.14.0-beta.7", path = "crates/internal" }
-dcrypt-params = { version = "=0.14.0-beta.7", path = "crates/params" }
+dcrypt-api = { version = "=1.0.0", path = "crates/api" }
+dcrypt-common = { version = "=1.0.0", path = "crates/common" }
+dcrypt-internal = { version = "=1.0.0", path = "crates/internal" }
+dcrypt-params = { version = "=1.0.0", path = "crates/params" }
 
 # Optional algorithm crates
-dcrypt-algorithms = { version = "=0.14.0-beta.7", path = "crates/algorithms", optional = true }
-dcrypt-symmetric = { version = "=0.14.0-beta.7", path = "crates/symmetric", optional = true }
-dcrypt-kem = { version = "=0.14.0-beta.7", path = "crates/kem", optional = true }
-dcrypt-sign = { version = "=0.14.0-beta.7", path = "crates/sign", optional = true }
-dcrypt-pke = { version = "=0.14.0-beta.7", path = "crates/pke", optional = true }
-dcrypt-hybrid = { version = "=0.14.0-beta.7", path = "crates/hybrid", optional = true }
+dcrypt-algorithms = { version = "=1.0.0", path = "crates/algorithms", optional = true }
+dcrypt-symmetric = { version = "=1.0.0", path = "crates/symmetric", optional = true }
+dcrypt-kem = { version = "=1.0.0", path = "crates/kem", optional = true }
+dcrypt-sign = { version = "=1.0.0", path = "crates/sign", optional = true }
+dcrypt-pke = { version = "=1.0.0", path = "crates/pke", optional = true }
+dcrypt-hybrid = { version = "=1.0.0", path = "crates/hybrid", optional = true }
 
 # Re-export workspace dependencies that users might need
 rand = { workspace = true, optional = true }
@@ -86,7 +86,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version     = "0.14.0-beta.7"
+version     = "1.0.0"
 edition     = "2021"
 authors     = ["Heath Ledger"]
 description = "dcrypt is a pure Rust software-only cryptographic library for DePIN Network's Web4 infrastructure framework providing both traditional and post-quantum cryptography. Designed with emphasis on security, modularity, performance, and usability, dcrypt eliminates foreign function interfaces (FFI) ensuring memory safety and cross-platform compatibility."
