@@ -23,9 +23,9 @@ no_std = ["alloc",  # no_std typically needs alloc for Vec, String, etc.
 alloc = []  # Feature for allocation support in no_std environments
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=1.0.0" }
-dcrypt-common = { path = "../common", version = "=1.0.0" }
-dcrypt-internal = { path = "../internal", version = "=1.0.0" }
+dcrypt-api = { path = "../api", version = "=1.0.1" }
+dcrypt-common = { path = "../common", version = "=1.0.1" }
+dcrypt-internal = { path = "../internal", version = "=1.0.1" }
 zeroize = { workspace = true }
 rand = { workspace = true }
 hex = "0.4.3"

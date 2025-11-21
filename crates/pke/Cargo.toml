@@ -31,11 +31,11 @@ no_std = [
 ]
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=1.0.0", default-features = false }
-dcrypt-common = { path = "../common", version = "=1.0.0", default-features = false }
-dcrypt-algorithms = { path = "../algorithms", version = "=1.0.0", default-features = false, features = ["ec", "kdf", "aead", "hash"] }
-dcrypt-internal = { path = "../internal", version = "=1.0.0", default-features = false }
-dcrypt-params = { path = "../params", version = "=1.0.0" }
+dcrypt-api = { path = "../api", version = "=1.0.1", default-features = false }
+dcrypt-common = { path = "../common", version = "=1.0.1", default-features = false }
+dcrypt-algorithms = { path = "../algorithms", version = "=1.0.1", default-features = false, features = ["ec", "kdf", "aead", "hash"] }
+dcrypt-internal = { path = "../internal", version = "=1.0.1", default-features = false }
+dcrypt-params = { path = "../params", version = "=1.0.1" }
 rand = { workspace = true, default-features = false }
 zeroize = { workspace = true }
 subtle = { workspace = true, default-features = false }

@@ -57,10 +57,10 @@ pairing-debug = []
 
 [dependencies]
 # Internal dependencies
-dcrypt-api = { path = "../api", version = "=1.0.0", default-features = false }
-dcrypt-common = { path = "../common", version = "=1.0.0", default-features = false }
-dcrypt-internal = { path = "../internal", version = "=1.0.0", default-features = false }
-dcrypt-params = { path = "../params", version = "=1.0.0" }
+dcrypt-api = { path = "../api", version = "=1.0.1", default-features = false }
+dcrypt-common = { path = "../common", version = "=1.0.1", default-features = false }
+dcrypt-internal = { path = "../internal", version = "=1.0.1", default-features = false }
+dcrypt-params = { path = "../params", version = "=1.0.1" }
 
 # Core cryptographic dependencies
 zeroize = { version = "1.5.7", features = ["zeroize_derive"], optional = true }
