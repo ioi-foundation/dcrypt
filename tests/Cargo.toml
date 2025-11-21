@@ -3,9 +3,10 @@ name = "dcrypt-tests"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-description = "Testing utilities and benchmarks for the DCRYPT library"
+description = "Testing utilities and benchmarks for the dcrypt library"
 repository.workspace = true
 license.workspace = true
+publish = false
 
 [dependencies]
 dcrypt-kem = { path = "../crates/kem", version = "=1.0.0" }
@@ -38,6 +39,3 @@ criterion = { version = "0.5", features = ["html_reports"] }
 [build-dependencies]
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
-
-[package.metadata.release]
-publish = false

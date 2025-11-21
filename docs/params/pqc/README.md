@@ -2,7 +2,7 @@
 
 This module within the `params` crate centralizes constants and parameter sets for various Post-Quantum Cryptography (PQC) algorithms. Many of these parameters are aligned with the specifications from the NIST Post-Quantum Cryptography Standardization project.
 
-Having these parameters in a dedicated location ensures consistency and ease of reference for PQC algorithm implementations throughout the DCRYPT ecosystem.
+Having these parameters in a dedicated location ensures consistency and ease of reference for PQC algorithm implementations throughout the dcrypt ecosystem.
 
 ## PQC Algorithm Parameter Sets
 

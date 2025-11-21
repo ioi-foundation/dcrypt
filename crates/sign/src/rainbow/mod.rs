@@ -1,6 +1,6 @@
 // File: dcrypt-sign/src/rainbow/mod.rs
 
-use dcrypt_api::{Result, Signature as SignatureTrait};
+use dcrypt_api::{Error, Result, Signature as SignatureTrait};
 use rand::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
@@ -55,35 +55,31 @@ impl AsMut<[u8]> for RainbowSignature {
 impl SignatureTrait for RainbowI {
     type PublicKey = RainbowPublicKey;
     type SecretKey = RainbowSecretKey;
-    type SignatureData = RainbowSignature; // Changed from 'Signature' to 'SignatureData'
-    type KeyPair = (Self::PublicKey, Self::SecretKey); // Added this type definition
+    type SignatureData = RainbowSignature;
+    type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
         "Rainbow-I"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 161600];
-        let mut secret_key = vec![0u8; 103648];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((RainbowPublicKey(public_key), RainbowSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "Rainbow-I key generation",
+        })
     }
 
-    // Add the missing public_key function
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
 
-    // Add the missing secret_key function
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
     fn sign(_message: &[u8], _secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
-        // Placeholder implementation
-        Ok(RainbowSignature(vec![0u8; 64]))
+        Err(Error::NotImplemented {
+            feature: "Rainbow-I signing",
+        })
     }
 
     fn verify(
@@ -91,8 +87,9 @@ impl SignatureTrait for RainbowI {
         _signature: &Self::SignatureData,
         _public_key: &Self::PublicKey,
     ) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+        Err(Error::NotImplemented {
+            feature: "Rainbow-I verification",
+        })
     }
 }
 
@@ -102,35 +99,31 @@ pub struct RainbowIII;
 impl SignatureTrait for RainbowIII {
     type PublicKey = RainbowPublicKey;
     type SecretKey = RainbowSecretKey;
-    type SignatureData = RainbowSignature; // Changed from 'Signature' to 'SignatureData'
-    type KeyPair = (Self::PublicKey, Self::SecretKey); // Added this type definition
+    type SignatureData = RainbowSignature;
+    type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
         "Rainbow-III"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 861400];
-        let mut secret_key = vec![0u8; 611300];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((RainbowPublicKey(public_key), RainbowSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "Rainbow-III key generation",
+        })
     }
 
-    // Add the missing public_key function
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
 
-    // Add the missing secret_key function
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
     fn sign(_message: &[u8], _secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
-        // Placeholder implementation
-        Ok(RainbowSignature(vec![0u8; 96]))
+        Err(Error::NotImplemented {
+            feature: "Rainbow-III signing",
+        })
     }
 
     fn verify(
@@ -138,8 +131,9 @@ impl SignatureTrait for RainbowIII {
         _signature: &Self::SignatureData,
         _public_key: &Self::PublicKey,
     ) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+        Err(Error::NotImplemented {
+            feature: "Rainbow-III verification",
+        })
     }
 }
 
@@ -149,35 +143,31 @@ pub struct RainbowV;
 impl SignatureTrait for RainbowV {
     type PublicKey = RainbowPublicKey;
     type SecretKey = RainbowSecretKey;
-    type SignatureData = RainbowSignature; // Changed from 'Signature' to 'SignatureData'
-    type KeyPair = (Self::PublicKey, Self::SecretKey); // Added this type definition
+    type SignatureData = RainbowSignature;
+    type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
         "Rainbow-V"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 1885400];
-        let mut secret_key = vec![0u8; 1375700];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((RainbowPublicKey(public_key), RainbowSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "Rainbow-V key generation",
+        })
     }
 
-    // Add the missing public_key function
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
 
-    // Add the missing secret_key function
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
     fn sign(_message: &[u8], _secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
-        // Placeholder implementation
-        Ok(RainbowSignature(vec![0u8; 128]))
+        Err(Error::NotImplemented {
+            feature: "Rainbow-V signing",
+        })
     }
 
     fn verify(
@@ -185,7 +175,8 @@ impl SignatureTrait for RainbowV {
         _signature: &Self::SignatureData,
         _public_key: &Self::PublicKey,
     ) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+        Err(Error::NotImplemented {
+            feature: "Rainbow-V verification",
+        })
     }
 }

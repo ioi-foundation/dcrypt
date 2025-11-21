@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/dcrypt-pke.svg)](https://crates.io/crates/dcrypt-pke)
 [![Docs.rs](https://docs.rs/dcrypt-pke/badge.svg)](https://docs.rs/dcrypt-pke)
 
-Part of the DCRYPT library, this crate provides Public Key Encryption (PKE) schemes. It specifically contains implementations of the Elliptic Curve Integrated Encryption Scheme (ECIES).
+Part of the dcrypt library, this crate provides Public Key Encryption (PKE) schemes. It specifically contains implementations of the Elliptic Curve Integrated Encryption Scheme (ECIES).
 
 The library is designed with a focus on security, modularity, and `no_std` compatibility (with `alloc`), ensuring it can be used in a wide range of Rust projects, including those in constrained environments like embedded systems or WebAssembly.
 

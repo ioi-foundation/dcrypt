@@ -1,6 +1,6 @@
 // File: crates/api/src/types.rs
 
-//! Core types with security guarantees for the DCRYPT library
+//! Core types with security guarantees for the dcrypt library
 //!
 //! This module provides fundamental type definitions that enforce
 //! compile-time and runtime guarantees for cryptographic operations.

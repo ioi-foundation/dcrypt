@@ -1,7 +1,7 @@
-//! Common implementations and shared functionality for the DCRYPT library
+//! Common implementations and shared functionality for the dcrypt library
 //!
 //! This crate provides common utilities and implementations used across
-//! multiple DCRYPT components.
+//! multiple dcrypt components.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 

@@ -36,18 +36,18 @@ impl Aes128Key {
     /// Securely serializes the key for storage
     pub fn to_secure_string(&self) -> String {
         let key_b64 = base64::encode(self.0);
-        format!("DCRYPT-AES128-KEY:{}", key_b64)
+        format!("dcrypt-AES128-KEY:{}", key_b64)
     }
 
     /// Loads a key from a secure serialized format
     pub fn from_secure_string(serialized: &str) -> Result<Self> {
         validate_format(
-            serialized.starts_with("DCRYPT-AES128-KEY:"),
+            serialized.starts_with("dcrypt-AES128-KEY:"),
             "key deserialization",
             "invalid key format",
         )?;
 
-        let b64_part = &serialized["DCRYPT-AES128-KEY:".len()..];
+        let b64_part = &serialized["dcrypt-AES128-KEY:".len()..];
         let key_bytes =
             base64::decode(b64_part).map_err(|_| dcrypt_api::error::Error::SerializationError {
                 context: "base64 decode",
@@ -96,18 +96,18 @@ impl Aes256Key {
     /// Securely serializes the key for storage
     pub fn to_secure_string(&self) -> String {
         let key_b64 = base64::encode(self.0);
-        format!("DCRYPT-AES256-KEY:{}", key_b64)
+        format!("dcrypt-AES256-KEY:{}", key_b64)
     }
 
     /// Loads a key from a secure serialized format
     pub fn from_secure_string(serialized: &str) -> Result<Self> {
         validate_format(
-            serialized.starts_with("DCRYPT-AES256-KEY:"),
+            serialized.starts_with("dcrypt-AES256-KEY:"),
             "key deserialization",
             "invalid key format",
         )?;
 
-        let b64_part = &serialized["DCRYPT-AES256-KEY:".len()..];
+        let b64_part = &serialized["dcrypt-AES256-KEY:".len()..];
         let key_bytes =
             base64::decode(b64_part).map_err(|_| dcrypt_api::error::Error::SerializationError {
                 context: "base64 decode",

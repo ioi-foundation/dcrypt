@@ -1,7 +1,7 @@
 //! Message Authentication Code (MAC) implementations with type-safe interfaces
 //!
 //! This module contains implementations of various Message Authentication Codes (MACs)
-//! used throughout the DCRYPT library, with improved type safety and ergonomic APIs.
+//! used throughout the dcrypt library, with improved type safety and ergonomic APIs.
 
 use crate::error::Result;
 use subtle::ConstantTimeEq;

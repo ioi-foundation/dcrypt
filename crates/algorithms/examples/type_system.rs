@@ -1,4 +1,4 @@
-//! Example demonstrating DCRYPT's type system for keys, nonces, etc.
+//! Example demonstrating dcrypt's type system for keys, nonces, etc.
 
 // Standard library features (if available)
 #[cfg(feature = "std")]
@@ -8,7 +8,7 @@ use std::println;
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::println;
 
-// Core DCRYPT API traits and types
+// Core dcrypt API traits and types
 use dcrypt_api::error::{Error as CoreError, Result as CoreResult};
 
 // Algorithms crate components and types
@@ -33,7 +33,7 @@ use dcrypt_algorithms::types::{
 use rand::rngs::OsRng;
 
 fn main() -> CoreResult<()> {
-    println!("DCRYPT Type System Example:");
+    println!("dcrypt Type System Example:");
 
     // --- SymmetricKey Example ---
     let aes128_key_bytes = [0x42u8; 16];

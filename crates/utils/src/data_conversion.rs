@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_base64_standard_conversions() {
-        let original_str = "Hello, DCRYPT! This is a test string.";
+        let original_str = "Hello, dcrypt! This is a test string.";
         let bytes = original_str.as_bytes();
         let base64_string = "SGVsbG8sIERDUllQVCEgVGhpcyBpcyBhIHRlc3Qgc3RyaW5nLg==";
 

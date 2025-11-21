@@ -1,6 +1,6 @@
 // File: dcrypt-kem/src/mceliece/mod.rs
 
-use dcrypt_api::{Kem, Result};
+use dcrypt_api::{Error, Kem, Result};
 use rand::{CryptoRng, RngCore};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
@@ -159,13 +159,10 @@ impl Kem for McEliece348864 {
         "McEliece-348864"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Self::PublicKey, Self::SecretKey)> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 261120];
-        let mut secret_key = vec![0u8; 6492];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((McEliecePublicKey(public_key), McElieceSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<(Self::PublicKey, Self::SecretKey)> {
+        Err(Error::NotImplemented {
+            feature: "McEliece-348864 key generation",
+        })
     }
 
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
@@ -180,19 +177,18 @@ impl Kem for McEliece348864 {
         _rng: &mut R,
         _public_key: &Self::PublicKey,
     ) -> Result<(Self::Ciphertext, Self::SharedSecret)> {
-        // Placeholder implementation
-        Ok((
-            McElieceCiphertext(vec![0u8; 128]),
-            McElieceSharedSecret(vec![0u8; 32]),
-        ))
+        Err(Error::NotImplemented {
+            feature: "McEliece-348864 encapsulation",
+        })
     }
 
     fn decapsulate(
         _secret_key: &Self::SecretKey,
         _ciphertext: &Self::Ciphertext,
     ) -> Result<Self::SharedSecret> {
-        // Placeholder implementation
-        Ok(McElieceSharedSecret(vec![0u8; 32]))
+        Err(Error::NotImplemented {
+            feature: "McEliece-348864 decapsulation",
+        })
     }
 }
 
@@ -210,13 +206,10 @@ impl Kem for McEliece6960119 {
         "McEliece-6960119"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Self::PublicKey, Self::SecretKey)> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 1047319];
-        let mut secret_key = vec![0u8; 13932];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((McEliecePublicKey(public_key), McElieceSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<(Self::PublicKey, Self::SecretKey)> {
+        Err(Error::NotImplemented {
+            feature: "McEliece-6960119 key generation",
+        })
     }
 
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
@@ -231,18 +224,17 @@ impl Kem for McEliece6960119 {
         _rng: &mut R,
         _public_key: &Self::PublicKey,
     ) -> Result<(Self::Ciphertext, Self::SharedSecret)> {
-        // Placeholder implementation
-        Ok((
-            McElieceCiphertext(vec![0u8; 240]),
-            McElieceSharedSecret(vec![0u8; 32]),
-        ))
+        Err(Error::NotImplemented {
+            feature: "McEliece-6960119 encapsulation",
+        })
     }
 
     fn decapsulate(
         _secret_key: &Self::SecretKey,
         _ciphertext: &Self::Ciphertext,
     ) -> Result<Self::SharedSecret> {
-        // Placeholder implementation
-        Ok(McElieceSharedSecret(vec![0u8; 32]))
+        Err(Error::NotImplemented {
+            feature: "McEliece-6960119 decapsulation",
+        })
     }
 }

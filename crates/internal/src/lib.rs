@@ -1,7 +1,7 @@
-//! Internal utility functions for the DCRYPT library
+//! Internal utility functions for the dcrypt library
 //!
 //! This crate provides internal utilities and helpers that are used by
-//! other DCRYPT crates but are not part of the public API.
+//! other dcrypt crates but are not part of the public API.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 

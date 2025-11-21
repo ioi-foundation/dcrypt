@@ -1,6 +1,6 @@
-//! Public API traits and types for the DCRYPT library
+//! Public API traits and types for the dcrypt library
 //!
-//! This crate provides the public API surface for the DCRYPT ecosystem, including
+//! This crate provides the public API surface for the dcrypt ecosystem, including
 //! trait definitions, error types, and common types used throughout the library.
 
 #![cfg_attr(not(feature = "std"), no_std)]

@@ -1,9 +1,9 @@
 // File: dcrypt/crates/utils/src/lib.rs
 
-//! Utility functions for the DCRYPT library
+//! Utility functions for the dcrypt library
 //!
 //! This crate provides common utilities and helpers that are used by
-//! other DCRYPT crates but are not part of the public API.
+//! other dcrypt crates but are not part of the public API.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 

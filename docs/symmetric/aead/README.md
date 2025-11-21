@@ -55,7 +55,7 @@ A key design goal of this module is to provide type-safe and convenient ways to 
     *   Offer `to_string()` (base64) and `from_string()` for serialization.
 -   **Ciphertext Packages** (e.g., `ChaCha20Poly1305CiphertextPackage`):
     *   Structs that combine a nonce and its corresponding ciphertext.
-    *   Provide `to_string()` and `from_string()` methods for a simple serialized format (e.g., `DCRYPT-ALGORITHM:{nonce_b64}:{ciphertext_b64}`). This helps ensure the correct nonce is used during decryption.
+    *   Provide `to_string()` and `from_string()` methods for a simple serialized format (e.g., `dcrypt-ALGORITHM:{nonce_b64}:{ciphertext_b64}`). This helps ensure the correct nonce is used during decryption.
 
 ## Usage Example (AES-256-GCM)
 

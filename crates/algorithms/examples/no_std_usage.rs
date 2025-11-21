@@ -1,4 +1,4 @@
-//! Example demonstrating `no_std` usage of DCRYPT primitives
+//! Example demonstrating `no_std` usage of dcrypt primitives
 //!
 //! This example shows how to use core algorithms in a `no_std` environment,
 //! assuming an allocator is available (via the `alloc` feature).
@@ -11,7 +11,7 @@ use std::{println, vec::Vec};
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::{println, vec::Vec};
 
-// Core DCRYPT API traits and types
+// Core dcrypt API traits and types
 use dcrypt_api::error::{Error as CoreError, Result as CoreResult};
 use dcrypt_api::traits::symmetric::{DecryptOperation, EncryptOperation};
 use dcrypt_api::traits::SymmetricCipher as ApiSymmetricCipherTrait; // Import the trait
@@ -31,11 +31,11 @@ use rand::rngs::OsRng;
 use rand::RngCore;
 
 fn main() -> CoreResult<()> {
-    println!("DCRYPT no_std usage example (with alloc):");
+    println!("dcrypt no_std usage example (with alloc):");
 
     // --- Hashing with SHA-256 ---
     println!("\n--- SHA-256 Hashing ---");
-    let data_to_hash = b"Hello, DCRYPT no_std!";
+    let data_to_hash = b"Hello, dcrypt no_std!";
     let mut hasher = Sha256::new(); // Now uses HashFunction::new()
     hasher
         .update(data_to_hash) // Now uses HashFunction::update()

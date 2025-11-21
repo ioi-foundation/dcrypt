@@ -1,6 +1,6 @@
 # Common Security Primitives (`common/security`)
 
-This module is a cornerstone of the DCRYPT library's security model. It provides essential types, traits, and utilities for handling sensitive data securely, performing operations in a way that mitigates side-channel attacks (especially timing attacks), and ensuring proper memory management for cryptographic secrets.
+This module is a cornerstone of the dcrypt library's security model. It provides essential types, traits, and utilities for handling sensitive data securely, performing operations in a way that mitigates side-channel attacks (especially timing attacks), and ensuring proper memory management for cryptographic secrets.
 
 ## Key Components
 
@@ -42,8 +42,8 @@ This module is a cornerstone of the DCRYPT library's security model. It provides
 
 ## Purpose and Importance
 
-The `common::security` module underpins DCRYPT's commitment to robust security practices. By providing these reusable components:
--   **Reduces Risk of Error**: Developers using DCRYPT primitives are less likely to make common mistakes in handling sensitive data or implementing constant-time operations.
+The `common::security` module underpins dcrypt's commitment to robust security practices. By providing these reusable components:
+-   **Reduces Risk of Error**: Developers using dcrypt primitives are less likely to make common mistakes in handling sensitive data or implementing constant-time operations.
 -   **Centralizes Security Logic**: Security-critical patterns are implemented once and reused, making auditing and maintenance easier.
 -   **Enforces Best Practices**: The type system and trait bounds encourage or enforce the use of these secure patterns.
 

@@ -21,7 +21,7 @@ This module defines the error handling mechanisms for the `dcrypt-symmetric` cra
     *   `From<PrimitiveError> for Error`: Allows errors from `dcrypt-algorithms` to be converted into `symmetric::error::Error`.
     *   `From<CoreError> for Error`: Allows errors from `dcrypt-api` (like `api::error::Error::InvalidLength`) to be converted, typically into a `Format` error.
     *   `From<std::io::Error> for Error` (std-only): Converts I/O errors into `Error::Io(String)`.
-    *   `From<Error> for CoreError`: Enables `symmetric::error::Error` to be converted into the DCRYPT API's core error type (`api::error::Error`), facilitating consistent error handling if `dcrypt-symmetric` is used as part of a larger DCRYPT application.
+    *   `From<Error> for CoreError`: Enables `symmetric::error::Error` to be converted into the dcrypt API's core error type (`api::error::Error`), facilitating consistent error handling if `dcrypt-symmetric` is used as part of a larger dcrypt application.
 
 4.  **`validate` Module (`symmetric::error::validate`)**:
     This sub-module provides validation utility functions specific to the needs of the `symmetric` crate:

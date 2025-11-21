@@ -1,8 +1,8 @@
-# DCRYPT - Pure Rust Cryptographic Library
+# dcrypt - Pure Rust Cryptographic Library
 
-DCRYPT is a pure Rust cryptographic library implementing both traditional and post-quantum cryptographic algorithms. Built with security, modularity, and usability as core principles, it eliminates foreign function interfaces (FFI) to ensure memory safety and cross-platform compatibility.
+dcrypt is a pure Rust cryptographic library implementing both traditional and post-quantum cryptographic algorithms. Built with security, modularity, and usability as core principles, it eliminates foreign function interfaces (FFI) to ensure memory safety and cross-platform compatibility.
 
-This documentation provides an overview of the DCRYPT project structure, its core components, and guidance on using its cryptographic functionalities.
+This documentation provides an overview of the dcrypt project structure, its core components, and guidance on using its cryptographic functionalities.
 
 ## Key Features
 
@@ -17,10 +17,10 @@ This documentation provides an overview of the DCRYPT project structure, its cor
 
 ## Project Structure
 
-DCRYPT is organized into the following main crates:
+dcrypt is organized into the following main crates:
 
 -   **`dcrypt_docs/api/README.md`**: Defines the public API surface, including core traits, error handling infrastructure, and fundamental data types.
--   **`dcrypt_docs/common/README.md`**: Provides shared utilities and security primitives used across the DCRYPT ecosystem.
+-   **`dcrypt_docs/common/README.md`**: Provides shared utilities and security primitives used across the dcrypt ecosystem.
 -   **`dcrypt_docs/internal/README.md`**: Contains low-level helper functions not part of the public API, focusing on constant-time operations, endianness, and zeroing.
 -   **`dcrypt_docs/params/README.md`**: A `no_std` crate centralizing cryptographic parameters and constants for various algorithms.
 -   **`dcrypt_docs/algorithms/README.md`**: The core crate implementing foundational cryptographic primitives like hash functions, block ciphers, MACs, AEADs, KDFs, and XOFs.
@@ -33,7 +33,7 @@ DCRYPT is organized into the following main crates:
 
 ## Quick Start
 
-To use DCRYPT in your project, add it as a dependency in your `Cargo.toml`:
+To use dcrypt in your project, add it as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -120,7 +120,7 @@ fn main() -> dcrypt_api::error::Result<()> {
 
 ## Security Considerations
 
-DCRYPT is designed with security as a primary concern. Key security features include:
+dcrypt is designed with security as a primary concern. Key security features include:
 
 -   **Constant-Time Operations**: Many cryptographic primitives are implemented to execute in time independent of secret inputs, helping to prevent timing side-channel attacks. Refer to `CONSTANT_TIME_POLICY.md` for details.
 -   **Secure Memory Handling**: Sensitive data like keys and intermediate cryptographic values are handled using types that ensure automatic zeroization on drop (e.g., `SecretBuffer`, `SecretVec` from the `common` crate).
@@ -132,7 +132,7 @@ Users should always ensure they are using appropriate key management practices, 
 
 ## Feature Flags
 
-DCRYPT utilizes feature flags to tailor the build for different environments and requirements:
+dcrypt utilizes feature flags to tailor the build for different environments and requirements:
 
 -   `std` (default): Enables features requiring the standard library, including heap allocations and OS-level RNG.
 -   `alloc`: Enables features requiring heap allocation (like `Vec`) but without the full standard library.
@@ -143,7 +143,7 @@ DCRYPT utilizes feature flags to tailor the build for different environments and
 
 ## Contributing
 
-Contributions to DCRYPT are welcome! Please refer to the (forthcoming) `CONTRIBUTING.md` for guidelines on:
+Contributions to dcrypt are welcome! Please refer to the (forthcoming) `CONTRIBUTING.md` for guidelines on:
 
 -   Code style and formatting.
 -   Testing requirements.
@@ -154,4 +154,4 @@ Security is paramount; all contributions, especially those touching cryptographi
 
 ## License
 
-DCRYPT is licensed under the Apache License, Version 2.0. (See `LICENSE` file or `Cargo.toml` for details).
+dcrypt is licensed under the Apache License, Version 2.0. (See `LICENSE` file or `Cargo.toml` for details).

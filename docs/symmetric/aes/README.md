@@ -35,7 +35,7 @@ This module within the `dcrypt-symmetric` crate focuses on providing high-level 
 The `symmetric::aes` module aims to:
 -   Provide dedicated, type-safe key objects (`Aes128Key`, `Aes256Key`) for AES, enhancing security by ensuring correct key sizes and automatic zeroization.
 -   Offer convenient utilities for AES key management, including random generation and password-based derivation.
--   Serve as a clear entry point for users looking to use AES-based authenticated encryption (specifically AES-GCM) within the DCRYPT library.
+-   Serve as a clear entry point for users looking to use AES-based authenticated encryption (specifically AES-GCM) within the dcrypt library.
 -   Abstract the direct use of `algorithms::block::aes` and `algorithms::aead::gcm` primitives for common AES-GCM use cases.
 
 ## Usage Example (Using `Aes128Gcm` re-exported here)

@@ -1,6 +1,6 @@
-# DCRYPT Common Utilities (`common`)
+# dcrypt Common Utilities (`common`)
 
-The `common` crate provides shared functionality, data structures, and security primitives that are used across multiple crates within the DCRYPT workspace. Its main purpose is to centralize common code, especially related to security best practices, to ensure consistency and reduce redundancy.
+The `common` crate provides shared functionality, data structures, and security primitives that are used across multiple crates within the dcrypt workspace. Its main purpose is to centralize common code, especially related to security best practices, to ensure consistency and reduce redundancy.
 
 ## Core Components
 
@@ -39,11 +39,11 @@ The `common` crate provides shared functionality, data structures, and security 
 
 ## Purpose and Usage
 
-The `common` crate is a foundational library within DCRYPT.
+The `common` crate is a foundational library within dcrypt.
 -   It promotes code reuse for essential security patterns (like zeroization and constant-time comparison).
 -   It provides a centralized place for low-level utilities that don't fit into the `api` or `internal` crates but are needed by multiple algorithm implementations.
 -   Higher-level crates like `algorithms`, `symmetric`, `kem`, and `sign` depend on `common` for these shared functionalities.
 
 For instance, a cryptographic algorithm implementation in `dcrypt-algorithms` might use `SecretBuffer` to store its round keys, `EphemeralSecret` to manage temporary sensitive state during computation, and `barrier` functions to ensure correct execution order for side-channel resistance. Mathematical utilities might be used in RSA or Diffie-Hellman implementations.
 
-By centralizing these common elements, DCRYPT aims to maintain a higher standard of security and consistency across its various components.
+By centralizing these common elements, dcrypt aims to maintain a higher standard of security and consistency across its various components.

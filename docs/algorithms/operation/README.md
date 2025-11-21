@@ -59,4 +59,4 @@ The module provides concrete builder implementations for common cryptographic ta
 
 The operation traits defined here are often used to *implement* the higher-level operation patterns defined in `dcrypt-api/src/traits/symmetric.rs` (like `api::traits::symmetric::EncryptOperation` and `DecryptOperation`). For example, an AEAD cipher struct might implement `api::traits::SymmetricCipher` where its `encrypt()` method returns an instance of `algorithms::operation::aead::AeadEncryptOperation` (or a similar struct specific to that cipher).
 
-This module provides the building blocks for creating ergonomic and safe cryptographic APIs within the DCRYPT ecosystem.
+This module provides the building blocks for creating ergonomic and safe cryptographic APIs within the dcrypt ecosystem.

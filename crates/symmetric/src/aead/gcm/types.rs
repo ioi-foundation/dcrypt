@@ -69,16 +69,16 @@ impl AesCiphertextPackage {
     /// Parses a serialized package
     pub fn from_string(s: &str) -> Result<Self> {
         validate_format(
-            s.starts_with("DCRYPT-AES-GCM:"),
+            s.starts_with("dcrypt-AES-GCM:"),
             "package deserialization",
             "invalid package format",
         )?;
 
-        let parts: Vec<&str> = s["DCRYPT-AES-GCM:".len()..].split(':').collect();
+        let parts: Vec<&str> = s["dcrypt-AES-GCM:".len()..].split(':').collect();
         validate_format(
             parts.len() == 2,
             "package deserialization",
-            "expected format: DCRYPT-AES-GCM:<nonce>:<ciphertext>",
+            "expected format: dcrypt-AES-GCM:<nonce>:<ciphertext>",
         )?;
 
         let nonce_bytes =
@@ -111,6 +111,6 @@ impl fmt::Display for AesCiphertextPackage {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let nonce_b64 = base64::encode(self.nonce.as_bytes());
         let ciphertext_b64 = base64::encode(&self.ciphertext);
-        write!(f, "DCRYPT-AES-GCM:{}:{}", nonce_b64, ciphertext_b64)
+        write!(f, "dcrypt-AES-GCM:{}:{}", nonce_b64, ciphertext_b64)
     }
 }

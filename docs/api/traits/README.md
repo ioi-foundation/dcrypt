@@ -1,6 +1,6 @@
 # API Traits (`api/traits`)
 
-This module defines the core public traits that cryptographic components in the DCRYPT ecosystem must implement. These traits establish a consistent and type-safe interface for various cryptographic operations, abstracting the underlying algorithm details.
+This module defines the core public traits that cryptographic components in the dcrypt ecosystem must implement. These traits establish a consistent and type-safe interface for various cryptographic operations, abstracting the underlying algorithm details.
 
 ## Key Traits
 
@@ -65,10 +65,10 @@ These traits are primarily used to categorize algorithms and define their fundam
 
 ## Purpose and Usage
 
-These traits provide a common language for interacting with cryptographic primitives in DCRYPT.
+These traits provide a common language for interacting with cryptographic primitives in dcrypt.
 -   **Abstraction**: Users can write generic code that works with any KEM, signature scheme, or symmetric cipher that implements these traits.
 -   **Type Safety**: Associated types (like `Self::Key`, `Self::Nonce`) ensure that correct types are used with specific algorithms, often enforced further by specific implementations using types from `dcrypt-algorithms/src/types`.
 -   **Discoverability**: They define a clear set of operations expected from each category of cryptographic algorithm.
--   **Modularity**: Implementations of these traits reside in other DCRYPT crates (e.g., `algorithms`, `symmetric`, `kem`, `sign`), allowing users to depend only on the functionalities they need.
+-   **Modularity**: Implementations of these traits reside in other dcrypt crates (e.g., `algorithms`, `symmetric`, `kem`, `sign`), allowing users to depend only on the functionalities they need.
 
-By adhering to these traits, the DCRYPT library aims to provide a secure, consistent, and user-friendly cryptographic toolkit.
+By adhering to these traits, the dcrypt library aims to provide a secure, consistent, and user-friendly cryptographic toolkit.

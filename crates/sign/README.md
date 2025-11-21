@@ -5,13 +5,13 @@
 [![License](https://img.shields.io/crates/l/dcrypt-sign.svg)](https://crates.io/crates/dcrypt-sign)
 [![Build Status](https://github.com/your-repo/dcrypt-sign/actions/workflows/rust.yml/badge.svg)](https://github.com/your-repo/dcrypt-sign/actions)
 
-Digital Signature Schemes for the DCRYPT library.
+Digital Signature Schemes for the dcrypt library.
 
 ## Overview
 
 `dcrypt-sign` is a crate that provides a comprehensive suite of digital signature algorithms. It features a unified API for both traditional, widely-used schemes and next-generation, post-quantum cryptographic standards. The implementations are designed with security, correctness, and performance in mind, conforming to official standards such as FIPS and RFCs.
 
-The primary goal of this crate is to offer robust, production-ready signature algorithms that adhere to the `dcrypt-api` traits, ensuring seamless integration within the DCRYPT ecosystem.
+The primary goal of this crate is to offer robust, production-ready signature algorithms that adhere to the `dcrypt-api` traits, ensuring seamless integration within the dcrypt ecosystem.
 
 ## Features
 

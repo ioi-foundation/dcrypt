@@ -1,6 +1,6 @@
 # Cryptographic Parameters (`params`)
 
-The `params` crate is a `no_std` library dedicated to centralizing constant values and parameter sets for various cryptographic algorithms used within the DCRYPT ecosystem. This approach ensures consistency and makes it easier to manage and update parameters across different DCRYPT crates.
+The `params` crate is a `no_std` library dedicated to centralizing constant values and parameter sets for various cryptographic algorithms used within the dcrypt ecosystem. This approach ensures consistency and makes it easier to manage and update parameters across different dcrypt crates.
 
 By being `no_std`, this crate can be used in a wide range of environments, including embedded systems.
 
@@ -68,6 +68,6 @@ pub const KYBER768: Kyber768Params = Kyber768Params {
 -   **Clarity**: Makes algorithm parameters explicit and easy to find.
 -   **Maintainability**: If parameters need to be updated (e.g., due to new security recommendations or standard revisions), changes can be made in one place.
 -   **`no_std` Compatibility**: Ensures that these essential constants are available even in resource-constrained environments.
--   **Facilitates Generic Programming**: Algorithm implementations in other DCRYPT crates can refer to these constants generically or through specific parameter structs.
+-   **Facilitates Generic Programming**: Algorithm implementations in other dcrypt crates can refer to these constants generically or through specific parameter structs.
 
-This crate is a crucial dependency for `algorithms`, `kem`, `sign`, and other DCRYPT components that implement specific cryptographic schemes, as it provides them with the necessary operational parameters.
+This crate is a crucial dependency for `algorithms`, `kem`, `sign`, and other dcrypt components that implement specific cryptographic schemes, as it provides them with the necessary operational parameters.

@@ -35,4 +35,4 @@ This module defines the error handling system for the Public Key Encryption (PKE
 -   **Clarity**: Provides context for where the error occurred (e.g., "ECIES Encryption", "ECIES Decryption").
 -   **Integration**: Seamlessly converts to and from errors in the `api` and `algorithms` crates.
 
-This error system allows the `pke` crate to manage its specific operational failures while fitting neatly into the overall DCRYPT error handling strategy.
+This error system allows the `pke` crate to manage its specific operational failures while fitting neatly into the overall dcrypt error handling strategy.

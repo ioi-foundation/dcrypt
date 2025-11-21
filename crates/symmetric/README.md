@@ -1,7 +1,7 @@
 # Symmetric Cryptography (`symmetric`)
 
 
-The `dcrypt-symmetric` crate provides a high-level, secure, and easy-to-use API for common symmetric encryption algorithms within the DCRYPT ecosystem. It is built upon the low-level cryptographic primitives in `dcrypt-algorithms` and integrates with `dcrypt-api` for a unified and robust error-handling system.
+The `dcrypt-symmetric` crate provides a high-level, secure, and easy-to-use API for common symmetric encryption algorithms within the dcrypt ecosystem. It is built upon the low-level cryptographic primitives in `dcrypt-algorithms` and integrates with `dcrypt-api` for a unified and robust error-handling system.
 
 This crate is designed for both ease of use in common scenarios and the flexibility required for more complex applications, such as streaming large files.
 
@@ -25,7 +25,7 @@ This crate is designed for both ease of use in common scenarios and the flexibil
       * Memory-efficient streaming encryption and decryption for large files or data streams.
       * Handles nonce management automatically and securely across data chunks.
   * **Unified Error System**:
-      * Leverages the `dcrypt-api` error system for consistent and descriptive error handling across the entire DCRYPT library stack.
+      * Leverages the `dcrypt-api` error system for consistent and descriptive error handling across the entire dcrypt library stack.
   * **`no_std` Compatibility**: Core features are available in `no_std` environments.
 
 -----

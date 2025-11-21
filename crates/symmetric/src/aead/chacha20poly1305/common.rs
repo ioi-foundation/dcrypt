@@ -39,18 +39,18 @@ impl ChaCha20Poly1305Key {
     /// Securely serializes the key for storage
     pub fn to_secure_string(&self) -> String {
         let key_b64 = base64::encode(self.0);
-        format!("DCRYPT-CHACHA20POLY1305-KEY:{}", key_b64)
+        format!("dcrypt-CHACHA20POLY1305-KEY:{}", key_b64)
     }
 
     /// Loads a key from a secure serialized format
     pub fn from_secure_string(serialized: &str) -> Result<Self> {
         validate_format(
-            serialized.starts_with("DCRYPT-CHACHA20POLY1305-KEY:"),
+            serialized.starts_with("dcrypt-CHACHA20POLY1305-KEY:"),
             "key deserialization",
             "invalid key format",
         )?;
 
-        let b64_part = &serialized["DCRYPT-CHACHA20POLY1305-KEY:".len()..];
+        let b64_part = &serialized["dcrypt-CHACHA20POLY1305-KEY:".len()..];
         let key_bytes =
             base64::decode(b64_part).map_err(|_| dcrypt_api::error::Error::SerializationError {
                 context: "base64 decode",
@@ -145,16 +145,16 @@ impl ChaCha20Poly1305CiphertextPackage {
     /// Parses a serialized package
     pub fn from_string(s: &str) -> Result<Self> {
         validate_format(
-            s.starts_with("DCRYPT-CHACHA20POLY1305:"),
+            s.starts_with("dcrypt-CHACHA20POLY1305:"),
             "package deserialization",
             "invalid package format",
         )?;
 
-        let parts: Vec<&str> = s["DCRYPT-CHACHA20POLY1305:".len()..].split(':').collect();
+        let parts: Vec<&str> = s["dcrypt-CHACHA20POLY1305:".len()..].split(':').collect();
         validate_format(
             parts.len() == 2,
             "package deserialization",
-            "expected format: DCRYPT-CHACHA20POLY1305:<nonce>:<ciphertext>",
+            "expected format: dcrypt-CHACHA20POLY1305:<nonce>:<ciphertext>",
         )?;
 
         let nonce_bytes =
@@ -193,7 +193,7 @@ impl fmt::Display for ChaCha20Poly1305CiphertextPackage {
         let ciphertext_b64 = base64::encode(&self.ciphertext);
         write!(
             f,
-            "DCRYPT-CHACHA20POLY1305:{}:{}",
+            "dcrypt-CHACHA20POLY1305:{}:{}",
             nonce_b64, ciphertext_b64
         )
     }

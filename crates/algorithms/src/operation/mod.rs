@@ -1,11 +1,11 @@
 //! Operation pattern traits for constructing cryptographic operations
 //!
-//! This module provides the core operation traits used throughout the DCRYPT library
+//! This module provides the core operation traits used throughout the dcrypt library
 //! for a fluent API with compile-time and runtime validation guarantees.
 
 use crate::error::Result;
 
-/// Base trait for all operations in the DCRYPT library
+/// Base trait for all operations in the dcrypt library
 ///
 /// This trait defines the core functionality for constructing objects
 /// in a step-by-step manner with proper validation.

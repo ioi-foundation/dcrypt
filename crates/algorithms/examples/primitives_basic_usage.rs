@@ -12,7 +12,7 @@ fn main() {
     let cipher = ChaCha20Poly1305::new(&key_data);
 
     // Example plaintext and associated data
-    let plaintext = b"Hello, DCRYPT!";
+    let plaintext = b"Hello, dcrypt!";
     let aad = b"Additional data";
 
     // Create a Nonce<12> object (12-byte nonce for ChaCha20)

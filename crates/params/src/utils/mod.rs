@@ -1,6 +1,6 @@
-//! Constant values for DCRYPT cryptographic operations
+//! Constant values for dcrypt cryptographic operations
 //!
-//! This library provides common constants used across the DCRYPT project.
+//! This library provides common constants used across the dcrypt project.
 
 pub mod hash;
 pub mod symmetric;

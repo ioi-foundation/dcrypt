@@ -1,4 +1,4 @@
-//! Public Key Encryption (PKE) schemes for the DCRYPT library.
+//! Public Key Encryption (PKE) schemes for the dcrypt library.
 #![cfg_attr(not(feature = "std"), no_std)]
 
 // Required for Vec, String, format! in no_std + alloc environments

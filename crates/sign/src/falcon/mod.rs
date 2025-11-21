@@ -1,6 +1,6 @@
 // File: dcrypt-sign/src/falcon/mod.rs
 
-use dcrypt_api::{Result, Signature as SignatureTrait};
+use dcrypt_api::{Error, Result, Signature as SignatureTrait};
 use rand::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
@@ -55,35 +55,31 @@ impl AsMut<[u8]> for FalconSignature {
 impl SignatureTrait for Falcon512 {
     type PublicKey = FalconPublicKey;
     type SecretKey = FalconSecretKey;
-    type SignatureData = FalconSignature; // Changed from 'Signature' to 'SignatureData'
-    type KeyPair = (Self::PublicKey, Self::SecretKey); // Added this type definition
+    type SignatureData = FalconSignature;
+    type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
         "Falcon-512"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 897];
-        let mut secret_key = vec![0u8; 1281];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((FalconPublicKey(public_key), FalconSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "Falcon-512 key generation",
+        })
     }
 
-    // Add the missing public_key function
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
 
-    // Add the missing secret_key function
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
     fn sign(_message: &[u8], _secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
-        // Placeholder implementation
-        Ok(FalconSignature(vec![0u8; 666]))
+        Err(Error::NotImplemented {
+            feature: "Falcon-512 signing",
+        })
     }
 
     fn verify(
@@ -91,8 +87,9 @@ impl SignatureTrait for Falcon512 {
         _signature: &Self::SignatureData,
         _public_key: &Self::PublicKey,
     ) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+        Err(Error::NotImplemented {
+            feature: "Falcon-512 verification",
+        })
     }
 }
 
@@ -102,35 +99,31 @@ pub struct Falcon1024;
 impl SignatureTrait for Falcon1024 {
     type PublicKey = FalconPublicKey;
     type SecretKey = FalconSecretKey;
-    type SignatureData = FalconSignature; // Changed from 'Signature' to 'SignatureData'
-    type KeyPair = (Self::PublicKey, Self::SecretKey); // Added this type definition
+    type SignatureData = FalconSignature;
+    type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
         "Falcon-1024"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 1793];
-        let mut secret_key = vec![0u8; 2305];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((FalconPublicKey(public_key), FalconSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "Falcon-1024 key generation",
+        })
     }
 
-    // Add the missing public_key function
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
 
-    // Add the missing secret_key function
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
     fn sign(_message: &[u8], _secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
-        // Placeholder implementation
-        Ok(FalconSignature(vec![0u8; 1280]))
+        Err(Error::NotImplemented {
+            feature: "Falcon-1024 signing",
+        })
     }
 
     fn verify(
@@ -138,7 +131,8 @@ impl SignatureTrait for Falcon1024 {
         _signature: &Self::SignatureData,
         _public_key: &Self::PublicKey,
     ) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+        Err(Error::NotImplemented {
+            feature: "Falcon-1024 verification",
+        })
     }
 }

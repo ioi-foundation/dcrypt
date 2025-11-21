@@ -1,4 +1,4 @@
-//! Utility functions for the DCRYPT library
+//! Utility functions for the dcrypt library
 
 pub mod constant_time;
 pub mod endian;

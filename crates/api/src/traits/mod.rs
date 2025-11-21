@@ -1,4 +1,4 @@
-//! Trait definitions for cryptographic operations in DCRYPT
+//! Trait definitions for cryptographic operations in dcrypt
 //!
 //! This module provides core traits that define the interfaces for various
 //! cryptographic operations, along with marker traits that define algorithm

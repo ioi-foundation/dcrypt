@@ -1,8 +1,8 @@
-# DCRYPT API (`api`)
+# dcrypt API (`api`)
 
-The `api` crate defines the public Application Programming Interface for the DCRYPT cryptographic ecosystem. It establishes the core traits, error handling mechanisms, and fundamental types that are used consistently across all DCRYPT libraries.
+The `api` crate defines the public Application Programming Interface for the dcrypt cryptographic ecosystem. It establishes the core traits, error handling mechanisms, and fundamental types that are used consistently across all dcrypt libraries.
 
-The primary goal of this crate is to provide a stable and ergonomic interface for users of DCRYPT, abstracting away the specific implementation details of the underlying cryptographic algorithms.
+The primary goal of this crate is to provide a stable and ergonomic interface for users of dcrypt, abstracting away the specific implementation details of the underlying cryptographic algorithms.
 
 ## Core Components
 
@@ -16,7 +16,7 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
 
 2.  **Error Handling (`dcrypt_docs/api/error/README.md`)**:
     Provides a unified error handling system:
-    *   `Error` (enum): The primary error type for all DCRYPT operations, with variants for common cryptographic failures (e.g., `InvalidKey`, `InvalidSignature`, `DecryptionFailed`, `InvalidLength`).
+    *   `Error` (enum): The primary error type for all dcrypt operations, with variants for common cryptographic failures (e.g., `InvalidKey`, `InvalidSignature`, `DecryptionFailed`, `InvalidLength`).
     *   `Result<T>`: A type alias for `core::result::Result<T, api::Error>`.
     *   `ResultExt` (trait): Extension methods for `Result` types to easily add context or wrap errors.
     *   `SecureErrorHandling` (trait): For handling errors in constant-time operations, integrating with `ErrorRegistry`.
@@ -40,9 +40,9 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
 -   **Security by Default**: Secure practices, like zeroization of sensitive data and constant-time comparisons, are built into the core types and traits where appropriate.
 -   **`no_std` Compatibility**: Designed to be usable in `no_std` environments, with features like heap allocations (`alloc`) being optional.
 
-## How It Fits in DCRYPT
+## How It Fits in dcrypt
 
-The `api` crate serves as the contract between the users of the DCRYPT library and the underlying algorithm implementations (primarily found in `dcrypt-algorithms`). Higher-level crates like `dcrypt-symmetric`, `dcrypt-kem`, and `dcrypt-sign` implement the traits defined in `api` to expose their functionalities.
+The `api` crate serves as the contract between the users of the dcrypt library and the underlying algorithm implementations (primarily found in `dcrypt-algorithms`). Higher-level crates like `dcrypt-symmetric`, `dcrypt-kem`, and `dcrypt-sign` implement the traits defined in `api` to expose their functionalities.
 
 ### Example: Using the `SymmetricCipher` Trait
 

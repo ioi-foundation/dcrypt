@@ -1,11 +1,11 @@
 # API Error Handling (`api/error`)
 
-This module establishes the core error handling infrastructure for the DCRYPT library. It defines the primary `Error` enum, a unified `Result` type, extension traits for easier error manipulation, and mechanisms for secure error reporting in constant-time contexts.
+This module establishes the core error handling infrastructure for the dcrypt library. It defines the primary `Error` enum, a unified `Result` type, extension traits for easier error manipulation, and mechanisms for secure error reporting in constant-time contexts.
 
 ## Core Components
 
 1.  **`Error` Enum (`types.rs`)**:
-    The central error type used across the DCRYPT API. It covers a range of common cryptographic error scenarios:
+    The central error type used across the dcrypt API. It covers a range of common cryptographic error scenarios:
     *   `InvalidKey`: Issues with cryptographic keys (e.g., wrong size, invalid format).
     *   `InvalidSignature`: Signature verification failures or malformed signatures.
     *   `DecryptionFailed`: General failure during decryption (often implies failed authentication in AEAD).
@@ -21,7 +21,7 @@ This module establishes the core error handling infrastructure for the DCRYPT li
     Each variant includes a `context` field (`&'static str`) and, when the `std` feature is enabled, an optional `message` field (`String`) for more detailed error information. The `Error` enum implements `Debug`, `Clone`, `PartialEq`, `Eq`, `Display`, and `std::error::Error` (if `std` is enabled).
 
 2.  **`Result<T>` Type Alias (`types.rs`)**:
-    A standard alias for `core::result::Result<T, api::Error>`, used throughout the DCRYPT ecosystem for fallible operations.
+    A standard alias for `core::result::Result<T, api::Error>`, used throughout the dcrypt ecosystem for fallible operations.
 
 3.  **`ErrorRegistry` (`registry.rs`)**:
     *   `pub static ERROR_REGISTRY: ErrorRegistry`: A globally accessible static instance of the error registry.
@@ -94,4 +94,4 @@ fn example_secure_handling() {
 }
 ```
 
-This error module provides a robust foundation for handling errors consistently and securely throughout the DCRYPT library.
+This error module provides a robust foundation for handling errors consistently and securely throughout the dcrypt library.

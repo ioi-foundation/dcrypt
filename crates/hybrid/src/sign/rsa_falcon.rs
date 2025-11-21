@@ -1,10 +1,10 @@
 // File: crates/hybrid/src/sign/rsa_falcon.rs
 
-use dcrypt_api::{Signature as SignatureTrait, Result};
+use dcrypt_api::{Error, Result, Signature as SignatureTrait};
 // use dcrypt_sign::traditional::rsa::RsaPss; // RsaPss not yet implemented/exposed in dcrypt-sign
 use dcrypt_sign::falcon::Falcon512;
-use zeroize::Zeroize;
 use rand::{CryptoRng, RngCore};
+use zeroize::Zeroize;
 
 // Stub for RsaPss until implemented in dcrypt-sign
 // This prevents compilation errors while RsaPss is missing
@@ -14,12 +14,30 @@ impl SignatureTrait for RsaPss {
     type SecretKey = Vec<u8>;
     type SignatureData = Vec<u8>;
     type KeyPair = (Vec<u8>, Vec<u8>);
-    fn name() -> &'static str { "RSA-PSS-STUB" }
-    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> { Ok((vec![], vec![])) }
-    fn public_key(kp: &Self::KeyPair) -> Self::PublicKey { kp.0.clone() }
-    fn secret_key(kp: &Self::KeyPair) -> Self::SecretKey { kp.1.clone() }
-    fn sign(_m: &[u8], _sk: &Self::SecretKey) -> Result<Self::SignatureData> { Ok(vec![]) }
-    fn verify(_m: &[u8], _s: &Self::SignatureData, _pk: &Self::PublicKey) -> Result<()> { Ok(()) }
+    fn name() -> &'static str {
+        "RSA-PSS-STUB"
+    }
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "RSA-PSS key generation",
+        })
+    }
+    fn public_key(kp: &Self::KeyPair) -> Self::PublicKey {
+        kp.0.clone()
+    }
+    fn secret_key(kp: &Self::KeyPair) -> Self::SecretKey {
+        kp.1.clone()
+    }
+    fn sign(_m: &[u8], _sk: &Self::SecretKey) -> Result<Self::SignatureData> {
+        Err(Error::NotImplemented {
+            feature: "RSA-PSS signing",
+        })
+    }
+    fn verify(_m: &[u8], _s: &Self::SignatureData, _pk: &Self::PublicKey) -> Result<()> {
+        Err(Error::NotImplemented {
+            feature: "RSA-PSS verification",
+        })
+    }
 }
 
 /// Hybrid signature scheme combining RSA-PSS and Falcon-512
@@ -85,46 +103,33 @@ impl SignatureTrait for RsaFalconHybrid {
         "RSA-PSS + Falcon-512 Hybrid"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(
-        rng: &mut R,
-    ) -> Result<Self::KeyPair> {
+    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
         // Generate keypairs for both algorithms
+        // RsaPss will return Error::NotImplemented, making this entire call safe
         let (rsa_pk, rsa_sk) = RsaPss::keypair(rng)?;
         let (falcon_pk, falcon_sk) = Falcon512::keypair(rng)?;
 
-        let public_key = HybridPublicKey {
-            rsa_pk,
-            falcon_pk,
-        };
+        let public_key = HybridPublicKey { rsa_pk, falcon_pk };
 
-        let secret_key = HybridSecretKey {
-            rsa_sk,
-            falcon_sk,
-        };
+        let secret_key = HybridSecretKey { rsa_sk, falcon_sk };
 
         Ok((public_key, secret_key))
     }
-    
+
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
-    
+
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
-    fn sign(
-        message: &[u8],
-        secret_key: &Self::SecretKey,
-    ) -> Result<Self::SignatureData> {
+    fn sign(message: &[u8], secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
         // Sign with both algorithms
         let rsa_sig = RsaPss::sign(message, &secret_key.rsa_sk)?;
         let falcon_sig = Falcon512::sign(message, &secret_key.falcon_sk)?;
 
-        Ok(HybridSignature {
-            rsa_sig,
-            falcon_sig,
-        })
+        Ok(HybridSignature { rsa_sig, falcon_sig })
     }
 
     fn verify(
@@ -135,7 +140,7 @@ impl SignatureTrait for RsaFalconHybrid {
         // Verify both signatures
         RsaPss::verify(message, &signature.rsa_sig, &public_key.rsa_pk)?;
         Falcon512::verify(message, &signature.falcon_sig, &public_key.falcon_pk)?;
-        
+
         // If both verifications pass, return Ok
         Ok(())
     }

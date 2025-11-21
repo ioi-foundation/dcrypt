@@ -87,7 +87,7 @@ These types also integrate with secure memory handling practices, such as zeroiz
 
 ## Sealed Traits (`sealed.rs`)
 
-The `Sealed` trait is used internally to prevent external crates from implementing certain DCRYPT traits (like `ValidKeySize` or algorithm compatibility traits). This ensures that only combinations vetted within the `algorithms` crate are considered valid, maintaining control over type safety.
+The `Sealed` trait is used internally to prevent external crates from implementing certain dcrypt traits (like `ValidKeySize` or algorithm compatibility traits). This ensures that only combinations vetted within the `algorithms` crate are considered valid, maintaining control over type safety.
 
 ## Purpose
 

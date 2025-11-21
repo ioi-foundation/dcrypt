@@ -1,6 +1,6 @@
 # API Core Types (`api/types.rs`)
 
-This module in the `api` crate defines fundamental data types used throughout the DCRYPT library. These types are designed with security and type safety in mind, often providing compile-time guarantees and integrating secure memory handling practices like zeroization on drop.
+This module in the `api` crate defines fundamental data types used throughout the dcrypt library. These types are designed with security and type safety in mind, often providing compile-time guarantees and integrating secure memory handling practices like zeroization on drop.
 
 While the `algorithms` crate (`dcrypt_docs/algorithms/types/README.md`) defines more specialized, const-generic types like `Nonce<N>`, `Tag<N>`, etc., this `api/types.rs` file provides foundational wrappers primarily for variable-length secret data and basic cryptographic object representation.
 
@@ -54,4 +54,4 @@ While the `algorithms` crate (`dcrypt_docs/algorithms/types/README.md`) defines 
 -   `algorithms::types` then builds upon these by defining more specialized, algorithm-aware types like `Nonce<N>`, `Salt<N>`, `Digest<N>`, `Tag<N>`, `SymmetricKey<A, N>`, etc., which often use `SecretBytes<N>` or `SecretBuffer<N>` (from `common`) internally.
 -   The `Key` type from `api` is used by some of the KEM/Signature trait implementations as the `Self::Key` associated type for simplicity where fixed-size, algorithm-bound keys (like `SymmetricKey<A,N>`) are not yet fully integrated into those placeholder implementations.
 
-These core types are crucial for writing secure cryptographic code in DCRYPT, providing a safe foundation for handling sensitive materials and cryptographic objects.
+These core types are crucial for writing secure cryptographic code in dcrypt, providing a safe foundation for handling sensitive materials and cryptographic objects.

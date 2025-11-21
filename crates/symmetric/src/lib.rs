@@ -1,4 +1,4 @@
-//! Symmetric encryption algorithms for the DCRYPT library
+//! Symmetric encryption algorithms for the dcrypt library
 //!
 //! This crate provides high-level symmetric encryption algorithms built on top of
 //! the primitives in dcrypt-primitives and uses the unified API error system.

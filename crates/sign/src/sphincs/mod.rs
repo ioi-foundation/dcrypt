@@ -1,6 +1,6 @@
 // File: dcrypt-sign/src/sphincs/mod.rs
 
-use dcrypt_api::{Result, Signature as SignatureTrait};
+use dcrypt_api::{Error, Result, Signature as SignatureTrait};
 use rand::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
@@ -55,35 +55,31 @@ impl AsMut<[u8]> for SphincsSignature {
 impl SignatureTrait for SphincsSha2 {
     type PublicKey = SphincsPublicKey;
     type SecretKey = SphincsSecretKey;
-    type SignatureData = SphincsSignature; // Changed from 'Signature' to 'SignatureData'
-    type KeyPair = (Self::PublicKey, Self::SecretKey); // Added this type definition
+    type SignatureData = SphincsSignature;
+    type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
         "SPHINCS+-SHA2"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 32];
-        let mut secret_key = vec![0u8; 64];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((SphincsPublicKey(public_key), SphincsSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "SPHINCS+-SHA2 key generation",
+        })
     }
 
-    // Add the missing public_key function
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
 
-    // Add the missing secret_key function
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
     fn sign(_message: &[u8], _secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
-        // Placeholder implementation
-        Ok(SphincsSignature(vec![0u8; 16976]))
+        Err(Error::NotImplemented {
+            feature: "SPHINCS+-SHA2 signing",
+        })
     }
 
     fn verify(
@@ -91,8 +87,9 @@ impl SignatureTrait for SphincsSha2 {
         _signature: &Self::SignatureData,
         _public_key: &Self::PublicKey,
     ) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+        Err(Error::NotImplemented {
+            feature: "SPHINCS+-SHA2 verification",
+        })
     }
 }
 
@@ -102,35 +99,31 @@ pub struct SphincsShake;
 impl SignatureTrait for SphincsShake {
     type PublicKey = SphincsPublicKey;
     type SecretKey = SphincsSecretKey;
-    type SignatureData = SphincsSignature; // Changed from 'Signature' to 'SignatureData'
-    type KeyPair = (Self::PublicKey, Self::SecretKey); // Added this type definition
+    type SignatureData = SphincsSignature;
+    type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
         "SPHINCS+-SHAKE"
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
-        // Placeholder implementation
-        let mut public_key = vec![0u8; 32];
-        let mut secret_key = vec![0u8; 64];
-        rng.fill_bytes(&mut public_key);
-        rng.fill_bytes(&mut secret_key);
-        Ok((SphincsPublicKey(public_key), SphincsSecretKey(secret_key)))
+    fn keypair<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<Self::KeyPair> {
+        Err(Error::NotImplemented {
+            feature: "SPHINCS+-SHAKE key generation",
+        })
     }
 
-    // Add the missing public_key function
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
         keypair.0.clone()
     }
 
-    // Add the missing secret_key function
     fn secret_key(keypair: &Self::KeyPair) -> Self::SecretKey {
         keypair.1.clone()
     }
 
     fn sign(_message: &[u8], _secret_key: &Self::SecretKey) -> Result<Self::SignatureData> {
-        // Placeholder implementation
-        Ok(SphincsSignature(vec![0u8; 7856]))
+        Err(Error::NotImplemented {
+            feature: "SPHINCS+-SHAKE signing",
+        })
     }
 
     fn verify(
@@ -138,7 +131,8 @@ impl SignatureTrait for SphincsShake {
         _signature: &Self::SignatureData,
         _public_key: &Self::PublicKey,
     ) -> Result<()> {
-        // Placeholder implementation
-        Ok(())
+        Err(Error::NotImplemented {
+            feature: "SPHINCS+-SHAKE verification",
+        })
     }
 }
