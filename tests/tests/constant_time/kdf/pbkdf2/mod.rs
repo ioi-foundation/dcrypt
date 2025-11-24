@@ -1,28 +1,11 @@
 // tests/tests/constant_time/kdf/pbkdf2/mod.rs
-
 use dcrypt_algorithms::hash::Sha256;
 use dcrypt_algorithms::kdf::pbkdf2::Pbkdf2;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
 
 fn create_pbkdf2_config() -> TestConfig {
-    TestConfig {
-        num_warmup: 5,
-        num_samples: 30,
-        num_iterations: 3,
-        mean_ratio_max: 1.4,
-        mean_ratio_min: 0.6,
-        t_stat_threshold: 5.0,
-        std_dev_threshold: 0.25,
-        combined_score_threshold: 3.0,
-
-        // DTS Config
-        enable_dynamic_scaling: true,
-        noise_scale_factor: 1.0,
-        noise_sensitivity: 20.0,
-        noise_soft_floor: 0.02,
-        noise_hard_floor: 0.20,
-    }
+    TestConfig::for_pbkdf2()
 }
 
 #[test]
@@ -51,11 +34,13 @@ fn test_pbkdf2_constant_time() {
     let analysis = tester.calibrate_and_measure(
         warmup_op,
         measurement_op,
-        &config
+        &config,
+        "PBKDF2"
     ).expect("Calibration failed");
 
     println!("PBKDF2 Timing Analysis:");
-    println!("  Combined score: {:.3}", analysis.combined_score);
+    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
+    println!("  99% CI: [{:.3}, {:.3}] ns", analysis.ci_lower, analysis.ci_upper);
 
     if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
         println!("\n{}", generate_test_insights(&analysis, &config, "PBKDF2"));

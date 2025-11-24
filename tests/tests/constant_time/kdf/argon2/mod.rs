@@ -1,5 +1,4 @@
 // tests/tests/constant_time/kdf/argon2/mod.rs
-
 use dcrypt_algorithms::kdf::argon2::{Algorithm, Argon2, Params};
 use dcrypt_algorithms::kdf::PasswordHashFunction;
 use dcrypt_algorithms::types::Salt;
@@ -8,23 +7,12 @@ use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
 
 fn create_argon2_config() -> TestConfig {
-    TestConfig {
-        num_warmup: 5,
-        num_samples: 30,
-        num_iterations: 3,
-        mean_ratio_max: 1.4,
-        mean_ratio_min: 0.6,
-        t_stat_threshold: 5.0,
-        std_dev_threshold: 0.25,
-        combined_score_threshold: 3.0,
-
-        // DTS Config
-        enable_dynamic_scaling: true,
-        noise_scale_factor: 1.0, 
-        noise_sensitivity: 20.0,
-        noise_soft_floor: 0.02,
-        noise_hard_floor: 0.20, // Relaxed to 20%
-    }
+    let mut config = TestConfig::default();
+    config.num_warmup = 5;
+    config.num_samples = 30;
+    config.num_iterations = 3;
+    config.practical_significance_threshold = 10.0; // Heavy op
+    config
 }
 
 #[test]
@@ -91,17 +79,19 @@ fn test_argon2id_verify_constant_time() {
     let analysis = tester.calibrate_and_measure(
         warmup_op,
         measurement_op,
-        &config
+        &config,
+        "Argon2id Verify"
     ).expect("Calibration failed");
 
     println!("Argon2id Verify Timing Analysis:");
-    println!("  Combined score: {:.3}", analysis.combined_score);
+    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
+    println!("  99% CI: [{:.3}, {:.3}] ns", analysis.ci_lower, analysis.ci_upper);
 
     if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
         println!("\n{}", generate_test_insights(&analysis, &config, "Argon2id Verify"));
     }
 
-    assert!(analysis.is_constant_time, "Argon2id verify not constant-time");
+    assert!(analysis.is_constant_time);
 }
 
 #[test]
@@ -128,11 +118,9 @@ fn test_argon2_constant_time_compare() {
     let argon2 = Argon2::new_with_params(params);
     let hash1 = argon2.hash_password(password.as_ref()).unwrap();
 
-    // Differs at start
     let mut hash2 = hash1.clone();
     if !hash2.is_empty() { hash2[0] ^= 0x01; }
 
-    // Differs at end
     let mut hash3 = hash1.clone();
     if !hash3.is_empty() { 
         let idx = hash3.len() - 1;
@@ -157,11 +145,12 @@ fn test_argon2_constant_time_compare() {
     let analysis = tester.calibrate_and_measure(
         warmup_op,
         measurement_op,
-        &config
+        &config,
+        "Argon2 Comparison"
     ).expect("Calibration failed");
 
-    println!("Argon2 Hash Comparison Analysis:");
-    println!("  Combined score: {:.3}", analysis.combined_score);
+    println!("Argon2 Comparison Timing Analysis:");
+    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
 
     assert!(analysis.is_constant_time);
 }
