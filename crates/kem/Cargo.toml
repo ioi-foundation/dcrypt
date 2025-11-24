@@ -33,11 +33,11 @@ traditional = []  # Feature flag for traditional KEMs (ECDH, RSA, etc.)
 post-quantum = [] # Feature flag for post-quantum KEMs (Kyber, McEliece, etc.)
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=1.0.1", default-features = false }
-dcrypt-common = { path = "../common", version = "=1.0.1", default-features = false }
-dcrypt-internal = { path = "../internal", version = "=1.0.1", default-features = false }
-dcrypt-params = { path = "../params", version = "=1.0.1" }
-dcrypt-algorithms = { path = "../algorithms", version = "=1.0.1" }
+dcrypt-api = { path = "../api", version = "=1.1.0", default-features = false }
+dcrypt-common = { path = "../common", version = "=1.1.0", default-features = false }
+dcrypt-internal = { path = "../internal", version = "=1.1.0", default-features = false }
+dcrypt-params = { path = "../params", version = "=1.1.0" }
+dcrypt-algorithms = { path = "../algorithms", version = "=1.1.0" }
 zeroize = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true, optional = true }
