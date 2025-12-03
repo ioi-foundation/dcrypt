@@ -365,7 +365,7 @@ impl Operation<Ciphertext> for ChaCha20Poly1305EncryptOperation<'_> {
             .encrypt_with_nonce(&nonce_array, plaintext, self.aad)
             .map_err(CoreError::from)?;
 
-        Ok(Ciphertext::new(&ciphertext))
+        Ok(Ciphertext::new(ciphertext))
     }
 }
 
@@ -395,7 +395,7 @@ impl<'a> EncryptOperation<'a, ChaCha20Poly1305> for ChaCha20Poly1305EncryptOpera
             .encrypt_with_nonce(&nonce_array, plaintext, self.aad)
             .map_err(CoreError::from)?;
 
-        Ok(Ciphertext::new(&ciphertext))
+        Ok(Ciphertext::new(ciphertext))
     }
 }
 

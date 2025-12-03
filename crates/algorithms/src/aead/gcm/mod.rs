@@ -391,7 +391,7 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Operation<Ciphertext>
             .internal_encrypt(plaintext, self.aad)
             .map_err(CoreError::from)?;
 
-        Ok(Ciphertext::new(&ciphertext))
+        Ok(Ciphertext::new(ciphertext))
     }
 }
 
@@ -423,7 +423,7 @@ impl<'a, B: BlockCipher + Zeroize + ZeroizeOnDrop> EncryptOperation<'a, Gcm<B>>
             .internal_encrypt(plaintext, self.aad)
             .map_err(CoreError::from)?;
 
-        Ok(Ciphertext::new(&ciphertext))
+        Ok(Ciphertext::new(ciphertext))
     }
 }
 

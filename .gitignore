@@ -6,7 +6,6 @@ Cargo.lock
 .gitignore
 output.txt
 VERSION_STRATEGY.md
-SECURITY.md
 /.cargo/
 ~/.cargo/credentials.toml
 release-dcrypt.sh

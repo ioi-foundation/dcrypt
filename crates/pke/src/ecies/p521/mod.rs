@@ -132,10 +132,14 @@ impl Pke for EciesP521 {
         ciphertext_bytes: &Self::Ciphertext,
         aad: Option<&[u8]>,
     ) -> dcrypt_api::error::Result<Vec<u8>> {
-        let ecies_components =
-            EciesCiphertextComponents::deserialize(ciphertext_bytes).map_err(ApiError::from)?;
+        // OPTIMIZATION: Destructure components to move vectors
+        let EciesCiphertextComponents {
+            ephemeral_public_key,
+            aead_nonce,
+            aead_ciphertext_tag,
+        } = EciesCiphertextComponents::deserialize(ciphertext_bytes).map_err(ApiError::from)?;
 
-        let r_point = ec::Point::deserialize_uncompressed(&ecies_components.ephemeral_public_key)
+        let r_point = ec::Point::deserialize_uncompressed(&ephemeral_public_key)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
         if r_point.is_identity() {
             return Err(ApiError::from(PkeError::DecryptionFailed(
@@ -159,7 +163,7 @@ impl Pke for EciesP521 {
         let mut derived_key_material = derive_symmetric_key_hkdf_sha512(
             // Use SHA512 KDF
             &z_bytes,
-            &ecies_components.ephemeral_public_key,
+            &ephemeral_public_key,
             AES256GCM_KEY_LEN,
             Some(info_str.as_bytes()),
         )
@@ -171,7 +175,7 @@ impl Pke for EciesP521 {
         z_bytes.zeroize();
         derived_key_material.zeroize();
 
-        let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::from_slice(&ecies_components.aead_nonce)
+        let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::from_slice(&aead_nonce)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aes_core_key = AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes);
@@ -180,7 +184,7 @@ impl Pke for EciesP521 {
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         gcm_cipher_impl
-            .internal_decrypt(&ecies_components.aead_ciphertext_tag, aad)
+            .internal_decrypt(&aead_ciphertext_tag, aad)
             .map_err(|_| ApiError::from(PkeError::DecryptionFailed("AEAD authentication failed")))
     }
 }

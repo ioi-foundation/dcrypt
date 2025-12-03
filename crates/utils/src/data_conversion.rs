@@ -115,7 +115,8 @@ mod tests {
     fn test_base64_standard_conversions() {
         let original_str = "Hello, dcrypt! This is a test string.";
         let bytes = original_str.as_bytes();
-        let base64_string = "SGVsbG8sIERDUllQVCEgVGhpcyBpcyBhIHRlc3Qgc3RyaW5nLg==";
+        // Fixed: Expected string now matches lowercase "dcrypt"
+        let base64_string = "SGVsbG8sIGRjcnlwdCEgVGhpcyBpcyBhIHRlc3Qgc3RyaW5nLg==";
 
         assert_eq!(bytes_to_base64(bytes), base64_string);
         assert_eq!(base64_to_bytes(base64_string).unwrap(), bytes);
@@ -128,7 +129,6 @@ mod tests {
             base64_to_bytes("SGVsbG8sIERCWVBUISEgVGhpcyBpcyBhIHRlc3Qgc3RyaW5nLg").is_err(),
             "Missing padding should fail strict decode"
         );
-        // A slightly more lenient decoder might accept it, but `base64` crate's standard engine is strict.
     }
 
     #[test]
@@ -141,7 +141,7 @@ mod tests {
 
         let original_str = "Many hands make light work.";
         let bytes = original_str.as_bytes();
-        let base64url_nopad_string = "TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu"; // Standard would be "TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu" (same here)
+        let base64url_nopad_string = "TWFueSBoYW5kcyBtYWtlIGxpZ2h0IHdvcmsu";
 
         assert_eq!(bytes_to_base64url_nopad(bytes), base64url_nopad_string);
         assert_eq!(

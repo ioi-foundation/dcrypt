@@ -128,10 +128,14 @@ impl Pke for EciesP256 {
         ciphertext_bytes: &Self::Ciphertext,
         aad: Option<&[u8]>,
     ) -> dcrypt_api::error::Result<Vec<u8>> {
-        let ecies_components =
-            EciesCiphertextComponents::deserialize(ciphertext_bytes).map_err(ApiError::from)?;
+        // OPTIMIZATION: Destructure to move fields
+        let EciesCiphertextComponents {
+            ephemeral_public_key,
+            aead_nonce,
+            aead_ciphertext_tag,
+        } = EciesCiphertextComponents::deserialize(ciphertext_bytes).map_err(ApiError::from)?;
 
-        let r_point = ec::Point::deserialize_uncompressed(&ecies_components.ephemeral_public_key)
+        let r_point = ec::Point::deserialize_uncompressed(&ephemeral_public_key)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
         if r_point.is_identity() {
             return Err(ApiError::from(PkeError::DecryptionFailed(
@@ -154,7 +158,7 @@ impl Pke for EciesP256 {
         let info_str = format!("{}-KeyMaterial", Self::name());
         let mut derived_key_material = derive_symmetric_key_hkdf_sha256(
             &z_bytes,
-            &ecies_components.ephemeral_public_key,
+            &ephemeral_public_key,
             CHACHA20POLY1305_KEY_LEN,
             Some(info_str.as_bytes()),
         )
@@ -166,16 +170,17 @@ impl Pke for EciesP256 {
         z_bytes.zeroize();
         derived_key_material.zeroize();
 
-        let aead_nonce =
-            Nonce::<CHACHA20POLY1305_NONCE_LEN>::from_slice(&ecies_components.aead_nonce)
+        let aead_nonce_obj =
+            Nonce::<CHACHA20POLY1305_NONCE_LEN>::from_slice(&aead_nonce)
                 .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
 
-        let aead_ct_api_obj = dcrypt_api::Ciphertext::new(&ecies_components.aead_ciphertext_tag);
+        // Zero-copy optimization: Move the vector into Ciphertext
+        let aead_ct_api_obj = dcrypt_api::Ciphertext::new(aead_ciphertext_tag);
 
         let plaintext = <ChaCha20Poly1305 as ApiSymmetricCipherTrait>::decrypt(&aead_cipher_impl)
-            .with_nonce(&aead_nonce)
+            .with_nonce(&aead_nonce_obj)
             .with_aad(aad.unwrap_or(&[]))
             .decrypt(&aead_ct_api_obj)
             .map_err(|_| {

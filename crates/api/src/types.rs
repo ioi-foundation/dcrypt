@@ -15,6 +15,11 @@ use core::ops::{Deref, DerefMut};
 use dcrypt_internal::constant_time::ct_eq;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
+#[cfg(feature = "std")]
+use std::vec::Vec;
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::vec::Vec;
+
 /// A fixed-size array of bytes that is securely zeroed when dropped
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct SecretBytes<const N: usize> {
@@ -92,8 +97,6 @@ impl<const N: usize> fmt::Debug for SecretBytes<N> {
     }
 }
 
-// CORRECTED: The Serialize trait is no longer used for secret types.
-// We implement SerializeSecret instead.
 impl<const N: usize> SerializeSecret for SecretBytes<N> {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
         Self::from_slice(bytes)
@@ -111,9 +114,15 @@ pub struct SecretVec {
 }
 
 impl SecretVec {
-    pub fn new(data: Vec<u8>) -> Self {
-        Self { data }
+    /// Create a new SecretVec.
+    ///
+    /// Accepts `Vec<u8>` (move) or `&[u8]` (copy).
+    /// Moving a Vec<u8> is preferred for security as it ensures the original
+    /// memory allocation is controlled and zeroized by SecretVec.
+    pub fn new<T: Into<Vec<u8>>>(data: T) -> Self {
+        Self { data: data.into() }
     }
+
     pub fn from_slice(slice: &[u8]) -> Self {
         Self {
             data: slice.to_vec(),
@@ -134,6 +143,12 @@ impl SecretVec {
     }
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+}
+
+impl From<Vec<u8>> for SecretVec {
+    fn from(data: Vec<u8>) -> Self {
+        Self::new(data)
     }
 }
 
@@ -176,8 +191,6 @@ impl fmt::Debug for SecretVec {
     }
 }
 
-// CORRECTED: The Serialize trait is no longer used for secret types.
-// We implement SerializeSecret instead.
 impl SerializeSecret for SecretVec {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
         Ok(Self::from_slice(bytes))
@@ -194,9 +207,14 @@ pub struct Key {
 }
 
 impl Key {
-    pub fn new(bytes: &[u8]) -> Self {
+    /// Create a new Key.
+    ///
+    /// Accepts `Vec<u8>` (move) or `&[u8]` (copy).
+    /// Moving a Vec<u8> is preferred for security as it ensures the original
+    /// memory allocation is controlled and zeroized by Key.
+    pub fn new<T: Into<Vec<u8>>>(data: T) -> Self {
         Self {
-            data: bytes.to_vec(),
+            data: data.into(),
         }
     }
     pub fn new_zeros(len: usize) -> Self {
@@ -212,6 +230,12 @@ impl Key {
     }
 }
 
+impl From<Vec<u8>> for Key {
+    fn from(data: Vec<u8>) -> Self {
+        Self::new(data)
+    }
+}
+
 impl AsRef<[u8]> for Key {
     fn as_ref(&self) -> &[u8] {
         &self.data
@@ -224,8 +248,6 @@ impl AsMut<[u8]> for Key {
     }
 }
 
-// CORRECTED: The Serialize trait is no longer used for secret types.
-// We implement SerializeSecret instead.
 impl SerializeSecret for Key {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
         Ok(Self::new(bytes))
@@ -242,9 +264,13 @@ pub struct PublicKey {
 }
 
 impl PublicKey {
-    pub fn new(bytes: &[u8]) -> Self {
+    /// Create a new PublicKey.
+    ///
+    /// Accepts `Vec<u8>` (move) or `&[u8]` (copy).
+    /// Moving a Vec<u8> avoids unnecessary allocation.
+    pub fn new<T: Into<Vec<u8>>>(data: T) -> Self {
         Self {
-            data: bytes.to_vec(),
+            data: data.into(),
         }
     }
     pub fn len(&self) -> usize {
@@ -252,6 +278,12 @@ impl PublicKey {
     }
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+}
+
+impl From<Vec<u8>> for PublicKey {
+    fn from(data: Vec<u8>) -> Self {
+        Self::new(data)
     }
 }
 
@@ -268,7 +300,6 @@ impl AsMut<[u8]> for PublicKey {
 }
 
 impl Serialize for PublicKey {
-    // CORRECTED: Changed return type and implementation
     fn to_bytes(&self) -> Vec<u8> {
         self.data.clone()
     }
@@ -284,9 +315,14 @@ pub struct Ciphertext {
 }
 
 impl Ciphertext {
-    pub fn new(bytes: &[u8]) -> Self {
+    /// Create a new Ciphertext.
+    ///
+    /// Accepts `Vec<u8>` (move) or `&[u8]` (copy).
+    /// Moving a Vec<u8> avoids unnecessary allocation, which is critical
+    /// for large ciphertexts.
+    pub fn new<T: Into<Vec<u8>>>(data: T) -> Self {
         Self {
-            data: bytes.to_vec(),
+            data: data.into(),
         }
     }
     pub fn len(&self) -> usize {
@@ -294,6 +330,12 @@ impl Ciphertext {
     }
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+}
+
+impl From<Vec<u8>> for Ciphertext {
+    fn from(data: Vec<u8>) -> Self {
+        Self::new(data)
     }
 }
 
@@ -310,7 +352,6 @@ impl AsMut<[u8]> for Ciphertext {
 }
 
 impl Serialize for Ciphertext {
-    // CORRECTED: Changed return type and implementation
     fn to_bytes(&self) -> Vec<u8> {
         self.data.clone()
     }

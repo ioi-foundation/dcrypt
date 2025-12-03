@@ -110,16 +110,20 @@ impl Pke for EciesP192 {
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
         let aead_nonce = Nonce::<CHACHA20POLY1305_NONCE_LEN>::random(rng);
 
-        let aead_ciphertext_api_obj =
+        // Note: encrypt returns Vec<u8> directly in current algorithms impl, not Ciphertext wrapper
+        // The new generic constructor is on api::Ciphertext.
+        // Algorithms returns Result<Vec<u8>>.
+        let aead_ciphertext_vec =
             <ChaCha20Poly1305 as ApiSymmetricCipherTrait>::encrypt(&aead_cipher_impl)
                 .with_nonce(&aead_nonce)
                 .with_aad(aad.unwrap_or_default())
                 .encrypt(plaintext)?;
 
+        // We just store the raw vec in the components
         let ecies_components = EciesCiphertextComponents {
             ephemeral_public_key: r_bytes_uncompressed.to_vec(),
             aead_nonce: aead_nonce.as_ref().to_vec(),
-            aead_ciphertext_tag: aead_ciphertext_api_obj.as_ref().to_vec(),
+            aead_ciphertext_tag: aead_ciphertext_vec.as_ref().to_vec(),
         };
         Ok(ecies_components.serialize())
     }
@@ -129,18 +133,16 @@ impl Pke for EciesP192 {
         ciphertext_bytes: &Self::Ciphertext,
         aad: Option<&[u8]>,
     ) -> dcrypt_api::error::Result<Vec<u8>> {
-        // Any structural/parsing error is treated as an authentication failure
-        // so callers cannot tell what part of the ciphertext was wrong.
-        let ecies_components = match EciesCiphertextComponents::deserialize(ciphertext_bytes) {
-            Ok(c) => c,
-            Err(_) => {
-                return Err(ApiError::from(PkeError::DecryptionFailed(
-                    "AEAD authentication failed",
-                )));
-            }
-        };
+        // OPTIMIZATION: Destructure components to move vectors instead of borrowing/cloning
+        let EciesCiphertextComponents {
+            ephemeral_public_key,
+            aead_nonce,
+            aead_ciphertext_tag,
+        } = EciesCiphertextComponents::deserialize(ciphertext_bytes).map_err(|_| {
+            ApiError::from(PkeError::DecryptionFailed("AEAD authentication failed"))
+        })?;
 
-        let r_point = ec::Point::deserialize_uncompressed(&ecies_components.ephemeral_public_key)
+        let r_point = ec::Point::deserialize_uncompressed(&ephemeral_public_key)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
         if r_point.is_identity() {
             return Err(ApiError::from(PkeError::DecryptionFailed(
@@ -163,7 +165,7 @@ impl Pke for EciesP192 {
         let info_str = format!("{}-KeyMaterial", Self::name());
         let mut derived_key_material = derive_symmetric_key_hkdf_sha256(
             &z_bytes,
-            &ecies_components.ephemeral_public_key, // Salt for KDF
+            &ephemeral_public_key, // Salt for KDF
             CHACHA20POLY1305_KEY_LEN,
             Some(info_str.as_bytes()),
         )
@@ -175,18 +177,19 @@ impl Pke for EciesP192 {
         z_bytes.zeroize();
         derived_key_material.zeroize();
 
-        let aead_nonce =
-            Nonce::<CHACHA20POLY1305_NONCE_LEN>::from_slice(&ecies_components.aead_nonce)
+        let aead_nonce_obj =
+            Nonce::<CHACHA20POLY1305_NONCE_LEN>::from_slice(&aead_nonce)
                 .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
-        let aead_ct_api_obj = dcrypt_api::Ciphertext::new(&ecies_components.aead_ciphertext_tag);
+        
+        // Zero-copy optimization: Move the vector into Ciphertext
+        let aead_ct_api_obj = dcrypt_api::Ciphertext::new(aead_ciphertext_tag);
 
         let plaintext = <ChaCha20Poly1305 as ApiSymmetricCipherTrait>::decrypt(&aead_cipher_impl)
-            .with_nonce(&aead_nonce)
+            .with_nonce(&aead_nonce_obj)
             .with_aad(aad.unwrap_or_default())
             .decrypt(&aead_ct_api_obj)
-            // Map any AEAD-layer failure to the same error as above.
             .map_err(|_| {
                 ApiError::from(PkeError::DecryptionFailed("AEAD authentication failed"))
             })?;

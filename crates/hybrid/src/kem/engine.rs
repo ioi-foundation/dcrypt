@@ -208,7 +208,8 @@ where
             },
         )?;
 
-        Ok((hybrid_ct, KyberSharedSecret::new(ApiKey::new(&okm))))
+        // Dereference Zeroizing<Vec<u8>> to get &[u8]
+        Ok((hybrid_ct, KyberSharedSecret::new(ApiKey::new(&**okm))))
     }
 
     pub fn decapsulate(
@@ -232,6 +233,7 @@ where
             },
         )?;
 
-        Ok(KyberSharedSecret::new(ApiKey::new(&okm)))
+        // Dereference Zeroizing<Vec<u8>> to get &[u8]
+        Ok(KyberSharedSecret::new(ApiKey::new(&**okm)))
     }
 }
