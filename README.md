@@ -11,11 +11,12 @@ Spearheaded by the **IOI Foundation** as the security cornerstone for next-gener
 
 ## 🚀 Novel Capabilities
 
-dcrypt introduces capabilities critical for the transition to quantum-safe computing:
+dcrypt introduces capabilities critical for the transition to quantum-safe and decentralized computing:
 
 1.  **Pure-Rust FIPS 204 (ML-DSA)**: A production-ready implementation of the complete **CRYSTALS-Dilithium** signature scheme with zero `unsafe` code and full constant-time execution.
 2.  **Pure-Rust FIPS 203 (ML-KEM)**: A complete implementation of **CRYSTALS-Kyber** with protections against timing side-channels.
 3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + Kyber-768`) and hybrid Digital Signatures, ensuring security even if one underlying primitive is compromised.
+4.  **BLS12-381 Pairing Engine**: A fully featured implementation of the pairing-friendly curve, including optimal Ate pairings and IETF-compliant **Hash-to-Curve**, essential for Zero-Knowledge Proofs and Signature Aggregation.
 
 ## 🛡️ Key Design Principles
 
@@ -93,6 +94,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Example 3: BLS12-381 Bilinear Pairings
+
+Perform bilinear pairings and hash-to-curve operations standard in decentralized identity and ZK systems.
+
+```rust
+use dcrypt::algorithms::ec::bls12_381::{
+    pairing, G1Projective, G2Affine, G2Projective, Scalar
+};
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Hash a message to a point on G1 using IETF hash-to-curve
+    let msg = b"Decentralized Identity";
+    let dst = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_";
+    
+    // hash_to_curve returns a projective point
+    let point_g1 = G1Projective::hash_to_curve(msg, dst)?.to_affine();
+
+    // 2. Generate a secret scalar and public G2 point
+    let secret = Scalar::from(42u64); // In reality, use random generation
+    let public_g2 = G2Affine::from(G2Projective::generator() * secret);
+
+    // 3. Compute Pairing e(H(m), [s]G2)
+    let result = pairing(&point_g1, &public_g2);
+    
+    println!("Pairing computed successfully: {:?}", result);
+    Ok(())
+}
+```
+
 ## 📚 Supported Algorithms
 
 dcrypt provides a unified API for classical, post-quantum, and hybrid operations:
@@ -100,6 +130,7 @@ dcrypt provides a unified API for classical, post-quantum, and hybrid operations
 | Category | Algorithms |
 | :--- | :--- |
 | **Symmetric Encryption (AEAD)** | `AES-128/256-GCM`, `ChaCha20-Poly1305`, `XChaCha20-Poly1305` |
+| **Public Key Encryption (PKE)** | `ECIES` (P-192, P-224, P-256, P-384, P-521) |
 | **Hash Functions** | `SHA-2` (224, 256, 384, 512), `SHA-3`, `BLAKE2b/s` |
 | **XOFs** | `SHAKE-128/256`, `BLAKE3` |
 | **Password Hashing** | `Argon2id` (default), `Argon2i`, `Argon2d`, `PBKDF2` |
@@ -107,6 +138,7 @@ dcrypt provides a unified API for classical, post-quantum, and hybrid operations
 | **Digital Signatures** | `ECDSA` (P-192 to P-521), `Ed25519` |
 | **Post-Quantum Signatures** | `Dilithium` / `ML-DSA` (Levels 2, 3, 5) |
 | **Key Exchange / KEM** | `ECDH` (P-Curves, K-256, B-283) |
+| **Pairing-Friendly Curves** | `BLS12-381` (G1, G2, Gt, Pairings, Hash-to-Curve) |
 | **Post-Quantum KEMs**| `Kyber` / `ML-KEM` (Levels 512, 768, 1024) |
 | **Hybrid Schemes** | `EcdhP256Kyber768`, `EcdhP384Kyber1024`, `EcdsaDilithiumHybrid` |
 
@@ -118,7 +150,8 @@ The library is organized as a workspace of specialized crates to align type-safe
 *   **`dcrypt-algorithms`**: Low-level, constant-time implementations of cryptographic kernels (hashing, curve arithmetic, lattice math).
 *   **`dcrypt-common`**: Shared security primitives, including `SecretBuffer` (automatic zeroization) and `SecureCompare`.
 *   **`dcrypt-symmetric`**: High-level AEADs, stream ciphers, and secure key management wrappers.
-*   **`dcrypt-kem`**: implementations of Key Encapsulation Mechanisms (Kyber, ECDH, McEliece placeholders).
+*   **`dcrypt-pke`**: Public Key Encryption schemes, specifically **ECIES** (Elliptic Curve Integrated Encryption Scheme) over standard NIST curves.
+*   **`dcrypt-kem`**: Implementations of Key Encapsulation Mechanisms (Kyber, ECDH, McEliece placeholders).
 *   **`dcrypt-sign`**: Implementations of Digital Signatures (Dilithium, ECDSA, Ed25519, SPHINCS+ placeholders).
 *   **`dcrypt-hybrid`**: Ready-to-use combiners for KEMs and Signatures ensuring crypto-agility.
 *   **`dcrypt-tests`**: Contains the ACVP test harness and Constant-Time Verification Suite.
