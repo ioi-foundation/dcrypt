@@ -1,3 +1,5 @@
+// algorithms/src/ec/bls12_381/field/fp.rs
+
 //! BLS12-381 base field `GF(p)` where p = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab
 
 // Standard library imports
@@ -61,7 +63,7 @@ const R: Fp = Fp([
 ]);
 
 /// Montgomery R^2 = 2^768 mod p
-const R2: Fp = Fp([
+pub(crate) const R2: Fp = Fp([
     0xf4df_1f34_1c34_1746,
     0x0a76_e6a6_09d1_04f1,
     0x8de5_476c_4c95_b6d5,
@@ -526,6 +528,48 @@ impl Fp {
     pub fn lexicographically_largest(&self) -> Choice {
         Choice::from(self.is_lexicographically_largest() as u8)
     }
+
+    /// Decode a 512-bit integer (64 bytes) into a field element by reducing modulo p.
+    /// Used for hash-to-field.
+    pub fn from_bytes_wide(bytes: &[u8; 64]) -> Self {
+        // Parse 64 bytes as 8 u64 limbs (little endian)
+        let d0 = u64::from_le_bytes(bytes[0..8].try_into().unwrap());
+        let d1 = u64::from_le_bytes(bytes[8..16].try_into().unwrap());
+        let d2 = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
+        let d3 = u64::from_le_bytes(bytes[24..32].try_into().unwrap());
+        let d4 = u64::from_le_bytes(bytes[32..40].try_into().unwrap());
+        let d5 = u64::from_le_bytes(bytes[40..48].try_into().unwrap());
+        let d6 = u64::from_le_bytes(bytes[48..56].try_into().unwrap());
+        let d7 = u64::from_le_bytes(bytes[56..64].try_into().unwrap());
+
+        // We split the 512-bit input into:
+        // 1. Low 384 bits (d0..d5)
+        // 2. High 128 bits (d6..d7)
+        //
+        // Value = Low + High * 2^384
+        //
+        // In Montgomery form (which Fp uses internally):
+        // result = (Low + High * 2^384) * R mod p
+        //        = Low * R + High * (2^384 * R) mod p
+        //
+        // We have precomputed constants:
+        // R2 = R^2 = 2^768 mod p  => Low * R2 reduces to Low * R
+        // R3 = R^3 = 2^1152 mod p => High * R3 reduces to High * R^2 = High * (2^384 * R)
+        
+        // Construct raw Fp wrappers (not yet in Montgomery form)
+        let low = Fp([d0, d1, d2, d3, d4, d5]);
+        let high = Fp([d6, d7, 0, 0, 0, 0]);
+
+        // Perform the reduction using Montgomery multiplication
+        // mul() computes a * b * R^-1
+        // low.mul(R2)  = low * R^2 * R^-1 = low * R
+        // high.mul(R3) = high * R^3 * R^-1 = high * R^2 = high * (2^384 * R)
+        
+        let term1 = low.mul(&R2);
+        let term2 = high.mul(&R3);
+        
+        term1.add(&term2)
+    }
 }
 
 // ============================================================================
@@ -628,6 +672,12 @@ impl fmt::Debug for Fp {
 impl Default for Fp {
     fn default() -> Self {
         Fp::zero()
+    }
+}
+
+impl From<u64> for Fp {
+    fn from(val: u64) -> Fp {
+        Fp([val, 0, 0, 0, 0, 0]) * R2
     }
 }
 

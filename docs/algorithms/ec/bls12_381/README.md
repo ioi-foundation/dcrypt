@@ -25,7 +25,8 @@ where `P` is a point in G₁, `Q` is a point in G₂, and `a` and `b` are scalar
 *   **Pairing Implementation**: An efficient implementation of the optimal Ate pairing, including the Miller loop (`multi_miller_loop`) and the final exponentiation.
 *   **Group Arithmetic**: Complete implementations for group operations in G₁, G₂, and Gₜ, including point addition, doubling, and negation.
 *   **Multi-Scalar Multiplication (MSM)**: Optimized Pippenger's algorithm implementation for both G₁ and G₂, with both constant-time and variable-time variants for different security requirements.
-*   **Hash-to-Field**: Standards-compliant hash-to-field implementation following the IETF hash-to-curve specification, using SHA-256 with the expand_message_xmd construction.
+*   **Hash-to-Curve**: Standards-compliant hash-to-curve implementation following RFC 9380 (hashing to G₁ and G₂ using the SSWU map).
+*   **Hash-to-Field**: Standards-compliant hash-to-field implementation following the IETF specification.
 *   **Coordinate Systems**: Both Affine and Jacobian Projective coordinates are used for points in G₁ and G₂, with projective coordinates being used internally for efficient, inversion-free arithmetic.
 *   **Scalar Field Arithmetic**: A full implementation of the scalar field Fₙ, including arithmetic operations and modular inversion.
 *   **Finite Field Tower**: The underlying tower of finite fields (Fₚ, Fₚ², Fₚ⁶, Fₚ¹²) required for the pairing is implemented in the `field` submodule.
@@ -111,37 +112,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Hash-to-Field
+### Hash-to-Curve
 
-The hash-to-field function allows deterministic conversion of arbitrary data to scalar field elements, following the IETF hash-to-curve specification.
+The `hash_to_curve` function allows deterministic mapping of arbitrary data to elliptic curve points, as specified in RFC 9380.
 
 ```rust
-use dcrypt::algorithms::ec::bls12_381::Scalar;
+use dcrypt::algorithms::ec::bls12_381::{G1Projective, G2Projective};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Define a domain separation tag (DST) for your application
-    // Using standard BLS signature DST format
-    let dst = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_";
-    
-    // Hash arbitrary data to a scalar
     let message = b"Hello, BLS12-381!";
-    let scalar = Scalar::hash_to_field(message, dst)?;
     
-    println!("Hash output: {:?}", scalar);
-    
-    // The function is deterministic
-    let scalar2 = Scalar::hash_to_field(message, dst)?;
-    assert_eq!(scalar, scalar2);
-    
-    // Different messages produce different scalars
-    let different_message = b"Different message";
-    let scalar3 = Scalar::hash_to_field(different_message, dst)?;
-    assert_ne!(scalar, scalar3);
-    
-    // Different DSTs produce different scalars for the same message
-    let different_dst = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
-    let scalar4 = Scalar::hash_to_field(message, different_dst)?;
-    assert_ne!(scalar, scalar4);
+    // Hash to G1
+    let dst_g1 = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_";
+    let point_g1 = G1Projective::hash_to_curve(message, dst_g1)?;
+    println!("G1 Point: {:?}", point_g1);
+
+    // Hash to G2
+    let dst_g2 = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
+    let point_g2 = G2Projective::hash_to_curve(message, dst_g2)?;
+    println!("G2 Point: {:?}", point_g2);
     
     Ok(())
 }
@@ -149,7 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### BLS Signature Example
 
-Here's a complete example showing how to use the BLS12-381 implementation for BLS signatures:
+Here's a complete example showing how to use the BLS12-381 implementation for BLS signatures using the standard hash-to-curve construction:
 
 ```rust
 use dcrypt::algorithms::ec::bls12_381::{
@@ -165,13 +154,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. Message to sign
     let message = b"Important message to sign";
     
-    // 3. Hash message to G1 point (simplified - real implementation needs hash-to-curve)
+    // 3. Hash message to G1 point using hash-to-curve
     let dst = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_";
-    let msg_scalar = Scalar::hash_to_field(message, dst)?;
-    let msg_point = G1Affine::from(G1Projective::generator() * msg_scalar);
+    let msg_point_proj = G1Projective::hash_to_curve(message, dst)?;
+    let msg_point = G1Affine::from(msg_point_proj);
     
     // 4. Sign: signature = [sk]H(message)
-    let signature = G1Affine::from(G1Projective::from(msg_point) * secret_key);
+    let signature = G1Affine::from(msg_point_proj * secret_key);
     
     // 5. Verify: e(signature, g2) = e(H(message), public_key)
     let lhs = pairing(&signature, &G2Affine::generator());
@@ -207,6 +196,7 @@ The implementation is organized into several key modules:
     *   Field arithmetic operations
     *   Modular inversion
     *   Hash-to-field functionality (IETF compliant)
+*   `hash_to_curve.rs`: Implements hashing to G1 and G2 curves using the SSWU map.
 *   `pairings.rs`: Implements the bilinear pairing, including:
     *   Miller loop computation
     *   Final exponentiation
@@ -262,7 +252,7 @@ let result = multi_miller_loop(&[
 
 This implementation follows several standards and specifications:
 
-- **IETF hash-to-curve**: The `hash_to_field` function implements expand_message_xmd as specified in draft-irtf-cfrg-hash-to-curve.
+- **IETF hash-to-curve**: The `hash_to_field` function implements expand_message_xmd and the map to curve functions follow RFC 9380.
 - **Serialization**: Point serialization follows the Zcash/Ethereum 2.0 format.
 - **Test Vectors**: The implementation passes test vectors from the BLST library and other reference implementations.
 
@@ -270,7 +260,7 @@ This implementation follows several standards and specifications:
 
 Potential areas for future development include:
 
-- [ ] Full hash-to-curve implementation (not just hash-to-field)
+- [x] Full hash-to-curve implementation (hash-to-field and map-to-curve)
 - [ ] GLV endomorphism optimization for scalar multiplication
 - [ ] Assembly optimizations for critical field operations
 - [ ] Batch verification optimizations
@@ -279,7 +269,7 @@ Potential areas for future development include:
 ## References
 
 - [BLS12-381 For The Rest Of Us](https://hackmd.io/@benjaminion/bls12-381)
-- [IETF: Hashing to Elliptic Curves](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/)
+- [RFC 9380: Hashing to Elliptic Curves](https://www.rfc-editor.org/rfc/rfc9380.html)
 - [Pairing-Based Cryptography](https://www.iacr.org/archive/asiacrypt2007/48330001/48330001.pdf)
 - [BLST Library](https://github.com/supranational/blst)
 - [Ethereum 2.0 BLS Signature Spec](https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#bls-signatures)

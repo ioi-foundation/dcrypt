@@ -384,6 +384,17 @@ impl Fp2 {
             })
         })
     }
+
+    /// Create from 128 bytes (two 64-byte chunks) by reducing modulo p.
+    pub fn from_bytes_wide(bytes: &[u8; 128]) -> Self {
+        let c0_bytes: &[u8; 64] = bytes[0..64].try_into().unwrap();
+        let c1_bytes: &[u8; 64] = bytes[64..128].try_into().unwrap();
+
+        Fp2 {
+            c0: Fp::from_bytes_wide(c0_bytes),
+            c1: Fp::from_bytes_wide(c1_bytes),
+        }
+    }
 }
 
 // ============================================================================

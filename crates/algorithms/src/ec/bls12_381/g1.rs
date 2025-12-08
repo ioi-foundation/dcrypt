@@ -8,6 +8,11 @@ use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use alloc::vec;
+
 use super::field::fp::Fp;
 use super::Scalar;
 
@@ -830,6 +835,7 @@ impl G1Projective {
     ///
     /// # Panics
     /// Panics if `points.len() != scalars.len()`.
+    #[cfg(feature = "alloc")]
     pub fn msm_vartime(
         points: &[G1Affine],
         scalars: &[Scalar],
@@ -850,6 +856,7 @@ impl G1Projective {
     ///
     /// # Panics
     /// Panics if `points.len() != scalars.len()`.
+    #[cfg(feature = "alloc")]
     pub fn msm(
         points: &[G1Affine],
         scalars: &[Scalar],
@@ -864,6 +871,7 @@ impl G1Projective {
     }
     
     /// Internal Pippenger's algorithm implementation.
+    #[cfg(feature = "alloc")]
     fn pippenger(points: &[G1Affine], scalars: &[Scalar], is_vartime: bool) -> Self {
         if points.is_empty() {
             return Self::identity();
@@ -872,11 +880,21 @@ impl G1Projective {
         let num_entries = points.len();
         let scalar_bits = 255; // BLS12-381 scalar size
 
-        // 1. Choose window size `c`. Heuristic: log2(num_entries)
-        let c = if num_entries < 32 {
-            3
+        // 1. Choose window size `c`.
+        // If constant-time, we limit window size to avoid excessive bucket scanning.
+        let c = if is_vartime {
+             if num_entries < 32 {
+                3
+            } else {
+                // Integer log2 equivalent: floor(log2(n))
+                // Works in no_std without libm
+                let log2 = (usize::BITS - num_entries.leading_zeros() - 1) as usize;
+                log2 + 2
+            }
         } else {
-            (num_entries as f64).log2() as usize + 2
+            // Fixed window size for constant time to ensure predictable performance.
+            // c=4 means 16 buckets.
+            4
         };
 
         let num_windows = (scalar_bits + c - 1) / c;
@@ -899,16 +917,29 @@ impl G1Projective {
                     if total_bit_idx < scalar_bits {
                         let byte_idx = total_bit_idx / 8;
                         let inner_bit_idx = total_bit_idx % 8;
-                        if (scalar_bytes[byte_idx] >> inner_bit_idx) & 1 == 1 {
-                            k |= 1 << bit_idx;
-                        }
+                        let byte = scalar_bytes[byte_idx];
+                        let bit = (byte >> inner_bit_idx) & 1;
+                        k |= (bit as usize) << bit_idx;
                     }
                 }
                 
-                if k > 0 {
-                    // This is variable-time. A constant-time implementation would
-                    // use conditional selects to avoid data-dependent branches.
-                    buckets[k - 1] = buckets[k - 1].add_mixed(&points[i]);
+                if is_vartime {
+                    if k > 0 {
+                        buckets[k - 1] = buckets[k - 1].add_mixed(&points[i]);
+                    }
+                } else {
+                    // Constant-time bucket accumulation
+                    // Iterate all buckets, conditionally add point if bucket index matches k-1.
+                    // If k=0 (scalar chunk is 0), we don't add to any bucket (add identity).
+                    
+                    for b in 0..num_buckets {
+                        let bucket_idx = b + 1;
+                        // Check if k == bucket_idx in constant time using subtle
+                        let choice = k.ct_eq(&bucket_idx);
+                        
+                        let res = buckets[b].add_mixed(&points[i]);
+                        buckets[b] = G1Projective::conditional_select(&buckets[b], &res, choice);
+                    }
                 }
             }
 
@@ -928,13 +959,6 @@ impl G1Projective {
                     global_acc = global_acc.double();
                 }
             }
-        }
-        
-        // TODO for `msm`: Harden the bucket addition loop to be constant-time.
-        // The branch `if k > 0` and the array access `buckets[k-1]` are variable-time.
-        // A CT version would iterate all buckets and use conditional_select to add.
-        if !is_vartime {
-            // Placeholder for future hardening. For now, it's the same as vartime.
         }
 
         global_acc

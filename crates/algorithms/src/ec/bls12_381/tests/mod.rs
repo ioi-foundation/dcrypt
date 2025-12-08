@@ -13,3 +13,6 @@ mod pairings;
 
 #[cfg(test)]
 mod serialization;
+
+#[cfg(test)]
+mod hash_to_curve;
