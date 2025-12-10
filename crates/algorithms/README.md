@@ -27,6 +27,7 @@ The crate provides a broad range of cryptographic primitives, categorized as fol
 *   **SHA-2 Family:** SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224, SHA-512/256
 *   **SHA-3 Family:** SHA3-224, SHA3-256, SHA3-384, SHA3-512
 *   **BLAKE2:** BLAKE2b (64-bit optimized) and BLAKE2s (32-bit optimized)
+*   **Keccak:** Keccak-256 (Ethereum compatible)
 *   **SHA-1:** Included for legacy compatibility, but its use is strongly discouraged.
 
 ### Extendable-Output Functions (XOFs)

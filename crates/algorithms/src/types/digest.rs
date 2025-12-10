@@ -170,3 +170,7 @@ impl Sha512Compatible for Digest<64> {}
 pub trait Blake2bCompatible {}
 impl Blake2bCompatible for Digest<32> {}
 impl Blake2bCompatible for Digest<64> {}
+
+/// Keccak-256 compatible digest size
+pub trait Keccak256Compatible {}
+impl Keccak256Compatible for Digest<32> {}

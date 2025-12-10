@@ -10,6 +10,7 @@ use crate::error::Result;
 use crate::types::Digest;
 
 pub mod blake2;
+pub mod keccak; // Added module
 pub mod sha1;
 pub mod sha2;
 pub mod sha3;
@@ -17,6 +18,7 @@ pub mod shake;
 
 // Re-exports
 pub use blake2::{Blake2b, Blake2s};
+pub use keccak::Keccak256; // Export Keccak256
 pub use sha1::Sha1;
 pub use sha2::{Sha224, Sha256, Sha384, Sha512};
 pub use sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512};

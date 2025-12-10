@@ -32,8 +32,8 @@ pub use block::{Aes128, Aes192, Aes256, Cbc, Ctr};
 // Hash function implementations
 pub mod hash;
 pub use hash::{
-    Blake2b, Blake2s, Sha1, Sha224, Sha256, Sha384, Sha3_224, Sha3_256, Sha3_384, Sha3_512, Sha512,
-    Shake128, Shake256,
+    Blake2b, Blake2s, Keccak256, Sha1, Sha224, Sha256, Sha384, Sha3_224, Sha3_256, Sha3_384,
+    Sha3_512, Sha512, Shake128, Shake256,
 };
 
 // AEAD cipher implementations
@@ -94,7 +94,7 @@ pub use types::{
         P521 as P521Algorithm, X25519 as X25519Algorithm,
     },
 
-    digest::{Blake2bCompatible, Sha256Compatible, Sha512Compatible},
+    digest::{Blake2bCompatible, Keccak256Compatible, Sha256Compatible, Sha512Compatible},
     // Key types
     key::{AsymmetricPublicKey, AsymmetricSecretKey, SymmetricKey},
 

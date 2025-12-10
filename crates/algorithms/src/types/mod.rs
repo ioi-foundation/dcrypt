@@ -89,7 +89,7 @@ pub use nonce::{AesCtrCompatible, AesGcmCompatible, ChaCha20Compatible, XChaCha2
 
 pub use salt::{Argon2Compatible, HkdfCompatible, Pbkdf2Compatible};
 
-pub use digest::{Blake2bCompatible, Sha256Compatible, Sha512Compatible};
+pub use digest::{Blake2bCompatible, Keccak256Compatible, Sha256Compatible, Sha512Compatible};
 
 pub use tag::{ChaCha20Poly1305Compatible, GcmCompatible, HmacCompatible, Poly1305Compatible};
 

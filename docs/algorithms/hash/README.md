@@ -35,6 +35,9 @@ The module includes the following standard hash functions:
     -   `Sha3_384`
     -   `Sha3_512`
 
+-   **Keccak Family (Ethereum Compatible)**
+    -   `Keccak256` (Uses `0x01` padding, distinct from NIST SHA3-256)
+
 -   **SHAKE (as fixed-output hashes)**
     -   `Shake128` (fixed 32-byte output)
     -   `Shake256` (fixed 64-byte output)
@@ -158,3 +161,17 @@ assert_eq!(digest.len(), 32);
 println!("SHAKE-128 (32-byte) Digest: {}", digest.to_hex());
 ```
 > For variable-length output from SHAKE, please see the `dcrypt::algorithms::xof` module.
+
+### Ethereum-Compatible Hashing (Keccak-256)
+
+For compatibility with Ethereum addresses and signatures, use `Keccak256`. Note that this produces different output than NIST `Sha3_256` due to different padding.
+
+```rust
+use dcrypt::algorithms::hash::{Keccak256, HashFunction};
+
+let data = b"transfer(address,uint256)";
+let digest = Keccak256::digest(data).unwrap();
+
+// This matches Ethereum's function selector hash
+println!("Keccak-256 Digest: {}", digest.to_hex());
+```
