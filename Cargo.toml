@@ -12,18 +12,18 @@ keywords.workspace = true
 
 [dependencies]
 # Core dependencies (always included)
-dcrypt-api = { version = "=1.2.2", path = "crates/api" }
-dcrypt-common = { version = "=1.2.2", path = "crates/common" }
-dcrypt-internal = { version = "=1.2.2", path = "crates/internal" }
-dcrypt-params = { version = "=1.2.2", path = "crates/params" }
+dcrypt-api = { version = "=1.2.3", path = "crates/api" }
+dcrypt-common = { version = "=1.2.3", path = "crates/common" }
+dcrypt-internal = { version = "=1.2.3", path = "crates/internal" }
+dcrypt-params = { version = "=1.2.3", path = "crates/params" }
 
 # Optional algorithm crates
-dcrypt-algorithms = { version = "=1.2.2", path = "crates/algorithms", optional = true }
-dcrypt-symmetric = { version = "=1.2.2", path = "crates/symmetric", optional = true }
-dcrypt-kem = { version = "=1.2.2", path = "crates/kem", optional = true }
-dcrypt-sign = { version = "=1.2.2", path = "crates/sign", optional = true }
-dcrypt-pke = { version = "=1.2.2", path = "crates/pke", optional = true }
-dcrypt-hybrid = { version = "=1.2.2", path = "crates/hybrid", optional = true }
+dcrypt-algorithms = { version = "=1.2.3", path = "crates/algorithms", optional = true }
+dcrypt-symmetric = { version = "=1.2.3", path = "crates/symmetric", optional = true }
+dcrypt-kem = { version = "=1.2.3", path = "crates/kem", optional = true }
+dcrypt-sign = { version = "=1.2.3", path = "crates/sign", optional = true }
+dcrypt-pke = { version = "=1.2.3", path = "crates/pke", optional = true }
+dcrypt-hybrid = { version = "=1.2.3", path = "crates/hybrid", optional = true }
 
 # Re-export workspace dependencies that users might need
 rand = { workspace = true, optional = true }
@@ -86,7 +86,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version     = "1.2.2"
+version     = "1.2.3"
 edition     = "2021"
 authors     = ["Heath Ledger"]
 description = "dcrypt is a pure-Rust, software-only cryptography library providing both classical and post-quantum primitives with a focus on security, hybrid KEMs/signatures, and memory-safe, no-FFI design."
