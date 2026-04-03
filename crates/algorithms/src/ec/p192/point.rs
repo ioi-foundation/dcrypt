@@ -8,7 +8,7 @@ use crate::ec::p192::{
     scalar::Scalar,
 };
 use crate::error::{validate, Error, Result};
-use subtle::Choice;
+use subtle::{Choice, ConditionallySelectable};
 
 /// Format of a serialized elliptic‐curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -222,9 +222,9 @@ impl Point {
         for &byte in bytes.iter() {
             for i in (0..8).rev() {
                 acc = acc.double();
-                if ((byte >> i) & 1) == 1 {
-                    acc = acc.add(&base);
-                }
+                let acc_added = acc.add(&base);
+                let choice = Choice::from((byte >> i) & 1);
+                acc = ProjectivePoint::conditional_select(&acc, &acc_added, choice);
             }
         }
         Ok(acc.to_affine())
@@ -269,14 +269,6 @@ impl ProjectivePoint {
 
     /// Constant‐time point addition (Jacobian coordinates)
     pub fn add(&self, other: &Self) -> Self {
-        // Handle identity cases
-        if self.is_identity.into() {
-            return other.clone();
-        }
-        if other.is_identity.into() {
-            return self.clone();
-        }
-
         // Z₁², Z₂², Z₁³, Z₂³
         let z1_sq = self.z.square();
         let z2_sq = other.z.square();
@@ -290,14 +282,6 @@ impl ProjectivePoint {
 
         let h = u2.sub(&u1);
         let r = s2.sub(&s1);
-
-        if h.is_zero() {
-            if r.is_zero() {
-                return self.double();
-            } else {
-                return ProjectivePoint::identity();
-            }
-        }
 
         let h2 = h.square();
         let h3 = h2.mul(&h);
@@ -319,23 +303,28 @@ impl ProjectivePoint {
         let z1z2 = self.z.mul(&other.z);
         let z3 = z1z2.mul(&h);
 
-        ProjectivePoint {
+        let generic = ProjectivePoint {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
             z: z3,
-        }
+        };
+
+        let double_point = self.double();
+        let h_is_zero = Choice::from(h.is_zero() as u8);
+        let r_is_zero = Choice::from(r.is_zero() as u8);
+        let p_eq_q = h_is_zero & r_is_zero;
+        let p_eq_neg_q = h_is_zero & !r_is_zero;
+
+        let mut result = Self::conditional_select(&generic, &double_point, p_eq_q);
+        result = Self::conditional_select(&result, &Self::identity(), p_eq_neg_q);
+        result = Self::conditional_select(&result, other, self.is_identity);
+        result = Self::conditional_select(&result, self, other.is_identity);
+        result
     }
 
     /// Constant‐time point doubling (Jacobian coordinates)
     pub fn double(&self) -> Self {
-        if self.is_identity.into() {
-            return self.clone();
-        }
-        if self.y.is_zero() {
-            return ProjectivePoint::identity();
-        }
-
         // Standard SEC-1 formulas  (a = −3)
         //
         //   δ  = Z²
@@ -379,12 +368,15 @@ impl ProjectivePoint {
         };
         let y3 = y3.sub(&eight_gamma_sq);
 
-        ProjectivePoint {
+        let result = ProjectivePoint {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
             z: z3,
-        }
+        };
+
+        let return_identity = self.is_identity | Choice::from(self.y.is_zero() as u8);
+        Self::conditional_select(&result, &Self::identity(), return_identity)
     }
 
     /// Convert Jacobian back to affine coordinates
@@ -401,6 +393,22 @@ impl ProjectivePoint {
             is_identity: Choice::from(0),
             x: x_aff,
             y: y_aff,
+        }
+    }
+
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let select_field = |lhs: &FieldElement, rhs: &FieldElement| {
+            let mut out = [0u32; 6];
+            for (i, limb) in out.iter_mut().enumerate() {
+                *limb = u32::conditional_select(&lhs.0[i], &rhs.0[i], choice);
+            }
+            FieldElement(out)
+        };
+        Self {
+            is_identity: Choice::conditional_select(&a.is_identity, &b.is_identity, choice),
+            x: select_field(&a.x, &b.x),
+            y: select_field(&a.y, &b.y),
+            z: select_field(&a.z, &b.z),
         }
     }
 }

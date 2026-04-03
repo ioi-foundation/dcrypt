@@ -76,19 +76,22 @@ fn test_argon2id_verify_constant_time() {
         }
     };
 
-    let analysis = tester.calibrate_and_measure(
-        warmup_op,
-        measurement_op,
-        &config,
-        "Argon2id Verify"
-    ).expect("Calibration failed");
+    let analysis = tester
+        .calibrate_and_measure(warmup_op, measurement_op, &config, "Argon2id Verify")
+        .expect("Calibration failed");
 
     println!("Argon2id Verify Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!("  99% CI: [{:.3}, {:.3}] ns", analysis.ci_lower, analysis.ci_upper);
+    println!(
+        "  99% CI: [{:.3}, {:.3}] ns",
+        analysis.ci_lower, analysis.ci_upper
+    );
 
     if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!("\n{}", generate_test_insights(&analysis, &config, "Argon2id Verify"));
+        println!(
+            "\n{}",
+            generate_test_insights(&analysis, &config, "Argon2id Verify")
+        );
     }
 
     assert!(analysis.is_constant_time);
@@ -119,35 +122,34 @@ fn test_argon2_constant_time_compare() {
     let hash1 = argon2.hash_password(password.as_ref()).unwrap();
 
     let mut hash2 = hash1.clone();
-    if !hash2.is_empty() { hash2[0] ^= 0x01; }
+    if !hash2.is_empty() {
+        hash2[0] ^= 0x01;
+    }
 
     let mut hash3 = hash1.clone();
-    if !hash3.is_empty() { 
+    if !hash3.is_empty() {
         let idx = hash3.len() - 1;
-        hash3[idx] ^= 0x01; 
+        hash3[idx] ^= 0x01;
     }
 
     let config = create_argon2_config();
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let warmup_op = || {
-         dcrypt_algorithms::kdf::common::constant_time_eq(&hash1, &hash2);
+        dcrypt_algorithms::kdf::common::constant_time_eq(&hash1, &hash2);
     };
 
     let measurement_op = |use_hash3: bool| {
         if use_hash3 {
-             dcrypt_algorithms::kdf::common::constant_time_eq(&hash1, &hash3);
+            dcrypt_algorithms::kdf::common::constant_time_eq(&hash1, &hash3);
         } else {
-             dcrypt_algorithms::kdf::common::constant_time_eq(&hash1, &hash2);
+            dcrypt_algorithms::kdf::common::constant_time_eq(&hash1, &hash2);
         }
     };
 
-    let analysis = tester.calibrate_and_measure(
-        warmup_op,
-        measurement_op,
-        &config,
-        "Argon2 Comparison"
-    ).expect("Calibration failed");
+    let analysis = tester
+        .calibrate_and_measure(warmup_op, measurement_op, &config, "Argon2 Comparison")
+        .expect("Calibration failed");
 
     println!("Argon2 Comparison Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);

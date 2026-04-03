@@ -30,19 +30,22 @@ fn test_chacha20_constant_time() {
         chacha.encrypt(&mut buf);
     };
 
-    let analysis = tester.calibrate_and_measure(
-        warmup_op,
-        measurement_op,
-        &config,
-        "ChaCha20"
-    ).expect("Calibration failed");
+    let analysis = tester
+        .calibrate_and_measure(warmup_op, measurement_op, &config, "ChaCha20")
+        .expect("Calibration failed");
 
     println!("ChaCha20 Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!("  99% CI: [{:.3}, {:.3}] ns", analysis.ci_lower, analysis.ci_upper);
+    println!(
+        "  99% CI: [{:.3}, {:.3}] ns",
+        analysis.ci_lower, analysis.ci_upper
+    );
 
     if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!("\n{}", generate_test_insights(&analysis, &config, "ChaCha20"));
+        println!(
+            "\n{}",
+            generate_test_insights(&analysis, &config, "ChaCha20")
+        );
     }
 
     assert!(analysis.is_constant_time);

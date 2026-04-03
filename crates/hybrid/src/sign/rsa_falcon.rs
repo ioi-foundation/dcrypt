@@ -1,10 +1,13 @@
 // File: crates/hybrid/src/sign/rsa_falcon.rs
 
-use dcrypt_api::{Error, Result, Signature as SignatureTrait};
+use dcrypt_api::{
+    traits::{Serialize, SerializeSecret},
+    Error, Result, Signature as SignatureTrait,
+};
 // use dcrypt_sign::traditional::rsa::RsaPss; // RsaPss not yet implemented/exposed in dcrypt-sign
-use dcrypt_sign::falcon::Falcon512;
+use dcrypt_sign::falcon::{Falcon512, FalconPublicKey, FalconSecretKey, FalconSignature};
 use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 // Stub for RsaPss until implemented in dcrypt-sign
 // This prevents compilation errors while RsaPss is missing
@@ -43,13 +46,17 @@ impl SignatureTrait for RsaPss {
 /// Hybrid signature scheme combining RSA-PSS and Falcon-512
 pub struct RsaFalconHybrid;
 
+const HYBRID_PUBLIC_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/rsa-pss+falcon-512/public/v1";
+const HYBRID_SECRET_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/rsa-pss+falcon-512/secret/v1";
+const HYBRID_SIGNATURE_LABEL: &[u8] = b"dcrypt-hybrid-sig/rsa-pss+falcon-512/signature/v1";
+
 #[derive(Clone, Zeroize)]
 pub struct HybridPublicKey {
     rsa_pk: <RsaPss as SignatureTrait>::PublicKey,
     falcon_pk: <Falcon512 as SignatureTrait>::PublicKey,
 }
 
-#[derive(Clone, Zeroize)]
+#[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct HybridSecretKey {
     rsa_sk: <RsaPss as SignatureTrait>::SecretKey,
     falcon_sk: <Falcon512 as SignatureTrait>::SecretKey,
@@ -61,35 +68,75 @@ pub struct HybridSignature {
     falcon_sig: <Falcon512 as SignatureTrait>::SignatureData,
 }
 
-impl AsRef<[u8]> for HybridPublicKey {
-    fn as_ref(&self) -> &[u8] {
-        self.rsa_pk.as_ref()
+impl HybridPublicKey {
+    pub fn components(&self) -> (&Vec<u8>, &FalconPublicKey) {
+        (&self.rsa_pk, &self.falcon_pk)
     }
 }
 
-impl AsMut<[u8]> for HybridPublicKey {
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.rsa_pk.as_mut()
+impl HybridSecretKey {
+    pub fn components(&self) -> (&Vec<u8>, &FalconSecretKey) {
+        (&self.rsa_sk, &self.falcon_sk)
     }
 }
 
-impl AsRef<[u8]> for HybridSecretKey {
-    fn as_ref(&self) -> &[u8] {
-        self.rsa_sk.as_ref()
+impl HybridSignature {
+    pub fn components(&self) -> (&Vec<u8>, &FalconSignature) {
+        (&self.rsa_sig, &self.falcon_sig)
     }
 }
 
-// REMOVED: AsMut<[u8]> for HybridSecretKey - Inner keys may not support mutable access
+impl Serialize for HybridPublicKey {
+    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let (rsa_bytes, falcon_bytes) = decode_framed(bytes, HYBRID_PUBLIC_KEY_LABEL)?;
+        Ok(Self {
+            rsa_pk: rsa_bytes.to_vec(),
+            falcon_pk: FalconPublicKey(falcon_bytes.to_vec()),
+        })
+    }
 
-impl AsRef<[u8]> for HybridSignature {
-    fn as_ref(&self) -> &[u8] {
-        self.rsa_sig.as_ref()
+    fn to_bytes(&self) -> Vec<u8> {
+        encode_framed(
+            HYBRID_PUBLIC_KEY_LABEL,
+            &self.rsa_pk,
+            self.falcon_pk.as_ref(),
+        )
     }
 }
 
-impl AsMut<[u8]> for HybridSignature {
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.rsa_sig.as_mut()
+impl SerializeSecret for HybridSecretKey {
+    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let (rsa_bytes, falcon_bytes) = decode_framed(bytes, HYBRID_SECRET_KEY_LABEL)?;
+        Ok(Self {
+            rsa_sk: rsa_bytes.to_vec(),
+            falcon_sk: FalconSecretKey(falcon_bytes.to_vec()),
+        })
+    }
+
+    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(encode_framed(
+            HYBRID_SECRET_KEY_LABEL,
+            &self.rsa_sk,
+            self.falcon_sk.as_ref(),
+        ))
+    }
+}
+
+impl Serialize for HybridSignature {
+    fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let (rsa_bytes, falcon_bytes) = decode_framed(bytes, HYBRID_SIGNATURE_LABEL)?;
+        Ok(Self {
+            rsa_sig: rsa_bytes.to_vec(),
+            falcon_sig: FalconSignature(falcon_bytes.to_vec()),
+        })
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        encode_framed(
+            HYBRID_SIGNATURE_LABEL,
+            &self.rsa_sig,
+            self.falcon_sig.as_ref(),
+        )
     }
 }
 
@@ -129,7 +176,10 @@ impl SignatureTrait for RsaFalconHybrid {
         let rsa_sig = RsaPss::sign(message, &secret_key.rsa_sk)?;
         let falcon_sig = Falcon512::sign(message, &secret_key.falcon_sk)?;
 
-        Ok(HybridSignature { rsa_sig, falcon_sig })
+        Ok(HybridSignature {
+            rsa_sig,
+            falcon_sig,
+        })
     }
 
     fn verify(
@@ -144,4 +194,86 @@ impl SignatureTrait for RsaFalconHybrid {
         // If both verifications pass, return Ok
         Ok(())
     }
+}
+
+fn encode_framed(label: &[u8], first: &[u8], second: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(1 + label.len() + 8 + first.len() + second.len());
+    out.push(label.len() as u8);
+    out.extend_from_slice(label);
+    out.extend_from_slice(&(first.len() as u32).to_be_bytes());
+    out.extend_from_slice(first);
+    out.extend_from_slice(&(second.len() as u32).to_be_bytes());
+    out.extend_from_slice(second);
+    out
+}
+
+fn decode_framed<'a>(bytes: &'a [u8], expected_label: &[u8]) -> Result<(&'a [u8], &'a [u8])> {
+    let label_len = *bytes.first().ok_or_else(|| Error::SerializationError {
+        context: "Hybrid signature decoding",
+        #[cfg(feature = "std")]
+        message: "Missing hybrid signature label".to_string(),
+    })? as usize;
+
+    let label_end = 1 + label_len;
+    let label = bytes
+        .get(1..label_end)
+        .ok_or_else(|| Error::SerializationError {
+            context: "Hybrid signature decoding",
+            #[cfg(feature = "std")]
+            message: "Truncated hybrid signature label".to_string(),
+        })?;
+
+    if label != expected_label {
+        return Err(Error::SerializationError {
+            context: "Hybrid signature decoding",
+            #[cfg(feature = "std")]
+            message: "Unexpected hybrid signature framing label".to_string(),
+        });
+    }
+
+    let mut pos = label_end;
+    let first_len = read_u32(bytes, &mut pos, "first component length")? as usize;
+    let first = bytes
+        .get(pos..pos + first_len)
+        .ok_or_else(|| Error::InvalidLength {
+            context: "Hybrid signature decoding",
+            expected: pos + first_len,
+            actual: bytes.len(),
+        })?;
+    pos += first_len;
+
+    let second_len = read_u32(bytes, &mut pos, "second component length")? as usize;
+    let second = bytes
+        .get(pos..pos + second_len)
+        .ok_or_else(|| Error::InvalidLength {
+            context: "Hybrid signature decoding",
+            expected: pos + second_len,
+            actual: bytes.len(),
+        })?;
+    pos += second_len;
+
+    if pos != bytes.len() {
+        return Err(Error::SerializationError {
+            context: "Hybrid signature decoding",
+            #[cfg(feature = "std")]
+            message: "Trailing bytes after hybrid signature payload".to_string(),
+        });
+    }
+
+    Ok((first, second))
+}
+
+fn read_u32(bytes: &[u8], pos: &mut usize, field: &'static str) -> Result<u32> {
+    let end = *pos + 4;
+    let len_bytes = bytes
+        .get(*pos..end)
+        .ok_or_else(|| Error::SerializationError {
+            context: "Hybrid signature decoding",
+            #[cfg(feature = "std")]
+            message: format!("Missing {field}"),
+        })?;
+    *pos = end;
+    Ok(u32::from_be_bytes(
+        len_bytes.try_into().expect("slice length checked"),
+    ))
 }

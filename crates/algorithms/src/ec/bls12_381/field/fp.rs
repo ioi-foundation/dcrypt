@@ -219,8 +219,7 @@ impl Fp {
     fn is_lexicographically_largest(&self) -> bool {
         // Convert from Montgomery form for comparison
         let tmp = Self::montgomery_reduce(
-            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5], 
-            0, 0, 0, 0, 0, 0,
+            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5], 0, 0, 0, 0, 0, 0,
         );
 
         // Check if > (p-1)/2
@@ -359,9 +358,18 @@ impl Fp {
     pub const fn square(&self) -> Self {
         let result = self.square_impl();
         Self::montgomery_reduce(
-            result.0[0], result.0[1], result.0[2], result.0[3],
-            result.0[4], result.0[5], result.0[6], result.0[7],
-            result.0[8], result.0[9], result.0[10], result.0[11],
+            result.0[0],
+            result.0[1],
+            result.0[2],
+            result.0[3],
+            result.0[4],
+            result.0[5],
+            result.0[6],
+            result.0[7],
+            result.0[8],
+            result.0[9],
+            result.0[10],
+            result.0[11],
         )
     }
 
@@ -406,8 +414,18 @@ impl Fp {
     /// Montgomery reduction algorithm
     #[inline(always)]
     pub(crate) const fn montgomery_reduce(
-        t0: u64, t1: u64, t2: u64, t3: u64, t4: u64, t5: u64,
-        t6: u64, t7: u64, t8: u64, t9: u64, t10: u64, t11: u64,
+        t0: u64,
+        t1: u64,
+        t2: u64,
+        t3: u64,
+        t4: u64,
+        t5: u64,
+        t6: u64,
+        t7: u64,
+        t8: u64,
+        t9: u64,
+        t10: u64,
+        t11: u64,
     ) -> Self {
         // Round 1
         let k = t0.wrapping_mul(INV);
@@ -555,7 +573,7 @@ impl Fp {
         // We have precomputed constants:
         // R2 = R^2 = 2^768 mod p  => Low * R2 reduces to Low * R
         // R3 = R^3 = 2^1152 mod p => High * R3 reduces to High * R^2 = High * (2^384 * R)
-        
+
         // Construct raw Fp wrappers (not yet in Montgomery form)
         let low = Fp([d0, d1, d2, d3, d4, d5]);
         let high = Fp([d6, d7, 0, 0, 0, 0]);
@@ -564,10 +582,10 @@ impl Fp {
         // mul() computes a * b * R^-1
         // low.mul(R2)  = low * R^2 * R^-1 = low * R
         // high.mul(R3) = high * R^3 * R^-1 = high * R^2 = high * (2^384 * R)
-        
+
         let term1 = low.mul(&R2);
         let term2 = high.mul(&R3);
-        
+
         term1.add(&term2)
     }
 }
@@ -608,8 +626,7 @@ impl Fp {
     pub fn to_bytes(self) -> [u8; 48] {
         // Convert from Montgomery form
         let tmp = Fp::montgomery_reduce(
-            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5], 
-            0, 0, 0, 0, 0, 0,
+            self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5], 0, 0, 0, 0, 0, 0,
         );
 
         let mut res = [0; 48];
@@ -720,114 +737,154 @@ impl ConditionallySelectable for Fp {
 impl<'a> Neg for &'a Fp {
     type Output = Fp;
     #[inline]
-    fn neg(self) -> Fp { self.neg() }
+    fn neg(self) -> Fp {
+        self.neg()
+    }
 }
 
 impl Neg for Fp {
     type Output = Fp;
     #[inline]
-    fn neg(self) -> Fp { -&self }
+    fn neg(self) -> Fp {
+        -&self
+    }
 }
 
 impl<'a, 'b> Sub<&'b Fp> for &'a Fp {
     type Output = Fp;
     #[inline]
-    fn sub(self, rhs: &'b Fp) -> Fp { self.sub(rhs) }
+    fn sub(self, rhs: &'b Fp) -> Fp {
+        self.sub(rhs)
+    }
 }
 
 impl<'a, 'b> Add<&'b Fp> for &'a Fp {
     type Output = Fp;
     #[inline]
-    fn add(self, rhs: &'b Fp) -> Fp { self.add(rhs) }
+    fn add(self, rhs: &'b Fp) -> Fp {
+        self.add(rhs)
+    }
 }
 
 impl<'a, 'b> Mul<&'b Fp> for &'a Fp {
     type Output = Fp;
     #[inline]
-    fn mul(self, rhs: &'b Fp) -> Fp { self.mul(rhs) }
+    fn mul(self, rhs: &'b Fp) -> Fp {
+        self.mul(rhs)
+    }
 }
 
 // Additional binop implementations for convenience
 impl<'b> Add<&'b Fp> for Fp {
     type Output = Fp;
     #[inline]
-    fn add(self, rhs: &'b Fp) -> Fp { &self + rhs }
+    fn add(self, rhs: &'b Fp) -> Fp {
+        &self + rhs
+    }
 }
 
 impl<'a> Add<Fp> for &'a Fp {
     type Output = Fp;
     #[inline]
-    fn add(self, rhs: Fp) -> Fp { self + &rhs }
+    fn add(self, rhs: Fp) -> Fp {
+        self + &rhs
+    }
 }
 
 impl Add<Fp> for Fp {
     type Output = Fp;
     #[inline]
-    fn add(self, rhs: Fp) -> Fp { &self + &rhs }
+    fn add(self, rhs: Fp) -> Fp {
+        &self + &rhs
+    }
 }
 
 impl<'b> Sub<&'b Fp> for Fp {
     type Output = Fp;
     #[inline]
-    fn sub(self, rhs: &'b Fp) -> Fp { &self - rhs }
+    fn sub(self, rhs: &'b Fp) -> Fp {
+        &self - rhs
+    }
 }
 
 impl<'a> Sub<Fp> for &'a Fp {
     type Output = Fp;
     #[inline]
-    fn sub(self, rhs: Fp) -> Fp { self - &rhs }
+    fn sub(self, rhs: Fp) -> Fp {
+        self - &rhs
+    }
 }
 
 impl Sub<Fp> for Fp {
     type Output = Fp;
     #[inline]
-    fn sub(self, rhs: Fp) -> Fp { &self - &rhs }
+    fn sub(self, rhs: Fp) -> Fp {
+        &self - &rhs
+    }
 }
 
 impl SubAssign<Fp> for Fp {
     #[inline]
-    fn sub_assign(&mut self, rhs: Fp) { *self = &*self - &rhs; }
+    fn sub_assign(&mut self, rhs: Fp) {
+        *self = &*self - &rhs;
+    }
 }
 
 impl AddAssign<Fp> for Fp {
     #[inline]
-    fn add_assign(&mut self, rhs: Fp) { *self = &*self + &rhs; }
+    fn add_assign(&mut self, rhs: Fp) {
+        *self = &*self + &rhs;
+    }
 }
 
 impl<'b> SubAssign<&'b Fp> for Fp {
     #[inline]
-    fn sub_assign(&mut self, rhs: &'b Fp) { *self = &*self - rhs; }
+    fn sub_assign(&mut self, rhs: &'b Fp) {
+        *self = &*self - rhs;
+    }
 }
 
 impl<'b> AddAssign<&'b Fp> for Fp {
     #[inline]
-    fn add_assign(&mut self, rhs: &'b Fp) { *self = &*self + rhs; }
+    fn add_assign(&mut self, rhs: &'b Fp) {
+        *self = &*self + rhs;
+    }
 }
 
 impl<'b> Mul<&'b Fp> for Fp {
     type Output = Fp;
     #[inline]
-    fn mul(self, rhs: &'b Fp) -> Fp { &self * rhs }
+    fn mul(self, rhs: &'b Fp) -> Fp {
+        &self * rhs
+    }
 }
 
 impl<'a> Mul<Fp> for &'a Fp {
     type Output = Fp;
     #[inline]
-    fn mul(self, rhs: Fp) -> Fp { self * &rhs }
+    fn mul(self, rhs: Fp) -> Fp {
+        self * &rhs
+    }
 }
 
 impl Mul<Fp> for Fp {
     type Output = Fp;
     #[inline]
-    fn mul(self, rhs: Fp) -> Fp { &self * &rhs }
+    fn mul(self, rhs: Fp) -> Fp {
+        &self * &rhs
+    }
 }
 
 impl MulAssign<Fp> for Fp {
     #[inline]
-    fn mul_assign(&mut self, rhs: Fp) { *self = &*self * &rhs; }
+    fn mul_assign(&mut self, rhs: Fp) {
+        *self = &*self * &rhs;
+    }
 }
 
 impl<'b> MulAssign<&'b Fp> for Fp {
     #[inline]
-    fn mul_assign(&mut self, rhs: &'b Fp) { *self = &*self * rhs; }
+    fn mul_assign(&mut self, rhs: &'b Fp) {
+        *self = &*self * rhs;
+    }
 }

@@ -9,9 +9,9 @@ use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 use super::field::fp::Fp;
 use super::Scalar;
@@ -396,15 +396,19 @@ impl G1Affine {
         x.and_then(|x| {
             y.and_then(|y| {
                 let p = G1Affine::conditional_select(
-                    &G1Affine { x, y, infinity: infinity_flag_set },
+                    &G1Affine {
+                        x,
+                        y,
+                        infinity: infinity_flag_set,
+                    },
                     &G1Affine::identity(),
                     infinity_flag_set,
                 );
                 CtOption::new(
                     p,
-                    ((!infinity_flag_set) | (infinity_flag_set & x.is_zero() & y.is_zero())) &
-                    (!compression_flag_set) &
-                    (!sort_flag_set),
+                    ((!infinity_flag_set) | (infinity_flag_set & x.is_zero() & y.is_zero()))
+                        & (!compression_flag_set)
+                        & (!sort_flag_set),
                 )
             })
         })
@@ -413,7 +417,7 @@ impl G1Affine {
     /// Deserialize from compressed bytes with dcrypt error handling
     pub fn from_compressed(bytes: &[u8; 48]) -> Result<Self> {
         Self::from_compressed_unchecked(bytes)
-            .into_option()  // Convert CtOption to Option
+            .into_option() // Convert CtOption to Option
             .ok_or_else(|| Error::Parameter {
                 name: "compressed_bytes".into(),
                 reason: "invalid G1 point encoding".into(),
@@ -451,7 +455,11 @@ impl G1Affine {
                         y.lexicographically_largest() ^ sort_flag_set,
                     );
                     CtOption::new(
-                        G1Affine { x, y, infinity: infinity_flag_set },
+                        G1Affine {
+                            x,
+                            y,
+                            infinity: infinity_flag_set,
+                        },
                         (!infinity_flag_set) & compression_flag_set,
                     )
                 })
@@ -508,7 +516,8 @@ impl ConstantTimeEq for G1Projective {
         let self_is_zero = self.z.is_zero();
         let other_is_zero = other.z.is_zero();
 
-        (self_is_zero & other_is_zero) | ((!self_is_zero) & (!other_is_zero) & x1.ct_eq(&x2) & y1.ct_eq(&y2))
+        (self_is_zero & other_is_zero)
+            | ((!self_is_zero) & (!other_is_zero) & x1.ct_eq(&x2) & y1.ct_eq(&y2))
     }
 }
 
@@ -823,7 +832,7 @@ impl G1Projective {
             }
         }
     }
-    
+
     // ============================================================================
     // START: New MSM Implementation
     // ============================================================================
@@ -836,10 +845,7 @@ impl G1Projective {
     /// # Panics
     /// Panics if `points.len() != scalars.len()`.
     #[cfg(feature = "alloc")]
-    pub fn msm_vartime(
-        points: &[G1Affine],
-        scalars: &[Scalar],
-    ) -> Result<Self> {
+    pub fn msm_vartime(points: &[G1Affine], scalars: &[Scalar]) -> Result<Self> {
         if points.len() != scalars.len() {
             return Err(Error::Parameter {
                 name: "points/scalars".into(),
@@ -857,10 +863,7 @@ impl G1Projective {
     /// # Panics
     /// Panics if `points.len() != scalars.len()`.
     #[cfg(feature = "alloc")]
-    pub fn msm(
-        points: &[G1Affine],
-        scalars: &[Scalar],
-    ) -> Result<Self> {
+    pub fn msm(points: &[G1Affine], scalars: &[Scalar]) -> Result<Self> {
         if points.len() != scalars.len() {
             return Err(Error::Parameter {
                 name: "points/scalars".into(),
@@ -869,7 +872,7 @@ impl G1Projective {
         }
         Ok(Self::pippenger(points, scalars, false))
     }
-    
+
     /// Internal Pippenger's algorithm implementation.
     #[cfg(feature = "alloc")]
     fn pippenger(points: &[G1Affine], scalars: &[Scalar], is_vartime: bool) -> Self {
@@ -883,7 +886,7 @@ impl G1Projective {
         // 1. Choose window size `c`.
         // If constant-time, we limit window size to avoid excessive bucket scanning.
         let c = if is_vartime {
-             if num_entries < 32 {
+            if num_entries < 32 {
                 3
             } else {
                 // Integer log2 equivalent: floor(log2(n))
@@ -909,7 +912,7 @@ impl G1Projective {
             // 3. Populate buckets for the current window
             for i in 0..num_entries {
                 let scalar_bytes = scalars[i].to_bytes();
-                
+
                 // Extract c-bit window from scalar
                 let mut k = 0;
                 for bit_idx in 0..c {
@@ -922,7 +925,7 @@ impl G1Projective {
                         k |= (bit as usize) << bit_idx;
                     }
                 }
-                
+
                 if is_vartime {
                     if k > 0 {
                         buckets[k - 1] = buckets[k - 1].add_mixed(&points[i]);
@@ -931,12 +934,12 @@ impl G1Projective {
                     // Constant-time bucket accumulation
                     // Iterate all buckets, conditionally add point if bucket index matches k-1.
                     // If k=0 (scalar chunk is 0), we don't add to any bucket (add identity).
-                    
+
                     for b in 0..num_buckets {
                         let bucket_idx = b + 1;
                         // Check if k == bucket_idx in constant time using subtle
                         let choice = k.ct_eq(&bucket_idx);
-                        
+
                         let res = buckets[b].add_mixed(&points[i]);
                         buckets[b] = G1Projective::conditional_select(&buckets[b], &res, choice);
                     }
@@ -968,7 +971,6 @@ impl G1Projective {
     // END: New MSM Implementation
     // ============================================================================
 
-
     /// Point doubling.
     pub fn double(&self) -> G1Projective {
         // Algorithm 9 from https://eprint.iacr.org/2015/1060.pdf
@@ -991,7 +993,11 @@ impl G1Projective {
         let x3 = t0 * t1;
         let x3 = x3 + x3;
 
-        let tmp = G1Projective { x: x3, y: y3, z: z3 };
+        let tmp = G1Projective {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
         G1Projective::conditional_select(&tmp, &G1Projective::identity(), self.is_identity())
     }
 
@@ -1032,7 +1038,11 @@ impl G1Projective {
         let z3 = z3 * t4;
         let z3 = z3 + t0;
 
-        G1Projective { x: x3, y: y3, z: z3 }
+        G1Projective {
+            x: x3,
+            y: y3,
+            z: z3,
+        }
     }
 
     /// Mixed addition with affine point.
@@ -1065,7 +1075,11 @@ impl G1Projective {
         let z3 = z3 * t4;
         let z3 = z3 + t0;
 
-        let tmp = G1Projective { x: x3, y: y3, z: z3 };
+        let tmp = G1Projective {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
         G1Projective::conditional_select(&tmp, self, rhs.is_identity())
     }
 
@@ -1157,17 +1171,13 @@ impl G1Projective {
         array.copy_from_slice(bytes);
 
         Self::from_bytes_unchecked(&array)
-            .into_option()  // Convert CtOption to Option
+            .into_option() // Convert CtOption to Option
             .ok_or_else(|| Error::Processing {
                 operation: "G1 deserialization",
                 details: "invalid point encoding",
             })
             .and_then(|p| {
-                validate::parameter(
-                    bool::from(p.is_on_curve()),
-                    "point",
-                    "not on curve"
-                )?;
+                validate::parameter(bool::from(p.is_on_curve()), "point", "not on curve")?;
                 Ok(p)
             })
     }
@@ -1178,11 +1188,10 @@ impl G1Projective {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_g1_msm() {
         let g = G1Affine::generator();

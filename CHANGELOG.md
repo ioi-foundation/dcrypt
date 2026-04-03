@@ -7,6 +7,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.2.3] – 2026-04-03
+### Changed
+- Reworked ML-DSA/Dilithium signing to keep a fixed public attempt window while moving per-attempt `cs1`, `cs2`, and `ct0` products into the NTT domain and serializing only the selected candidate once.
+- Aligned the ML-DSA signer and verifier hint flow with the FIPS 204 `MakeHint(-ct0, w - cs2 + ct0)` / `UseHint` contract.
+
+### Fixed
+- Corrected the ML-DSA `Decompose` special-case handling used by high-bit reconstruction, fixing edge cases that could inflate retry counts and break hint reconstruction.
+
+### Security
+- ML-DSA constant-time signing now uses the formal FIPS 204 Appendix C, Table 3 loop bound (`814`) as its public fixed signing window instead of an empirical-only cap.
+- Added assurance tests that keep the fixed signing window above the FIPS minimum and regression tests that exercise the deterministic signing-attempt profile.
+
+### Performance
+- Optimized ML-DSA constant-time signing relative to the earlier fixed-1000 fallback by combining NTT-domain challenge products with one-shot constant-time candidate selection and final packing.
+
 ## [1.2.0] – 2025-12-08
 ### Added
 - **RFC 9380 hash-to-curve** for BLS12-381 (G₁ + G₂), including:
@@ -77,7 +92,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Security
 - Secret key material cannot be exposed via `AsRef/AsMut` — only safe, explicit serialization/export allowed.  
 
-[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.0...HEAD  
+[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.3...HEAD  
+[1.2.3]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.2...v1.2.3  
 [1.2.0]: https://github.com/ioi-foundation/dcrypt/compare/v1.1.1...v1.2.0  
 [1.1.1]: https://github.com/ioi-foundation/dcrypt/compare/v1.1.0...v1.1.1  
 [1.1.0]: https://github.com/ioi-foundation/dcrypt/releases/tag/v1.1.0  

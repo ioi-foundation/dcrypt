@@ -15,6 +15,14 @@ pub const DILITHIUM_N: usize = 256;
 /// FIPS 204, Table 1: Common to all ML-DSA parameter sets
 pub const DILITHIUM_Q: u32 = 8380417;
 
+/// FIPS 204 Appendix C, Table 3 minimum allowable loop limit for `ML-DSA.Sign_internal`.
+///
+/// NIST states that implementations which cap the signing rejection loop "shall not use
+/// a limit lower than" this value, and that this limit yields an approximately `2^-256`
+/// or smaller probability of being reached under the standard output-distribution
+/// assumptions for the XOF and hash functions.
+pub const FIPS204_SIGN_INTERNAL_MIN_LOOP_LIMIT: u16 = 814;
+
 /// Common trait for ML-DSA parameter sets as defined in FIPS 204
 pub trait DilithiumSchemeParams: Send + Sync + 'static {
     /// Algorithm name (ML-DSA-44, ML-DSA-65, ML-DSA-87)
@@ -82,6 +90,11 @@ pub trait DilithiumSchemeParams: Send + Sync + 'static {
     // Additional parameters
     /// Maximum signing attempts before failure
     const MAX_SIGN_ABORTS: u16 = 1000;
+    /// Fixed public signing window used by the constant-time signer.
+    ///
+    /// For a formally justified rejection cap, implementations must not go below the
+    /// Appendix C, Table 3 bound from FIPS 204.
+    const FIXED_SIGNING_WINDOW: u16 = FIPS204_SIGN_INTERNAL_MIN_LOOP_LIMIT;
     /// Bits for packing w₁ coefficients
     /// FIPS 204, Algorithm 28: b = bitlen((q-1)/(2·γ₂) − 1)
     const W1_BITS: usize;
@@ -163,10 +176,8 @@ impl DilithiumSchemeParams for Dilithium2Params {
     // SIGNATURE_SIZE updated: 32 (challenge) + 2304 (z) + 80 (hints) + 4 (counters) = 2420
     const SIGNATURE_SIZE: usize = 2420;
     // w₁ encoding: (q-1)/(2·γ₂) = 8380416/(2·95232) = 44
-    // The decompose algorithm can produce r₁ ∈ [0, 44], giving 45 values
-    // bitlen(44) = 6 bits (can represent 0-63)
+    // Decompose returns r₁ ∈ [0, 43], which still requires 6 bits.
     const W1_BITS: usize = 6;
-
     // Number of bits for packing z coefficients
     // Range [-γ₁+β, γ₁-β] = [-131072+78, 131072-78] = [-130994, 130994]
     // Maximum absolute value: 130994 < 2¹⁷, so 2·130994 < 2¹⁸
@@ -242,12 +253,10 @@ impl DilithiumSchemeParams for Dilithium3Params {
     const PUBLIC_KEY_BYTES: usize = 1952;
     const SECRET_KEY_BYTES: usize = 4032;
     const SIGNATURE_SIZE: usize = 3309;
-    // CORRECTED: w₁ encoding for γ₂ = 261888
+    // w₁ encoding for γ₂ = 261888
     // (q-1)/(2·γ₂) = 8380416/(2·261888) = 16
-    // The decompose algorithm can produce r₁ ∈ [0, 16], giving 17 values
-    // bitlen(16) = 5 bits (can represent 0-31)
+    // Decompose returns r₁ ∈ [0, 15], which requires 5 bits.
     const W1_BITS: usize = 5;
-
     // Number of bits for packing z coefficients
     // Range [-γ₁+β, γ₁-β] = [-524288+196, 524288-196] = [-524092, 524092]
     // Maximum absolute value: 524092 < 2¹⁹, so 2·524092 < 2²⁰
@@ -325,10 +334,8 @@ impl DilithiumSchemeParams for Dilithium5Params {
     const SECRET_KEY_BYTES: usize = 4896;
     const SIGNATURE_SIZE: usize = 4627;
     // w₁ encoding: (q-1)/(2·γ₂) = 8380416/(2·261888) = 16
-    // The decompose algorithm can produce r₁ ∈ [0, 16], giving 17 values
-    // bitlen(16) = 5 bits (can represent 0-31)
+    // Decompose returns r₁ ∈ [0, 15], which requires 5 bits.
     const W1_BITS: usize = 5;
-
     // Number of bits for packing z coefficients
     // Range [-γ₁+β, γ₁-β] = [-524288+120, 524288-120] = [-524168, 524168]
     // Maximum absolute value: 524168 < 2¹⁹, so 2·524168 < 2²⁰

@@ -170,9 +170,8 @@ impl Pke for EciesP256 {
         z_bytes.zeroize();
         derived_key_material.zeroize();
 
-        let aead_nonce_obj =
-            Nonce::<CHACHA20POLY1305_NONCE_LEN>::from_slice(&aead_nonce)
-                .map_err(|e| ApiError::from(PkeError::from(e)))?;
+        let aead_nonce_obj = Nonce::<CHACHA20POLY1305_NONCE_LEN>::from_slice(&aead_nonce)
+            .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
 

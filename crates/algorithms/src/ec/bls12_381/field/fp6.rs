@@ -20,7 +20,7 @@ use rand_core::RngCore;
 // ============================================================================
 
 /// Element of Fp6 = Fp2[v]/(v³ - ξ) where ξ = u + 1
-/// 
+///
 /// Represented as c0 + c1*v + c2*v² where v³ = u + 1
 pub struct Fp6 {
     pub c0: Fp2,
@@ -105,11 +105,11 @@ impl ConstantTimeEq for Fp6 {
 
 impl Fp6 {
     /// Full multiplication using interleaving strategy from ePrint 2022-376
-    /// 
+    ///
     /// This algorithm avoids double-width intermediates by processing limbs
     /// at the same offset together, allowing direct summation. This is particularly
     /// efficient for the cubic extension.
-    /// 
+    ///
     /// The multiplication in Fp6 follows the rule: v³ = ξ = u + 1
     #[inline]
     fn multiply_impl(&self, b: &Self) -> Self {
@@ -123,31 +123,58 @@ impl Fp6 {
         Fp6 {
             c0: Fp2 {
                 c0: Fp::sum_of_products(
-                    [self.c0.c0, -self.c0.c1, self.c1.c0, -self.c1.c1, self.c2.c0, -self.c2.c1],
+                    [
+                        self.c0.c0,
+                        -self.c0.c1,
+                        self.c1.c0,
+                        -self.c1.c1,
+                        self.c2.c0,
+                        -self.c2.c1,
+                    ],
                     [b.c0.c0, b.c0.c1, b20_m_b21, b20_p_b21, b10_m_b11, b10_p_b11],
                 ),
                 c1: Fp::sum_of_products(
-                    [self.c0.c0, self.c0.c1, self.c1.c0, self.c1.c1, self.c2.c0, self.c2.c1],
+                    [
+                        self.c0.c0, self.c0.c1, self.c1.c0, self.c1.c1, self.c2.c0, self.c2.c1,
+                    ],
                     [b.c0.c1, b.c0.c0, b20_p_b21, b20_m_b21, b10_p_b11, b10_m_b11],
                 ),
             },
             c1: Fp2 {
                 c0: Fp::sum_of_products(
-                    [self.c0.c0, -self.c0.c1, self.c1.c0, -self.c1.c1, self.c2.c0, -self.c2.c1],
+                    [
+                        self.c0.c0,
+                        -self.c0.c1,
+                        self.c1.c0,
+                        -self.c1.c1,
+                        self.c2.c0,
+                        -self.c2.c1,
+                    ],
                     [b.c1.c0, b.c1.c1, b.c0.c0, b.c0.c1, b20_m_b21, b20_p_b21],
                 ),
                 c1: Fp::sum_of_products(
-                    [self.c0.c0, self.c0.c1, self.c1.c0, self.c1.c1, self.c2.c0, self.c2.c1],
+                    [
+                        self.c0.c0, self.c0.c1, self.c1.c0, self.c1.c1, self.c2.c0, self.c2.c1,
+                    ],
                     [b.c1.c1, b.c1.c0, b.c0.c1, b.c0.c0, b20_p_b21, b20_m_b21],
                 ),
             },
             c2: Fp2 {
                 c0: Fp::sum_of_products(
-                    [self.c0.c0, -self.c0.c1, self.c1.c0, -self.c1.c1, self.c2.c0, -self.c2.c1],
+                    [
+                        self.c0.c0,
+                        -self.c0.c1,
+                        self.c1.c0,
+                        -self.c1.c1,
+                        self.c2.c0,
+                        -self.c2.c1,
+                    ],
                     [b.c2.c0, b.c2.c1, b.c1.c0, b.c1.c1, b.c0.c0, b.c0.c1],
                 ),
                 c1: Fp::sum_of_products(
-                    [self.c0.c0, self.c0.c1, self.c1.c0, self.c1.c1, self.c2.c0, self.c2.c1],
+                    [
+                        self.c0.c0, self.c0.c1, self.c1.c0, self.c1.c1, self.c2.c0, self.c2.c1,
+                    ],
                     [b.c2.c1, b.c2.c0, b.c1.c1, b.c1.c0, b.c0.c1, b.c0.c0],
                 ),
             },
@@ -155,7 +182,7 @@ impl Fp6 {
     }
 
     /// Optimized squaring in the cubic extension
-    /// 
+    ///
     /// Uses the identity for (c0 + c1*v + c2*v²)² and leverages the fact
     /// that squaring can be done with fewer operations than general multiplication.
     #[inline]
@@ -176,7 +203,7 @@ impl Fp6 {
     }
 
     /// Multiplicative inverse in Fp6
-    /// 
+    ///
     /// Uses the norm map to reduce inversion in Fp6 to inversion in Fp2.
     /// The algorithm computes the inverse using the conjugates with respect
     /// to the cubic extension.
@@ -207,7 +234,7 @@ impl Fp6 {
     }
 
     /// Multiplication by element of form (0, c1, 0)
-    /// 
+    ///
     /// This is a sparse multiplication optimized for elements with c0 = c2 = 0.
     /// Used in pairing computations where such sparse elements frequently appear.
     #[inline]
@@ -220,7 +247,7 @@ impl Fp6 {
     }
 
     /// Multiplication by element of form (c0, c1, 0)
-    /// 
+    ///
     /// This is a sparse multiplication optimized for elements with c2 = 0.
     /// Used in pairing computations for efficiency.
     #[inline]
@@ -240,7 +267,7 @@ impl Fp6 {
     }
 
     /// Multiplication by v (the cubic non-residue)
-    /// 
+    ///
     /// Since v³ = ξ = u + 1, multiplying by v shifts coefficients:
     /// v * (c0 + c1*v + c2*v²) = c2*ξ + c0*v + c1*v²
     #[inline]
@@ -331,7 +358,7 @@ impl Fp6 {
 
 impl Fp6 {
     /// Frobenius endomorphism
-    /// 
+    ///
     /// The Frobenius map in Fp6 applies the Frobenius to each coefficient
     /// and multiplies by appropriate precomputed constants based on the
     /// tower structure.

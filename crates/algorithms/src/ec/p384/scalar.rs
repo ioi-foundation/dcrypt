@@ -4,6 +4,7 @@ use crate::ec::p384::constants::P384_SCALAR_SIZE;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_params::traditional::ecdsa::NIST_P384;
+use subtle::{Choice, ConditionallySelectable};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// P-384 scalar value for use in elliptic curve operations
@@ -128,12 +129,16 @@ impl Scalar {
             carry = tmp >> 32;
         }
 
-        // if overflowed OR r ≥ n  ⇒ subtract n once
-        if carry == 1 || Self::geq(&r, &Self::N_LIMBS) {
-            Self::sub_in_place(&mut r, &Self::N_LIMBS);
-        }
+        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
+        let mut reduced = r;
+        let borrow = Self::sub_in_place(&mut reduced, &Self::N_LIMBS);
+        let need_reduce = Choice::from((carry as u8) | ((borrow ^ 1) as u8));
 
-        Ok(Self::from_bytes_unchecked(Self::limbs_to_be(&r)))
+        Ok(Self::conditional_select(
+            &unreduced,
+            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
+            need_reduce,
+        ))
     }
 
     /// Subtract two scalars modulo the curve order n
@@ -142,30 +147,28 @@ impl Scalar {
         let b = Self::to_le_limbs(&other.serialize());
 
         let mut r = [0u32; 12];
-        let mut borrow = 0i64;
+        let mut borrow = 0u64;
 
         for (i, r_limb) in r.iter_mut().enumerate() {
-            let tmp = a[i] as i64 - b[i] as i64 - borrow;
-            if tmp < 0 {
-                *r_limb = (tmp + (1i64 << 32)) as u32;
-                borrow = 1;
-            } else {
-                *r_limb = tmp as u32;
-                borrow = 0;
-            }
+            let tmp = (a[i] as u64).wrapping_sub(b[i] as u64).wrapping_sub(borrow);
+            *r_limb = tmp as u32;
+            borrow = (tmp >> 63) & 1;
         }
 
-        // if negative ⇒ add n back
-        if borrow == 1 {
-            let mut c = 0u64;
-            for (i, r_limb) in r.iter_mut().enumerate() {
-                let tmp = *r_limb as u64 + Self::N_LIMBS[i] as u64 + c;
-                *r_limb = tmp as u32;
-                c = tmp >> 32;
-            }
+        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
+        let mut reduced = r;
+        let mut carry = 0u64;
+        for (i, r_limb) in reduced.iter_mut().enumerate() {
+            let tmp = *r_limb as u64 + Self::N_LIMBS[i] as u64 + carry;
+            *r_limb = tmp as u32;
+            carry = tmp >> 32;
         }
 
-        Ok(Self::from_bytes_unchecked(Self::limbs_to_be(&r)))
+        Ok(Self::conditional_select(
+            &unreduced,
+            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
+            Choice::from(borrow as u8),
+        ))
     }
 
     /// Multiply two scalars modulo the curve order n
@@ -183,10 +186,9 @@ impl Scalar {
                 // Double the accumulator: acc = acc * 2 (mod n)
                 acc = acc.add_mod_n(&acc)?;
 
-                // If bit is set, add self: acc = acc + self (mod n)
-                if (byte >> i) & 1 == 1 {
-                    acc = acc.add_mod_n(self)?;
-                }
+                let acc_plus_self = acc.add_mod_n(self)?;
+                let choice = Choice::from((byte >> i) & 1);
+                acc = Self::conditional_select(&acc, &acc_plus_self, choice);
             }
         }
 
@@ -341,6 +343,17 @@ impl Scalar {
         0xFFFF_FFFF,
     ];
 
+    #[inline(always)]
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let a_bytes = a.serialize();
+        let b_bytes = b.serialize();
+        let mut out = [0u8; P384_SCALAR_SIZE];
+        for i in 0..P384_SCALAR_SIZE {
+            out[i] = u8::conditional_select(&a_bytes[i], &b_bytes[i], choice);
+        }
+        Self::from_bytes_unchecked(out)
+    }
+
     /// constant-time compare:  a ≥ b ?
     #[inline(always)]
     fn geq(a: &[u32; 12], b: &[u32; 12]) -> bool {
@@ -357,12 +370,13 @@ impl Scalar {
 
     /// a ← a − b   (little-endian limbs), ignores final borrow
     #[inline(always)]
-    fn sub_in_place(a: &mut [u32; 12], b: &[u32; 12]) {
+    fn sub_in_place(a: &mut [u32; 12], b: &[u32; 12]) -> u64 {
         let mut borrow = 0u64;
         for i in 0..12 {
             let tmp = (a[i] as u64).wrapping_sub(b[i] as u64).wrapping_sub(borrow);
             a[i] = tmp as u32;
             borrow = (tmp >> 63) & 1;
         }
+        borrow
     }
 }

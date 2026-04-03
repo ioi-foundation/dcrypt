@@ -39,10 +39,9 @@ pub struct EcdsaP256SecretKey {
 // Manual Zeroize implementation for EcdsaP256SecretKey
 impl Zeroize for EcdsaP256SecretKey {
     fn zeroize(&mut self) {
+        self.raw.zeroize();
         // Zeroize the byte representation
         self.bytes.zeroize();
-        // Note: The ec::Scalar type doesn't implement Zeroize directly
-        // It will be dropped when the struct is dropped
     }
 }
 

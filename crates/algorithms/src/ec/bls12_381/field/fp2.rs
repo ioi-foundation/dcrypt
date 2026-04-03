@@ -16,7 +16,7 @@ use super::fp::Fp;
 // ============================================================================
 
 /// Element of Fp2 = Fp[u] / (u^2 + 1)
-/// 
+///
 /// Represented as c0 + c1*u where u^2 = -1
 #[derive(Copy, Clone)]
 pub struct Fp2 {
@@ -81,11 +81,11 @@ impl ConditionallySelectable for Fp2 {
 
 impl Fp2 {
     /// Karatsuba multiplication for complex numbers
-    /// 
+    ///
     /// Given (a0 + a1*u) * (b0 + b1*u) where u^2 = -1:
     /// = a0*b0 + a0*b1*u + a1*b0*u + a1*b1*u^2
     /// = a0*b0 - a1*b1 + (a0*b1 + a1*b0)*u
-    /// 
+    ///
     /// Uses Karatsuba's technique to compute with only 3 Fp multiplications
     /// instead of 4, using sum_of_products for efficiency.
     #[inline]
@@ -99,9 +99,9 @@ impl Fp2 {
     }
 
     /// Complex squaring using algebraic reduction
-    /// 
+    ///
     /// (a + b*u)^2 = a^2 + 2ab*u + b^2*u^2 = (a^2 - b^2) + 2ab*u
-    /// 
+    ///
     /// Optimized using the identity:
     /// - Real: (a + b)(a - b) = a^2 - b^2
     /// - Imaginary: 2ab
@@ -111,10 +111,10 @@ impl Fp2 {
         let a_plus_b = (&self.c0).add(&self.c1);
         let a_minus_b = (&self.c0).sub(&self.c1);
         let two_a = (&self.c0).add(&self.c0);
-        
+
         Fp2 {
-            c0: (&a_plus_b).mul(&a_minus_b),  // a^2 - b^2
-            c1: (&two_a).mul(&self.c1),       // 2ab
+            c0: (&a_plus_b).mul(&a_minus_b), // a^2 - b^2
+            c1: (&two_a).mul(&self.c1),      // 2ab
         }
     }
 
@@ -128,7 +128,7 @@ impl Fp2 {
     }
 
     /// Multiplication by non-residue (u + 1)
-    /// 
+    ///
     /// (a + b*u) * (u + 1) = a*(u + 1) + b*u*(u + 1)
     ///                     = a*u + a + b*u^2 + b*u
     ///                     = a*u + a - b + b*u
@@ -142,20 +142,20 @@ impl Fp2 {
     }
 
     /// Complex inversion using conjugate
-    /// 
+    ///
     /// 1/(a + b*u) = (a - b*u) / (a^2 + b^2)
-    /// 
+    ///
     /// Since u^2 = -1, the norm a^2 + b^2 is in Fp
     #[inline]
     fn invert_impl(&self) -> CtOption<Fp2> {
         // Compute norm: a^2 + b^2
         let norm = self.c0.square() + self.c1.square();
-        
+
         // Invert the norm in Fp
         norm.invert().map(|inv_norm| {
             Fp2 {
                 c0: self.c0 * inv_norm,
-                c1: self.c1 * -inv_norm,  // Conjugate and scale
+                c1: self.c1 * -inv_norm, // Conjugate and scale
             }
         })
     }
@@ -198,7 +198,7 @@ impl Fp2 {
     }
 
     /// Frobenius endomorphism (raising to power p)
-    /// 
+    ///
     /// In Fp2, Frob(a + b*u) = a - b*u (conjugation)
     /// because u^p = u^(p-1) * u = -u (since u^2 = -1 and p ≡ 3 (mod 4))
     #[inline(always)]
@@ -286,7 +286,7 @@ impl Fp2 {
 
 impl Fp2 {
     /// Square root using Algorithm 9 from https://eprint.iacr.org/2012/685.pdf
-    /// 
+    ///
     /// This algorithm handles the case where p ≡ 3 (mod 4) for the quadratic extension.
     pub fn sqrt(&self) -> CtOption<Self> {
         // Handle zero case
@@ -378,11 +378,7 @@ impl Fp2 {
         let c1 = Fp::from_bytes(<&[u8; 48]>::try_from(&bytes[0..48]).unwrap());
         let c0 = Fp::from_bytes(<&[u8; 48]>::try_from(&bytes[48..96]).unwrap());
 
-        c1.and_then(|c1| {
-            c0.and_then(|c0| {
-                CtOption::new(Fp2 { c0, c1 }, Choice::from(1))
-            })
-        })
+        c1.and_then(|c1| c0.and_then(|c0| CtOption::new(Fp2 { c0, c1 }, Choice::from(1))))
     }
 
     /// Create from 128 bytes (two 64-byte chunks) by reducing modulo p.
@@ -667,7 +663,7 @@ fn test_squaring() {
             0x0261_6d5b_c909_9209,
             0xdbed_4677_2db5_8d48,
             0x11b9_4d50_76c7_b7b1,
-        ])
+        ]),
     };
 
     assert_eq!(a.square(), b);
@@ -709,7 +705,7 @@ fn test_multiplication() {
             0x0261_6d5b_c909_9209,
             0xdbed_4677_2db5_8d48,
             0x11b9_4d50_76c7_b7b1,
-        ])
+        ]),
     };
     let c = Fp2 {
         c0: Fp::from_raw_unchecked([
@@ -769,7 +765,7 @@ fn test_addition() {
             0x0261_6d5b_c909_9209,
             0xdbed_4677_2db5_8d48,
             0x11b9_4d50_76c7_b7b1,
-        ])
+        ]),
     };
     let c = Fp2 {
         c0: Fp::from_raw_unchecked([
@@ -829,7 +825,7 @@ fn test_subtraction() {
             0x0261_6d5b_c909_9209,
             0xdbed_4677_2db5_8d48,
             0x11b9_4d50_76c7_b7b1,
-        ])
+        ]),
     };
     let c = Fp2 {
         c0: Fp::from_raw_unchecked([

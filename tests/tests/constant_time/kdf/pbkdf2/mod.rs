@@ -31,16 +31,16 @@ fn test_pbkdf2_constant_time() {
         }
     };
 
-    let analysis = tester.calibrate_and_measure(
-        warmup_op,
-        measurement_op,
-        &config,
-        "PBKDF2"
-    ).expect("Calibration failed");
+    let analysis = tester
+        .calibrate_and_measure(warmup_op, measurement_op, &config, "PBKDF2")
+        .expect("Calibration failed");
 
     println!("PBKDF2 Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!("  99% CI: [{:.3}, {:.3}] ns", analysis.ci_lower, analysis.ci_upper);
+    println!(
+        "  99% CI: [{:.3}, {:.3}] ns",
+        analysis.ci_lower, analysis.ci_upper
+    );
 
     if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
         println!("\n{}", generate_test_insights(&analysis, &config, "PBKDF2"));

@@ -7,7 +7,7 @@ use rand::rngs::OsRng;
 #[cfg(test)]
 mod test_utils {
     use dcrypt_common::security::SecretBuffer;
-    
+
     /// Convert a slice to a SecretBuffer of the specified size
     /// This is a test-only utility for creating SecretBuffers from slices
     pub fn secret_buffer_from_slice<const N: usize>(slice: &[u8]) -> SecretBuffer<N> {
@@ -129,7 +129,7 @@ fn test_b283k_kem_tampered_ciphertext() {
 fn test_b283k_public_key_serialization() {
     let mut rng = OsRng;
     let (pk, _) = EcdhB283k::keypair(&mut rng).unwrap();
-    
+
     // Round-trip
     let bytes = pk.to_bytes();
     assert_eq!(bytes.len(), 37);
@@ -141,21 +141,25 @@ fn test_b283k_public_key_serialization() {
 fn test_b283k_secret_key_serialization() {
     let mut rng = OsRng;
     let (_, sk) = EcdhB283k::keypair(&mut rng).unwrap();
-    
+
     // Export and verify length
     let bytes = sk.to_bytes();
     assert_eq!(bytes.len(), 36);
-    
+
     // Import and verify functionality
     let restored = EcdhB283kSecretKey::from_bytes(&bytes).unwrap();
-    
+
     // Generate same public key from both
     let pk1 = ec_b283k::scalar_mult_base_g(
-        &ec_b283k::Scalar::from_secret_buffer(secret_buffer_from_slice::<36>(&sk.to_bytes())).unwrap()
-    ).unwrap();
+        &ec_b283k::Scalar::from_secret_buffer(secret_buffer_from_slice::<36>(&sk.to_bytes()))
+            .unwrap(),
+    )
+    .unwrap();
     let pk2 = ec_b283k::scalar_mult_base_g(
-        &ec_b283k::Scalar::from_secret_buffer(secret_buffer_from_slice::<36>(&restored.to_bytes())).unwrap()
-    ).unwrap();
+        &ec_b283k::Scalar::from_secret_buffer(secret_buffer_from_slice::<36>(&restored.to_bytes()))
+            .unwrap(),
+    )
+    .unwrap();
     assert_eq!(pk1.serialize_compressed(), pk2.serialize_compressed());
 }
 
@@ -164,7 +168,7 @@ fn test_b283k_ciphertext_serialization() {
     let mut rng = OsRng;
     let (pk, _) = EcdhB283k::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhB283k::encapsulate(&mut rng, &pk).unwrap();
-    
+
     // Round-trip
     let bytes = ct.to_bytes();
     assert_eq!(bytes.len(), 37);
@@ -177,10 +181,10 @@ fn test_b283k_shared_secret_size() {
     let mut rng = OsRng;
     let (pk, sk) = EcdhB283k::keypair(&mut rng).unwrap();
     let (ct, ss) = EcdhB283k::encapsulate(&mut rng, &pk).unwrap();
-    
+
     // B-283k uses SHA-384, so 48-byte shared secrets
     assert_eq!(ss.to_bytes().len(), 48);
-    
+
     let ss_dec = EcdhB283k::decapsulate(&sk, &ct).unwrap();
     assert_eq!(ss_dec.to_bytes().len(), 48);
 }
@@ -190,7 +194,7 @@ fn test_b283k_invalid_public_key() {
     // Wrong length
     assert!(EcdhB283kPublicKey::from_bytes(&[0u8; 36]).is_err());
     assert!(EcdhB283kPublicKey::from_bytes(&[0u8; 38]).is_err());
-    
+
     // Identity point
     assert!(EcdhB283kPublicKey::from_bytes(&[0u8; 37]).is_err());
 }
@@ -200,11 +204,11 @@ fn test_b283k_binary_curve_properties() {
     // Binary curves have different properties than prime curves
     let mut rng = OsRng;
     let (pk, _) = EcdhB283k::keypair(&mut rng).unwrap();
-    
+
     // Binary curve compressed points can start with 0x02 or 0x03
     let bytes = pk.to_bytes();
     assert!(bytes[0] == 0x02 || bytes[0] == 0x03);
-    
+
     // Field element size is 36 bytes for B-283k
     assert_eq!(ec_b283k::B283K_FIELD_ELEMENT_SIZE, 36);
 }
@@ -212,22 +216,22 @@ fn test_b283k_binary_curve_properties() {
 #[test]
 fn test_b283k_full_kem_with_serialization() {
     let mut rng = OsRng;
-    
+
     // Generate and serialize
     let (pk, sk) = EcdhB283k::keypair(&mut rng).unwrap();
     let pk_bytes = pk.to_bytes();
     let sk_bytes = sk.to_bytes();
-    
+
     // Restore and use
     let pk_restored = EcdhB283kPublicKey::from_bytes(&pk_bytes).unwrap();
     let sk_restored = EcdhB283kSecretKey::from_bytes(&sk_bytes).unwrap();
-    
+
     // KEM operation
     let (ct, ss1) = EcdhB283k::encapsulate(&mut rng, &pk_restored).unwrap();
     let ct_bytes = ct.to_bytes();
     let ct_restored = EcdhB283kCiphertext::from_bytes(&ct_bytes).unwrap();
     let ss2 = EcdhB283k::decapsulate(&sk_restored, &ct_restored).unwrap();
-    
+
     assert_eq!(ss1.to_bytes(), ss2.to_bytes());
     assert_eq!(ss1.to_bytes().len(), 48); // SHA-384 output
 }

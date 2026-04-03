@@ -14,6 +14,7 @@ use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::ShakeXof128;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use dcrypt_params::pqc::dilithium::DilithiumSchemeParams;
+use subtle::{Choice, ConditionallySelectable};
 use zeroize::Zeroize;
 
 // Montgomery reduce is available from algorithms::poly::ntt when needed
@@ -88,6 +89,14 @@ impl<P: DilithiumSchemeParams> PolyVecL<P> {
         Ok(())
     }
 
+    /// Apply inverse NTT in-place to every polynomial.
+    pub fn inv_ntt_inplace(&mut self) -> AlgoResult<()> {
+        for p in self.polys.iter_mut() {
+            p.from_ntt_inplace()?;
+        }
+        Ok(())
+    }
+
     /// Point-wise product and accumulate into one Polynomial (all in NTT domain).
     pub fn pointwise_dot_product(&self, other: &PolyVecL<P>) -> Polynomial<DilithiumParams> {
         let mut acc = Polynomial::<DilithiumParams>::zero();
@@ -96,6 +105,17 @@ impl<P: DilithiumSchemeParams> PolyVecL<P> {
             acc = acc.add(&prod);
         }
         acc
+    }
+
+    pub fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let mut out = Self::zero();
+        for i in 0..P::L_DIM {
+            for j in 0..DilithiumParams::N {
+                out.polys[i].coeffs[j] =
+                    u32::conditional_select(&a.polys[i].coeffs[j], &b.polys[i].coeffs[j], choice);
+            }
+        }
+        out
     }
 }
 
@@ -139,6 +159,22 @@ impl<P: DilithiumSchemeParams> PolyVecK<P> {
         res
     }
 
+    /// Additive inverse modulo q, coefficient-wise.
+    pub fn neg_mod_q(&self) -> Self {
+        let mut res = Self::zero();
+        for i in 0..P::K_DIM {
+            for j in 0..DilithiumParams::N {
+                let coeff = self.polys[i].coeffs[j];
+                res.polys[i].coeffs[j] = if coeff == 0 {
+                    0
+                } else {
+                    DilithiumParams::Q - coeff
+                };
+            }
+        }
+        res
+    }
+
     /// self − other, element-wise.
     pub fn sub(&self, other: &Self) -> Self {
         let mut res = Self::zero();
@@ -168,6 +204,17 @@ impl<P: DilithiumSchemeParams> PolyVecK<P> {
             }
         }
         result
+    }
+
+    pub fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let mut out = Self::zero();
+        for i in 0..P::K_DIM {
+            for j in 0..DilithiumParams::N {
+                out.polys[i].coeffs[j] =
+                    u32::conditional_select(&a.polys[i].coeffs[j], &b.polys[i].coeffs[j], choice);
+            }
+        }
+        out
     }
 }
 

@@ -9,9 +9,9 @@ use rand_core::RngCore;
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
 
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-#[cfg(feature = "alloc")]
 use alloc::vec;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 use super::field::fp::Fp;
 use super::field::fp2::Fp2;
@@ -361,12 +361,12 @@ impl G2Affine {
         res[0..48].copy_from_slice(&x.c1.to_bytes());
         res[48..96].copy_from_slice(&x.c0.to_bytes());
 
-        res[0] |= 1u8 << 7;  // Compression flag
-        res[0] |= u8::conditional_select(&0u8, &(1u8 << 6), self.infinity);  // Infinity flag
+        res[0] |= 1u8 << 7; // Compression flag
+        res[0] |= u8::conditional_select(&0u8, &(1u8 << 6), self.infinity); // Infinity flag
         res[0] |= u8::conditional_select(
             &0u8,
             &(1u8 << 5),
-            (!self.infinity) & self.y.lexicographically_largest(),  // Sort flag
+            (!self.infinity) & self.y.lexicographically_largest(), // Sort flag
         );
         res
     }
@@ -412,8 +412,8 @@ impl G2Affine {
             xc0.and_then(|xc0| {
                 yc1.and_then(|yc1| {
                     yc0.and_then(|yc0| {
-                        let x = Fp2 {c0: xc0, c1: xc1};
-                        let y = Fp2 {c0: yc0, c1: yc1};
+                        let x = Fp2 { c0: xc0, c1: xc1 };
+                        let y = Fp2 { c0: yc0, c1: yc1 };
 
                         let p = G2Affine::conditional_select(
                             &G2Affine {
@@ -426,7 +426,8 @@ impl G2Affine {
                         );
                         CtOption::new(
                             p,
-                            ((!infinity_flag_set) | (infinity_flag_set & x.is_zero() & y.is_zero()))
+                            ((!infinity_flag_set)
+                                | (infinity_flag_set & x.is_zero() & y.is_zero()))
                                 & (!compression_flag_set)
                                 & (!sort_flag_set),
                         )
@@ -457,7 +458,7 @@ impl G2Affine {
 
         xc1.and_then(|xc1| {
             xc0.and_then(|xc0| {
-                let x = Fp2 {c0: xc0, c1: xc1};
+                let x = Fp2 { c0: xc0, c1: xc1 };
                 CtOption::new(
                     G2Affine::identity(),
                     infinity_flag_set & compression_flag_set & (!sort_flag_set) & x.is_zero(),
@@ -860,7 +861,7 @@ impl G2Projective {
             }
         }
     }
-    
+
     // ============================================================================
     // START: New MSM Implementation
     // ============================================================================
@@ -873,10 +874,7 @@ impl G2Projective {
     /// # Panics
     /// Panics if `points.len() != scalars.len()`.
     #[cfg(feature = "alloc")]
-    pub fn msm_vartime(
-        points: &[G2Affine],
-        scalars: &[Scalar],
-    ) -> Result<Self> {
+    pub fn msm_vartime(points: &[G2Affine], scalars: &[Scalar]) -> Result<Self> {
         if points.len() != scalars.len() {
             return Err(Error::Parameter {
                 name: "points/scalars".into(),
@@ -894,10 +892,7 @@ impl G2Projective {
     /// # Panics
     /// Panics if `points.len() != scalars.len()`.
     #[cfg(feature = "alloc")]
-    pub fn msm(
-        points: &[G2Affine],
-        scalars: &[Scalar],
-    ) -> Result<Self> {
+    pub fn msm(points: &[G2Affine], scalars: &[Scalar]) -> Result<Self> {
         if points.len() != scalars.len() {
             return Err(Error::Parameter {
                 name: "points/scalars".into(),
@@ -906,7 +901,7 @@ impl G2Projective {
         }
         Ok(Self::pippenger(points, scalars, false))
     }
-    
+
     /// Internal Pippenger's algorithm implementation.
     #[cfg(feature = "alloc")]
     fn pippenger(points: &[G2Affine], scalars: &[Scalar], is_vartime: bool) -> Self {
@@ -920,7 +915,7 @@ impl G2Projective {
         // 1. Choose window size `c`.
         // If constant-time, we limit window size to avoid excessive bucket scanning.
         let c = if is_vartime {
-             if num_entries < 32 {
+            if num_entries < 32 {
                 3
             } else {
                 // Integer log2 equivalent: floor(log2(n))
@@ -946,7 +941,7 @@ impl G2Projective {
             // 3. Populate buckets for the current window
             for i in 0..num_entries {
                 let scalar_bytes = scalars[i].to_bytes();
-                
+
                 // Extract c-bit window from scalar
                 let mut k = 0;
                 for bit_idx in 0..c {
@@ -959,7 +954,7 @@ impl G2Projective {
                         k |= (bit as usize) << bit_idx;
                     }
                 }
-                
+
                 if is_vartime {
                     if k > 0 {
                         buckets[k - 1] = buckets[k - 1].add_mixed(&points[i]);
@@ -968,12 +963,12 @@ impl G2Projective {
                     // Constant-time bucket accumulation
                     // Iterate all buckets, conditionally add point if bucket index matches k-1.
                     // If k=0 (scalar chunk is 0), we don't add to any bucket (add identity).
-                    
+
                     for b in 0..num_buckets {
                         let bucket_idx = b + 1;
                         // Check if k == bucket_idx in constant time using subtle
                         let choice = k.ct_eq(&bucket_idx);
-                        
+
                         let res = buckets[b].add_mixed(&points[i]);
                         buckets[b] = G2Projective::conditional_select(&buckets[b], &res, choice);
                     }
@@ -1000,7 +995,7 @@ impl G2Projective {
 
         global_acc
     }
-    
+
     // ============================================================================
     // END: New MSM Implementation
     // ============================================================================
@@ -1026,7 +1021,11 @@ impl G2Projective {
         let x3 = t0 * t1;
         let x3 = x3 + x3;
 
-        let tmp = G2Projective { x: x3, y: y3, z: z3 };
+        let tmp = G2Projective {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
         G2Projective::conditional_select(&tmp, &G2Projective::identity(), self.is_identity())
     }
 
@@ -1066,7 +1065,11 @@ impl G2Projective {
         let z3 = z3 * t4;
         let z3 = z3 + t0;
 
-        G2Projective { x: x3, y: y3, z: z3 }
+        G2Projective {
+            x: x3,
+            y: y3,
+            z: z3,
+        }
     }
 
     /// Mixed addition with affine point.
@@ -1098,7 +1101,11 @@ impl G2Projective {
         let z3 = z3 * t4;
         let z3 = z3 + t0;
 
-        let tmp = G2Projective { x: x3, y: y3, z: z3 };
+        let tmp = G2Projective {
+            x: x3,
+            y: y3,
+            z: z3,
+        };
         G2Projective::conditional_select(&tmp, self, rhs.is_identity())
     }
 
@@ -1251,11 +1258,10 @@ impl G2Projective {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_g2_msm() {
         let g = G2Affine::generator();

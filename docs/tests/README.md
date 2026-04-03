@@ -1,31 +1,34 @@
-# dcrypt Tests (`tests`)
+# dcrypt Tests (`dcrypt-tests`)
 
-The `tests` crate is a dedicated workspace member for housing integration tests, constant-time verification tests, and potentially other complex test suites for the dcrypt library. This separation allows for more elaborate test setups and dependencies without polluting the main library crates.
+The `dcrypt-tests` crate is a dedicated workspace member for housing integration tests, ACVP validation, and the constant-time verification suite for the dcrypt library. Keeping this logic in a separate workspace crate allows more elaborate harness code and dependencies without polluting the main library crates.
 
 ## Purpose
 
 -   **Integration Testing**: Verify that different components of the dcrypt library (e.g., `algorithms`, `symmetric`, `kem`, `sign`, `hybrid`) work together correctly.
--   **Cross-Implementation Testing**: Compare dcrypt's algorithm outputs against known test vectors or potentially other cryptographic libraries. The `cross_implementation_tests.rs` file suggests this intent.
--   **Constant-Time Verification**: Implement tests to statistically analyze the timing behavior of cryptographic primitives to ensure they are constant-time with respect to secret inputs. The `constant_time` directory and `constant_time_tests.rs` point to this. This likely uses a framework like `dudect` or a custom similar approach (as hinted in `DOCS.md`).
+-   **Cross-Implementation Testing**: Compare dcrypt outputs against known-answer vectors and compatibility adapters where applicable.
+-   **Constant-Time Verification**: Statistically analyze timing behavior of security-sensitive operations using the custom harness in `tests/src/suites/constant_time/`. The current suite uses interleaved A/B measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, Holm-Bonferroni correction, and persistent noise-profile gating.
 -   **Test Vector Management**: Centralize and manage test vectors for various algorithms, possibly loaded from JSON or other formats (indicated by `vectors` directory and files like `blake3_vectors.json`).
 -   **Hybrid Scheme Testing**: Specifically test the combined functionality of hybrid KEMs and signature schemes (`hybrid_tests.rs`).
 -   **KEM Specific Tests**: Detailed tests for Key Encapsulation Mechanisms (`kem_tests.rs`).
 
 ## Structure
 
-The `tests` crate has the following notable structure:
+The `dcrypt-tests` crate has the following notable structure:
 
 -   **`src/lib.rs`**: The main library file for the test crate. It likely pulls in modules for different test categories.
--   **`src/constant_time/`**:
+-   **`src/suites/constant_time/`**:
     *   `config.rs`: Configuration for constant-time tests.
     *   `mod.rs`: Module declaration.
-    *   `tester.rs`: Logic for running constant-time tests. This might implement or wrap a statistical framework. The "Novel Algorithm for Determining Constant-Time Behavior" mentioned in `DOCS.md` would likely be implemented or utilized here.
+    *   `profile.rs`: Stores and updates historical environment noise baselines.
+    *   `stats.rs`: Statistical helpers used by the harness.
+    *   `tester.rs`: Runs timing measurements, applies bootstrap / KS / Welch analysis, and gates noisy environments.
 -   **`src/vectors/`**: Directory for storing and managing test vectors.
     *   Subdirectories for specific algorithms (e.g., `cbc`, `chacha`, `ctr`, `gcm`, `sha2`, `sha3`, `shake`).
     *   `blake3_vectors.json`: Example of test vectors in JSON format.
     *   `custom.rs`, `fips.rs`, `nist_pqc.rs`: Rust modules potentially for parsing or generating test vectors from different sources or for specific standards.
--   **`tests/` directory (within the `tests` crate itself)**: This is where the actual test functions are defined, using the `#[test]` attribute.
-    *   `constant_time_tests.rs`: Contains test cases that utilize the constant-time testing framework.
+-   **`tests/`**: This is where the actual integration test binaries live, using the `#[test]` attribute.
+    *   `acvp_tests.rs`: Runs the NIST-style ACVP validation suites.
+    *   `constant_time_tests.rs`: Runs the timing-analysis suite.
     *   `cross_implementation_tests.rs`: For comparing dcrypt outputs.
     *   `hybrid_tests.rs`: For testing hybrid cryptographic schemes.
     *   `integration_tests.rs`: General integration tests.
@@ -33,30 +36,31 @@ The `tests` crate has the following notable structure:
 
 ## Dependencies
 
-The `Cargo.toml` for the `tests` crate includes dependencies on all major dcrypt workspace members (`algorithms`, `api`, `common`, `hybrid`, `internal`, `kem`, `sign`, `symmetric`) to allow comprehensive testing. It also includes development dependencies like `rand_chacha` (for deterministic RNG in tests if needed) and `statrs` (a statistics library, likely used by the constant-time testing framework).
+The `Cargo.toml` for `dcrypt-tests` depends on the major dcrypt workspace members (`algorithms`, `api`, `common`, `hybrid`, `internal`, `kem`, `sign`, `symmetric`) so it can validate end-to-end behavior. It also includes statistical and deterministic-test dependencies such as `rand_chacha`.
 
 ## Running Tests
 
-Tests would typically be run using `cargo test` from the root of the `dcrypt` workspace or from within the `crates/tests` directory:
+Tests are typically run from the workspace root:
 
 ```bash
-# From the workspace root
-cargo test -p tests
+# Core integration and ACVP harness
+cargo test -p dcrypt-tests
 
-# Or, from crates/tests
-cd crates/tests
-cargo test
+# Constant-time suite
+cargo test -p dcrypt-tests --test constant_time_tests -- --nocapture
+
+# ACVP ML-DSA coverage in release mode
+cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_ -- --nocapture
 ```
 
 ## Key Test Areas
 
 -   **Correctness**: Verifying algorithm outputs against known-answer tests (KATs) and official test vectors.
--   **Security Properties**:
--   Constant-time behavior of sensitive operations.
--   Correct handling of keys, nonces, and other cryptographic parameters.
--   Proper error handling for invalid inputs or conditions.
+-   **Security Properties**: Constant-time behavior of sensitive operations, including ML-DSA fixed-window signing.
+-   **Parameter Handling**: Correct handling of keys, nonces, and other cryptographic parameters.
+-   **Error Handling**: Proper behavior for invalid inputs and failure conditions.
 -   **API Usability**: Ensuring the public APIs are ergonomic and function as documented.
 -   **Interoperability** (Cross-Implementation): Ensuring that dcrypt can, for example, verify signatures or decrypt ciphertexts generated by other standard implementations (if applicable test vectors are used).
 -   **Hybrid Scheme Logic**: Verifying that the combination logic in hybrid schemes is correct and that they achieve the intended combined security properties (at least structurally).
 
-This dedicated test crate is crucial for maintaining the quality, correctness, and security of the dcrypt library.
+This dedicated test crate is a core part of maintaining the correctness, side-channel assurance, and release confidence of the dcrypt library.

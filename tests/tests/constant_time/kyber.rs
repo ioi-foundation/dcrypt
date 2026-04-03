@@ -14,7 +14,58 @@ fn create_kyber_config() -> TestConfig {
 }
 
 #[test]
-fn test_kyber768_decapsulate_constant_time() {
+fn test_kyber768_decapsulate_success_path_constant_time() {
+    let config = create_kyber_config();
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
+
+    let (pk, sk) = Kyber768::keypair(&mut rng).expect("Keygen failed");
+    let (valid_ct_a, _valid_ss_a) =
+        Kyber768::encapsulate(&mut rng, &pk).expect("Encapsulation failed");
+    let (valid_ct_b, _valid_ss_b) =
+        Kyber768::encapsulate(&mut rng, &pk).expect("Encapsulation failed");
+
+    let tester = TimingTester::new(config.num_samples, config.num_iterations);
+
+    let warmup_op = || {
+        let _ = Kyber768::decapsulate(&sk, &valid_ct_a);
+    };
+
+    let measurement_op = |use_b: bool| {
+        if use_b {
+            let _ = Kyber768::decapsulate(&sk, &valid_ct_b);
+        } else {
+            let _ = Kyber768::decapsulate(&sk, &valid_ct_a);
+        }
+    };
+
+    let analysis = tester
+        .calibrate_and_measure(
+            warmup_op,
+            measurement_op,
+            &config,
+            "Kyber768 Decapsulate Success",
+        )
+        .expect("Calibration failed");
+
+    println!("Kyber768 Success-Path Timing Analysis:");
+    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
+    println!(
+        "  99% CI: [{:.3}, {:.3}] ns",
+        analysis.ci_lower, analysis.ci_upper
+    );
+
+    if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
+        println!(
+            "\n{}",
+            generate_test_insights(&analysis, &config, "Kyber768 Decapsulate Success")
+        );
+    }
+
+    assert!(analysis.is_constant_time);
+}
+
+#[test]
+fn test_kyber768_decapsulate_rejection_path_constant_time() {
     let config = create_kyber_config();
     let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
@@ -23,7 +74,7 @@ fn test_kyber768_decapsulate_constant_time() {
 
     let mut ct_bytes = valid_ct.to_bytes();
     if let Some(last) = ct_bytes.last_mut() {
-        *last ^= 0xFF; 
+        *last ^= 0xFF;
     }
     let invalid_ct = <Kyber768 as Kem>::Ciphertext::from_bytes(&ct_bytes)
         .expect("Failed to deserialize manipulated ciphertext");
@@ -42,19 +93,27 @@ fn test_kyber768_decapsulate_constant_time() {
         }
     };
 
-    let analysis = tester.calibrate_and_measure(
-        warmup_op,
-        measurement_op,
-        &config,
-        "Kyber768 Decapsulate"
-    ).expect("Calibration failed");
+    let analysis = tester
+        .calibrate_and_measure(
+            warmup_op,
+            measurement_op,
+            &config,
+            "Kyber768 Decapsulate Reject",
+        )
+        .expect("Calibration failed");
 
-    println!("Kyber768 Decapsulation Timing Analysis:");
+    println!("Kyber768 Rejection-Path Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!("  99% CI: [{:.3}, {:.3}] ns", analysis.ci_lower, analysis.ci_upper);
+    println!(
+        "  99% CI: [{:.3}, {:.3}] ns",
+        analysis.ci_lower, analysis.ci_upper
+    );
 
     if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!("\n{}", generate_test_insights(&analysis, &config, "Kyber768 Decapsulate"));
+        println!(
+            "\n{}",
+            generate_test_insights(&analysis, &config, "Kyber768 Decapsulate Reject")
+        );
     }
 
     assert!(analysis.is_constant_time);

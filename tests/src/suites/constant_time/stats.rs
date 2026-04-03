@@ -56,11 +56,7 @@ pub fn bootstrap_mean_distribution(diffs: &[f64], iterations: usize) -> Vec<f64>
 /// Performs Percentile Bootstrap to calculate CI and p-value.
 ///
 /// Returns (lower_bound, upper_bound, p_value).
-pub fn bootstrap_ci_and_p(
-    diffs: &[f64], 
-    iterations: usize, 
-    alpha: f64
-) -> (f64, f64, f64) {
+pub fn bootstrap_ci_and_p(diffs: &[f64], iterations: usize, alpha: f64) -> (f64, f64, f64) {
     let means = bootstrap_mean_distribution(diffs, iterations);
 
     let lower_idx = ((iterations as f64) * (alpha / 2.0)) as usize;
@@ -81,13 +77,32 @@ pub fn bootstrap_ci_and_p(
     (lower, upper, p.max(1.0 / iterations as f64))
 }
 
+/// Welch's t-test statistic and a large-sample two-sided p-value approximation.
+pub fn welch_t_statistic(a: &[f64], b: &[f64]) -> (f64, f64) {
+    let mean_a = a.iter().sum::<f64>() / a.len() as f64;
+    let mean_b = b.iter().sum::<f64>() / b.len() as f64;
+    let var_a = variance(a, mean_a);
+    let var_b = variance(b, mean_b);
+
+    let denom = (var_a / a.len() as f64 + var_b / b.len() as f64).sqrt();
+    if denom < 1e-12 {
+        return (0.0, 1.0);
+    }
+
+    let t = (mean_a - mean_b) / denom;
+    let p = 2.0 * (1.0 - normal_cdf(t.abs()));
+    (t, p.clamp(0.0, 1.0))
+}
+
 /// Asymptotic Kolmogorov-Smirnov p-value approximation.
 ///
 /// Uses the standard Kolmogorov distribution tail approximation:
 /// P(D_n >= d) ≈ 2 * Σ_{k=1..∞} (-1)^(k-1) * e^(-2 k^2 λ^2)
 pub fn ks_pvalue(stat: f64, n_a: usize, n_b: usize) -> f64 {
-    if stat <= 0.0 { return 1.0; }
-    
+    if stat <= 0.0 {
+        return 1.0;
+    }
+
     let n_eff = (n_a * n_b) as f64 / (n_a + n_b) as f64;
     // Stephens approximation for lambda
     let lambda = (n_eff.sqrt() + 0.12 + 0.11 / n_eff.sqrt()) * stat;
@@ -97,12 +112,14 @@ pub fn ks_pvalue(stat: f64, n_a: usize, n_b: usize) -> f64 {
         let k_f = k as f64;
         let term = (-2.0 * k_f * k_f * lambda * lambda).exp();
         let sign = if (k - 1) % 2 == 0 { 1.0 } else { -1.0 };
-        
+
         sum += sign * term;
-        
-        if term < 1e-12 { break; }
+
+        if term < 1e-12 {
+            break;
+        }
     }
-    
+
     let p = 2.0 * sum;
     p.max(0.0).min(1.0)
 }
@@ -110,27 +127,23 @@ pub fn ks_pvalue(stat: f64, n_a: usize, n_b: usize) -> f64 {
 /// Holm-Bonferroni step-down method for multiple hypothesis testing.
 ///
 /// Controls Family-Wise Error Rate (FWER).
-/// Returns a boolean vector corresponding to the input p-values, 
+/// Returns a boolean vector corresponding to the input p-values,
 /// where `true` indicates the null hypothesis is rejected (significant result).
 pub fn holm_adjust(pvals: &[f64], alpha: f64) -> Vec<bool> {
     let m = pvals.len();
     // Store (original_index, p_value)
-    let mut indexed: Vec<(usize, f64)> = pvals
-        .iter()
-        .cloned()
-        .enumerate()
-        .collect();
+    let mut indexed: Vec<(usize, f64)> = pvals.iter().cloned().enumerate().collect();
 
     // Sort by p-value ascending (smallest first)
     indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
     let mut decisions = vec![false; m];
-    
+
     for (i, (original_idx, p)) in indexed.into_iter().enumerate() {
         // Holm threshold: alpha / (m - rank + 1)
         // Here rank is i+1 (1-based), so denominator is m - i
         let threshold = alpha / (m - i) as f64;
-        
+
         if p <= threshold {
             decisions[original_idx] = true;
         } else {
@@ -146,18 +159,39 @@ pub fn holm_adjust(pvals: &[f64], alpha: f64) -> Vec<bool> {
 pub fn cohens_d(a: &[f64], b: &[f64]) -> f64 {
     let mean_a = a.iter().sum::<f64>() / a.len() as f64;
     let mean_b = b.iter().sum::<f64>() / b.len() as f64;
-    
+
     // Pooled variance
     let var_a = variance(a, mean_a);
     let var_b = variance(b, mean_b);
     let pooled_std = ((var_a + var_b) / 2.0).sqrt();
 
-    if pooled_std < 1e-9 { 0.0 } else { (mean_a - mean_b).abs() / pooled_std }
+    if pooled_std < 1e-9 {
+        0.0
+    } else {
+        (mean_a - mean_b).abs() / pooled_std
+    }
 }
 
 fn variance(data: &[f64], mean: f64) -> f64 {
     let sum_sq_diff: f64 = data.iter().map(|x| (x - mean).powi(2)).sum();
     sum_sq_diff / (data.len() as f64 - 1.0)
+}
+
+fn normal_cdf(x: f64) -> f64 {
+    0.5 * (1.0 + erf_approx(x / core::f64::consts::SQRT_2))
+}
+
+fn erf_approx(x: f64) -> f64 {
+    // Abramowitz and Stegun 7.1.26
+    let sign = if x < 0.0 { -1.0 } else { 1.0 };
+    let x = x.abs();
+    let t = 1.0 / (1.0 + 0.3275911 * x);
+    let y = 1.0
+        - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t
+            + 0.254829592)
+            * t
+            * (-x * x).exp();
+    sign * y
 }
 
 /// Kolmogorov-Smirnov Test Statistic
@@ -170,7 +204,7 @@ pub fn ks_statistic(a: &[f64], b: &[f64]) -> f64 {
 
     let n_a = sorted_a.len();
     let n_b = sorted_b.len();
-    
+
     let mut i = 0;
     let mut j = 0;
     let mut max_diff = 0.0;
@@ -178,14 +212,20 @@ pub fn ks_statistic(a: &[f64], b: &[f64]) -> f64 {
     while i < n_a && j < n_b {
         let val_a = sorted_a[i];
         let val_b = sorted_b[j];
-        
+
         let cdf_a = i as f64 / n_a as f64;
         let cdf_b = j as f64 / n_b as f64;
-        
-        let diff = (cdf_a - cdf_b).abs();
-        if diff > max_diff { max_diff = diff; }
 
-        if val_a <= val_b { i += 1; } else { j += 1; }
+        let diff = (cdf_a - cdf_b).abs();
+        if diff > max_diff {
+            max_diff = diff;
+        }
+
+        if val_a <= val_b {
+            i += 1;
+        } else {
+            j += 1;
+        }
     }
     max_diff
 }

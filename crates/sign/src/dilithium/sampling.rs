@@ -119,106 +119,81 @@ pub fn sample_polyveck_cbd_eta<P: DilithiumSchemeParams>(
     Ok(pv)
 }
 
-/// Samples PolyVecL with coefficients uniformly in [-γ1+β+η, γ1-β-η] (Algorithm 23).
-/// Uses SHAKE256(K || κ || i) for polynomial i.
+/// Samples `y = ExpandMask(rho'', mu)` per FIPS 204 Algorithm 34.
 ///
-/// Produces symmetric distribution with proper bounds
+/// Each polynomial uses `rho || IntegerToBytes(mu + r, 2)` as the XOF input and
+/// unpacks coefficients into the range `[-gamma1 + 1, gamma1]`.
 pub fn sample_polyvecl_uniform_gamma1<P: DilithiumSchemeParams>(
-    key_seed_for_y: &[u8; 32], // SEED_KEY_BYTES is always 32
-    kappa_nonce: u16,
+    mask_seed: &[u8],
+    mu: u16,
     gamma1: u32,
 ) -> Result<PolyVecL<P>, SignError> {
     let mut pv = PolyVecL::<P>::zero();
 
-    // Compute the tighter bound for y to ensure acceptance in signing
-    let y_bound = gamma1 as i32 - P::BETA_PARAM as i32 - P::ETA_S1S2 as i32;
-
-    // Determine number of bits needed per coefficient
-    let gamma1_bits = if gamma1 == (1 << 17) {
-        18 // For γ1 = 2^17
-    } else if gamma1 == (1 << 19) {
-        20 // For γ1 = 2^19
-    } else {
-        return Err(SignError::Sampling("Unsupported gamma1 value".into()));
-    };
-
     for i in 0..P::L_DIM {
+        let nonce = mu.wrapping_add(i as u16);
         let mut xof = ShakeXof256::new();
-        xof.update(key_seed_for_y).map_err(SignError::from_algo)?;
-        xof.update(&kappa_nonce.to_le_bytes())
+        xof.update(mask_seed).map_err(SignError::from_algo)?;
+        xof.update(&nonce.to_le_bytes())
             .map_err(SignError::from_algo)?;
-        xof.update(&[i as u8]).map_err(SignError::from_algo)?;
 
-        let mut coeff_idx = 0;
-
-        if gamma1_bits == 18 {
-            // Sample 18-bit values for γ1 = 2^17
-            while coeff_idx < DilithiumParams::N {
-                let mut buf = [0u8; 3]; // 18 bits requires 3 bytes
+        match gamma1 {
+            val if val == (1 << 17) => {
+                let mut buf = [0u8; DilithiumParams::N * 18 / 8];
                 xof.squeeze(&mut buf).map_err(SignError::from_algo)?;
 
-                // Extract 18-bit value
-                let r = (buf[0] as u32) | ((buf[1] as u32) << 8) | ((buf[2] as u32 & 0x03) << 16);
+                for chunk in 0..(DilithiumParams::N / 4) {
+                    let off = 9 * chunk;
+                    let t0 = (buf[off] as u32)
+                        | ((buf[off + 1] as u32) << 8)
+                        | (((buf[off + 2] as u32) & 0x03) << 16);
+                    let t1 = ((buf[off + 2] as u32) >> 2)
+                        | ((buf[off + 3] as u32) << 6)
+                        | (((buf[off + 4] as u32) & 0x0F) << 14);
+                    let t2 = ((buf[off + 4] as u32) >> 4)
+                        | ((buf[off + 5] as u32) << 4)
+                        | (((buf[off + 6] as u32) & 0x3F) << 12);
+                    let t3 = ((buf[off + 6] as u32) >> 6)
+                        | ((buf[off + 7] as u32) << 2)
+                        | ((buf[off + 8] as u32) << 10);
 
-                // Rejection sampling: accept only if r < 2*gamma1 - 2
-                if r >= 2 * gamma1 - 2 {
-                    continue;
+                    pv.polys[i].coeffs[4 * chunk] = centered_to_mod_q((gamma1 as i32) - t0 as i32);
+                    pv.polys[i].coeffs[4 * chunk + 1] =
+                        centered_to_mod_q((gamma1 as i32) - t1 as i32);
+                    pv.polys[i].coeffs[4 * chunk + 2] =
+                        centered_to_mod_q((gamma1 as i32) - t2 as i32);
+                    pv.polys[i].coeffs[4 * chunk + 3] =
+                        centered_to_mod_q((gamma1 as i32) - t3 as i32);
                 }
-
-                // Map to symmetric range [-(gamma1-1), gamma1-1]
-                let coeff_signed = (r as i32) - ((gamma1 - 1) as i32);
-
-                // Clamp to ±(γ1-β-η) to ensure acceptance in signing
-                let mut v = coeff_signed;
-                if v > y_bound {
-                    v = y_bound;
-                }
-                if v < -y_bound {
-                    v = -y_bound;
-                }
-
-                // Store in polynomial (convert to positive representation mod q)
-                pv.polys[i].coeffs[coeff_idx] =
-                    ((v + DilithiumParams::Q as i32) % DilithiumParams::Q as i32) as u32;
-
-                coeff_idx += 1;
             }
-        } else {
-            // Sample 20-bit values for γ1 = 2^19
-            while coeff_idx < DilithiumParams::N {
-                let mut buf = [0u8; 3]; // 20 bits requires 2.5 bytes, use 3 for simplicity
+            val if val == (1 << 19) => {
+                let mut buf = [0u8; DilithiumParams::N * 20 / 8];
                 xof.squeeze(&mut buf).map_err(SignError::from_algo)?;
 
-                // Extract 20-bit value
-                let r = (buf[0] as u32) | ((buf[1] as u32) << 8) | ((buf[2] as u32 & 0x0F) << 16);
+                for chunk in 0..(DilithiumParams::N / 2) {
+                    let off = 5 * chunk;
+                    let t0 = (buf[off] as u32)
+                        | ((buf[off + 1] as u32) << 8)
+                        | (((buf[off + 2] as u32) & 0x0F) << 16);
+                    let t1 = ((buf[off + 2] as u32) >> 4)
+                        | ((buf[off + 3] as u32) << 4)
+                        | ((buf[off + 4] as u32) << 12);
 
-                // Rejection sampling: accept only if r < 2*gamma1 - 2
-                if r >= 2 * gamma1 - 2 {
-                    continue;
+                    pv.polys[i].coeffs[2 * chunk] = centered_to_mod_q((gamma1 as i32) - t0 as i32);
+                    pv.polys[i].coeffs[2 * chunk + 1] =
+                        centered_to_mod_q((gamma1 as i32) - t1 as i32);
                 }
-
-                // Map to symmetric range [-(gamma1-1), gamma1-1]
-                let coeff_signed = (r as i32) - ((gamma1 - 1) as i32);
-
-                // Clamp to ±(γ1-β-η) to ensure acceptance in signing
-                let mut v = coeff_signed;
-                if v > y_bound {
-                    v = y_bound;
-                }
-                if v < -y_bound {
-                    v = -y_bound;
-                }
-
-                // Store in polynomial (convert to positive representation mod q)
-                pv.polys[i].coeffs[coeff_idx] =
-                    ((v + DilithiumParams::Q as i32) % DilithiumParams::Q as i32) as u32;
-
-                coeff_idx += 1;
             }
+            _ => return Err(SignError::Sampling("Unsupported gamma1 value".into())),
         }
     }
 
     Ok(pv)
+}
+
+#[inline(always)]
+fn centered_to_mod_q(value: i32) -> u32 {
+    (value as i64).rem_euclid(DilithiumParams::Q as i64) as u32
 }
 
 /// Samples challenge polynomial c with τ nonzero coefficients (Algorithm 8).

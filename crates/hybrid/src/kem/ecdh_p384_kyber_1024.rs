@@ -4,7 +4,10 @@
 
 use super::engine::{HybridCiphertext, HybridKemEngine, HybridPublicKey, HybridSecretKey};
 use dcrypt_api::{error::Result as ApiResult, Kem};
-use dcrypt_kem::{ecdh::EcdhP384, kyber::{Kyber1024, KyberSharedSecret}};
+use dcrypt_kem::{
+    ecdh::EcdhP384,
+    kyber::{Kyber1024, KyberSharedSecret},
+};
 use rand::{CryptoRng, RngCore};
 
 /// A concrete hybrid KEM struct for EcdhP384 + Kyber1024.

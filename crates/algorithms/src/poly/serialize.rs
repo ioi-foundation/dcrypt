@@ -54,11 +54,9 @@ impl<M: Modulus> CoefficientPacker<M> for DefaultCoefficientSerde {
 
             // Pack coefficient into byte array
             for bit in 0..bits_per_coeff {
-                if (masked_coeff >> bit) & 1 == 1 {
-                    let byte_idx = bit_pos / 8;
-                    let bit_idx = bit_pos % 8;
-                    packed[byte_idx] |= 1 << bit_idx;
-                }
+                let byte_idx = bit_pos / 8;
+                let bit_idx = bit_pos % 8;
+                packed[byte_idx] |= (((masked_coeff >> bit) & 1) as u8) << bit_idx;
                 bit_pos += 1;
             }
         }
@@ -109,10 +107,7 @@ impl<M: Modulus> CoefficientUnpacker<M> for DefaultCoefficientSerde {
             for bit in 0..bits_per_coeff {
                 let byte_idx = bit_pos / 8;
                 let bit_idx = bit_pos % 8;
-
-                if (bytes[byte_idx] >> bit_idx) & 1 == 1 {
-                    coeff_value |= 1 << bit;
-                }
+                coeff_value |= (((bytes[byte_idx] >> bit_idx) & 1) as u32) << bit;
                 bit_pos += 1;
             }
 

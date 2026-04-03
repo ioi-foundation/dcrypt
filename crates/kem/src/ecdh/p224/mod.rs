@@ -18,7 +18,11 @@ use crate::error::Error as KemError;
 use dcrypt_algorithms::ec::p224 as ec; // Use P-224 algorithms
 use dcrypt_algorithms::hash::sha2::Sha256;
 use dcrypt_algorithms::mac::hmac::Hmac;
-use dcrypt_api::{error::Error as ApiError, traits::serialize::{Serialize, SerializeSecret}, Kem, Key as ApiKey, Result as ApiResult};
+use dcrypt_api::{
+    error::Error as ApiError,
+    traits::serialize::{Serialize, SerializeSecret},
+    Kem, Key as ApiKey, Result as ApiResult,
+};
 use dcrypt_common::security::SecretBuffer;
 use rand::{CryptoRng, RngCore};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
@@ -46,11 +50,20 @@ pub struct EcdhP224Ciphertext([u8; ec::P224_CIPHERTEXT_SIZE]);
 impl EcdhP224PublicKey {
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         if bytes.len() != ec::P224_POINT_COMPRESSED_SIZE {
-            return Err(ApiError::InvalidLength { context: "EcdhP224PublicKey::from_bytes", expected: ec::P224_POINT_COMPRESSED_SIZE, actual: bytes.len() });
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP224PublicKey::from_bytes",
+                expected: ec::P224_POINT_COMPRESSED_SIZE,
+                actual: bytes.len(),
+            });
         }
-        let point = ec::Point::deserialize_compressed(bytes).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let point = ec::Point::deserialize_compressed(bytes)
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         if point.is_identity() {
-            return Err(ApiError::InvalidKey { context: "EcdhP224PublicKey::from_bytes", #[cfg(feature = "std")] message: "Public key cannot be the identity point".to_string() });
+            return Err(ApiError::InvalidKey {
+                context: "EcdhP224PublicKey::from_bytes",
+                #[cfg(feature = "std")]
+                message: "Public key cannot be the identity point".to_string(),
+            });
         }
         let mut key_bytes = [0u8; ec::P224_POINT_COMPRESSED_SIZE];
         key_bytes.copy_from_slice(bytes);
@@ -62,29 +75,43 @@ impl EcdhP224PublicKey {
     }
 
     pub fn validate(&self) -> ApiResult<()> {
-        let point = ec::Point::deserialize_compressed(&self.0).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let point = ec::Point::deserialize_compressed(&self.0)
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         if point.is_identity() {
-            return Err(ApiError::InvalidKey { context: "validate_public_key", #[cfg(feature = "std")] message: "Public key is the identity point".to_string() });
+            return Err(ApiError::InvalidKey {
+                context: "validate_public_key",
+                #[cfg(feature = "std")]
+                message: "Public key is the identity point".to_string(),
+            });
         }
         Ok(())
     }
 }
 
 impl Serialize for EcdhP224PublicKey {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Self::from_bytes(bytes) }
-    fn to_bytes(&self) -> Vec<u8> { self.to_bytes() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Self::from_bytes(bytes)
+    }
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes()
+    }
 }
 
 // --- Secret key methods ---
 impl EcdhP224SecretKey {
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         if bytes.len() != ec::P224_SCALAR_SIZE {
-            return Err(ApiError::InvalidLength { context: "EcdhP224SecretKey::from_bytes", expected: ec::P224_SCALAR_SIZE, actual: bytes.len() });
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP224SecretKey::from_bytes",
+                expected: ec::P224_SCALAR_SIZE,
+                actual: bytes.len(),
+            });
         }
         let mut buffer_bytes = [0u8; ec::P224_SCALAR_SIZE];
         buffer_bytes.copy_from_slice(bytes);
         let buffer = SecretBuffer::new(buffer_bytes);
-        let scalar = ec::Scalar::from_secret_buffer(buffer.clone()).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let scalar = ec::Scalar::from_secret_buffer(buffer.clone())
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         drop(scalar);
         Ok(Self(buffer))
     }
@@ -92,14 +119,19 @@ impl EcdhP224SecretKey {
         Zeroizing::new(self.0.as_ref().to_vec())
     }
     pub fn validate(&self) -> ApiResult<()> {
-        let _ = ec::Scalar::from_secret_buffer(self.0.clone()).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let _ = ec::Scalar::from_secret_buffer(self.0.clone())
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         Ok(())
     }
 }
 
 impl SerializeSecret for EcdhP224SecretKey {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Self::from_bytes(bytes) }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> { self.to_bytes() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Self::from_bytes(bytes)
+    }
+    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        self.to_bytes()
+    }
 }
 
 // --- Shared secret methods ---
@@ -110,20 +142,33 @@ impl EcdhP224SharedSecret {
 }
 
 impl SerializeSecret for EcdhP224SharedSecret {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Ok(Self(ApiKey::new(bytes))) }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> { self.to_bytes() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Ok(Self(ApiKey::new(bytes)))
+    }
+    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        self.to_bytes()
+    }
 }
 
 // --- Ciphertext methods ---
 impl EcdhP224Ciphertext {
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         if bytes.len() != ec::P224_CIPHERTEXT_SIZE {
-            return Err(ApiError::InvalidLength { context: "EcdhP224Ciphertext::from_bytes", expected: ec::P224_CIPHERTEXT_SIZE, actual: bytes.len() });
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP224Ciphertext::from_bytes",
+                expected: ec::P224_CIPHERTEXT_SIZE,
+                actual: bytes.len(),
+            });
         }
         let pk_bytes = &bytes[..ec::P224_POINT_COMPRESSED_SIZE];
-        let point = ec::Point::deserialize_compressed(pk_bytes).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let point = ec::Point::deserialize_compressed(pk_bytes)
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         if point.is_identity() {
-            return Err(ApiError::InvalidCiphertext { context: "EcdhP224Ciphertext::from_bytes", #[cfg(feature = "std")] message: "Ephemeral public key cannot be the identity point".to_string() });
+            return Err(ApiError::InvalidCiphertext {
+                context: "EcdhP224Ciphertext::from_bytes",
+                #[cfg(feature = "std")]
+                message: "Ephemeral public key cannot be the identity point".to_string(),
+            });
         }
         let mut ct_bytes = [0u8; ec::P224_CIPHERTEXT_SIZE];
         ct_bytes.copy_from_slice(bytes);
@@ -134,17 +179,26 @@ impl EcdhP224Ciphertext {
     }
     pub fn validate(&self) -> ApiResult<()> {
         let pk_bytes = &self.0[..ec::P224_POINT_COMPRESSED_SIZE];
-        let point = ec::Point::deserialize_compressed(pk_bytes).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let point = ec::Point::deserialize_compressed(pk_bytes)
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         if point.is_identity() {
-            return Err(ApiError::InvalidCiphertext { context: "validate_ciphertext", #[cfg(feature = "std")] message: "Ciphertext contains identity point".to_string() });
+            return Err(ApiError::InvalidCiphertext {
+                context: "validate_ciphertext",
+                #[cfg(feature = "std")]
+                message: "Ciphertext contains identity point".to_string(),
+            });
         }
         Ok(())
     }
 }
 
 impl Serialize for EcdhP224Ciphertext {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Self::from_bytes(bytes) }
-    fn to_bytes(&self) -> Vec<u8> { self.to_bytes() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Self::from_bytes(bytes)
+    }
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes()
+    }
 }
 
 /// Calculate authentication tag for key confirmation

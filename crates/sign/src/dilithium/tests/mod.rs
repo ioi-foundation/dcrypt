@@ -33,7 +33,7 @@ use dcrypt_algorithms::poly::params::DilithiumParams; // Removed unused Modulus 
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_params::pqc::dilithium::{
     Dilithium2Params, Dilithium3Params, Dilithium5Params, DilithiumSchemeParams, DILITHIUM_N,
-    DILITHIUM_Q,
+    DILITHIUM_Q, FIPS204_SIGN_INTERNAL_MIN_LOOP_LIMIT,
 };
 
 use rand::SeedableRng;
@@ -115,8 +115,9 @@ fn test_dilithium2_sign_verify() {
     // Step 2: Sign the message
     let sig = Dilithium2::sign(TEST_MESSAGE, &sk).unwrap();
 
-    // Step 3: Basic verification should pass
-    assert!(Dilithium2::verify(TEST_MESSAGE, &sig, &pk).is_ok());
+    // Step 3: We'll assert full verification after the deeper algebraic checks so
+    // any mismatch is easier to localize during debugging.
+    let verify_result = Dilithium2::verify(TEST_MESSAGE, &sig, &pk);
 
     // Step 4: Deep algebraic verification using the ACTUAL challenge from the signature
 
@@ -173,10 +174,12 @@ fn test_dilithium2_sign_verify() {
         ct0_vec.polys[i] = schoolbook_mul_centered(&c, &t0_vec.polys[i]);
     }
 
-    // The hint vector helps the verifier recover HighBits(w) from w' = w - cs2 + ct0
-    let z_for_hint = ct0_vec.sub(&cs2_vec);
+    // FIPS 204 Algorithm 7 computes h = MakeHint(-ct0, w - cs2 + ct0).
+    let w_minus_cs2 = w.sub(&cs2_vec);
+    let w_prime_approx = w_minus_cs2.add(&ct0_vec);
+    let neg_ct0 = ct0_vec.neg_mod_q();
     let (h_recomputed, hint_count) =
-        make_hint_polyveck::<Dilithium2Params>(&w, &z_for_hint).unwrap();
+        make_hint_polyveck::<Dilithium2Params>(&neg_ct0, &w_prime_approx).unwrap();
 
     // Verify hint count is within bounds (can be up to omega=80 for Dilithium2)
     assert!(
@@ -280,6 +283,8 @@ fn test_dilithium2_sign_verify() {
         identity_holds,
         "Algebraic identity w' = w + ct0 - cs2 doesn't hold"
     );
+
+    assert!(verify_result.is_ok(), "Basic verification should pass");
 }
 
 #[test]
@@ -401,7 +406,7 @@ fn test_check_norm_poly() {
 
     // Set one coefficient to exactly the bound
     poly.coeffs[0] = 100;
-    assert!(check_norm_poly(&poly, 100));
+    assert!(!check_norm_poly(&poly, 100));
 
     // Set one coefficient above the bound
     poly.coeffs[0] = 101;
@@ -409,7 +414,7 @@ fn test_check_norm_poly() {
 
     // Test with negative values (represented as q - value)
     poly.coeffs[0] = DILITHIUM_Q - 100; // -100 mod q
-    assert!(check_norm_poly(&poly, 100));
+    assert!(!check_norm_poly(&poly, 100));
 
     poly.coeffs[0] = DILITHIUM_Q - 101; // -101 mod q
     assert!(!check_norm_poly(&poly, 100));
@@ -483,12 +488,65 @@ fn test_sample_uniform_gamma1() {
             } else {
                 coeff as i32
             };
-            // Check bounds: should be in [-(γ1-β-η), γ1-β-η]
-            let bound = gamma1 as i32
-                - Dilithium2Params::BETA_PARAM as i32
-                - Dilithium2Params::ETA_S1S2 as i32;
-            assert!(centered >= -bound && centered <= bound);
+            // Check bounds: ExpandMask produces coefficients in [-γ1 + 1, γ1]
+            let lower = -(gamma1 as i32) + 1;
+            let upper = gamma1 as i32;
+            assert!(centered >= lower && centered <= upper);
         }
+    }
+}
+
+#[test]
+fn test_ntt_challenge_products_match_schoolbook() {
+    let mut rng = ChaCha20Rng::from_seed([99u8; 32]);
+    let (_, sk) = Dilithium2::keypair(&mut rng).unwrap();
+    let (_, _, _, s1_vec, s2_vec, t0_vec) =
+        unpack_secret_key::<Dilithium2Params>(sk.as_ref()).unwrap();
+
+    let c_tilde_seed = vec![0xA5; Dilithium2Params::CHALLENGE_BYTES];
+    let c_poly =
+        sample_challenge_c::<Dilithium2Params>(&c_tilde_seed, Dilithium2Params::TAU_PARAM as u32)
+            .unwrap();
+
+    let mut c_hat = c_poly.clone();
+    c_hat.ntt_inplace().unwrap();
+
+    let mut s1_hat = s1_vec.clone();
+    s1_hat.ntt_inplace().unwrap();
+    let mut s2_hat = s2_vec.clone();
+    s2_hat.ntt_inplace().unwrap();
+    let mut t0_hat = t0_vec.clone();
+    t0_hat.ntt_inplace().unwrap();
+
+    let mut s1_ntt = PolyVecL::<Dilithium2Params>::zero();
+    for i in 0..Dilithium2Params::L_DIM {
+        s1_ntt.polys[i] = c_hat.ntt_mul(&s1_hat.polys[i]);
+    }
+    s1_ntt.inv_ntt_inplace().unwrap();
+
+    let mut s2_ntt = PolyVecK::<Dilithium2Params>::zero();
+    for i in 0..Dilithium2Params::K_DIM {
+        s2_ntt.polys[i] = c_hat.ntt_mul(&s2_hat.polys[i]);
+    }
+    s2_ntt.inv_ntt_inplace().unwrap();
+
+    let mut t0_ntt = PolyVecK::<Dilithium2Params>::zero();
+    for i in 0..Dilithium2Params::K_DIM {
+        t0_ntt.polys[i] = c_hat.ntt_mul(&t0_hat.polys[i]);
+    }
+    t0_ntt.inv_ntt_inplace().unwrap();
+
+    for i in 0..Dilithium2Params::L_DIM {
+        let schoolbook = schoolbook_mul_generic(&c_poly, &s1_vec.polys[i], true, true);
+        assert_eq!(schoolbook.coeffs, s1_ntt.polys[i].coeffs);
+    }
+
+    for i in 0..Dilithium2Params::K_DIM {
+        let s2_schoolbook = schoolbook_mul_generic(&c_poly, &s2_vec.polys[i], true, true);
+        assert_eq!(s2_schoolbook.coeffs, s2_ntt.polys[i].coeffs);
+
+        let t0_schoolbook = schoolbook_mul_generic(&c_poly, &t0_vec.polys[i], true, true);
+        assert_eq!(t0_schoolbook.coeffs, t0_ntt.polys[i].coeffs);
     }
 }
 
@@ -808,12 +866,12 @@ fn test_q_minus_one_decompose_fips204() {
 #[test]
 fn test_use_hint_fips204_algorithm_40() {
     // FIPS 204 Algorithm 40 (final specification test):
-    //   Step 3: "if h = 1 and r₀ ≥ 0 return (r₁ + 1) mod m"    [rotate UP when non-negative]
-    //   Step 4: "if h = 1 and r₀ < 0 return (r₁ − 1) mod m"     [rotate DOWN when negative]
+    //   Step 3: "if h = 1 and r₀ > 0 return (r₁ + 1) mod m"     [rotate UP when positive]
+    //   Step 4: "if h = 1 and r₀ ≤ 0 return (r₁ − 1) mod m"     [rotate DOWN when zero/negative]
 
     let gamma2 = 95_232; // GAMMA2 for Dilithium2
     let alpha = 2 * gamma2; // 2 γ₂
-    let m = 45u32; // number of γ-buckets for Dilithium2
+    let m = 44u32; // number of non-special high-bit buckets for Dilithium2
 
     // Case 0: hint = 0 → identity (Step 5)
     let r = 1_234_567u32 % DILITHIUM_Q; // arbitrary coefficient
@@ -836,19 +894,19 @@ fn test_use_hint_fips204_algorithm_40() {
         "FIPS 204 Step 3: r₀ > 0 must rotate UP"
     );
 
-    // Case 2: r₀ = 0 → rotate UP (Step 3: r₀ ≥ 0)
+    // Case 2: r₀ = 0 → rotate DOWN (Step 4: r₀ ≤ 0)
     // Any exact multiple of α gives r₀ = 0
     let r_zero = alpha * 7; // r₁ = 7, r₀ = 0
     let (r0_zero, r1_zero) = decompose(r_zero, alpha);
     assert_eq!(r0_zero, 0);
-    let expected_up0 = (r1_zero + 1) % m; // FIPS 204: r₀ ≥ 0 → UP
+    let expected_up0 = (r1_zero + m - 1) % m; // FIPS 204: r₀ ≤ 0 → DOWN
     assert_eq!(
         use_hint_coeff::<Dilithium2Params>(true, r_zero),
         expected_up0,
-        "FIPS 204 Step 3: r₀ = 0 must rotate UP"
+        "FIPS 204 Step 4: r₀ = 0 must rotate DOWN"
     );
 
-    // Case 3: r₀ < 0 → rotate DOWN (Step 4: r₀ < 0)
+    // Case 3: r₀ < 0 → rotate DOWN (Step 4: r₀ ≤ 0)
     // Choose r = α − 1 so that r₀ = −1
     let r_neg = alpha - 1; // 2 γ₂ − 1
     let (r0_neg, r1_neg) = decompose(r_neg, alpha);
@@ -963,7 +1021,7 @@ fn test_hint_system_complete() {
 
     // Generate hints
     let (hint_vec, hint_count) =
-        super::arithmetic::make_hint_polyveck::<Dilithium2Params>(&pv_r, &pv_z)
+        super::arithmetic::make_hint_polyveck::<Dilithium2Params>(&pv_z, &pv_r)
             .expect("make_hint_polyveck must succeed");
 
     // We expect exactly 2 hints (positions 0 and 1 where we forced boundary crossings)
@@ -1015,10 +1073,7 @@ fn test_hint_system_complete() {
 }
 
 #[test]
-fn test_hint_system_rejects_large_gaps() {
-    // Test that the hint system correctly rejects attempts to create hints
-    // for bucket changes larger than ±1, as required by FIPS 204
-
+fn test_hint_system_marks_large_gaps_per_algorithm_39() {
     let mut pv_r = PolyVecK::<Dilithium2Params>::zero();
     let mut pv_z = PolyVecK::<Dilithium2Params>::zero();
 
@@ -1028,25 +1083,15 @@ fn test_hint_system_rejects_large_gaps() {
     pv_r.polys[0].coeffs[0] = 1234567;
     pv_z.polys[0].coeffs[0] = 7 * ALPHA; // This would jump 7 buckets!
 
-    // This should fail with the new ±1 bucket constraint
-    let result = super::arithmetic::make_hint_polyveck::<Dilithium2Params>(&pv_r, &pv_z);
+    let (hint_vec, hint_count) =
+        super::arithmetic::make_hint_polyveck::<Dilithium2Params>(&pv_z, &pv_r)
+            .expect("make_hint_polyveck must succeed");
 
-    assert!(
-        result.is_err(),
-        "make_hint_polyveck should reject large bucket gaps"
+    assert_eq!(hint_count, 1, "Algorithm 39 should set one hint bit");
+    assert_eq!(
+        hint_vec.polys[0].coeffs[0], 1,
+        "large gap still yields a hint"
     );
-
-    if let Err(e) = result {
-        // Just check that it's an error - the exact error type may vary
-        // The important thing is that it rejects the large gap
-        let error_string = format!("{:?}", e);
-        assert!(
-            error_string.contains("Highbit change exceeds ±1 bucket")
-                || error_string.contains("SignatureGeneration"),
-            "Expected error about highbit bucket constraint, got: {}",
-            error_string
-        );
-    }
 }
 
 #[test]
@@ -1398,4 +1443,116 @@ fn test_hint_identity_valid_cases() {
             r, z, bucket_diff
         );
     }
+}
+
+fn collect_signing_attempts<P>(num_keys: usize, messages_per_key: usize) -> Vec<u16>
+where
+    P: DilithiumSchemeParams + Send + Sync + 'static,
+{
+    let mut seed = [0u8; 32];
+    for (idx, byte) in P::NAME.as_bytes().iter().enumerate() {
+        seed[idx % seed.len()] ^= *byte;
+    }
+
+    let mut rng = ChaCha20Rng::from_seed(seed);
+    let mut attempts = Vec::with_capacity(num_keys * messages_per_key);
+
+    for key_idx in 0..num_keys {
+        let (_, sk) = Dilithium::<P>::keypair(&mut rng).unwrap();
+
+        for message_idx in 0..messages_per_key {
+            let message = format!(
+                "{}-window-profile-key-{}-message-{}",
+                P::NAME,
+                key_idx,
+                message_idx
+            );
+            let attempt = super::sign::first_valid_signing_attempt_internal::<P>(
+                message.as_bytes(),
+                sk.as_ref(),
+            )
+            .unwrap()
+            .unwrap_or_else(|| panic!("{} exceeded {}", P::NAME, P::MAX_SIGN_ABORTS));
+            attempts.push(attempt);
+        }
+    }
+
+    attempts
+}
+
+fn percentile(sorted: &[u16], numerator: usize, denominator: usize) -> u16 {
+    let idx = (sorted.len() - 1) * numerator / denominator;
+    sorted[idx]
+}
+
+fn assert_signing_window_covers_sample<P>(num_keys: usize, messages_per_key: usize)
+where
+    P: DilithiumSchemeParams + Send + Sync + 'static,
+{
+    let attempts = collect_signing_attempts::<P>(num_keys, messages_per_key);
+    let max_attempt = *attempts.iter().max().unwrap();
+
+    assert!(
+        max_attempt <= P::FIXED_SIGNING_WINDOW,
+        "{} fixed signing window {} did not cover deterministic sample max {}",
+        P::NAME,
+        P::FIXED_SIGNING_WINDOW,
+        max_attempt
+    );
+}
+
+#[test]
+fn test_dilithium_fixed_signing_windows_cover_regression_sample() {
+    assert_signing_window_covers_sample::<Dilithium2Params>(4, 8);
+    assert_signing_window_covers_sample::<Dilithium3Params>(4, 8);
+    assert_signing_window_covers_sample::<Dilithium5Params>(4, 8);
+}
+
+#[test]
+fn test_dilithium_fixed_signing_windows_meet_fips_appendix_c_bound() {
+    assert!(
+        Dilithium2Params::FIXED_SIGNING_WINDOW >= FIPS204_SIGN_INTERNAL_MIN_LOOP_LIMIT,
+        "Dilithium2 fixed signing window fell below the FIPS 204 Appendix C minimum"
+    );
+    assert!(
+        Dilithium3Params::FIXED_SIGNING_WINDOW >= FIPS204_SIGN_INTERNAL_MIN_LOOP_LIMIT,
+        "Dilithium3 fixed signing window fell below the FIPS 204 Appendix C minimum"
+    );
+    assert!(
+        Dilithium5Params::FIXED_SIGNING_WINDOW >= FIPS204_SIGN_INTERNAL_MIN_LOOP_LIMIT,
+        "Dilithium5 fixed signing window fell below the FIPS 204 Appendix C minimum"
+    );
+}
+
+#[test]
+#[ignore = "profiling helper for selecting fixed constant-time signing windows"]
+fn profile_dilithium_fixed_signing_windows() {
+    fn print_stats<P>(num_keys: usize, messages_per_key: usize)
+    where
+        P: DilithiumSchemeParams + Send + Sync + 'static,
+    {
+        let mut attempts = collect_signing_attempts::<P>(num_keys, messages_per_key);
+        attempts.sort_unstable();
+
+        let min = attempts[0];
+        let median = percentile(&attempts, 1, 2);
+        let p90 = percentile(&attempts, 9, 10);
+        let p99 = percentile(&attempts, 99, 100);
+        let max = *attempts.last().unwrap();
+
+        eprintln!(
+            "{} attempt profile over {} samples: min={}, median={}, p90={}, p99={}, max={}",
+            P::NAME,
+            attempts.len(),
+            min,
+            median,
+            p90,
+            p99,
+            max
+        );
+    }
+
+    print_stats::<Dilithium2Params>(16, 32);
+    print_stats::<Dilithium3Params>(16, 32);
+    print_stats::<Dilithium5Params>(16, 32);
 }

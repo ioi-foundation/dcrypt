@@ -15,10 +15,10 @@ use core::ops::{Deref, DerefMut};
 use dcrypt_internal::constant_time::ct_eq;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
-#[cfg(feature = "std")]
-use std::vec::Vec;
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::vec::Vec;
+#[cfg(feature = "std")]
+use std::vec::Vec;
 
 /// A fixed-size array of bytes that is securely zeroed when dropped
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
@@ -105,7 +105,6 @@ impl<const N: usize> SerializeSecret for SecretBytes<N> {
         Zeroizing::new(self.data.to_vec())
     }
 }
-
 
 /// A variable-length vector of bytes that is securely zeroed when dropped
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
@@ -213,9 +212,7 @@ impl Key {
     /// Moving a Vec<u8> is preferred for security as it ensures the original
     /// memory allocation is controlled and zeroized by Key.
     pub fn new<T: Into<Vec<u8>>>(data: T) -> Self {
-        Self {
-            data: data.into(),
-        }
+        Self { data: data.into() }
     }
     pub fn new_zeros(len: usize) -> Self {
         Self {
@@ -269,9 +266,7 @@ impl PublicKey {
     /// Accepts `Vec<u8>` (move) or `&[u8]` (copy).
     /// Moving a Vec<u8> avoids unnecessary allocation.
     pub fn new<T: Into<Vec<u8>>>(data: T) -> Self {
-        Self {
-            data: data.into(),
-        }
+        Self { data: data.into() }
     }
     pub fn len(&self) -> usize {
         self.data.len()
@@ -321,9 +316,7 @@ impl Ciphertext {
     /// Moving a Vec<u8> avoids unnecessary allocation, which is critical
     /// for large ciphertexts.
     pub fn new<T: Into<Vec<u8>>>(data: T) -> Self {
-        Self {
-            data: data.into(),
-        }
+        Self { data: data.into() }
     }
     pub fn len(&self) -> usize {
         self.data.len()

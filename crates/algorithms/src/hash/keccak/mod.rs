@@ -16,7 +16,7 @@ use crate::types::Digest;
 
 use core::sync::atomic::{compiler_fence, Ordering};
 
-use dcrypt_params::utils::hash::{KECCAK256_OUTPUT_SIZE, KECCAK256_BLOCK_SIZE};
+use dcrypt_params::utils::hash::{KECCAK256_BLOCK_SIZE, KECCAK256_OUTPUT_SIZE};
 
 const KECCAK_ROUNDS: usize = 24;
 const KECCAK_STATE_SIZE: usize = 25; // 5 × 5 u64

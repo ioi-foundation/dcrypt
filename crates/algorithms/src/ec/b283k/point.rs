@@ -183,27 +183,27 @@ impl Point {
         // 1. Calculate flags
         let x_eq = self.x == other.x;
         let y_eq = self.y == other.y;
-        
+
         // P == Q: x1 == x2 AND y1 == y2
         let p_eq_q = Choice::from((x_eq && y_eq) as u8);
         // P == -Q: x1 == x2 AND y1 != y2 (in binary field characteristic 2)
         let p_eq_neg_q = Choice::from((x_eq && !y_eq) as u8);
-        
+
         // 2. Compute Generic Addition (valid when x1 != x2)
         // lambda = (y1 + y2) / (x1 + x2)
         let sum_y = self.y.add(&other.y);
         let sum_x = self.x.add(&other.x);
-        
+
         // Safe inversion: if sum_x is zero (x1 == x2), invert 1 instead.
         // This produces garbage result, but we won't select it in that case.
         let sum_x_is_zero = Choice::from(sum_x.is_zero() as u8);
         let denom = FieldElement::conditional_select(&sum_x, &FieldElement::one(), sum_x_is_zero);
         let inv_denom = denom.invert().unwrap_or(FieldElement::zero());
-        
+
         let lambda = sum_y.mul(&inv_denom);
         let x3 = lambda.square().add(&lambda).add(&self.x).add(&other.x);
         let y3 = lambda.mul(&(self.x.add(&x3))).add(&x3).add(&self.y);
-        
+
         let generic = Point {
             is_identity: Choice::from(0),
             x: x3,
@@ -216,10 +216,10 @@ impl Point {
         // 4. Select Result
         // Start with Generic. If P==Q, switch to Double.
         let mut result = Self::conditional_select(&generic, &double, p_eq_q);
-        
+
         // If P == -Q, the result must be Identity.
         result = Self::conditional_select(&result, &Self::identity(), p_eq_neg_q);
-        
+
         // If either input is identity, result is the other one.
         result = Self::conditional_select(&result, other, self.is_identity);
         result = Self::conditional_select(&result, self, other.is_identity);
@@ -236,10 +236,10 @@ impl Point {
         let x_is_zero = Choice::from(self.x.is_zero() as u8);
         let denom = FieldElement::conditional_select(&self.x, &FieldElement::one(), x_is_zero);
         let inv_x = denom.invert().unwrap_or(FieldElement::zero());
-        
+
         let term = self.y.mul(&inv_x);
         let lambda = self.x.add(&term);
-        
+
         let x2 = lambda.square().add(&lambda);
         let y2 = self.x.square().add(&lambda.mul(&x2)).add(&x2);
 
@@ -270,7 +270,7 @@ impl Point {
 
                 // Unconditionally compute addition
                 let res_added = res.add(&temp);
-                
+
                 // Constant-time select
                 res = Point::conditional_select(&res, &res_added, choice);
 

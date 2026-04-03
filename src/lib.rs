@@ -30,7 +30,7 @@
 //! - [`dcrypt-hybrid`]: Hybrid constructions
 //!
 //! ## Example Usage
-//! 
+//!
 //! ```rust,no_run
 //! # #[cfg(feature = "sign")]
 //! # {
@@ -38,7 +38,7 @@
 //! use dcrypt::api::Signature;
 //! use dcrypt::sign::dilithium::{DilithiumSigningKey, DilithiumVerifyingKey};
 //! # }
-//! 
+//!
 //! // Or using the prelude (always available)
 //! use dcrypt::prelude::*;
 //! ```
@@ -90,7 +90,7 @@ pub mod prelude {
         AuthenticatedCipher, BlockCipher, HashAlgorithm, Kem, KeyDerivationFunction, Serialize,
         Signature, StreamCipher, SymmetricCipher,
     };
-    
+
     // Re-export all traits from api::traits if they exist
     pub use crate::api::traits::*;
 
@@ -109,7 +109,7 @@ pub mod prelude {
 
     #[cfg(any(feature = "std", feature = "alloc"))]
     pub use crate::common::{CurveParams, ECPoint};
-    
+
     // Note: Specific algorithm implementations should be imported directly from their modules
     // For example:
     // - use dcrypt::kem::ecdh::p256::{EcdhP256PublicKey, EcdhP256SecretKey};
@@ -126,17 +126,17 @@ mod tests {
         // This should compile if the imports are working
         use crate::api::Signature as SignatureTrait;
         use crate::sign;
-        
+
         // Type annotations to ensure we can access the module
         let _: Option<&dyn SignatureTrait> = None;
     }
-    
-    #[test] 
+
+    #[test]
     #[cfg(feature = "full")]
     fn test_full_imports() {
         // Test that all modules are accessible with full features
         use crate::{algorithms, api, common, hybrid, internal, kem, params, pke, sign, symmetric};
-        
+
         // Just checking that the modules exist
         let _ = api::Error;
     }

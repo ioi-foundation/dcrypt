@@ -198,15 +198,14 @@ fn test_ed25519_signature_malleability_resistance() {
 fn test_derive_public_from_secret() {
     let mut rng = OsRng;
     let (original_public, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Derive public key from secret
-    let derived_public = Ed25519::derive_public_from_secret(&secret)
-        .expect("Failed to derive public key");
-    
+    let derived_public =
+        Ed25519::derive_public_from_secret(&secret).expect("Failed to derive public key");
+
     // Should match the original
     assert_eq!(
-        original_public.0, 
-        derived_public.0,
+        original_public.0, derived_public.0,
         "Derived public key doesn't match original"
     );
 }
@@ -215,14 +214,12 @@ fn test_derive_public_from_secret() {
 fn test_secret_key_public_key_method() {
     let mut rng = OsRng;
     let (original_public, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Use the convenience method on SecretKey
-    let derived_public = secret.public_key()
-        .expect("Failed to get public key");
-    
+    let derived_public = secret.public_key().expect("Failed to get public key");
+
     assert_eq!(
-        original_public.0, 
-        derived_public.0,
+        original_public.0, derived_public.0,
         "Public key from method doesn't match original"
     );
 }
@@ -231,14 +228,14 @@ fn test_secret_key_public_key_method() {
 fn test_derived_public_key_can_verify() {
     let mut rng = OsRng;
     let (_, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Derive public key
     let public = secret.public_key().unwrap();
-    
+
     // Sign a message
     let message = b"Test message for verification";
     let signature = Ed25519::sign(message, &secret).unwrap();
-    
+
     // Verify with derived public key
     assert!(
         Ed25519::verify(message, &signature, &public).is_ok(),
@@ -250,12 +247,12 @@ fn test_derived_public_key_can_verify() {
 fn test_multiple_derivations_are_identical() {
     let mut rng = OsRng;
     let (_, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Derive multiple times
     let public1 = secret.public_key().unwrap();
     let public2 = secret.public_key().unwrap();
     let public3 = Ed25519::derive_public_from_secret(&secret).unwrap();
-    
+
     // All should be identical
     assert_eq!(public1.0, public2.0);
     assert_eq!(public2.0, public3.0);
@@ -265,20 +262,19 @@ fn test_multiple_derivations_are_identical() {
 fn test_key_serialization_round_trip() {
     let mut rng = OsRng;
     let (original_public, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Simulate saving/loading just the secret key
     let secret_bytes = secret.seed.clone();
-    
+
     // Reconstruct secret key from seed
     let reconstructed_secret = Ed25519SecretKey::from_seed(&secret_bytes).unwrap();
-    
+
     // Derive public key from reconstructed secret
     let derived_public = reconstructed_secret.public_key().unwrap();
-    
+
     // Should match original
     assert_eq!(
-        original_public.0,
-        derived_public.0,
+        original_public.0, derived_public.0,
         "Public key doesn't match after round-trip"
     );
 }
@@ -288,13 +284,13 @@ fn test_from_seed_matches_keypair() {
     // Generate a keypair
     let mut rng = OsRng;
     let (public1, secret1) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Reconstruct secret key from seed
     let secret2 = Ed25519SecretKey::from_seed(secret1.seed()).unwrap();
-    
+
     // Derive public key from reconstructed secret
     let public2 = secret2.public_key().unwrap();
-    
+
     // Should match
     assert_eq!(public1.0, public2.0);
     assert_eq!(secret1.seed, secret2.seed);
@@ -306,10 +302,10 @@ fn test_sign_with_from_seed() {
     let seed = [99u8; 32];
     let secret = Ed25519SecretKey::from_seed(&seed).unwrap();
     let public = secret.public_key().unwrap();
-    
+
     let message = b"Message signed with reconstructed key";
     let signature = Ed25519::sign(message, &secret).unwrap();
-    
+
     assert!(
         Ed25519::verify(message, &signature, &public).is_ok(),
         "Verification failed with key from seed"
@@ -321,14 +317,14 @@ fn test_sign_with_from_seed() {
 fn test_secret_key_immutability() {
     let mut rng = OsRng;
     let (_, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Secret keys no longer implement AsRef/AsMut, so we can't test those
     // Instead, test that we can only access through explicit methods
-    
+
     // Seed access is read-only through method
     let seed = secret.seed();
     assert_eq!(seed.len(), 32);
-    
+
     // Can export seed securely
     let exported = secret.export_seed();
     assert_eq!(exported.len(), 32);
@@ -337,7 +333,7 @@ fn test_secret_key_immutability() {
 #[test]
 fn test_zeroization_on_drop() {
     let mut rng = OsRng;
-    
+
     // Create a secret key in a limited scope
     let seed_copy = {
         let (_, secret) = Ed25519::keypair(&mut rng).unwrap();
@@ -345,11 +341,11 @@ fn test_zeroization_on_drop() {
         seed
         // secret is dropped and zeroized here
     };
-    
+
     // We can't test the actual memory was cleared (would need unsafe),
     // but we can verify the type implements Drop + Zeroize
     let _secret = Ed25519SecretKey::from_seed(&seed_copy).unwrap();
-    
+
     // This is a compile-time check that Drop is implemented
     fn assert_implements_drop<T: Drop>() {}
     assert_implements_drop::<Ed25519SecretKey>();
@@ -360,17 +356,17 @@ fn test_seed_validation() {
     // Test that from_seed properly validates and processes seeds
     let mut rng = OsRng;
     let (public1, secret1) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Get the seed
     let seed = secret1.seed();
-    
+
     // Reconstruct multiple times - should be deterministic
     let secret2 = Ed25519SecretKey::from_seed(seed).unwrap();
     let secret3 = Ed25519SecretKey::from_seed(seed).unwrap();
-    
+
     let public2 = secret2.public_key().unwrap();
     let public3 = secret3.public_key().unwrap();
-    
+
     // All public keys should match
     assert_eq!(public1.0, public2.0);
     assert_eq!(public2.0, public3.0);
@@ -380,10 +376,10 @@ fn test_seed_validation() {
 fn test_no_key_material_in_debug() {
     let mut rng = OsRng;
     let (public, _secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Debug output should not contain key material
     let public_debug = format!("{:?}", public);
-    
+
     // Verify the debug output doesn't contain the actual key bytes
     assert!(public_debug.contains("Ed25519PublicKey"));
     assert!(!public_debug.contains(&format!("{:?}", public.0)));
@@ -395,18 +391,18 @@ fn test_type_safety() {
     fn requires_public_key(_key: &Ed25519PublicKey) {
         // This function only accepts public keys
     }
-    
+
     fn requires_secret_key(_key: &Ed25519SecretKey) {
         // This function only accepts secret keys
     }
-    
+
     let mut rng = OsRng;
     let (public, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // These should compile
     requires_public_key(&public);
     requires_secret_key(&secret);
-    
+
     // These should NOT compile (uncomment to verify):
     // requires_public_key(&secret);  // Type error
     // requires_secret_key(&public);  // Type error
@@ -417,15 +413,15 @@ fn test_secure_comparison() {
     let mut rng = OsRng;
     let (_, secret1) = Ed25519::keypair(&mut rng).unwrap();
     let (_, secret2) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Sign the same message with different keys
     let message = b"test message";
     let sig1 = Ed25519::sign(message, &secret1).unwrap();
     let sig2 = Ed25519::sign(message, &secret2).unwrap();
-    
+
     // Signatures should be different
     assert_ne!(sig1.0, sig2.0);
-    
+
     // The verification internally uses constant-time comparison
     // This is tested implicitly through the verify function
 }
@@ -433,30 +429,30 @@ fn test_secure_comparison() {
 #[test]
 fn example_secure_seed_handling() {
     use zeroize::Zeroize;
-    
+
     // Generate a keypair
     let mut rng = OsRng;
     let (_public, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Get seed for storage
     let mut seed_bytes = *secret.seed();
-    
+
     // In production, you would:
     // 1. Encrypt seed_bytes with a password or key
     // 2. Store encrypted bytes
     // 3. Clear the plaintext seed
     seed_bytes.zeroize();
-    
+
     // When loading:
     // 1. Load and decrypt the seed
     // 2. Create the secret key
     // 3. Clear the decrypted seed
-    
+
     // For this test, we'll use a dummy seed
     let mut loaded_seed = [99u8; 32];
     let loaded_secret = Ed25519SecretKey::from_seed(&loaded_seed).unwrap();
     loaded_seed.zeroize(); // Always clear seeds after use
-    
+
     // Use the loaded key
     let message = b"secure message";
     let signature = Ed25519::sign(message, &loaded_secret).unwrap();
@@ -469,19 +465,19 @@ fn example_secure_seed_handling() {
 fn test_explicit_serialization() {
     let mut rng = OsRng;
     let (public, secret) = Ed25519::keypair(&mut rng).unwrap();
-    
+
     // Test public key serialization
     let public_bytes = public.to_bytes();
     let public_restored = Ed25519PublicKey::from_bytes(&public_bytes).unwrap();
     assert_eq!(public.0, public_restored.0);
-    
+
     // Test secret key seed export
     let seed = secret.export_seed();
     let mut seed_array = [0u8; 32];
     seed_array.copy_from_slice(&seed);
     let secret_restored = Ed25519SecretKey::from_seed(&seed_array).unwrap();
     assert_eq!(secret.seed, secret_restored.seed);
-    
+
     // Test signature serialization
     let message = b"test";
     let sig = Ed25519::sign(message, &secret).unwrap();
@@ -495,11 +491,11 @@ fn test_invalid_sizes() {
     // Test invalid public key size
     let result = Ed25519PublicKey::from_bytes(&[0u8; 31]);
     assert!(result.is_err());
-    
-    // Test invalid signature size  
+
+    // Test invalid signature size
     let result = Ed25519Signature::from_bytes(&[0u8; 63]);
     assert!(result.is_err());
-    
+
     // Note: Invalid seed size is already enforced at compile time by the type system
     // since from_seed takes a fixed-size array &[u8; 32]
 }

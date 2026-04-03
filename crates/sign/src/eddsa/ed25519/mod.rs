@@ -106,14 +106,18 @@ impl Ed25519PublicKey {
             return Err(ApiError::InvalidKey {
                 context: "Ed25519PublicKey::from_bytes",
                 #[cfg(feature = "std")]
-                message: format!("Invalid key size: expected {}, got {}", ED25519_PUBLIC_KEY_SIZE, bytes.len()),
+                message: format!(
+                    "Invalid key size: expected {}, got {}",
+                    ED25519_PUBLIC_KEY_SIZE,
+                    bytes.len()
+                ),
             });
         }
         let mut key = [0u8; ED25519_PUBLIC_KEY_SIZE];
         key.copy_from_slice(bytes);
         Ok(Ed25519PublicKey(key))
     }
-    
+
     /// Convert public key to bytes
     pub fn to_bytes(&self) -> [u8; ED25519_PUBLIC_KEY_SIZE] {
         self.0
@@ -143,13 +147,13 @@ impl Ed25519SecretKey {
     /// # fn main() -> dcrypt_api::Result<()> {
     /// // Load seed from storage (example uses fixed bytes)
     /// let seed = [42u8; 32];
-    /// 
+    ///
     /// // Reconstruct secret key
     /// let secret = Ed25519SecretKey::from_seed(&seed)?;
-    /// 
+    ///
     /// // Can now derive public key
     /// let public = secret.public_key()?;
-    /// 
+    ///
     /// // Or use for signing
     /// let message = b"test";
     /// let signature = Ed25519::sign(message, &secret)?;
@@ -161,21 +165,21 @@ impl Ed25519SecretKey {
         let mut hasher = Sha512::new();
         hasher.update(seed).map_err(ApiError::from)?;
         let hash = hasher.finalize().map_err(ApiError::from)?;
-        
+
         let mut expanded = [0u8; 64];
         expanded.copy_from_slice(hash.as_ref());
-        
+
         // Apply Ed25519 clamping to scalar (first 32 bytes)
-        expanded[0] &= 248;  // Clear bits 0, 1, 2
+        expanded[0] &= 248; // Clear bits 0, 1, 2
         expanded[31] &= 127; // Clear bit 255
-        expanded[31] |= 64;  // Set bit 254
-        
+        expanded[31] |= 64; // Set bit 254
+
         Ok(Ed25519SecretKey {
             seed: *seed,
             expanded,
         })
     }
-    
+
     /// Get the 32-byte seed value
     ///
     /// This is the original random seed before expansion. This is what
@@ -190,12 +194,12 @@ impl Ed25519SecretKey {
     pub fn seed(&self) -> &[u8; ED25519_SECRET_KEY_SIZE] {
         &self.seed
     }
-    
+
     /// Export the seed as a Zeroizing vector for secure handling
     pub fn export_seed(&self) -> Zeroizing<Vec<u8>> {
         Zeroizing::new(self.seed.to_vec())
     }
-    
+
     /// Get the public key corresponding to this secret key
     ///
     /// This derives the public key on-demand from the secret key material.
@@ -212,10 +216,10 @@ impl Ed25519SecretKey {
     /// # fn main() -> dcrypt_api::Result<()> {
     /// let mut rng = OsRng;
     /// let (_, secret) = Ed25519::keypair(&mut rng)?;
-    /// 
+    ///
     /// // Get public key from secret key
     /// let public = secret.public_key()?;
-    /// 
+    ///
     /// // Can use it for verification
     /// let message = b"test message";
     /// let signature = Ed25519::sign(message, &secret)?;
@@ -236,14 +240,18 @@ impl Ed25519Signature {
             return Err(ApiError::InvalidSignature {
                 context: "Ed25519Signature::from_bytes",
                 #[cfg(feature = "std")]
-                message: format!("Invalid signature size: expected {}, got {}", ED25519_SIGNATURE_SIZE, bytes.len()),
+                message: format!(
+                    "Invalid signature size: expected {}, got {}",
+                    ED25519_SIGNATURE_SIZE,
+                    bytes.len()
+                ),
             });
         }
         let mut sig = [0u8; ED25519_SIGNATURE_SIZE];
         sig.copy_from_slice(bytes);
         Ok(Ed25519Signature(sig))
     }
-    
+
     /// Convert signature to bytes
     pub fn to_bytes(&self) -> [u8; ED25519_SIGNATURE_SIZE] {
         self.0
@@ -455,29 +463,28 @@ impl Ed25519 {
     /// # fn main() -> dcrypt_api::Result<()> {
     /// let mut rng = OsRng;
     /// let (original_public, secret) = Ed25519::keypair(&mut rng)?;
-    /// 
+    ///
     /// // Later, derive public key from secret
     /// let derived_public = Ed25519::derive_public_from_secret(&secret)?;
-    /// 
+    ///
     /// assert_eq!(original_public.0, derived_public.0);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn derive_public_from_secret(
-        secret_key: &Ed25519SecretKey
-    ) -> ApiResult<Ed25519PublicKey> {
+    pub fn derive_public_from_secret(secret_key: &Ed25519SecretKey) -> ApiResult<Ed25519PublicKey> {
         // Extract the clamped scalar from the expanded key material
         let scalar = &secret_key.expanded[0..32];
-        
+
         // Derive the public key A = [scalar]B
         let mut public_key_bytes = [0u8; ED25519_PUBLIC_KEY_SIZE];
-        operations::derive_public_key(scalar, &mut public_key_bytes)
-            .map_err(|e| ApiError::InvalidParameter {
+        operations::derive_public_key(scalar, &mut public_key_bytes).map_err(|e| {
+            ApiError::InvalidParameter {
                 context: "Ed25519::derive_public_from_secret",
                 #[cfg(feature = "std")]
                 message: format!("Failed to derive public key: {}", e),
-            })?;
-        
+            }
+        })?;
+
         Ok(Ed25519PublicKey(public_key_bytes))
     }
 }
@@ -495,32 +502,36 @@ impl SignatureSerialize for Ed25519 {
     fn serialize_public_key(key: &Self::PublicKey) -> Vec<u8> {
         key.0.to_vec()
     }
-    
+
     fn deserialize_public_key(bytes: &[u8]) -> ApiResult<Self::PublicKey> {
         Ed25519PublicKey::from_bytes(bytes)
     }
-    
+
     fn serialize_secret_key(key: &Self::SecretKey) -> Zeroizing<Vec<u8>> {
         key.export_seed()
     }
-    
+
     fn deserialize_secret_key(bytes: &[u8]) -> ApiResult<Self::SecretKey> {
         if bytes.len() != ED25519_SECRET_KEY_SIZE {
             return Err(ApiError::InvalidKey {
                 context: "Ed25519::deserialize_secret_key",
                 #[cfg(feature = "std")]
-                message: format!("Invalid seed size: expected {}, got {}", ED25519_SECRET_KEY_SIZE, bytes.len()),
+                message: format!(
+                    "Invalid seed size: expected {}, got {}",
+                    ED25519_SECRET_KEY_SIZE,
+                    bytes.len()
+                ),
             });
         }
         let mut seed = [0u8; ED25519_SECRET_KEY_SIZE];
         seed.copy_from_slice(bytes);
         Ed25519SecretKey::from_seed(&seed)
     }
-    
+
     fn serialize_signature(sig: &Self::SignatureData) -> Vec<u8> {
         sig.0.to_vec()
     }
-    
+
     fn deserialize_signature(bytes: &[u8]) -> ApiResult<Self::SignatureData> {
         Ed25519Signature::from_bytes(bytes)
     }
@@ -539,18 +550,21 @@ impl SignatureDerive for Ed25519 {
             return Err(ApiError::InvalidParameter {
                 context: "Ed25519::derive_keypair",
                 #[cfg(feature = "std")]
-                message: format!("Seed too short: minimum {} bytes required", Self::MIN_SEED_SIZE),
+                message: format!(
+                    "Seed too short: minimum {} bytes required",
+                    Self::MIN_SEED_SIZE
+                ),
             });
         }
-        
+
         let mut seed_array = [0u8; ED25519_SECRET_KEY_SIZE];
         seed_array.copy_from_slice(&seed[..ED25519_SECRET_KEY_SIZE]);
-        
+
         let secret = Ed25519SecretKey::from_seed(&seed_array)?;
         let public = secret.public_key()?;
         Ok((public, secret))
     }
-    
+
     fn derive_public_key(secret_key: &Self::SecretKey) -> ApiResult<Self::PublicKey> {
         secret_key.public_key()
     }

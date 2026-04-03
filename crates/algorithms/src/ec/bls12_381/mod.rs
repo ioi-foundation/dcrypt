@@ -10,9 +10,9 @@ extern crate alloc;
 mod field;
 mod g1;
 mod g2;
+mod hash_to_curve;
 mod pairings;
 mod scalar;
-mod hash_to_curve;
 
 #[cfg(test)]
 mod tests;
@@ -22,11 +22,11 @@ use crate::error::Result;
 use scalar::Scalar;
 
 // Public API exports (following dcrypt conventions)
+pub use self::scalar::Scalar as Bls12_381Scalar;
 pub use g1::{G1Affine, G1Projective};
 pub use g2::{G2Affine, G2Projective};
 pub use hash_to_curve::{hash_to_curve_g1, hash_to_curve_g2};
 pub use pairings::{pairing, Bls12, Gt, MillerLoopResult};
-pub use self::scalar::Scalar as Bls12_381Scalar;
 
 #[cfg(feature = "alloc")]
 pub use pairings::{multi_miller_loop, G2Prepared};

@@ -11,11 +11,11 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dcrypt_api::Kem;
 use dcrypt_hybrid::kem::{
-    EcdhK256Kyber512,   // secp256k1 + Kyber512
-    EcdhP256Kyber512,   // NIST P-256 + Kyber512
-    EcdhP256Kyber768,   // NIST P-256 + Kyber768
-    EcdhP384Kyber1024,  // NIST P-384 + Kyber1024
-    EcdhP521Kyber1024,  // NIST P-521 + Kyber1024
+    EcdhK256Kyber512,  // secp256k1 + Kyber512
+    EcdhP256Kyber512,  // NIST P-256 + Kyber512
+    EcdhP256Kyber768,  // NIST P-256 + Kyber768
+    EcdhP384Kyber1024, // NIST P-384 + Kyber1024
+    EcdhP521Kyber1024, // NIST P-521 + Kyber1024
 };
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
@@ -23,7 +23,7 @@ use rand_chacha::ChaCha20Rng;
 /// Generic helper to benchmark a specific KEM implementation
 fn bench_kem_workflow<K: Kem>(c: &mut Criterion, name: &str) {
     let mut group = c.benchmark_group("Figure_14_Hybrid_Full_Workflow_Latency");
-    
+
     // Use a deterministic RNG for reproducible benchmarks
     let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 

@@ -417,13 +417,13 @@ pub fn pack_signature<P: DilithiumSchemeParams>(
 }
 
 /// Packs w1 for computing challenge hash using FIPS 204 final w1Encode.
-/// Packs full gamma-bucket indices: 6 bits for Dilithium2, 5 bits for Dilithium3/5.
+/// Packs full gamma-bucket indices: 6 bits for ML-DSA-44, 5 bits for ML-DSA-65/87.
 pub fn pack_polyveck_w1<P: DilithiumSchemeParams>(
     w1_vec: &PolyVecK<P>,
 ) -> Result<Vec<u8>, SignError> {
     // FIPS 204 final: use full bucket indices
-    // - Dilithium2: 6 bits for r1 ∈ [0,44]
-    // - Dilithium3/5: 5 bits for r1 ∈ [0,16]
+    // - ML-DSA-44: 6 bits for r1 ∈ [0,43]
+    // - ML-DSA-65/87: 5 bits for r1 ∈ [0,15]
     let bits_per_coeff = w1_bits_needed::<P>();
     let total_bits = P::K_DIM * DILITHIUM_N * bits_per_coeff as usize;
     let total_bytes = total_bits.div_ceil(8);

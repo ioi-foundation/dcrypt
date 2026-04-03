@@ -45,8 +45,10 @@ static INVERSE_TWIST_FACTORS: OnceLock<Vec<Scalar>> = OnceLock::new();
 fn get_root_of_unity() -> &'static Scalar {
     ROOT_OF_UNITY.get_or_init(|| {
         Scalar::from_raw([
-            0x4253_d252_a210_b619, 0x81c3_5f15_01a0_2431,
-            0xb734_6a32_008b_0320, 0x0a16_14a8_64b3_09e1
+            0x4253_d252_a210_b619,
+            0x81c3_5f15_01a0_2431,
+            0xb734_6a32_008b_0320,
+            0x0a16_14a8_64b3_09e1,
         ])
     })
 }
@@ -91,10 +93,17 @@ fn two_adicity(mut r: Scalar) -> u32 {
 fn select_2power_seed(min_k: u32) -> (Scalar, u32) {
     let bases: [Scalar; 12] = [
         *get_root_of_unity(),
-        Scalar::from(5u64), Scalar::from(7u64), Scalar::from(2u64),
-        Scalar::from(3u64), Scalar::from(11u64), Scalar::from(13u64),
-        Scalar::from(17u64), Scalar::from(19u64), Scalar::from(29u64),
-        Scalar::from(31u64), Scalar::from(37u64),
+        Scalar::from(5u64),
+        Scalar::from(7u64),
+        Scalar::from(2u64),
+        Scalar::from(3u64),
+        Scalar::from(11u64),
+        Scalar::from(13u64),
+        Scalar::from(17u64),
+        Scalar::from(19u64),
+        Scalar::from(29u64),
+        Scalar::from(31u64),
+        Scalar::from(37u64),
     ];
 
     for base in bases.iter() {
@@ -125,11 +134,15 @@ fn get_fft_n_root() -> &'static Scalar {
         #[cfg(debug_assertions)]
         {
             let mut t = w_n;
-            for _ in 0..need { t = t.square(); }
+            for _ in 0..need {
+                t = t.square();
+            }
             debug_assert_eq!(t, Scalar::one(), "w_N^N must be 1");
 
             let mut half = w_n;
-            for _ in 0..(need - 1) { half = half.square(); }
+            for _ in 0..(need - 1) {
+                half = half.square();
+            }
             debug_assert_eq!(half, -Scalar::one(), "w_N^(N/2) must be -1");
         }
         w_n
@@ -173,9 +186,11 @@ fn get_primitive_2n_root() -> &'static Scalar {
         }
 
         debug_assert_eq!(g.square(), *get_fft_n_root(), "g^2 must equal w_N");
-        
+
         let mut gn = g;
-        for _ in 0..need { gn = gn.square(); }
+        for _ in 0..need {
+            gn = gn.square();
+        }
         debug_assert_eq!(gn, -Scalar::one(), "g^N must be -1");
 
         g
@@ -203,7 +218,6 @@ fn get_inverse_twist_factors() -> &'static Vec<Scalar> {
         factors
     })
 }
-
 
 /// Performs a bit-reversal permutation on the input slice in-place.
 fn bit_reverse_permutation<T>(data: &mut [T]) {
@@ -283,7 +297,7 @@ pub fn fft_negacyclic(coeffs: &mut [Scalar]) -> Result<()> {
             reason: "Negacyclic FFT requires length 256".into(),
         });
     }
-    
+
     let twists = get_twist_factors();
     for i in 0..FFT_SIZE {
         coeffs[i] *= twists[i];
@@ -300,17 +314,16 @@ pub fn ifft_negacyclic(evals: &mut [Scalar]) -> Result<()> {
             reason: "Negacyclic IFFT requires length 256".into(),
         });
     }
-    
+
     ifft(evals)?;
 
     let inv_twists = get_inverse_twist_factors();
     for i in 0..FFT_SIZE {
         evals[i] *= inv_twists[i];
     }
-    
+
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests;

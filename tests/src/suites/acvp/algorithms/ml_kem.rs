@@ -203,7 +203,11 @@ fn ml_kem_encap(group: &TestGroup, case: &TestCase) -> Result<()> {
     }
 
     if let Some(exp_k) = case.inputs.get("k").map(|v| v.as_string()) {
-        if hex::decode(&exp_k)?.ct_eq(&*ss.to_bytes_zeroizing()).unwrap_u8() != 1 {
+        if hex::decode(&exp_k)?
+            .ct_eq(&*ss.to_bytes_zeroizing())
+            .unwrap_u8()
+            != 1
+        {
             return Err(EngineError::Mismatch {
                 expected: exp_k,
                 actual: hex::encode(&*ss.to_bytes_zeroizing()),
@@ -259,7 +263,11 @@ fn ml_kem_decap(group: &TestGroup, case: &TestCase) -> Result<()> {
     let ss = result.map_err(|e| EngineError::Crypto(format!("{:?}", e)))?;
 
     if let Some(exp_k) = case.inputs.get("k").map(|v| v.as_string()) {
-        if hex::decode(&exp_k)?.ct_eq(&*ss.to_bytes_zeroizing()).unwrap_u8() != 1 {
+        if hex::decode(&exp_k)?
+            .ct_eq(&*ss.to_bytes_zeroizing())
+            .unwrap_u8()
+            != 1
+        {
             return Err(EngineError::Mismatch {
                 expected: exp_k,
                 actual: hex::encode(&*ss.to_bytes_zeroizing()),

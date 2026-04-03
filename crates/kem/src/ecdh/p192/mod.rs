@@ -16,7 +16,11 @@
 
 use crate::error::Error as KemError;
 use dcrypt_algorithms::ec::p192 as ec;
-use dcrypt_api::{error::Error as ApiError, traits::serialize::{Serialize, SerializeSecret}, Kem, Key as ApiKey, Result as ApiResult};
+use dcrypt_api::{
+    error::Error as ApiError,
+    traits::serialize::{Serialize, SerializeSecret},
+    Kem, Key as ApiKey, Result as ApiResult,
+};
 use dcrypt_common::security::SecretBuffer;
 use rand::{CryptoRng, RngCore};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
@@ -59,76 +63,125 @@ pub struct EcdhP192Ciphertext([u8; ec::P192_POINT_COMPRESSED_SIZE]);
 impl EcdhP192PublicKey {
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         if bytes.len() != ec::P192_POINT_COMPRESSED_SIZE {
-            return Err(ApiError::InvalidLength { context: "EcdhP192PublicKey::from_bytes", expected: ec::P192_POINT_COMPRESSED_SIZE, actual: bytes.len() });
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP192PublicKey::from_bytes",
+                expected: ec::P192_POINT_COMPRESSED_SIZE,
+                actual: bytes.len(),
+            });
         }
-        let point = ec::Point::deserialize_compressed(bytes).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let point = ec::Point::deserialize_compressed(bytes)
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         if point.is_identity() {
-            return Err(ApiError::InvalidKey { context: "EcdhP192PublicKey::from_bytes", #[cfg(feature = "std")] message: "Public key cannot be the identity point".to_string() });
+            return Err(ApiError::InvalidKey {
+                context: "EcdhP192PublicKey::from_bytes",
+                #[cfg(feature = "std")]
+                message: "Public key cannot be the identity point".to_string(),
+            });
         }
         let mut key_bytes = [0u8; ec::P192_POINT_COMPRESSED_SIZE];
         key_bytes.copy_from_slice(bytes);
         Ok(Self(key_bytes))
     }
-    pub fn to_bytes(&self) -> Vec<u8> { self.0.to_vec() }
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
 }
 
 impl Serialize for EcdhP192PublicKey {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Self::from_bytes(bytes) }
-    fn to_bytes(&self) -> Vec<u8> { self.to_bytes() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Self::from_bytes(bytes)
+    }
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes()
+    }
 }
 
 // --- Secret key methods ---
 impl EcdhP192SecretKey {
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         if bytes.len() != ec::P192_SCALAR_SIZE {
-            return Err(ApiError::InvalidLength { context: "EcdhP192SecretKey::from_bytes", expected: ec::P192_SCALAR_SIZE, actual: bytes.len() });
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP192SecretKey::from_bytes",
+                expected: ec::P192_SCALAR_SIZE,
+                actual: bytes.len(),
+            });
         }
         let mut buffer_bytes = [0u8; ec::P192_SCALAR_SIZE];
         buffer_bytes.copy_from_slice(bytes);
         let buffer = SecretBuffer::new(buffer_bytes);
-        let scalar = ec::Scalar::from_secret_buffer(buffer.clone()).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let scalar = ec::Scalar::from_secret_buffer(buffer.clone())
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         drop(scalar);
         Ok(Self(buffer))
     }
-    pub fn to_bytes(&self) -> Zeroizing<Vec<u8>> { Zeroizing::new(self.0.as_ref().to_vec()) }
+    pub fn to_bytes(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(self.0.as_ref().to_vec())
+    }
 }
 
 impl SerializeSecret for EcdhP192SecretKey {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Self::from_bytes(bytes) }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> { self.to_bytes() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Self::from_bytes(bytes)
+    }
+    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        self.to_bytes()
+    }
 }
 
 // --- Shared secret methods ---
 impl EcdhP192SharedSecret {
-    pub fn to_bytes(&self) -> Vec<u8> { self.0.as_ref().to_vec() }
-    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> { Zeroizing::new(self.0.as_ref().to_vec()) }
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.as_ref().to_vec()
+    }
+    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(self.0.as_ref().to_vec())
+    }
 }
 
 impl SerializeSecret for EcdhP192SharedSecret {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Ok(Self(ApiKey::new(bytes))) }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> { self.to_bytes_zeroizing() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Ok(Self(ApiKey::new(bytes)))
+    }
+    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        self.to_bytes_zeroizing()
+    }
 }
 
 // --- Ciphertext methods ---
 impl EcdhP192Ciphertext {
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         if bytes.len() != ec::P192_POINT_COMPRESSED_SIZE {
-            return Err(ApiError::InvalidLength { context: "EcdhP192Ciphertext::from_bytes", expected: ec::P192_POINT_COMPRESSED_SIZE, actual: bytes.len() });
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP192Ciphertext::from_bytes",
+                expected: ec::P192_POINT_COMPRESSED_SIZE,
+                actual: bytes.len(),
+            });
         }
-        let point = ec::Point::deserialize_compressed(bytes).map_err(|e| ApiError::from(KemError::from(e)))?;
+        let point = ec::Point::deserialize_compressed(bytes)
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         if point.is_identity() {
-            return Err(ApiError::InvalidCiphertext { context: "EcdhP192Ciphertext::from_bytes", #[cfg(feature = "std")] message: "Ephemeral public key cannot be the identity point".to_string() });
+            return Err(ApiError::InvalidCiphertext {
+                context: "EcdhP192Ciphertext::from_bytes",
+                #[cfg(feature = "std")]
+                message: "Ephemeral public key cannot be the identity point".to_string(),
+            });
         }
         let mut ct_bytes = [0u8; ec::P192_POINT_COMPRESSED_SIZE];
         ct_bytes.copy_from_slice(bytes);
         Ok(Self(ct_bytes))
     }
-    pub fn to_bytes(&self) -> Vec<u8> { self.0.to_vec() }
+    pub fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
 }
 
 impl Serialize for EcdhP192Ciphertext {
-    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> { Self::from_bytes(bytes) }
-    fn to_bytes(&self) -> Vec<u8> { self.to_bytes() }
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        Self::from_bytes(bytes)
+    }
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes()
+    }
 }
 
 // No AsRef or AsMut implementations - this prevents direct byte access

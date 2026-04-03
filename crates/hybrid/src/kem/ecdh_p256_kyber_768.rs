@@ -2,9 +2,12 @@
 
 //! Hybrid KEM combining ECDH on P-256 and Kyber-768.
 
-use super::engine::{HybridKemEngine, HybridCiphertext, HybridPublicKey, HybridSecretKey};
+use super::engine::{HybridCiphertext, HybridKemEngine, HybridPublicKey, HybridSecretKey};
 use dcrypt_api::{error::Result as ApiResult, Kem};
-use dcrypt_kem::{ecdh::EcdhP256, kyber::{Kyber768, KyberSharedSecret}};
+use dcrypt_kem::{
+    ecdh::EcdhP256,
+    kyber::{Kyber768, KyberSharedSecret},
+};
 use rand::{CryptoRng, RngCore};
 
 /// A concrete hybrid KEM struct for EcdhP256 + Kyber768.

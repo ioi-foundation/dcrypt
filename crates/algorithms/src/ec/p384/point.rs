@@ -446,7 +446,7 @@ impl ProjectivePoint {
         // 3. Select Result based on state
         let h_is_zero = Choice::from((h.is_zero() as u8) & 1);
         let r_is_zero = Choice::from((r.is_zero() as u8) & 1);
-        
+
         // Case: P == Q (h=0, r=0)
         let p_eq_q = h_is_zero & r_is_zero;
         // Case: P == -Q (h=0, r!=0)
@@ -520,7 +520,7 @@ impl ProjectivePoint {
         // Explicitly handle identity or y=0 cases constant-time
         let is_y_zero = self.y.is_zero();
         let return_identity = self.is_identity | Choice::from(is_y_zero as u8);
-        
+
         Self::conditional_select(&result, &Self::identity(), return_identity)
     }
 

@@ -5,6 +5,7 @@ use crate::ec::p521::field::FieldElement;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_params::traditional::ecdsa::NIST_P521;
+use subtle::{Choice, ConditionallySelectable};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// P-521 scalar value for use in elliptic curve operations.
@@ -91,14 +92,16 @@ impl Scalar {
         let a = Self::to_le_limbs(&self.serialize());
         let b = Self::to_le_limbs(&other.serialize());
 
-        let (mut r, carry) = FieldElement::adc_n(a, b);
+        let (r, carry) = FieldElement::adc_n(a, b);
+        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
+        let (reduced, borrow) = FieldElement::sbb_n(r, Self::N_LIMBS);
+        let need_reduce = Choice::from((carry as u8) | ((borrow ^ 1) as u8));
 
-        // if overflowed OR r >= n ⇒ subtract n once
-        if carry == 1 || Self::geq(&r, &Self::N_LIMBS) {
-            Self::sub_in_place(&mut r, &Self::N_LIMBS);
-        }
-
-        Ok(Self::from_bytes_unchecked(Self::limbs_to_be(&r)))
+        Ok(Self::conditional_select(
+            &unreduced,
+            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
+            need_reduce,
+        ))
     }
 
     /// Subtract two scalars modulo the curve order n
@@ -106,15 +109,15 @@ impl Scalar {
         let a = Self::to_le_limbs(&self.serialize());
         let b = Self::to_le_limbs(&other.serialize());
 
-        let (mut r, borrow) = FieldElement::sbb_n(a, b);
+        let (r, borrow) = FieldElement::sbb_n(a, b);
+        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
+        let (reduced, _) = FieldElement::adc_n(r, Self::N_LIMBS);
 
-        // if negative ⇒ add n back
-        if borrow == 1 {
-            let (sum, _) = FieldElement::adc_n(r, Self::N_LIMBS);
-            r = sum;
-        }
-
-        Ok(Self::from_bytes_unchecked(Self::limbs_to_be(&r)))
+        Ok(Self::conditional_select(
+            &unreduced,
+            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
+            Choice::from(borrow as u8),
+        ))
     }
 
     /// Multiply two scalars modulo the curve order n.
@@ -131,10 +134,9 @@ impl Scalar {
                 // Double the accumulator: acc = acc * 2 (mod n)
                 acc = acc.add_mod_n(&acc)?;
 
-                // If bit is set, add self: acc = acc + self (mod n)
-                if (byte >> i) & 1 == 1 {
-                    acc = acc.add_mod_n(self)?;
-                }
+                let acc_plus_self = acc.add_mod_n(self)?;
+                let choice = Choice::from((byte >> i) & 1);
+                acc = Self::conditional_select(&acc, &acc_plus_self, choice);
             }
         }
 
@@ -232,21 +234,6 @@ impl Scalar {
     /// 4. Verify result is still non-zero
     ///
     /// Constant-time "a ≥ b" test on 66-byte big-endian values
-    #[inline(always)]
-    fn ge_be(a: &[u8; P521_SCALAR_SIZE], b: &[u8; P521_SCALAR_SIZE]) -> bool {
-        let mut gt = 0u8;
-        let mut lt = 0u8;
-
-        for i in 0..P521_SCALAR_SIZE {
-            gt |= ((a[i] > b[i]) as u8) & (!lt);
-            lt |= ((a[i] < b[i]) as u8) & (!gt);
-        }
-        // true when a > b  OR  a == b
-        gt == 1 || (gt == 0 && lt == 0)
-    }
-
-    /* ---------- patched reducer ---------- */
-
     fn reduce_scalar_bytes(bytes: &mut [u8; P521_SCALAR_SIZE]) -> Result<()> {
         let order = &NIST_P521.n;
 
@@ -255,20 +242,28 @@ impl Scalar {
             return Err(Error::param("P-521 Scalar", "Scalar cannot be zero"));
         }
 
-        // keep subtracting until bytes < order   (constant-time loop)
-        while Self::ge_be(bytes, order) {
+        let mut reduced = *bytes;
+        for _ in 0..128 {
+            let mut candidate = reduced;
             let mut borrow = 0u16;
             for i in (0..P521_SCALAR_SIZE).rev() {
-                let diff = bytes[i] as i16 - order[i] as i16 - borrow as i16;
+                let diff = candidate[i] as i16 - order[i] as i16 - borrow as i16;
                 if diff < 0 {
-                    bytes[i] = (diff + 256) as u8;
+                    candidate[i] = (diff + 256) as u8;
                     borrow = 1;
                 } else {
-                    bytes[i] = diff as u8;
+                    candidate[i] = diff as u8;
                     borrow = 0;
                 }
             }
+
+            let choice = Choice::from((borrow ^ 1) as u8);
+            for i in 0..P521_SCALAR_SIZE {
+                reduced[i] = u8::conditional_select(&reduced[i], &candidate[i], choice);
+            }
         }
+
+        *bytes = reduced;
         Ok(())
     }
 
@@ -316,5 +311,16 @@ impl Scalar {
             a[i] = tmp as u32;
             borrow = (tmp >> 63) & 1; // 1 if we wrapped
         }
+    }
+
+    #[inline(always)]
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let a_bytes = a.serialize();
+        let b_bytes = b.serialize();
+        let mut out = [0u8; P521_SCALAR_SIZE];
+        for i in 0..P521_SCALAR_SIZE {
+            out[i] = u8::conditional_select(&a_bytes[i], &b_bytes[i], choice);
+        }
+        Self::from_bytes_unchecked(out)
     }
 }

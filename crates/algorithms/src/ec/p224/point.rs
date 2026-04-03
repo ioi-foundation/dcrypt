@@ -9,7 +9,7 @@ use crate::ec::p224::{
 };
 use crate::error::{validate, Error, Result};
 use dcrypt_params::traditional::ecdsa::NIST_P224;
-use subtle::Choice;
+use subtle::{Choice, ConditionallySelectable};
 
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -370,10 +370,9 @@ impl Point {
         for byte in scalar_bytes.iter() {
             for bit_pos in (0..8).rev() {
                 result = result.double();
-                let bit = (byte >> bit_pos) & 1;
-                if bit == 1 {
-                    result = result.add(&base);
-                }
+                let added = result.add(&base);
+                let choice = Choice::from((byte >> bit_pos) & 1);
+                result = ProjectivePoint::conditional_select(&result, &added, choice);
             }
         }
 
@@ -430,6 +429,15 @@ impl Point {
 }
 
 impl ProjectivePoint {
+    pub fn identity() -> Self {
+        Self {
+            is_identity: Choice::from(1),
+            x: FieldElement::zero(),
+            y: FieldElement::one(),
+            z: FieldElement::zero(),
+        }
+    }
+
     /// Projective point addition using complete addition formulas
     ///
     /// Implements the addition law for Jacobian coordinates that works
@@ -438,14 +446,6 @@ impl ProjectivePoint {
     /// Uses optimized formulas that avoid expensive field inversions
     /// until the final conversion back to affine coordinates.
     pub fn add(&self, other: &Self) -> Self {
-        // Handle identity element cases
-        if self.is_identity.into() {
-            return other.clone();
-        }
-        if other.is_identity.into() {
-            return self.clone();
-        }
-
         // Compute addition using Jacobian coordinate formulas
         // Reference: "Guide to Elliptic Curve Cryptography" Algorithm 3.22
 
@@ -464,22 +464,6 @@ impl ProjectivePoint {
         // Compute differences
         let h = u2.sub(&u1); // X2·Z1² − X1·Z2²
         let r = s2.sub(&s1); // Y2·Z1³ − Y1·Z2³
-
-        // Handle special cases: point doubling or inverse points
-        if h.is_zero() {
-            if r.is_zero() {
-                // Points are equal: use doubling formula
-                return self.double();
-            } else {
-                // Points are inverses: return identity
-                return Self {
-                    is_identity: Choice::from(1),
-                    x: FieldElement::zero(),
-                    y: FieldElement::one(), // (0 : 1 : 0)
-                    z: FieldElement::zero(),
-                };
-            }
-        }
 
         // General addition case
         let h_squared = h.square();
@@ -502,23 +486,24 @@ impl ProjectivePoint {
         let z1_times_z2 = self.z.mul(&other.z);
         let z3 = z1_times_z2.mul(&h);
 
-        // if Z3 == 0 we actually computed the point at infinity
-        if z3.is_zero() {
-            return Self {
-                is_identity: Choice::from(1),
-                x: FieldElement::zero(),
-                y: FieldElement::one(), // canonical projective infinity
-                z: FieldElement::zero(),
-            };
-        }
-
-        // Normal return path
-        Self {
+        let generic = Self {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
             z: z3,
-        }
+        };
+
+        let double_point = self.double();
+        let h_is_zero = Choice::from(h.is_zero() as u8);
+        let r_is_zero = Choice::from(r.is_zero() as u8);
+        let p_eq_q = h_is_zero & r_is_zero;
+        let p_eq_neg_q = h_is_zero & !r_is_zero;
+
+        let mut result = Self::conditional_select(&generic, &double_point, p_eq_q);
+        result = Self::conditional_select(&result, &Self::identity(), p_eq_neg_q);
+        result = Self::conditional_select(&result, other, self.is_identity);
+        result = Self::conditional_select(&result, self, other.is_identity);
+        result
     }
 
     /// Projective point doubling using efficient doubling formulas
@@ -529,20 +514,6 @@ impl ProjectivePoint {
     /// (SEC 1, Algorithm 3.2.1  —  Δ / Γ / β / α form)
     #[inline]
     pub fn double(&self) -> Self {
-        // ── 0. Easy outs ────────────────────────────────────────
-        if self.is_identity.into() {
-            return self.clone();
-        }
-        if self.y.is_zero() {
-            // (x,0) is its own negative ⇒ 2·P = ∞
-            return Self {
-                is_identity: Choice::from(1),
-                x: FieldElement::zero(),
-                y: FieldElement::one(),
-                z: FieldElement::zero(),
-            };
-        }
-
         // ── 1. Pre-computations ─────────────────────────────────
         // Δ = Z₁²
         let delta = self.z.square();
@@ -582,12 +553,15 @@ impl ProjectivePoint {
         eight_gamma_sq = eight_gamma_sq.add(&eight_gamma_sq); // 8Γ²
         y3 = y3.sub(&eight_gamma_sq);
 
-        Self {
+        let result = Self {
             is_identity: Choice::from(0),
             x: x3,
             y: y3,
             z: z3,
-        }
+        };
+
+        let return_identity = self.is_identity | Choice::from(self.y.is_zero() as u8);
+        Self::conditional_select(&result, &Self::identity(), return_identity)
     }
 
     /// Convert Jacobian projective coordinates back to affine coordinates
@@ -615,6 +589,23 @@ impl ProjectivePoint {
             is_identity: Choice::from(0),
             x: x_affine,
             y: y_affine,
+        }
+    }
+
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let select_field = |lhs: &FieldElement, rhs: &FieldElement| {
+            let mut out = [0u32; 7];
+            for (i, limb) in out.iter_mut().enumerate() {
+                *limb = u32::conditional_select(&lhs.0[i], &rhs.0[i], choice);
+            }
+            FieldElement(out)
+        };
+
+        Self {
+            is_identity: Choice::conditional_select(&a.is_identity, &b.is_identity, choice),
+            x: select_field(&a.x, &b.x),
+            y: select_field(&a.y, &b.y),
+            z: select_field(&a.z, &b.z),
         }
     }
 }

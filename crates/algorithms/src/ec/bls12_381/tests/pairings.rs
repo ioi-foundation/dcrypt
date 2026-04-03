@@ -1,7 +1,7 @@
 //! Pairing tests for BLS12-381
 
-use super::super::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
 use super::super::pairings::{pairing, Gt};
+use super::super::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
 
 #[cfg(feature = "alloc")]
 use super::super::pairings::{multi_miller_loop, G2Prepared};
@@ -17,20 +17,26 @@ fn test_pairing_bilinearity() {
     // Use smaller, deterministic points for more reliable testing
     let g1 = G1Affine::generator();
     let g2 = G2Affine::generator();
-    
+
     // Create multiples of the generators
     let p1 = G1Affine::from(G1Projective::from(g1) * Scalar::from(2u64));
     let p2 = G1Affine::from(G1Projective::from(g1) * Scalar::from(3u64));
     let q1 = G2Affine::from(G2Projective::from(g2) * Scalar::from(5u64));
     let q2 = G2Affine::from(G2Projective::from(g2) * Scalar::from(7u64));
-    
+
     // Test: e(P1 + P2, Q) == e(P1, Q) * e(P2, Q)
-    let left = pairing(&G1Affine::from(G1Projective::from(p1) + G1Projective::from(p2)), &q1);
+    let left = pairing(
+        &G1Affine::from(G1Projective::from(p1) + G1Projective::from(p2)),
+        &q1,
+    );
     let right = pairing(&p1, &q1) + pairing(&p2, &q1);
     assert_eq!(left, right);
-    
+
     // Test: e(P, Q1 + Q2) == e(P, Q1) * e(P, Q2)
-    let left = pairing(&p1, &G2Affine::from(G2Projective::from(q1) + G2Projective::from(q2)));
+    let left = pairing(
+        &p1,
+        &G2Affine::from(G2Projective::from(q1) + G2Projective::from(q2)),
+    );
     let right = pairing(&p1, &q1) + pairing(&p1, &q2);
     assert_eq!(left, right);
 }
@@ -42,10 +48,12 @@ fn test_pairing_scalar_multiplication() {
     let q = G2Affine::generator();
     let a = Scalar::from(42u64);
     let b = Scalar::from(69u64);
-    
+
     // Test: e([a]P, [b]Q) == e(P, Q)^(a*b)
-    let left = pairing(&G1Affine::from(G1Projective::from(p) * a), 
-                         &G2Affine::from(G2Projective::from(q) * b));
+    let left = pairing(
+        &G1Affine::from(G1Projective::from(p) * a),
+        &G2Affine::from(G2Projective::from(q) * b),
+    );
     let right = pairing(&p, &q) * (a * b);
     assert_eq!(left, right);
 }
@@ -56,7 +64,7 @@ fn test_pairing_non_degeneracy() {
     let g1 = G1Affine::generator();
     let g2 = G2Affine::generator();
     let result = pairing(&g1, &g2);
-    
+
     assert!(!bool::from(result.is_identity()));
 }
 
@@ -64,15 +72,18 @@ fn test_pairing_non_degeneracy() {
 fn test_pairing_with_identity() {
     let p = G1Affine::from(G1Projective::random(&mut OsRng));
     let q = G2Affine::from(G2Projective::random(&mut OsRng));
-    
+
     // pairing(Identity, Q) = 1
     assert_eq!(pairing(&G1Affine::identity(), &q), Gt::identity());
-    
+
     // pairing(P, Identity) = 1
     assert_eq!(pairing(&p, &G2Affine::identity()), Gt::identity());
-    
+
     // pairing(Identity, Identity) = 1
-    assert_eq!(pairing(&G1Affine::identity(), &G2Affine::identity()), Gt::identity());
+    assert_eq!(
+        pairing(&G1Affine::identity(), &G2Affine::identity()),
+        Gt::identity()
+    );
 }
 
 // ============================================================================
@@ -85,19 +96,19 @@ fn test_multi_miller_loop_consistency() {
     // Use deterministic points
     let g1 = G1Affine::generator();
     let g2 = G2Affine::generator();
-    
+
     let p1 = G1Affine::from(G1Projective::from(g1) * Scalar::from(2u64));
     let p2 = G1Affine::from(G1Projective::from(g1) * Scalar::from(3u64));
     let q1 = G2Affine::from(G2Projective::from(g2) * Scalar::from(5u64));
     let q2 = G2Affine::from(G2Projective::from(g2) * Scalar::from(7u64));
-    
+
     let prep1 = G2Prepared::from(q1);
     let prep2 = G2Prepared::from(q2);
-    
+
     // Multi-pairing should equal sum of individual pairings
     let multi_result = multi_miller_loop(&[(&p1, &prep1), (&p2, &prep2)]).final_exponentiation();
     let individual_result = pairing(&p1, &q1) + pairing(&p2, &q2);
-    
+
     assert_eq!(multi_result, individual_result);
 }
 
@@ -106,20 +117,21 @@ fn test_multi_miller_loop_consistency() {
 fn test_multi_miller_loop_with_identity() {
     let g1 = G1Affine::generator();
     let g2 = G2Affine::generator();
-    
+
     let p = G1Affine::from(G1Projective::from(g1) * Scalar::from(42u64));
     let q = G2Affine::from(G2Projective::from(g2) * Scalar::from(69u64));
     let identity_g1 = G1Affine::identity();
     let identity_g2 = G2Affine::identity();
-    
+
     let prep_q = G2Prepared::from(q);
     let prep_identity = G2Prepared::from(identity_g2);
-    
+
     // Pairing with identity should not affect result
-    let result1 = multi_miller_loop(&[(&p, &prep_q), (&identity_g1, &prep_q)]).final_exponentiation();
+    let result1 =
+        multi_miller_loop(&[(&p, &prep_q), (&identity_g1, &prep_q)]).final_exponentiation();
     let result2 = pairing(&p, &q);
     assert_eq!(result1, result2);
-    
+
     let result3 = multi_miller_loop(&[(&p, &prep_q), (&p, &prep_identity)]).final_exponentiation();
     assert_eq!(result3, result2);
 }
@@ -132,11 +144,11 @@ fn test_multi_miller_loop_with_identity() {
 fn test_gt_identity() {
     let identity = Gt::identity();
     let g = Gt::generator();
-    
+
     // Identity + G = G
     assert_eq!(identity + g, g);
     assert_eq!(g + identity, g);
-    
+
     // Identity * scalar = Identity
     let s = Scalar::from(42u64);
     assert_eq!(identity * s, identity);
@@ -147,7 +159,7 @@ fn test_gt_double() {
     let g = Gt::generator();
     let doubled = g.double();
     let added = g + g;
-    
+
     assert_eq!(doubled, added);
 }
 
@@ -155,7 +167,7 @@ fn test_gt_double() {
 fn test_gt_negation() {
     let g = Gt::generator();
     let neg_g = -g;
-    
+
     // G + (-G) should equal identity
     assert_eq!(g + neg_g, Gt::identity());
 }

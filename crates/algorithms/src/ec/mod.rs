@@ -8,19 +8,19 @@
 //! This module now also includes support for Koblitz (secp256k1) and Binary (sect283k1) curves.
 
 pub mod b283k;
+pub mod bls12_381;
 pub mod k256; // For secp256k1
 pub mod p192;
 pub mod p224;
 pub mod p256;
 pub mod p384;
 pub mod p521; // For sect283k1
-pub mod bls12_381;
 
 // Re-export types with consistent naming scheme.
 // This corrects the original error which tried to export non-existent types like 'PointG1'.
 pub use bls12_381::{
-    G1Projective as Bls12_381G1, G2Projective as Bls12_381G2, Gt as Bls12_381Gt,
-    Bls12_381Scalar, pairing as bls12_381_pairing,
+    pairing as bls12_381_pairing, Bls12_381Scalar, G1Projective as Bls12_381G1,
+    G2Projective as Bls12_381G2, Gt as Bls12_381Gt,
 };
 
 pub use b283k::{Point as B283kPoint, Scalar as B283kScalar};

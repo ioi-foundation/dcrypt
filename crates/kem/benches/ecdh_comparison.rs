@@ -52,7 +52,6 @@ fn bench_ecdh_encapsulate_comparison(c: &mut Criterion) {
     let (pk_k256, _) = EcdhK256::keypair(&mut rng).unwrap();
     let (pk_b283k, _) = EcdhB283k::keypair(&mut rng).unwrap();
 
-
     group.bench_function("P-256", |b| {
         b.iter(|| EcdhP256::encapsulate(&mut rng, &pk_p256).unwrap());
     });
@@ -144,7 +143,6 @@ fn bench_ecdh_throughput_comparison(c: &mut Criterion) {
     for (curve_name, iterations) in configs {
         group.bench_function(curve_name, |b| {
             b.iter(|| match curve_name {
-
                 "P-256" => {
                     for _ in 0..iterations {
                         let (pk, sk) = EcdhP256::keypair(&mut rng).unwrap();

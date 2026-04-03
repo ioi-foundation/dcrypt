@@ -1,6 +1,6 @@
 //! EdDSA (Edwards-curve Digital Signature Algorithm) implementations
 //!
-//! This module provides a production-ready, security-hardened implementation 
+//! This module provides a production-ready, security-hardened implementation
 //! of Ed25519, the most widely used EdDSA variant, as specified in RFC 8032.
 //!
 //! # Security Features
@@ -35,7 +35,7 @@
 //!
 //! # fn main() -> dcrypt_api::Result<()> {
 //! let mut rng = OsRng;
-//! 
+//!
 //! // Generate a new keypair
 //! let (public_key, secret_key) = Ed25519::keypair(&mut rng)?;
 //!
@@ -45,14 +45,14 @@
 //!
 //! // Verify the signature
 //! assert!(Ed25519::verify(message, &signature, &public_key).is_ok());
-//! 
+//!
 //! // Save the secret key seed (encrypt in production!)
 //! let seed = secret_key.seed();
-//! 
+//!
 //! // Later, reconstruct the secret key
 //! let reconstructed_secret = Ed25519SecretKey::from_seed(seed)?;
 //! let reconstructed_public = reconstructed_secret.public_key()?;
-//! 
+//!
 //! // The reconstructed keys work identically
 //! assert_eq!(public_key.0, reconstructed_public.0);
 //! # Ok(())

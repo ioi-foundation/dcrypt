@@ -5,8 +5,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod error;
 pub mod dilithium;
+pub mod error;
 pub mod falcon;
 pub mod rainbow;
 pub mod sphincs;

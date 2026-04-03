@@ -502,7 +502,7 @@ impl ProjectivePoint {
         // 3. Select Result based on state
         let h_is_zero = Choice::from((h.is_zero() as u8) & 1);
         let r_is_zero = Choice::from((r.is_zero() as u8) & 1);
-        
+
         // Case: P == Q (h=0, r=0)
         let p_eq_q = h_is_zero & r_is_zero;
         // Case: P == -Q (h=0, r!=0)
@@ -583,7 +583,7 @@ impl ProjectivePoint {
         // Also handle (x, 0) case which results in identity (y == 0 check embedded in math via z3 calc?)
         // Actually, if Y=0, doubling is identity. Our math produces Z3 = ... - gamma ...
         // Let's explicitly handle the "result should be identity if input identity or Y=0" logic safely.
-        
+
         let is_y_zero = self.y.is_zero();
         let return_identity = self.is_identity | Choice::from(is_y_zero as u8);
 

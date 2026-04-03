@@ -1,11 +1,14 @@
 // tests/src/suites/constant_time/tester.rs
 
+use crate::suites::constant_time::config::TestConfig;
+use crate::suites::constant_time::profile::ProfileStore;
+use crate::suites::constant_time::stats;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
+use std::sync::Mutex;
 use std::time::Instant;
-use crate::suites::constant_time::config::TestConfig;
-use crate::suites::constant_time::stats;
-use crate::suites::constant_time::profile::ProfileStore;
+
+static TIMING_MEASUREMENT_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug)]
 pub struct TimingAnalysis {
@@ -17,20 +20,23 @@ pub struct TimingAnalysis {
     pub mad_b: f64,
     pub cohens_d: f64,
     pub ks_stat: f64,
+    pub welch_t: f64,
 
     // Inference & P-values
     pub ci_lower: f64,
     pub ci_upper: f64,
     pub zero_in_ci: bool,
-    pub p_ci: f64,  // Bootstrap p-value for mean diff
-    pub p_ks: f64,  // KS test p-value for distribution shape
-    
+    pub p_ci: f64,    // Bootstrap p-value for mean diff
+    pub p_ks: f64,    // KS test p-value for distribution shape
+    pub p_welch: f64, // Welch t-test p-value (large-sample approximation)
+
     // Multi-signal Correction (Holm-Bonferroni)
-    pub holm_reject_ci: bool, // Did mean diff survive Holm?
-    pub holm_reject_ks: bool, // Did KS stat survive Holm?
+    pub holm_reject_ci: bool,    // Did mean diff survive Holm?
+    pub holm_reject_ks: bool,    // Did KS stat survive Holm?
+    pub holm_reject_welch: bool, // Did Welch survive Holm?
 
     pub practical_threshold: f64,
-    
+
     // Environment
     pub noise_floor_mad: f64,
     pub environment_status: String,
@@ -59,12 +65,16 @@ impl TimingTester {
         mut warmup_op: W,
         mut measurement_op: M,
         config: &TestConfig,
-        name: &str
+        name: &str,
     ) -> Result<TimingAnalysis, String>
     where
         W: FnMut(),
         M: FnMut(bool) -> (),
     {
+        let _measurement_guard = TIMING_MEASUREMENT_LOCK
+            .lock()
+            .map_err(|_| "timing measurement lock poisoned".to_string())?;
+
         // --- 1. Warmup & Noise Profiling ---
         let mut warmup_times = Vec::with_capacity(config.num_warmup);
         for _ in 0..config.num_warmup {
@@ -80,7 +90,7 @@ impl TimingTester {
         // Profile Check & Gating
         if config.use_noise_profile {
             let mut store = ProfileStore::load_or_create(&config.noise_profile_path);
-            
+
             if let Some(baseline) = store.get_baseline(name) {
                 // Check if noise is drastically worse than history
                 if current_mad > baseline * config.noise_tolerance_factor {
@@ -90,13 +100,16 @@ impl TimingTester {
                         current_mad, config.noise_tolerance_factor, baseline
                     ));
                 }
-                
+
                 // Warn if noise is elevated but within tolerance
                 if current_mad > baseline * 1.5 {
-                    env_status = format!("Elevated Noise (MAD {:.2} > Baseline {:.2})", current_mad, baseline);
+                    env_status = format!(
+                        "Elevated Noise (MAD {:.2} > Baseline {:.2})",
+                        current_mad, baseline
+                    );
                 }
             }
-            
+
             store.update(name, current_mad);
             store.save(&config.noise_profile_path);
         }
@@ -151,39 +164,44 @@ impl TimingTester {
 
         // 2. Bootstrap Confidence Interval & P-Value (Metric 1: Mean Diff)
         let (ci_low, ci_high, p_ci) = stats::bootstrap_ci_and_p(
-            &diffs, 
-            config.bootstrap_iterations, 
-            config.significance_level
+            &diffs,
+            config.bootstrap_iterations,
+            config.significance_level,
         );
 
         // 3. Kolmogorov-Smirnov Test (Metric 2: Distribution Shape)
         let ks_stat = stats::ks_statistic(a, b);
         let p_ks = stats::ks_pvalue(ks_stat, a.len(), b.len());
 
-        // 4. Holm-Bonferroni Correction
+        // 4. Welch's t-test (Metric 3: Dudect-style signal)
+        let (welch_t, p_welch) = stats::welch_t_statistic(a, b);
+
+        // 5. Holm-Bonferroni Correction
         // We are testing two hypotheses:
         // H0_1: Mean diff = 0
         // H0_2: Distributions are identical
+        // H0_3: Welch t-statistic indicates no mean-shift signal
         // We want to control FWER at `significance_level`
-        let pvals = vec![p_ci, p_ks];
+        let pvals = vec![p_ci, p_ks, p_welch];
         let holm_decisions = stats::holm_adjust(&pvals, config.significance_level);
-        
+
         let holm_reject_ci = holm_decisions[0];
         let holm_reject_ks = holm_decisions[1];
-        
-        // 5. Other Diagnostics
+        let holm_reject_welch = holm_decisions[2];
+
+        // 6. Other Diagnostics
         let mean_a = a.iter().sum::<f64>() / a.len() as f64;
         let mean_b = b.iter().sum::<f64>() / b.len() as f64;
         let mad_a = stats::robust_mad(a);
         let mad_b = stats::robust_mad(b);
         let cohens_d = stats::cohens_d(a, b);
 
-        // 6. Decision Logic
+        // 7. Decision Logic
         // A. Confidence Interval Check (Primary Signal)
-        // Note: zero_excluded matches holm_reject_ci in theory (same test), but 
+        // Note: zero_excluded matches holm_reject_ci in theory (same test), but
         // we track both explicitly.
         let zero_excluded = ci_low > 0.0 || ci_high < 0.0;
-        
+
         // B. Practical Significance (Magnitude)
         let thr = config.practical_significance_threshold;
         let is_practical = ci_low > thr || ci_high < -thr;
@@ -195,7 +213,8 @@ impl TimingTester {
         // 3. The hypothesis test survives Holm correction (controls false positive rate)
         //
         // Note: We use holm_reject_ci as the gatekeeper. KS provides shape info.
-        let leak_detected = zero_excluded && is_practical && holm_reject_ci;
+        let welch_signal = welch_t.abs() >= config.welch_t_threshold && holm_reject_welch;
+        let leak_detected = is_practical && (zero_excluded && holm_reject_ci || welch_signal);
 
         Ok(TimingAnalysis {
             mean_a,
@@ -205,13 +224,16 @@ impl TimingTester {
             mad_b,
             cohens_d,
             ks_stat,
+            welch_t,
             ci_lower: ci_low,
             ci_upper: ci_high,
             zero_in_ci: !zero_excluded,
             p_ci,
             p_ks,
+            p_welch,
             holm_reject_ci,
             holm_reject_ks,
+            holm_reject_welch,
             practical_threshold: config.practical_significance_threshold,
             noise_floor_mad: noise_mad,
             environment_status: env_status,
@@ -226,39 +248,78 @@ pub fn generate_test_insights(
     primitive_name: &str,
 ) -> String {
     let mut s = String::new();
-    
-    let status_icon = if analysis.is_constant_time { "✅" } else { "❌" };
-    
+
+    let status_icon = if analysis.is_constant_time {
+        "✅"
+    } else {
+        "❌"
+    };
+
     s.push_str(&format!("{} Result: {}\n", status_icon, primitive_name));
-    s.push_str(&format!("   Environment: {}\n", analysis.environment_status));
-    s.push_str(&format!("   Noise Floor (MAD): {:.3} ns\n", analysis.noise_floor_mad));
-    
+    s.push_str(&format!(
+        "   Environment: {}\n",
+        analysis.environment_status
+    ));
+    s.push_str(&format!(
+        "   Noise Floor (MAD): {:.3} ns\n",
+        analysis.noise_floor_mad
+    ));
+
     s.push_str("   --- Statistics ---\n");
     s.push_str(&format!("   Mean Diff:   {:.3} ns\n", analysis.mean_diff));
-    s.push_str(&format!("   99% CI:      [{:.3}, {:.3}] ns\n", analysis.ci_lower, analysis.ci_upper));
-    s.push_str(&format!("   Cohen's d:   {:.3} (Effect Size)\n", analysis.cohens_d));
-    
+    s.push_str(&format!(
+        "   99% CI:      [{:.3}, {:.3}] ns\n",
+        analysis.ci_lower, analysis.ci_upper
+    ));
+    s.push_str(&format!(
+        "   Cohen's d:   {:.3} (Effect Size)\n",
+        analysis.cohens_d
+    ));
+    s.push_str(&format!("   Welch t:     {:.3}\n", analysis.welch_t));
+
     s.push_str("   --- Hypothesis Tests (Holm-Adjusted) ---\n");
-    s.push_str(&format!("   Mean Diff P: {:.1e} (Reject: {})\n", analysis.p_ci, analysis.holm_reject_ci));
-    s.push_str(&format!("   KS Stat P:   {:.1e} (Reject: {})\n", analysis.p_ks, analysis.holm_reject_ks));
-    
+    s.push_str(&format!(
+        "   Mean Diff P: {:.1e} (Reject: {})\n",
+        analysis.p_ci, analysis.holm_reject_ci
+    ));
+    s.push_str(&format!(
+        "   KS Stat P:   {:.1e} (Reject: {})\n",
+        analysis.p_ks, analysis.holm_reject_ks
+    ));
+    s.push_str(&format!(
+        "   Welch P:     {:.1e} (Reject: {})\n",
+        analysis.p_welch, analysis.holm_reject_welch
+    ));
+
     if !analysis.is_constant_time {
         s.push_str("\n   ⚠️  FAILURE DIAGNOSIS:\n");
-        
+
         if analysis.holm_reject_ci {
-             s.push_str("   - Statistically significant mean difference detected (p < alpha).\n");
+            s.push_str("   - Statistically significant mean difference detected (p < alpha).\n");
         }
-        
+
         if analysis.ci_lower > analysis.practical_threshold {
-             s.push_str(&format!("   - Positive bias exceeds practical threshold (+{:.1} ns)\n", analysis.practical_threshold));
+            s.push_str(&format!(
+                "   - Positive bias exceeds practical threshold (+{:.1} ns)\n",
+                analysis.practical_threshold
+            ));
         } else if analysis.ci_upper < -analysis.practical_threshold {
-             s.push_str(&format!("   - Negative bias exceeds practical threshold (-{:.1} ns)\n", analysis.practical_threshold));
+            s.push_str(&format!(
+                "   - Negative bias exceeds practical threshold (-{:.1} ns)\n",
+                analysis.practical_threshold
+            ));
         }
-        
+
         if analysis.holm_reject_ks {
-             s.push_str("   - Distribution shapes differ significantly (suggests branching).\n");
+            s.push_str("   - Distribution shapes differ significantly (suggests branching).\n");
         } else {
-             s.push_str("   - Distributions similar shape, offset implies data-dependent operands.\n");
+            s.push_str(
+                "   - Distributions similar shape, offset implies data-dependent operands.\n",
+            );
+        }
+
+        if analysis.holm_reject_welch {
+            s.push_str("   - Welch's t-test exceeded the dudect-style significance threshold.\n");
         }
     }
 

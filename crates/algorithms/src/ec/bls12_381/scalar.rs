@@ -2,9 +2,7 @@
 
 use crate::error::{Error, Result};
 use crate::hash::{sha2::Sha256, HashFunction};
-use crate::types::{
-    ByteSerializable, ConstantTimeEq as DcryptConstantTimeEq, SecureZeroingType,
-};
+use crate::types::{ByteSerializable, ConstantTimeEq as DcryptConstantTimeEq, SecureZeroingType};
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
@@ -1130,7 +1128,10 @@ fn test_scalar_hash_to_field() {
     // 6. Test empty DST and empty data edge cases
     let s_empty = Scalar::hash_to_field(b"", b"").unwrap();
     let s_empty2 = Scalar::hash_to_field(b"", b"").unwrap();
-    assert_eq!(s_empty, s_empty2, "Empty input should still be deterministic");
+    assert_eq!(
+        s_empty, s_empty2,
+        "Empty input should still be deterministic"
+    );
 
     // 7. Verify that DST length is properly included (catches common implementation bugs)
     let dst_short = b"A";
@@ -1152,7 +1153,10 @@ fn test_scalar_hash_to_field() {
             has_odd = true;
         }
     }
-    assert!(has_odd && has_even, "Hash output should have both odd and even values");
+    assert!(
+        has_odd && has_even,
+        "Hash output should have both odd and even values"
+    );
 
     // 9. Test expand_message_xmd internal function with basic test vectors
     // These help ensure our implementation follows the standard

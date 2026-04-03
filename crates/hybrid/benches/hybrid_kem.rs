@@ -1,13 +1,11 @@
 //! Benchmarks for Hybrid KEM operations
-//! 
-//! Measures performance of composite KEMs combining classical ECDH 
+//!
+//! Measures performance of composite KEMs combining classical ECDH
 //! with Post-Quantum Kyber.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dcrypt_api::Kem;
-use dcrypt_hybrid::kem::{
-    EcdhP256Kyber768, EcdhP384Kyber1024
-};
+use dcrypt_hybrid::kem::{EcdhP256Kyber768, EcdhP384Kyber1024};
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 
@@ -22,7 +20,7 @@ fn bench_hybrid_keypair(c: &mut Criterion) {
     group.bench_function("P384_Kyber1024", |b| {
         b.iter(|| EcdhP384Kyber1024::keypair(&mut rng).unwrap());
     });
-    
+
     group.finish();
 }
 

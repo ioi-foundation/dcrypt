@@ -4,6 +4,7 @@ use crate::ec::p192::constants::P192_SCALAR_SIZE;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_params::traditional::ecdsa::NIST_P192;
+use subtle::{Choice, ConditionallySelectable};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// P-192 scalar: integers mod n, where
@@ -95,11 +96,16 @@ impl Scalar {
             *r_limb = tmp as u32;
             carry = tmp >> 32;
         }
-        // If overflow OR r ≥ n, subtract n
-        if carry == 1 || Self::geq(&r, &Self::N_LIMBS) {
-            Self::sub_in_place(&mut r, &Self::N_LIMBS);
-        }
-        Ok(Self::from_bytes_unchecked(Self::limbs_to_be(&r)))
+        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
+        let mut reduced = r;
+        let borrow = Self::sub_in_place(&mut reduced, &Self::N_LIMBS);
+        let need_reduce = Choice::from((carry as u8) | ((borrow ^ 1) as u8));
+
+        Ok(Self::conditional_select(
+            &unreduced,
+            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
+            need_reduce,
+        ))
     }
 
     /// Subtract two scalars mod n
@@ -107,27 +113,28 @@ impl Scalar {
         let a_limbs = Self::to_le_limbs(&self.serialize());
         let b_limbs = Self::to_le_limbs(&other.serialize());
         let mut r = [0u32; 6];
-        let mut borrow: i64 = 0;
+        let mut borrow: u64 = 0;
         for ((&a_limb, &b_limb), r_limb) in a_limbs.iter().zip(b_limbs.iter()).zip(r.iter_mut()) {
-            let tmp = a_limb as i64 - b_limb as i64 - borrow;
-            if tmp < 0 {
-                *r_limb = (tmp + (1i64 << 32)) as u32;
-                borrow = 1;
-            } else {
-                *r_limb = tmp as u32;
-                borrow = 0;
-            }
+            let tmp = (a_limb as u64)
+                .wrapping_sub(b_limb as u64)
+                .wrapping_sub(borrow);
+            *r_limb = tmp as u32;
+            borrow = (tmp >> 63) & 1;
         }
-        if borrow == 1 {
-            // Add n back
-            let mut c: u64 = 0;
-            for (&n_limb, r_limb) in Self::N_LIMBS.iter().zip(r.iter_mut()) {
-                let tmp = *r_limb as u64 + n_limb as u64 + c;
-                *r_limb = tmp as u32;
-                c = tmp >> 32;
-            }
+        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
+        let mut reduced = r;
+        let mut carry: u64 = 0;
+        for (&n_limb, r_limb) in Self::N_LIMBS.iter().zip(reduced.iter_mut()) {
+            let tmp = *r_limb as u64 + n_limb as u64 + carry;
+            *r_limb = tmp as u32;
+            carry = tmp >> 32;
         }
-        Ok(Self::from_bytes_unchecked(Self::limbs_to_be(&r)))
+
+        Ok(Self::conditional_select(
+            &unreduced,
+            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
+            Choice::from(borrow as u8),
+        ))
     }
 
     /// Multiply two scalars mod n (double‐and‐add)
@@ -138,9 +145,9 @@ impl Scalar {
         for &byte in other.serialize().iter() {
             for i in (0..8).rev() {
                 acc = acc.add_mod_n(&acc)?; // Double
-                if ((byte >> i) & 1) == 1 {
-                    acc = acc.add_mod_n(&self_val)?; // Add
-                }
+                let acc_plus_self = acc.add_mod_n(&self_val)?; // Add
+                let choice = Choice::from((byte >> i) & 1);
+                acc = Self::conditional_select(&acc, &acc_plus_self, choice);
             }
         }
         Ok(acc)
@@ -254,7 +261,7 @@ impl Scalar {
 
     /// Subtract b from a in‐place, ignoring final borrow
     #[inline(always)]
-    fn sub_in_place(a: &mut [u32; 6], b: &[u32; 6]) {
+    fn sub_in_place(a: &mut [u32; 6], b: &[u32; 6]) -> u64 {
         let mut borrow = 0u64;
         for (a_limb, &b_limb) in a.iter_mut().zip(b.iter()) {
             let tmp = (*a_limb as u64)
@@ -263,6 +270,7 @@ impl Scalar {
             *a_limb = tmp as u32;
             borrow = (tmp >> 63) & 1;
         }
+        borrow
     }
 
     /// Order n in little‐endian limbs
@@ -271,4 +279,15 @@ impl Scalar {
         0xB4D22831, // least significant 32 bits
         0x146BC9B1, 0x99DEF836, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, // most significant
     ];
+
+    #[inline(always)]
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let a_bytes = a.serialize();
+        let b_bytes = b.serialize();
+        let mut out = [0u8; P192_SCALAR_SIZE];
+        for i in 0..P192_SCALAR_SIZE {
+            out[i] = u8::conditional_select(&a_bytes[i], &b_bytes[i], choice);
+        }
+        Self::from_bytes_unchecked(out)
+    }
 }

@@ -13,7 +13,7 @@ Spearheaded by the **IOI Foundation** as the security cornerstone for next-gener
 
 dcrypt introduces capabilities critical for the transition to quantum-safe and decentralized computing:
 
-1.  **Pure-Rust FIPS 204 (ML-DSA)**: A production-ready implementation of the complete **CRYSTALS-Dilithium** signature scheme with zero `unsafe` code and full constant-time execution.
+1.  **Pure-Rust FIPS 204 (ML-DSA)**: A production-ready implementation of the complete **CRYSTALS-Dilithium** signature scheme with zero `unsafe` code, spec-aligned hint handling, and a fixed-window constant-time signer bounded by the public FIPS 204 Appendix C loop limit.
 2.  **Pure-Rust FIPS 203 (ML-KEM)**: A complete implementation of **CRYSTALS-Kyber** with protections against timing side-channels.
 3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + Kyber-768`) and hybrid Digital Signatures, ensuring security even if one underlying primitive is compromised.
 4.  **BLS12-381 Pairing Engine**: A fully featured implementation of the pairing-friendly curve, including optimal Ate pairings and IETF-compliant **Hash-to-Curve**, essential for Zero-Knowledge Proofs and Signature Aggregation.
@@ -23,7 +23,7 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 *   **Pure Rust & Memory Safety**: Implemented with **zero FFI dependencies** to eliminate memory vulnerabilities like buffer overflows and use-after-free errors common in C/C++ wrapped libraries.
 *   **Post-Quantum Ready**: Full support for NIST-selected algorithms, protecting data against "Harvest Now, Decrypt Later" attacks.
 *   **Defense-in-Depth**: Hybrid schemes combine battle-tested classical algorithms (ECDH/ECDSA) with modern PQC primitives.
-*   **Constant-Time Execution**: All primitives handling secret data are engineered to be branch-free and memory-access-pattern-free. This is enforced by a built-in **Constant-Time Verification Suite** that statistically detects timing leaks during CI.
+*   **Constant-Time Assurance**: Security-sensitive paths are designed to avoid secret-dependent timing behavior where supported, and ML-DSA signing uses a fixed public rejection window derived from FIPS 204 Appendix C. This work is backed by a built-in **Constant-Time Verification Suite** that statistically detects timing leaks during CI.
 *   **Type Safety**: High-level APIs prevent misuse through strong typing (e.g., distinct types for `Nonce`, `Key`, and `Tag` prevents byte-array confusion).
 *   **`no_std` & Cross-Platform**: Fully functional in `no_std` environments (requiring `alloc`), making it suitable for IoT, embedded systems, and WASM targets.
 
@@ -162,13 +162,14 @@ Security is the primary driver for dcrypt. The library employs a rigorous testin
 
 ### Constant-Time Verification
 We utilize a custom statistical analysis engine (`dcrypt-tests/src/suites/constant_time`) that integrates into our CI.
-*   **Methodology**: Uses Welch’s t-test, Kolmogorov–Smirnov tests, and Bootstrap resampling on high-resolution timing measurements.
-*   **Dynamic Threshold Scaling**: Adapts to environmental noise (OS jitter) to prevent false positives in CI environments.
-*   **Coverage**: Verifies critical paths in Kyber, Dilithium, ECDH, and AES-GCM against timing side-channels.
+*   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the combined signals.
+*   **Noise Gating**: Maintains a persistent noise profile and aborts inconclusive runs when the host environment is materially noisier than the historical baseline.
+*   **Coverage**: Exercises critical paths in Kyber, ML-DSA/Dilithium, hybrid constructions, ECDH, and AEAD implementations against timing side-channels.
 
 ### FIPS/NIST Compliance
 *   **ACVP Test Harness**: Includes a full test harness compatible with NIST's Automated Cryptographic Validation Program (ACVP) JSON vectors to ensure implementation correctness against official standards.
 *   **Parameters**: All PQC parameters strictly adhere to FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA).
+*   **ML-DSA Signing Bound**: The constant-time ML-DSA signer uses the public fixed rejection bound from FIPS 204 Appendix C, Table 3.
 
 ## 📄 License
 

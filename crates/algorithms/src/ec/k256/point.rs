@@ -178,7 +178,7 @@ impl Point {
         x_bytes.copy_from_slice(&bytes[1..]);
         let x_fe = FieldElement::from_bytes(&x_bytes)
             .map_err(|_| Error::param("K256 Point", "Invalid x-coordinate"))?;
-        
+
         let rhs = {
             let x3 = x_fe.square().mul(&x_fe);
             let mut seven = [0u32; 8];
@@ -289,7 +289,7 @@ impl ProjectivePoint {
 
         let h = u2.sub(&u1);
         let r = s2.sub(&s1);
-        
+
         // Generic addition
         let h_sq = h.square();
         let h_cu = h_sq.mul(&h);
@@ -334,12 +334,12 @@ impl ProjectivePoint {
 
     pub fn double(&self) -> Self {
         // Jacobian doubling for a = 0 (y^2 = x^3 + 7)
-        
+
         let y_sq = self.y.square();
         let mut s = self.x.mul(&y_sq);
         s = s.add(&s); // 2s
         s = s.add(&s); // 4s -> S = 4*x*y^2
-        
+
         let x_sq = self.x.square();
         let mut m = x_sq.add(&x_sq);
         m = m.add(&x_sq); // M = 3*x^2 (a=0)
@@ -350,7 +350,7 @@ impl ProjectivePoint {
 
         let mut y3 = s.sub(&x3);
         y3 = m.mul(&y3);
-        
+
         let y_sq_sq = y_sq.square();
         let mut eight_y4 = y_sq_sq.add(&y_sq_sq); // 2
         eight_y4 = eight_y4.add(&eight_y4); // 4
@@ -370,7 +370,7 @@ impl ProjectivePoint {
         // Explicitly handle identity or y=0 cases constant-time
         let is_y_zero = self.y.is_zero();
         let return_identity = self.is_identity | Choice::from(is_y_zero as u8);
-        
+
         Self::conditional_select(&result, &Self::identity(), return_identity)
     }
 

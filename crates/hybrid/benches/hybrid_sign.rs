@@ -20,11 +20,11 @@ fn bench_hybrid_sign_keypair(c: &mut Criterion) {
 
     // RSA-PSS + Falcon-512 (Optional comparison)
     // Note: RSA keygen is very slow, so sample size is reduced
-    group.sample_size(10); 
+    group.sample_size(10);
     group.bench_function("RSA_PSS_Falcon512", |b| {
         b.iter(|| RsaFalconHybrid::keypair(&mut rng).unwrap());
     });
-    
+
     group.finish();
 }
 
@@ -72,20 +72,22 @@ fn bench_hybrid_verify(c: &mut Criterion) {
     group.bench_function("ECDSA_P384_Dilithium3", |b| {
         b.iter(|| {
             EcdsaDilithiumHybrid::verify(
-                black_box(message), 
-                black_box(&sig_ecdsa_dil), 
-                black_box(&pk_ecdsa_dil)
-            ).unwrap();
+                black_box(message),
+                black_box(&sig_ecdsa_dil),
+                black_box(&pk_ecdsa_dil),
+            )
+            .unwrap();
         });
     });
 
     group.bench_function("RSA_PSS_Falcon512", |b| {
         b.iter(|| {
             RsaFalconHybrid::verify(
-                black_box(message), 
-                black_box(&sig_rsa_falcon), 
-                black_box(&pk_rsa_falcon)
-            ).unwrap();
+                black_box(message),
+                black_box(&sig_rsa_falcon),
+                black_box(&pk_rsa_falcon),
+            )
+            .unwrap();
         });
     });
 

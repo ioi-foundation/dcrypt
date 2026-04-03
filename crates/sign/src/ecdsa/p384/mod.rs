@@ -12,7 +12,7 @@ use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
 use dcrypt_internal::constant_time::ct_eq;
 use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 /// ECDSA signature scheme using NIST P-384 curve (secp384r1)
 ///
@@ -39,10 +39,9 @@ pub struct EcdsaP384SecretKey {
 // Manual Zeroize implementation for EcdsaP384SecretKey
 impl Zeroize for EcdsaP384SecretKey {
     fn zeroize(&mut self) {
+        self.raw.zeroize();
         // Zeroize the byte representation
         self.bytes.zeroize();
-        // Note: The ec::Scalar type doesn't implement Zeroize directly
-        // It will be dropped when the struct is dropped
     }
 }
 
@@ -92,6 +91,50 @@ impl AsRef<[u8]> for EcdsaP384Signature {
 impl AsMut<[u8]> for EcdsaP384Signature {
     fn as_mut(&mut self) -> &mut [u8] {
         &mut self.0
+    }
+}
+
+impl EcdsaP384PublicKey {
+    /// Parse an uncompressed P-384 public key with on-curve validation.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let point = ec::Point::deserialize_uncompressed(bytes).map_err(ApiError::from)?;
+        Ok(Self(point.serialize_uncompressed()))
+    }
+
+    /// Return the SEC1 uncompressed encoding.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl EcdsaP384SecretKey {
+    /// Parse a validated P-384 secret scalar from bytes.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let raw = ec::Scalar::deserialize(bytes).map_err(ApiError::from)?;
+        let mut serialized = [0u8; ec::P384_SCALAR_SIZE];
+        serialized.copy_from_slice(bytes);
+        Ok(Self {
+            raw,
+            bytes: serialized,
+        })
+    }
+
+    /// Export the secret scalar bytes in a zeroizing buffer.
+    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(self.bytes.to_vec())
+    }
+}
+
+impl EcdsaP384Signature {
+    /// Parse a DER-encoded ECDSA-P384 signature.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        SignatureComponents::from_der(bytes)?;
+        Ok(Self(bytes.to_vec()))
+    }
+
+    /// Return the DER encoding of this signature.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 

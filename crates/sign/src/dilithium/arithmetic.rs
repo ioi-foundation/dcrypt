@@ -8,24 +8,62 @@ use crate::error::Error as SignError;
 use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_params::pqc::dilithium::{DilithiumSchemeParams, DILITHIUM_N, DILITHIUM_Q};
+use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// Dilithium modulus Q
 const Q: i32 = 8_380_417;
 
-/// Helper - number of high-bit buckets (m) for the given parameters
-/// This is the number of valid values for the high bits after decomposition
+#[inline(always)]
+fn ct_lt_u32(a: u32, b: u32) -> Choice {
+    Choice::from((((a as u64).wrapping_sub(b as u64)) >> 63) as u8)
+}
+
+#[inline(always)]
+fn ct_gt_u32(a: u32, b: u32) -> Choice {
+    ct_lt_u32(b, a)
+}
+
+#[inline(always)]
+fn ct_lt_u64(a: u64, b: u64) -> Choice {
+    Choice::from((a.wrapping_sub(b) >> 63) as u8)
+}
+
+#[inline(always)]
+fn ct_lt_i32(a: i32, b: i32) -> Choice {
+    ct_lt_u32((a as u32) ^ 0x8000_0000, (b as u32) ^ 0x8000_0000)
+}
+
+#[inline(always)]
+fn ct_lt_i64(a: i64, b: i64) -> Choice {
+    ct_lt_u64(
+        (a as u64) ^ 0x8000_0000_0000_0000,
+        (b as u64) ^ 0x8000_0000_0000_0000,
+    )
+}
+
+#[inline(always)]
+fn ct_select_i32(a: i32, b: i32, choice: Choice) -> i32 {
+    i32::from_ne_bytes(u32::conditional_select(&(a as u32), &(b as u32), choice).to_ne_bytes())
+}
+
+#[inline(always)]
+fn ct_select_i64(a: i64, b: i64, choice: Choice) -> i64 {
+    i64::from_ne_bytes(u64::conditional_select(&(a as u64), &(b as u64), choice).to_ne_bytes())
+}
+
+#[inline(always)]
+fn ct_abs_i32(value: i32) -> u32 {
+    let mask = value >> 31;
+    ((value ^ mask).wrapping_sub(mask)) as u32
+}
+
+/// Helper - number of high-bit buckets (m) for the given decomposition width α = 2γ₂.
 ///
-/// FIPS 204 §4.4: For ML-DSA-44, there are ⌊(q-1)/α⌋ + 1 = 45 buckets (0...44 inclusive)
-/// For ML-DSA-65/87, there are ⌊(q-1)/α⌋ = 16 buckets (0...15 inclusive)
+/// FIPS 204 Algorithm 40 defines m = (q - 1) / (2γ₂). For ML-DSA-44 this gives 44
+/// high-bit values, and for ML-DSA-65/87 it gives 16.
 #[inline]
-pub(crate) const fn buckets(alpha: u32, gamma2: u32) -> u32 {
-    let base = (DILITHIUM_Q - 1) / alpha;
-    // ML-DSA-44 (γ2 = (q-1)/88) needs one extra bucket (0…base inclusive)
-    if gamma2 == (DILITHIUM_Q - 1) / 88 {
-        base + 1
-    } else {
-        base
-    }
+pub(crate) const fn buckets(alpha: u32) -> u32 {
+    (DILITHIUM_Q - 1) / alpha
 }
 
 /// Helper - compute centered subtraction modulo q
@@ -36,22 +74,17 @@ pub(crate) const fn buckets(alpha: u32, gamma2: u32) -> u32 {
 /// to large positive values, breaking the norm checks and hint generation.
 #[inline]
 pub(crate) fn centered_sub(a: u32, b: u32) -> i32 {
-    let diff = ((a as i64 - b as i64).rem_euclid(DilithiumParams::Q as i64)) as i32;
-    if diff > (DilithiumParams::Q / 2) as i32 {
-        diff - DilithiumParams::Q as i32
-    } else {
-        diff
-    }
+    let raw = a.wrapping_sub(b);
+    let wrapped = a.wrapping_add(DilithiumParams::Q).wrapping_sub(b);
+    let diff = u32::conditional_select(&raw, &wrapped, ct_lt_u32(a, b));
+    to_centered(diff)
 }
 
 /// Interpret a coefficient in [0,q) as a signed value in (-q/2, q/2].
 #[inline]
 pub(crate) fn to_centered(v: u32) -> i32 {
-    if v > DilithiumParams::Q / 2 {
-        v as i32 - DilithiumParams::Q as i32 // treat as negative
-    } else {
-        v as i32 // treat as positive
-    }
+    let negative = v as i32 - DilithiumParams::Q as i32;
+    ct_select_i32(v as i32, negative, ct_gt_u32(v, DilithiumParams::Q / 2))
 }
 
 /// Generic schoolbook multiplication that handles all coefficient interpretation cases.
@@ -71,22 +104,15 @@ pub fn schoolbook_mul_generic(
     let mut result = Polynomial::<DilithiumParams>::zero();
 
     for i in 0..DILITHIUM_N {
-        // Interpret coefficient a[i] based on a_centered flag
-        let a_i = if a_centered && a.coeffs[i] > DILITHIUM_Q / 2 {
-            (a.coeffs[i] as i64) - DILITHIUM_Q as i64
+        let a_i = if a_centered {
+            to_centered(a.coeffs[i]) as i64
         } else {
             a.coeffs[i] as i64
         };
 
-        // Skip if coefficient is zero (optimization)
-        if a_i == 0 {
-            continue;
-        }
-
         for j in 0..DILITHIUM_N {
-            // Interpret coefficient b[j] based on b_centered flag
-            let b_j = if b_centered && b.coeffs[j] > DILITHIUM_Q / 2 {
-                (b.coeffs[j] as i64) - DILITHIUM_Q as i64
+            let b_j = if b_centered {
+                to_centered(b.coeffs[j]) as i64
             } else {
                 b.coeffs[j] as i64
             };
@@ -162,23 +188,18 @@ pub fn decompose(a: u32, alpha_param: u32) -> (i32, u32) {
     let alpha = alpha_param;
     let gamma2 = alpha / 2;
 
-    // 1. centred remainder r0 ∈ (-γ₂, γ₂]
-    let mut r0 = (a % alpha) as i32; // 0 … α-1
-    if r0 > gamma2 as i32 {
-        // bring it down to centred range
-        r0 -= alpha as i32; // now r0 ∈ (-γ₂, γ₂]
-    }
+    let r0_raw = (a % alpha) as i32;
+    let r0_adjusted = r0_raw - alpha as i32;
+    let r0 = ct_select_i32(r0_raw, r0_adjusted, ct_gt_u32(r0_raw as u32, gamma2));
 
-    // 2. high bits - Use i64 to prevent overflow
     let r1 = (((a as i64) - (r0 as i64)) / (alpha as i64)) as u32;
 
-    // 3. Special case per FIPS 204 Algorithm 36
-    // When a = q-1, set r1 = 0 and r0 = r0 - 1
-    if a == (q - 1) {
-        return (r0 - 1, 0);
-    }
-
-    (r0, r1)
+    let adjusted = (a as i64) - (r0 as i64);
+    let special = (adjusted as u32).ct_eq(&(q - 1));
+    (
+        ct_select_i32(r0, r0 - 1, special),
+        u32::conditional_select(&r1, &0u32, special),
+    )
 }
 
 /// Implements `HighBits` from FIPS 204.
@@ -196,8 +217,8 @@ pub fn lowbits(r_coeff: u32, alpha: u32) -> i32 {
 
 /// FIPS 204 final w1Encode (Algorithm 28).
 /// Returns the FULL gamma-bucket index r1 (no truncation).
-/// For Dilithium2: r1 ∈ [0,44] requires 6 bits
-/// For Dilithium3/5: r1 ∈ [0,16] requires 5 bits
+/// For ML-DSA-44: r1 ∈ [0,43] requires 6 bits
+/// For ML-DSA-65/87: r1 ∈ [0,15] requires 5 bits
 ///
 /// Note: Earlier drafts truncated/shifted these values, but FIPS 204 final
 /// specifies that w1 encoding returns r1 directly (identity function).
@@ -211,7 +232,7 @@ pub fn w1_encode_gamma(r1_gamma: u32) -> u32 {
 /// This is b = bitlen((q-1)/(2γ₂) - 1) as per FIPS 204 Algorithm 28.
 #[inline]
 pub fn w1_bits_needed<P: DilithiumSchemeParams>() -> u32 {
-    let m = buckets(2 * P::GAMMA2_PARAM, P::GAMMA2_PARAM);
+    let m = buckets(2 * P::GAMMA2_PARAM);
     32 - (m - 1).leading_zeros()
 }
 
@@ -223,66 +244,69 @@ pub fn w1_bits_needed<P: DilithiumSchemeParams>() -> u32 {
 ///
 /// The final FIPS 204 specification (13-Aug-2024) defines UseHint as:
 ///
-/// Step 3: "if h = 1 and r₀ ≥ 0 return (r₁ + 1) mod m"     [rotate UP when non-negative]
-/// Step 4: "if h = 1 and r₀ < 0 return (r₁ − 1) mod m"     [rotate DOWN when negative]
+/// Step 3: "if h = 1 and r₀ > 0 return (r₁ + 1) mod m"     [rotate UP when positive]
+/// Step 4: "if h = 1 and r₀ ≤ 0 return (r₁ − 1) mod m"     [rotate DOWN when zero/negative]
 /// Step 5: "return r₁"                                      [no hint case]
 ///
 /// This means:
-/// - r₀ ≥ 0  → rotate UP (+1 mod m)     ← NON-NEGATIVE values go UP (includes r₀ = 0)
-/// - r₀ < 0  → rotate DOWN (-1 mod m)   ← NEGATIVE values go DOWN
+/// - r₀ > 0   → rotate UP (+1 mod m)
+/// - r₀ ≤ 0   → rotate DOWN (-1 mod m)
 #[inline]
 pub fn use_hint_coeff<P: DilithiumSchemeParams>(hint_bit: bool, r_coeff: u32) -> u32 {
     let gamma2 = P::GAMMA2_PARAM;
     let alpha = 2 * gamma2;
-    let m = buckets(alpha, gamma2);
+    let m = buckets(alpha);
 
     let (r0, r1) = decompose(r_coeff, alpha);
-
-    if !hint_bit {
-        return r1; // Algorithm 40, Step 5: return r₁ (no hint)
-    }
-
-    // FIPS 204 Algorithm 40, Steps 3-4 (FINAL SPECIFICATION):
-    // The r0 from decompose is already in the correct signed range
-    // (-γ₂, γ₂] as an i32. We can use it directly for the comparison.
-    if r0 >= 0 {
-        // Step 3: "if h = 1 and r₀ ≥ 0 return (r₁ + 1) mod m"
-        // NON-NEGATIVE r₀ → rotate UP (+1 mod m)
-        (r1 + 1) % m
-    } else {
-        // Step 4: "if h = 1 and r₀ < 0 return (r₁ − 1) mod m"
-        // NEGATIVE r₀ → rotate DOWN (-1 mod m)
-        (r1 + m - 1) % m
-    }
+    let adjusted = u32::conditional_select(&((r1 + m - 1) % m), &((r1 + 1) % m), ct_lt_i32(0, r0));
+    u32::conditional_select(&r1, &adjusted, Choice::from(hint_bit as u8))
 }
 
 /// Checks if the infinity norm of a polynomial is at most `bound`.
 /// Coefficients are centered in (-Q/2, Q/2]
-pub fn check_norm_poly(poly: &Polynomial<DilithiumParams>, bound: u32) -> bool {
+pub(crate) fn check_norm_poly_ct(poly: &Polynomial<DilithiumParams>, bound: u32) -> Choice {
+    let mut valid = Choice::from(1u8);
     for &coeff in poly.coeffs.iter() {
-        // First center the coefficient to range (-Q/2, Q/2]
-        let centered = if coeff > DilithiumParams::Q / 2 {
-            coeff as i32 - DilithiumParams::Q as i32
-        } else {
-            coeff as i32
-        };
-
-        // Check if absolute value exceeds bound
-        if centered.abs() > bound as i32 {
-            return false;
-        }
+        let centered = to_centered(coeff);
+        valid = valid & ct_lt_u32(ct_abs_i32(centered), bound);
     }
-    true
+    valid
+}
+
+pub fn check_norm_poly(poly: &Polynomial<DilithiumParams>, bound: u32) -> bool {
+    bool::from(check_norm_poly_ct(poly, bound))
 }
 
 /// Checks if the infinity norm of all polynomials in a PolyVecL is at most `bound`.
+pub(crate) fn check_norm_polyvec_l_ct<P: DilithiumSchemeParams>(
+    pv: &PolyVecL<P>,
+    bound: u32,
+) -> Choice {
+    let mut valid = Choice::from(1u8);
+    for poly in pv.polys.iter() {
+        valid = valid & check_norm_poly_ct(poly, bound);
+    }
+    valid
+}
+
 pub fn check_norm_polyvec_l<P: DilithiumSchemeParams>(pv: &PolyVecL<P>, bound: u32) -> bool {
-    pv.polys.iter().all(|p| check_norm_poly(p, bound))
+    bool::from(check_norm_polyvec_l_ct(pv, bound))
 }
 
 /// Checks if the infinity norm of all polynomials in a PolyVecK is at most `bound`.
+pub(crate) fn check_norm_polyvec_k_ct<P: DilithiumSchemeParams>(
+    pv: &PolyVecK<P>,
+    bound: u32,
+) -> Choice {
+    let mut valid = Choice::from(1u8);
+    for poly in pv.polys.iter() {
+        valid = valid & check_norm_poly_ct(poly, bound);
+    }
+    valid
+}
+
 pub fn check_norm_polyvec_k<P: DilithiumSchemeParams>(pv: &PolyVecK<P>, bound: u32) -> bool {
-    pv.polys.iter().all(|p| check_norm_poly(p, bound))
+    bool::from(check_norm_polyvec_k_ct(pv, bound))
 }
 
 /// Applies `Power2Round` element-wise to a PolyVecK.
@@ -335,66 +359,50 @@ pub fn lowbits_polyvec<P: DilithiumSchemeParams>(pv: &PolyVecK<P>, alpha: u32) -
     res
 }
 
-/// FIPS 204 Algorithm 39 applied to polynomial vectors
+/// FIPS 204 Algorithm 39 applied componentwise to polynomial vectors.
 ///
-/// The MakeHint/UseHint identity from FIPS 204 is:
-///     UseHint(MakeHint(z, r), r + z) = HighBits(r)
-///
-/// During signing:
-/// - We have the original commitment w = A*y
-/// - The verifier will compute w' = Az - ct1*2^d = w - cs2 + ct0
-/// - To ensure the verifier recovers HighBits(w), we need z = w' - w = ct0 - cs2
-///
-/// This function generates hints for recovering HighBits(r_polyvec) when given r_polyvec + z_polyvec.
-///
-/// Parameters:
-/// - r_polyvec: The base vector (typically w in signing)
-/// - z_polyvec: The difference vector (typically ct0 - cs2 in signing)
-///
-/// Also enforces that the highbit change is at most ±1 bucket,
-/// as required by FIPS 204 Lemma 7 for the hint mechanism to work correctly.
-pub fn make_hint_polyveck<P: DilithiumSchemeParams>(
-    r_polyvec: &PolyVecK<P>, // r (base vector)
-    z_polyvec: &PolyVecK<P>, // z (difference vector)
-) -> Result<(PolyVecK<P>, usize), SignError> {
+/// The inputs match the standard directly: `z_polyvec` is the additive offset and
+/// `r_polyvec` is the base vector whose high bits will be adjusted by `UseHint`.
+pub(crate) fn make_hint_polyveck_ct<P: DilithiumSchemeParams>(
+    z_polyvec: &PolyVecK<P>,
+    r_polyvec: &PolyVecK<P>,
+) -> (PolyVecK<P>, usize) {
     let mut hints_pv = PolyVecK::<P>::zero();
-    let mut hint_count = 0;
-
-    let alpha = 2 * P::GAMMA2_PARAM;
+    let mut hint_count: usize = 0;
 
     for i in 0..P::K_DIM {
         for j in 0..DILITHIUM_N {
-            let r = r_polyvec.polys[i].coeffs[j]; // w
-            let z = z_polyvec.polys[i].coeffs[j]; // ct0 - cs2 (may represent negative)
+            let r = r_polyvec.polys[i].coeffs[j];
+            let z = z_polyvec.polys[i].coeffs[j];
 
             let z_signed = to_centered(z) as i64;
-            let r_plus_z = ((r as i64 + z_signed).rem_euclid(DilithiumParams::Q as i64)) as u32;
+            let sum = r as i64 + z_signed;
+            let with_q = sum + DilithiumParams::Q as i64;
+            let non_negative = ct_select_i64(sum, with_q, ct_lt_i64(sum, 0));
+            let reduced = non_negative - DilithiumParams::Q as i64;
+            let r_plus_z = ct_select_i64(
+                non_negative,
+                reduced,
+                !ct_lt_u64(non_negative as u64, DilithiumParams::Q as u64),
+            ) as u32;
 
-            let r1 = highbits(r, alpha);
-            let v1 = highbits(r_plus_z, alpha);
+            let r1 = highbits(r, 2 * P::GAMMA2_PARAM);
+            let v1 = highbits(r_plus_z, 2 * P::GAMMA2_PARAM);
+            let hint_bit = !r1.ct_eq(&v1);
 
-            if r1 != v1 {
-                // A hint is needed. Check if this hint is recoverable.
-                // The high-bit bucket change must be exactly +/- 1 as an integer,
-                // not merely modulo m. Large jumps (e.g., 0 to 44) cannot be recovered
-                // by UseHint even though 44 ≡ -1 (mod 45).
-                let diff = v1 as i32 - r1 as i32;
-
-                if diff.abs() != 1 {
-                    // This is an unrecoverable jump. This signature attempt must be rejected.
-                    return Err(SignError::SignatureGeneration {
-                        algorithm: P::NAME,
-                        details: "Unrecoverable high-bit wrap-around detected during signing"
-                            .into(),
-                    });
-                }
-
-                hints_pv.polys[i].coeffs[j] = 1;
-                hint_count += 1;
-            }
+            hints_pv.polys[i].coeffs[j] = u32::conditional_select(&0u32, &1u32, hint_bit);
+            hint_count = hint_count.wrapping_add(hint_bit.unwrap_u8() as usize);
         }
     }
 
+    (hints_pv, hint_count)
+}
+
+pub fn make_hint_polyveck<P: DilithiumSchemeParams>(
+    z_polyvec: &PolyVecK<P>,
+    r_polyvec: &PolyVecK<P>,
+) -> Result<(PolyVecK<P>, usize), SignError> {
+    let (hints_pv, hint_count) = make_hint_polyveck_ct::<P>(z_polyvec, r_polyvec);
     Ok((hints_pv, hint_count))
 }
 

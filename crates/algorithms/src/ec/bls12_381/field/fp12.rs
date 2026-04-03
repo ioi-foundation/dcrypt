@@ -22,7 +22,7 @@ use rand_core::RngCore;
 // ============================================================================
 
 /// Element of Fp12 = Fp6[w] / (w^2 - v)
-/// 
+///
 /// Represented as c0 + c1*w where w^2 = v (the cubic non-residue from Fp6).
 /// This is the target field G_T for BLS12-381 pairings.
 pub struct Fp12 {
@@ -113,7 +113,7 @@ impl ConstantTimeEq for Fp12 {
 
 impl Fp12 {
     /// Full multiplication in Fp12
-    /// 
+    ///
     /// Uses Karatsuba multiplication for the quadratic extension:
     /// (a0 + a1*w) * (b0 + b1*w) = a0*b0 + a1*b1*w^2 + (a0*b1 + a1*b0)*w
     /// Since w^2 = v, and v*v^2 = v^3 = ξ = u + 1 in Fp2, we have:
@@ -134,7 +134,7 @@ impl Fp12 {
     }
 
     /// Optimized squaring in Fp12
-    /// 
+    ///
     /// Uses the identity (a0 + a1*w)^2 = a0^2 + a1^2*v + 2*a0*a1*w
     /// This saves operations compared to general multiplication.
     #[inline]
@@ -152,11 +152,11 @@ impl Fp12 {
     }
 
     /// Sparse multiplication by element of form (c0, 0, c1, 0, c4, 0) in Fp12
-    /// 
+    ///
     /// This is optimized for the specific sparse structure that appears
     /// in pairing computations. The element has only 3 non-zero Fp2 components
     /// out of 6 possible positions when viewed as an element of Fp2^6.
-    /// 
+    ///
     /// Used in Miller loop computations for efficiency.
     #[inline]
     fn mul_by_014_impl(&self, c0: &Fp2, c1: &Fp2, c4: &Fp2) -> Fp12 {
@@ -174,7 +174,7 @@ impl Fp12 {
     }
 
     /// Complex conjugation in Fp12
-    /// 
+    ///
     /// For a = a0 + a1*w, the conjugate is a0 - a1*w.
     /// This operation is important for the final exponentiation in pairings.
     #[inline]
@@ -186,7 +186,7 @@ impl Fp12 {
     }
 
     /// Multiplicative inverse in Fp12
-    /// 
+    ///
     /// Uses the conjugate to reduce inversion to Fp6:
     /// 1/(a0 + a1*w) = (a0 - a1*w) / (a0^2 - a1^2*v)
     /// where the denominator is in Fp6.
@@ -271,11 +271,11 @@ impl Fp12 {
 
 impl Fp12 {
     /// Frobenius endomorphism
-    /// 
+    ///
     /// The Frobenius map in Fp12 applies the Frobenius to each Fp6 coefficient
     /// and multiplies c1 by the appropriate precomputed constant based on
     /// the tower structure.
-    /// 
+    ///
     /// Frob(c0 + c1*w) = Frob(c0) + Frob(c1) * Frob(w)
     /// where Frob(w) = w * ζ for a specific constant ζ.
     #[inline(always)]

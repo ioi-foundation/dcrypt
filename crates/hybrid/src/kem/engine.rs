@@ -3,6 +3,7 @@
 //! A generic engine for creating hybrid KEMs.
 
 use super::traits::KemDimensions;
+use core::marker::PhantomData;
 use dcrypt_algorithms::{hash::sha2::Sha256, kdf::hkdf::Hkdf};
 use dcrypt_api::{
     error::Error as ApiError,
@@ -13,7 +14,8 @@ use dcrypt_api::{
 use dcrypt_kem::kyber::KyberSharedSecret;
 use rand::{CryptoRng, RngCore};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
-use core::marker::PhantomData;
+
+const HYBRID_KEM_INFO_LABEL: &[u8] = b"dcrypt-hybrid-kem/v2";
 
 // --- Generic Hybrid Data Structures ---
 
@@ -61,7 +63,11 @@ impl<C: KemDimensions, P: KemDimensions> Serialize for HybridPublicKey<C, P> {
         })
     }
     fn to_bytes(&self) -> Vec<u8> {
-        [self.classical_pk.to_bytes(), self.post_quantum_pk.to_bytes()].concat()
+        [
+            self.classical_pk.to_bytes(),
+            self.post_quantum_pk.to_bytes(),
+        ]
+        .concat()
     }
 }
 
@@ -143,7 +149,11 @@ impl<C: KemDimensions, P: KemDimensions> Serialize for HybridCiphertext<C, P> {
         })
     }
     fn to_bytes(&self) -> Vec<u8> {
-        [self.classical_ct.to_bytes(), self.post_quantum_ct.to_bytes()].concat()
+        [
+            self.classical_ct.to_bytes(),
+            self.post_quantum_ct.to_bytes(),
+        ]
+        .concat()
     }
 }
 
@@ -159,6 +169,53 @@ where
     C: KemDimensions,
     P: KemDimensions,
 {
+    fn derive_shared_secret_from_bytes(
+        ciphertext: &HybridCiphertext<C, P>,
+        classical_ss_bytes: &[u8],
+        post_quantum_ss_bytes: &[u8],
+    ) -> ApiResult<KyberSharedSecret> {
+        let ciphertext_bytes = ciphertext.to_bytes();
+
+        let mut ikm = Zeroizing::new(Vec::with_capacity(
+            4 + classical_ss_bytes.len() + 4 + post_quantum_ss_bytes.len(),
+        ));
+        append_len_prefixed(&mut ikm, classical_ss_bytes);
+        append_len_prefixed(&mut ikm, post_quantum_ss_bytes);
+
+        let mut info = Vec::with_capacity(
+            HYBRID_KEM_INFO_LABEL.len()
+                + 4
+                + C::SUITE_ID.len()
+                + 4
+                + P::SUITE_ID.len()
+                + 4
+                + ciphertext_bytes.len(),
+        );
+        info.extend_from_slice(HYBRID_KEM_INFO_LABEL);
+        append_len_prefixed(&mut info, C::SUITE_ID);
+        append_len_prefixed(&mut info, P::SUITE_ID);
+        append_len_prefixed(&mut info, &ciphertext_bytes);
+
+        let okm =
+            Hkdf::<Sha256>::derive(None, &ikm, Some(&info), 32).map_err(|_| ApiError::Other {
+                context: "HKDF",
+                #[cfg(feature = "std")]
+                message: "HKDF derivation failed".to_string(),
+            })?;
+
+        Ok(KyberSharedSecret::new(ApiKey::new(&okm[..])))
+    }
+
+    fn derive_shared_secret(
+        ciphertext: &HybridCiphertext<C, P>,
+        classical_ss: &C::SharedSecret,
+        post_quantum_ss: &P::SharedSecret,
+    ) -> ApiResult<KyberSharedSecret> {
+        let classical_bytes = classical_ss.to_bytes_zeroizing();
+        let post_quantum_bytes = post_quantum_ss.to_bytes_zeroizing();
+        Self::derive_shared_secret_from_bytes(ciphertext, &classical_bytes, &post_quantum_bytes)
+    }
+
     pub fn keypair<R: CryptoRng + RngCore>(
         rng: &mut R,
     ) -> ApiResult<(HybridPublicKey<C, P>, HybridSecretKey<C, P>)> {
@@ -187,53 +244,61 @@ where
         public_key: &HybridPublicKey<C, P>,
     ) -> ApiResult<(HybridCiphertext<C, P>, KyberSharedSecret)> {
         let (classical_ct, classical_ss) = C::encapsulate(rng, &public_key.classical_pk)?;
-        let (post_quantum_ct, post_quantum_ss) =
-            P::encapsulate(rng, &public_key.post_quantum_pk)?;
+        let (post_quantum_ct, post_quantum_ss) = P::encapsulate(rng, &public_key.post_quantum_pk)?;
 
         let hybrid_ct = HybridCiphertext {
             classical_ct,
             post_quantum_ct,
         };
 
-        let ikm = [
-            classical_ss.to_bytes_zeroizing().to_vec(),
-            post_quantum_ss.to_bytes_zeroizing().to_vec(),
-        ]
-        .concat();
-        let okm = Hkdf::<Sha256>::derive(None, &ikm, Some(b"depin-hybrid-kem-v1"), 32).map_err(
-            |_| ApiError::Other {
-                context: "HKDF",
-                #[cfg(feature = "std")]
-                message: "HKDF derivation failed".to_string(),
-            },
-        )?;
-
-        // Dereference Zeroizing<Vec<u8>> to get &[u8]
-        Ok((hybrid_ct, KyberSharedSecret::new(ApiKey::new(&**okm))))
+        let hybrid_ss = Self::derive_shared_secret(&hybrid_ct, &classical_ss, &post_quantum_ss)?;
+        Ok((hybrid_ct, hybrid_ss))
     }
 
     pub fn decapsulate(
         secret_key: &HybridSecretKey<C, P>,
         ciphertext: &HybridCiphertext<C, P>,
     ) -> ApiResult<KyberSharedSecret> {
-        let classical_ss = C::decapsulate(&secret_key.classical_sk, &ciphertext.classical_ct)?;
-        let post_quantum_ss =
-            P::decapsulate(&secret_key.post_quantum_sk, &ciphertext.post_quantum_ct)?;
+        let classical_result = C::decapsulate(&secret_key.classical_sk, &ciphertext.classical_ct);
+        let post_quantum_result =
+            P::decapsulate(&secret_key.post_quantum_sk, &ciphertext.post_quantum_ct);
 
-        let ikm = [
-            classical_ss.to_bytes_zeroizing().to_vec(),
-            post_quantum_ss.to_bytes_zeroizing().to_vec(),
-        ]
-        .concat();
-        let okm = Hkdf::<Sha256>::derive(None, &ikm, Some(b"depin-hybrid-kem-v1"), 32).map_err(
-            |_| ApiError::Other {
-                context: "HKDF",
-                #[cfg(feature = "std")]
-                message: "HKDF derivation failed".to_string(),
-            },
+        let mut decapsulation_error = None;
+
+        let classical_ss_bytes = match classical_result {
+            Ok(shared_secret) => shared_secret.to_bytes_zeroizing(),
+            Err(err) => {
+                decapsulation_error = Some(err);
+                Zeroizing::new(vec![0u8; C::SHARED_SECRET_LEN])
+            }
+        };
+
+        let post_quantum_ss_bytes = match post_quantum_result {
+            Ok(shared_secret) => shared_secret.to_bytes_zeroizing(),
+            Err(err) => {
+                if decapsulation_error.is_none() {
+                    decapsulation_error = Some(err);
+                }
+                Zeroizing::new(vec![0u8; P::SHARED_SECRET_LEN])
+            }
+        };
+
+        let hybrid_secret = Self::derive_shared_secret_from_bytes(
+            ciphertext,
+            &classical_ss_bytes,
+            &post_quantum_ss_bytes,
         )?;
 
-        // Dereference Zeroizing<Vec<u8>> to get &[u8]
-        Ok(KyberSharedSecret::new(ApiKey::new(&**okm)))
+        if let Some(err) = decapsulation_error {
+            drop(hybrid_secret);
+            return Err(err);
+        }
+
+        Ok(hybrid_secret)
     }
+}
+
+fn append_len_prefixed(out: &mut Vec<u8>, bytes: &[u8]) {
+    out.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+    out.extend_from_slice(bytes);
 }

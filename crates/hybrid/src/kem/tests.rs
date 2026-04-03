@@ -16,7 +16,10 @@ fn test_ecdh_p256_kyber_768_kem_full_roundtrip() {
     let ss_recipient = EcdhP256Kyber768::decapsulate(&sk, &ciphertext).unwrap();
 
     // Verify secrets match and have correct length
-    assert_eq!(*ss_sender.to_bytes_zeroizing(), *ss_recipient.to_bytes_zeroizing());
+    assert_eq!(
+        *ss_sender.to_bytes_zeroizing(),
+        *ss_recipient.to_bytes_zeroizing()
+    );
     assert_eq!(ss_sender.len(), 32);
 
     // Verify key and ciphertext lengths (Now compiles because `to_bytes` is in scope)
@@ -34,7 +37,10 @@ fn test_ecdh_p384_kyber_1024_kem_full_roundtrip() {
     let ss_recipient = EcdhP384Kyber1024::decapsulate(&sk, &ciphertext).unwrap();
 
     // Verify secrets match and have correct length
-    assert_eq!(*ss_sender.to_bytes_zeroizing(), *ss_recipient.to_bytes_zeroizing());
+    assert_eq!(
+        *ss_sender.to_bytes_zeroizing(),
+        *ss_recipient.to_bytes_zeroizing()
+    );
     assert_eq!(ss_sender.len(), 32);
 
     // Verify key and ciphertext lengths (Now compiles because `to_bytes` is in scope)
@@ -50,7 +56,10 @@ fn test_ecdh_p256_kyber_512_kem_full_roundtrip() {
     let (ciphertext, ss_sender) = EcdhP256Kyber512::encapsulate(&mut rng, &pk).unwrap();
     let ss_recipient = EcdhP256Kyber512::decapsulate(&sk, &ciphertext).unwrap();
 
-    assert_eq!(*ss_sender.to_bytes_zeroizing(), *ss_recipient.to_bytes_zeroizing());
+    assert_eq!(
+        *ss_sender.to_bytes_zeroizing(),
+        *ss_recipient.to_bytes_zeroizing()
+    );
     assert_eq!(ss_sender.len(), 32);
 
     assert_eq!(pk.to_bytes().len(), 833); // 33 + 800
@@ -65,7 +74,10 @@ fn test_ecdh_p521_kyber_1024_kem_full_roundtrip() {
     let (ciphertext, ss_sender) = EcdhP521Kyber1024::encapsulate(&mut rng, &pk).unwrap();
     let ss_recipient = EcdhP521Kyber1024::decapsulate(&sk, &ciphertext).unwrap();
 
-    assert_eq!(*ss_sender.to_bytes_zeroizing(), *ss_recipient.to_bytes_zeroizing());
+    assert_eq!(
+        *ss_sender.to_bytes_zeroizing(),
+        *ss_recipient.to_bytes_zeroizing()
+    );
     assert_eq!(ss_sender.len(), 32);
 
     assert_eq!(pk.to_bytes().len(), 1635); // 67 + 1568
@@ -80,7 +92,10 @@ fn test_ecdh_k256_kyber_512_kem_full_roundtrip() {
     let (ciphertext, ss_sender) = EcdhK256Kyber512::encapsulate(&mut rng, &pk).unwrap();
     let ss_recipient = EcdhK256Kyber512::decapsulate(&sk, &ciphertext).unwrap();
 
-    assert_eq!(*ss_sender.to_bytes_zeroizing(), *ss_recipient.to_bytes_zeroizing());
+    assert_eq!(
+        *ss_sender.to_bytes_zeroizing(),
+        *ss_recipient.to_bytes_zeroizing()
+    );
     assert_eq!(ss_sender.len(), 32);
 
     assert_eq!(pk.to_bytes().len(), 833); // 33 + 800
@@ -96,7 +111,10 @@ fn test_hybrid_kem_decapsulation_wrong_key() {
     let (ciphertext, ss_sender) = EcdhP256Kyber768::encapsulate(&mut rng, &pk1).unwrap();
     let ss_recipient = EcdhP256Kyber768::decapsulate(&sk2, &ciphertext).unwrap();
 
-    assert_ne!(*ss_sender.to_bytes_zeroizing(), *ss_recipient.to_bytes_zeroizing());
+    assert_ne!(
+        *ss_sender.to_bytes_zeroizing(),
+        *ss_recipient.to_bytes_zeroizing()
+    );
 }
 
 #[test]
@@ -107,14 +125,12 @@ fn test_hybrid_serialization_roundtrip() {
 
     // Public Key roundtrip (Now compiles because trait methods are in scope)
     let pk_bytes = pk.to_bytes();
-    let pk_restored =
-        <EcdhP384Kyber1024 as Kem>::PublicKey::from_bytes(&pk_bytes).unwrap();
+    let pk_restored = <EcdhP384Kyber1024 as Kem>::PublicKey::from_bytes(&pk_bytes).unwrap();
     assert_eq!(pk.to_bytes(), pk_restored.to_bytes());
 
     // Ciphertext roundtrip (Now compiles because trait methods are in scope)
     let ct_bytes = ct.to_bytes();
-    let ct_restored =
-        <EcdhP384Kyber1024 as Kem>::Ciphertext::from_bytes(&ct_bytes).unwrap();
+    let ct_restored = <EcdhP384Kyber1024 as Kem>::Ciphertext::from_bytes(&ct_bytes).unwrap();
     assert_eq!(ct.to_bytes(), ct_restored.to_bytes());
 }
 
