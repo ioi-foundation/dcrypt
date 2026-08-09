@@ -2,6 +2,7 @@
 
 #[cfg(any(feature = "alloc", feature = "std"))]
 use alloc::{boxed::Box, string::String, vec::Vec};
+use core::hint::black_box;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{compiler_fence, Ordering};
 
@@ -24,6 +25,7 @@ macro_rules! impl_zeroize_integer {
             fn zeroize(&mut self) {
                 *self = 0;
                 compiler_fence(Ordering::SeqCst);
+                black_box(self);
             }
         }
     )+ };
@@ -36,16 +38,18 @@ impl Zeroize for bool {
     fn zeroize(&mut self) {
         *self = false;
         compiler_fence(Ordering::SeqCst);
+        black_box(self);
     }
 }
 
 impl<T: Zeroize> Zeroize for [T] {
     #[inline(never)]
     fn zeroize(&mut self) {
-        for item in self {
+        for item in self.iter_mut() {
             item.zeroize();
         }
         compiler_fence(Ordering::SeqCst);
+        black_box(self);
     }
 }
 
