@@ -4,6 +4,8 @@
 //! upstream commit, paths, and Git blob identifiers are recorded beside the
 //! corpus in `vectors/ethereum_consensus_spec_tests/PROVENANCE.md`.
 
+#![forbid(unsafe_code)]
+
 use dcrypt_sign::bls::{Bls12381PublicKey, Bls12381Signature, Eth2Bls12381G2PopV4};
 use std::fs;
 use std::path::{Path, PathBuf};
