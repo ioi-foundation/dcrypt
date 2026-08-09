@@ -8,7 +8,7 @@ use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::traits::Pke;
 // Removed unused import: use dcrypt_api::SymmetricCipher as ApiSymmetricCipherTrait;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::Zeroize;
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::format;
@@ -110,7 +110,8 @@ impl Pke for EciesP384 {
 
         let aes_core_key = AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes);
         let aes_core = Aes256::new(&aes_core_key);
-        let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::random(rng);
+        let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::random(rng)
+            .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let gcm_cipher_impl =
             Gcm::<Aes256>::new(aes_core).map_err(|e| ApiError::from(PkeError::from(e)))?;

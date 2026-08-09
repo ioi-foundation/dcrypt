@@ -7,7 +7,7 @@ use dcrypt_api::traits::symmetric::{DecryptOperation, EncryptOperation}; // Impo
 use dcrypt_api::traits::Pke;
 use dcrypt_api::traits::SymmetricCipher as ApiSymmetricCipherTrait;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::Zeroize;
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::format;
@@ -109,7 +109,8 @@ impl Pke for EciesP256 {
 
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
         encryption_key_arr.zeroize();
-        let aead_nonce = Nonce::<CHACHA20POLY1305_NONCE_LEN>::random(rng);
+        let aead_nonce = Nonce::<CHACHA20POLY1305_NONCE_LEN>::random(rng)
+            .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aead_ciphertext_api_obj =
             <ChaCha20Poly1305 as ApiSymmetricCipherTrait>::encrypt(&aead_cipher_impl)
