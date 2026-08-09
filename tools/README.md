@@ -21,6 +21,15 @@ feature profiles on Linux x86-64, Linux AArch64, WebAssembly, and the declared
 `no_std` target; separate per-package checks require no-default-feature graphs
 to remain `std`-free.
 
+Owned excluded workspaces are declared explicitly in
+`implementation-boundary.toml`. Each must be independently locked,
+non-published, excluded from the release workspace, free of oracle and
+native/FFI/OS-entropy dependencies, and equal its exact external-package
+snapshot. The checker scans its complete normal/build closure and actively
+compiles every target for unsafe-code diagnostics and native build output. CI
+and the release script additionally run unsafe-deny, RustSec, and cargo-deny
+checks against the legacy migration workspace and its own tracked lockfile.
+
 The policy has no unsafe/native exceptions and the gate has no release-mode
 bypass. `--skip-checks` skips only the separate format, audit/deny, Miri, and
 fuzz checks. Other CI jobs run independently so a boundary failure does not

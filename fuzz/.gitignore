@@ -1,5 +1,9 @@
 target/
-corpus/
+corpus/*
+!corpus/legacy_xchacha_migration/
+corpus/legacy_xchacha_migration/*
+!corpus/legacy_xchacha_migration/valid_no_aad
+!corpus/legacy_xchacha_migration/valid_with_aad
 artifacts/
 coverage/
 *.profraw

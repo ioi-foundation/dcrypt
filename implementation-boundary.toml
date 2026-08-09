@@ -270,3 +270,13 @@ dcrypt-pke = ["alloc"]
 dcrypt-utils = ["alloc"]
 dcrypt-hybrid = ["alloc"]
 dcrypt = ["alloc", "algorithms", "symmetric", "kem", "sign", "pke", "hybrid", "traditional", "post-quantum"]
+
+# Owned tools that must remain separate, non-published Cargo workspaces while
+# still satisfying the same zero-unsafe/zero-native/zero-FFI normal/build
+# boundary. External dependency snapshots are exact and workspace-specific.
+[[owned-excluded-workspaces]]
+path = "migration/legacy-xchacha20poly1305"
+allowed-external-normal-build-packages = [
+    "base64@0.22.1",
+    "hex@0.4.3",
+]

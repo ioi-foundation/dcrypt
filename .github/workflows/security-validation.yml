@@ -53,7 +53,10 @@ jobs:
           cargo fmt --manifest-path fuzz/Cargo.toml -- --check
           cargo fmt --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml -- --check
       - name: Check every workspace target with every feature
-        run: cargo check --workspace --all-targets --all-features
+        run: |
+          cargo check --workspace --all-targets --all-features
+          RUSTFLAGS="-Dunsafe-code" cargo check --locked --all-targets --all-features \
+            --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml
 
   workspace-tests:
     name: Workspace crate tests
@@ -155,9 +158,14 @@ jobs:
           cargo install --root "$RUNNER_TEMP/security-tools" cargo-deny --version 0.20.2 --locked
           echo "$RUNNER_TEMP/security-tools/bin" >> "$GITHUB_PATH"
       - name: Audit resolved dependencies against RustSec
-        run: cargo audit
+        run: |
+          cargo audit
+          cargo audit --file migration/legacy-xchacha20poly1305/Cargo.lock
       - name: Enforce advisories, licenses, bans, and sources for all workspace roots
-        run: cargo deny --workspace --all-features check
+        run: |
+          cargo deny --workspace --all-features check
+          cargo deny --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml \
+            --all-features check
 
   miri:
     name: Miri (${{ matrix.crate }})

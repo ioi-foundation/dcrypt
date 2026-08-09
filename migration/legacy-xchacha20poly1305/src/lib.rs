@@ -1,5 +1,6 @@
 //! Decrypt-only migration support for the nonstandard construction shipped by
-//! dcrypt v1 under the `XChaCha20Poly1305` name.
+//! dcrypt from `v0.7.0-pre` through `v1.2.3` under the
+//! `XChaCha20Poly1305` name.
 //!
 //! This crate is deliberately outside the published dcrypt workspace and must
 //! never be used for new encryption. Its sole purpose is authenticated,
@@ -12,23 +13,41 @@ use dcrypt_algorithms::aead::chacha20poly1305::ChaCha20Poly1305;
 use dcrypt_algorithms::stream::chacha::chacha20::ChaCha20;
 use dcrypt_algorithms::types::Nonce;
 use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
+use std::fmt;
 
-/// Exact marker required by the command-line tool before legacy decryption.
-pub const REQUIRED_PROVENANCE: &str = "dcrypt-v1-custom-xchacha20poly1305";
+/// Exact format acknowledgement required by the command-line tool before decryption.
+pub const REQUIRED_FORMAT_ACKNOWLEDGEMENT: &str =
+    "dcrypt-v0.7.0-pre-through-v1.2.3-custom-xchacha20poly1305";
 
-/// Authenticate and decrypt ciphertext from dcrypt v1's nonstandard
-/// `XChaCha20Poly1305` construction.
+/// Opaque authentication failure for the historical construction.
+///
+/// Deliberately does not expose the current primitive implementation or its
+/// error variants across this isolated migration boundary.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct AuthenticationError;
+
+impl fmt::Display for AuthenticationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("legacy ciphertext authentication failed")
+    }
+}
+
+impl std::error::Error for AuthenticationError {}
+
+/// Authenticate and decrypt ciphertext from the nonstandard
+/// `XChaCha20Poly1305` construction shipped from `v0.7.0-pre` through
+/// `v1.2.3`.
 ///
 /// The caller must establish ciphertext provenance before calling this
 /// function. Ciphertext from standard XChaCha20-Poly1305 is intentionally
 /// incompatible and will fail authentication. The returned exact-size box is
 /// cleared on drop.
-pub fn decrypt_legacy_v1(
+pub fn decrypt_legacy(
     key: &[u8; 32],
     nonce: &[u8; 24],
     ciphertext: &[u8],
     aad: Option<&[u8]>,
-) -> dcrypt_algorithms::Result<Zeroizing<Box<[u8]>>> {
+) -> Result<Zeroizing<Box<[u8]>>, AuthenticationError> {
     let mut nonce_prefix = [0u8; 12];
     nonce_prefix.copy_from_slice(&nonce[..12]);
     let nonce_prefix = Nonce::<12>::new(nonce_prefix);
@@ -37,12 +56,16 @@ pub fn decrypt_legacy_v1(
     // bytes of an ordinary IETF ChaCha20 counter-0 block. This is not HChaCha20.
     let mut subkey = Zeroizing::new([0u8; 32]);
     let mut chacha = ChaCha20::new(key, &nonce_prefix);
-    chacha.keystream(subkey.as_mut())?;
+    chacha
+        .keystream(subkey.as_mut())
+        .map_err(|_| AuthenticationError)?;
 
     let mut final_nonce = [0u8; 12];
     final_nonce.copy_from_slice(&nonce[12..]);
     let cipher = ChaCha20Poly1305::new(&subkey);
-    let mut plaintext = cipher.decrypt_with_nonce(&final_nonce, ciphertext, aad)?;
+    let mut plaintext = cipher
+        .decrypt_with_nonce(&final_nonce, ciphertext, aad)
+        .map_err(|_| AuthenticationError)?;
     let exact = Zeroizing::new(Box::from(plaintext.as_slice()));
     plaintext.zeroize();
     Ok(exact)
@@ -50,7 +73,7 @@ pub fn decrypt_legacy_v1(
 
 #[cfg(test)]
 mod tests {
-    use super::decrypt_legacy_v1;
+    use super::decrypt_legacy;
     use dcrypt_algorithms::aead::chacha20poly1305::ChaCha20Poly1305;
     use dcrypt_algorithms::aead::xchacha20poly1305::XChaCha20Poly1305;
     use dcrypt_algorithms::stream::chacha::chacha20::ChaCha20;
@@ -59,6 +82,8 @@ mod tests {
 
     const KEY: [u8; 32] = [0x42; 32];
     const NONCE: [u8; 24] = [0x24; 24];
+    // Generated with the exact crates.io dcrypt-algorithms 1.2.3 artifact
+    // identified in ../PROVENANCE.md, not with the implementation under test.
     const CIPHERTEXT: [u8; 55] = [
         0x67, 0x2c, 0x3b, 0x97, 0xcd, 0x47, 0x79, 0xf4, 0x49, 0xbd, 0x39, 0xba, 0x13, 0xbf, 0x4d,
         0x21, 0x36, 0x22, 0x06, 0x74, 0x76, 0xb0, 0xcb, 0xfc, 0x0e, 0x05, 0x3d, 0x1d, 0x9f, 0xb9,
@@ -83,7 +108,7 @@ mod tests {
             encrypt_historical_reference(b"Extended nonce allows for random nonces"),
             CIPHERTEXT
         );
-        let plaintext = decrypt_legacy_v1(&KEY, &NONCE, &CIPHERTEXT, None).unwrap();
+        let plaintext = decrypt_legacy(&KEY, &NONCE, &CIPHERTEXT, None).unwrap();
         assert_eq!(&plaintext[..], b"Extended nonce allows for random nonces");
     }
 
@@ -91,11 +116,11 @@ mod tests {
     fn rejects_tampering_and_standard_xchacha_ciphertext() {
         let mut tampered = CIPHERTEXT;
         tampered[0] ^= 1;
-        assert!(decrypt_legacy_v1(&KEY, &NONCE, &tampered, None).is_err());
+        assert!(decrypt_legacy(&KEY, &NONCE, &tampered, None).is_err());
 
         let standard = XChaCha20Poly1305::new(&KEY)
             .encrypt(&Nonce::<24>::new(NONCE), b"not legacy", None)
             .unwrap();
-        assert!(decrypt_legacy_v1(&KEY, &NONCE, &standard, None).is_err());
+        assert!(decrypt_legacy(&KEY, &NONCE, &standard, None).is_err());
     }
 }

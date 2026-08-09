@@ -250,15 +250,20 @@ run_check_gates() {
     cargo fmt --manifest-path \
         "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" -- --check
     cargo check --workspace --all-targets --all-features
-    RUSTFLAGS="-Dunsafe-code" cargo check --locked --all-targets \
+    RUSTFLAGS="-Dunsafe-code" cargo check --locked --all-targets --all-features \
         --manifest-path "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml"
 
     if require_security_subcommand audit "cargo install cargo-audit --locked"; then
         cargo audit
+        cargo audit --file \
+            "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.lock"
     fi
 
     if require_security_subcommand deny "cargo install cargo-deny --locked"; then
         cargo deny --workspace --all-features check
+        cargo deny --manifest-path \
+            "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" \
+            --all-features check
     fi
 
     if cargo +nightly miri --version >/dev/null 2>&1; then

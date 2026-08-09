@@ -106,6 +106,9 @@ class BoundaryAudit:
         self.closures: dict[str, set[str]] = {}
         self.packages: dict[str, dict[str, Any]] = {}
         self.archive_hashes: dict[str, str] = {}
+        self.excluded_workspace_closures: dict[str, list[str]] = {}
+        self.excluded_lock_hashes: dict[str, str] = {}
+        self.excluded_workspace_metadata: dict[str, dict[str, Any]] = {}
         self.commands: list[dict[str, Any]] = []
 
     def fail(self, scope: str, detail: str) -> None:
@@ -209,6 +212,40 @@ class BoundaryAudit:
         self.closures[profile] = closure
         for package_id in closure:
             self.packages[package_id] = packages[package_id]
+
+    def normal_build_closure(
+        self,
+        scope: str,
+        metadata: dict[str, Any],
+        roots: set[str],
+    ) -> set[str]:
+        packages = {package["id"]: package for package in metadata.get("packages", [])}
+        nodes = {
+            node["id"]: node
+            for node in (metadata.get("resolve") or {}).get("nodes", [])
+        }
+        closure = set(roots)
+        queue: deque[str] = deque(sorted(roots))
+        while queue:
+            package_id = queue.popleft()
+            node = nodes.get(package_id)
+            if node is None:
+                self.fail(scope, f"missing resolve node for {package_id}")
+                continue
+            for dependency in node.get("deps", []):
+                if not any(
+                    item.get("kind") in (None, "normal", "build")
+                    for item in dependency.get("dep_kinds", [])
+                ):
+                    continue
+                dependency_id = dependency["pkg"]
+                if dependency_id not in packages:
+                    self.fail(scope, f"missing package metadata for {dependency_id}")
+                    continue
+                if dependency_id not in closure:
+                    closure.add(dependency_id)
+                    queue.append(dependency_id)
+        return closure
 
     def audit_package_metadata(self, policy: dict[str, Any]) -> None:
         forbidden = set(policy["forbidden-packages"])
@@ -400,6 +437,363 @@ class BoundaryAudit:
                         "verification oracle dependency must be dev/test-only: "
                         f"{dependency['name']} ({dependency.get('kind') or 'normal'})",
                     )
+
+    def audit_owned_excluded_workspaces(
+        self, policy: dict[str, Any], main_metadata: dict[str, Any]
+    ) -> None:
+        configurations = policy.get("owned-excluded-workspaces", [])
+        if not isinstance(configurations, list):
+            self.fail(
+                "owned-excluded-workspaces",
+                "policy entry must be an array of workspace tables",
+            )
+            return
+
+        try:
+            root_manifest = tomllib.loads((PROJECT_ROOT / "Cargo.toml").read_text())
+        except (OSError, tomllib.TOMLDecodeError) as error:
+            self.fail(
+                "owned-excluded-workspaces",
+                f"cannot parse root Cargo.toml: {error}",
+            )
+            return
+        excluded_roots = {
+            (PROJECT_ROOT / entry).resolve()
+            for entry in root_manifest.get("workspace", {}).get("exclude", [])
+        }
+        main_members = set(main_metadata.get("workspace_members", []))
+        main_member_manifests = {
+            Path(package["manifest_path"]).resolve()
+            for package in main_metadata.get("packages", [])
+            if package["id"] in main_members
+        }
+        forbidden = set(policy["forbidden-packages"])
+        suffixes = tuple(policy["forbidden-package-suffixes"])
+        oracles = set(policy["test-oracle-packages"])
+        native_extensions = set(policy["native-extensions"])
+        seen_roots: set[Path] = set()
+
+        for configuration in configurations:
+            if not isinstance(configuration, dict):
+                self.fail(
+                    "owned-excluded-workspaces",
+                    "each workspace policy entry must be a table",
+                )
+                continue
+            relative_value = configuration.get("path")
+            allowed_value = configuration.get(
+                "allowed-external-normal-build-packages"
+            )
+            if not isinstance(relative_value, str) or not relative_value:
+                self.fail(
+                    "owned-excluded-workspaces",
+                    "workspace path must be a non-empty string",
+                )
+                continue
+            if not isinstance(allowed_value, list) or not all(
+                isinstance(label, str) and label for label in allowed_value
+            ):
+                self.fail(
+                    relative_value,
+                    "allowed-external-normal-build-packages must be a string array",
+                )
+                continue
+
+            relative = Path(relative_value)
+            workspace_root = (PROJECT_ROOT / relative).resolve()
+            scope = f"excluded:{relative.as_posix()}"
+            if (
+                relative.is_absolute()
+                or workspace_root == PROJECT_ROOT
+                or not workspace_root.is_relative_to(PROJECT_ROOT)
+            ):
+                self.fail(scope, "workspace path must remain inside the repository")
+                continue
+            if workspace_root in seen_roots:
+                self.fail(scope, "workspace is configured more than once")
+                continue
+            seen_roots.add(workspace_root)
+
+            manifest = workspace_root / "Cargo.toml"
+            lock = workspace_root / "Cargo.lock"
+            if workspace_root not in excluded_roots:
+                self.fail(scope, "workspace must be listed in root [workspace].exclude")
+            if any(path.is_relative_to(workspace_root) for path in main_member_manifests):
+                self.fail(scope, "excluded packages are members of the published workspace")
+            if not manifest.is_file() or not lock.is_file():
+                self.fail(scope, "independent Cargo.toml and Cargo.lock are required")
+                continue
+            tracked_lock = self.command(
+                [
+                    "git",
+                    "ls-files",
+                    "--error-unmatch",
+                    "--",
+                    lock.relative_to(PROJECT_ROOT).as_posix(),
+                ]
+            )
+            if tracked_lock.returncode != 0:
+                self.fail(scope, "excluded workspace Cargo.lock must be git-tracked")
+            self.excluded_lock_hashes[relative.as_posix()] = sha256_file(lock)
+
+            completed = self.command(
+                [
+                    "cargo",
+                    "metadata",
+                    "--locked",
+                    "--all-features",
+                    "--format-version",
+                    "1",
+                    "--manifest-path",
+                    str(manifest),
+                ],
+                env=clean_cargo_env(),
+            )
+            if completed.returncode != 0:
+                self.fail(scope, f"cargo metadata failed: {tail(completed.stderr)}")
+                continue
+            try:
+                metadata = json.loads(completed.stdout)
+            except json.JSONDecodeError as error:
+                self.fail(scope, f"cargo metadata returned invalid JSON: {error}")
+                continue
+            if Path(metadata.get("workspace_root", "")).resolve() != workspace_root:
+                self.fail(scope, "Cargo.toml must define an independent Cargo workspace")
+            members = set(metadata.get("workspace_members", []))
+            packages = {
+                package["id"]: package for package in metadata.get("packages", [])
+            }
+            if not members:
+                self.fail(scope, "excluded workspace has no members")
+                continue
+            for package_id in sorted(members):
+                package = packages.get(package_id)
+                if package is None:
+                    self.fail(scope, f"missing member metadata for {package_id}")
+                    continue
+                label = package_label(package)
+                if package.get("publish") != []:
+                    self.fail(label, "excluded workspace package must set publish = false")
+                for target in package.get("targets", []):
+                    source = Path(target.get("src_path", "")).resolve()
+                    if not source.is_file():
+                        self.fail(label, f"Cargo target source is missing: {source}")
+                        continue
+                    if not has_crate_level_forbid(source.read_text(errors="replace")):
+                        self.fail(
+                            label,
+                            "excluded workspace target lacks top-level "
+                            f"#![forbid(unsafe_code)]: {source}",
+                        )
+
+                try:
+                    member_manifest = tomllib.loads(
+                        Path(package["manifest_path"]).read_text()
+                    )
+                except (OSError, tomllib.TOMLDecodeError) as error:
+                    self.fail(label, f"cannot parse member Cargo.toml: {error}")
+                    continue
+                for table_name, dependency_name, specification in iter_manifest_dependencies(
+                    member_manifest
+                ):
+                    if isinstance(specification, dict) and "path" in specification:
+                        dependency_path = (
+                            Path(package["manifest_path"]).parent
+                            / specification["path"]
+                        ).resolve()
+                        if not dependency_path.is_relative_to(PROJECT_ROOT):
+                            self.fail(
+                                label,
+                                "path dependency escapes the repository: "
+                                f"{table_name}.{dependency_name}",
+                            )
+                        requirement = specification.get("version", "")
+                        if not isinstance(requirement, str) or not is_exact_requirement(
+                            requirement
+                        ):
+                            self.fail(
+                                label,
+                                "path normal/build dependency is not exactly pinned: "
+                                f"{table_name}.{dependency_name} {requirement!r}",
+                            )
+                        continue
+                    requirement = (
+                        specification
+                        if isinstance(specification, str)
+                        else specification.get("version", "")
+                        if isinstance(specification, dict)
+                        else ""
+                    )
+                    if not isinstance(requirement, str) or not is_exact_requirement(
+                        requirement
+                    ):
+                        self.fail(
+                            label,
+                            "registry normal/build dependency is not exactly pinned: "
+                            f"{table_name}.{dependency_name} {requirement!r}",
+                        )
+
+            closure = self.normal_build_closure(scope, metadata, members)
+            closure_packages = [
+                packages[package_id]
+                for package_id in sorted(closure)
+                if package_id in packages
+            ]
+            external_labels: set[str] = set()
+            for package in closure_packages:
+                label = package_label(package)
+                name = package["name"]
+                package_root = Path(package["manifest_path"]).resolve().parent
+                owned_source = package_root.is_relative_to(PROJECT_ROOT)
+                if not owned_source:
+                    external_labels.add(label)
+                    if package.get("source") != (
+                        "registry+https://github.com/rust-lang/crates.io-index"
+                    ):
+                        self.fail(label, "external dependency is not from crates.io")
+                if package.get("links"):
+                    self.fail(label, f"Cargo package declares links={package['links']!r}")
+                for target in package.get("targets", []):
+                    native_types = sorted(
+                        set(target.get("crate_types", [])) & NATIVE_CRATE_TYPES
+                    )
+                    if native_types:
+                        self.fail(
+                            label,
+                            "Cargo target emits native-library crate type(s): "
+                            f"{', '.join(native_types)}",
+                        )
+                if name in forbidden or name.endswith(suffixes):
+                    self.fail(label, "forbidden native/FFI/OS-entropy bridge package")
+                if name in oracles:
+                    self.fail(
+                        label,
+                        "external cryptographic implementation appears in the "
+                        "excluded workspace normal/build closure",
+                    )
+
+                required_sources = cargo_target_sources(self, package, package_root)
+                audit_source_tree(
+                    self,
+                    f"{scope}:{label}",
+                    package_root,
+                    native_extensions,
+                    check_internal_entropy=owned_source,
+                    scan_all_rust=package_root == workspace_root,
+                    required_rust_files=required_sources,
+                )
+
+            allowed_labels = set(allowed_value)
+            if external_labels != allowed_labels:
+                self.fail(
+                    scope,
+                    "external normal/build dependency snapshot mismatch; "
+                    f"missing={sorted(allowed_labels - external_labels)}, "
+                    f"extra={sorted(external_labels - allowed_labels)}",
+                )
+            self.excluded_workspace_closures[relative.as_posix()] = sorted(
+                package_label(package) for package in closure_packages
+            )
+            self.excluded_workspace_metadata[relative.as_posix()] = metadata
+
+    def run_owned_excluded_active_scans(self, policy: dict[str, Any]) -> None:
+        native_extensions = set(policy["native-extensions"])
+        configurations = policy.get("owned-excluded-workspaces", [])
+        with tempfile.TemporaryDirectory(prefix="dcrypt-excluded-boundary-") as temp:
+            target_root = Path(temp)
+            for configuration in configurations:
+                if not isinstance(configuration, dict):
+                    continue
+                relative_value = configuration.get("path")
+                if not isinstance(relative_value, str):
+                    continue
+                metadata = self.excluded_workspace_metadata.get(relative_value)
+                if not metadata:
+                    continue
+                manifest = PROJECT_ROOT / relative_value / "Cargo.toml"
+                scope = f"excluded:{relative_value}:active"
+                package_map = {
+                    package["id"]: package for package in metadata.get("packages", [])
+                }
+                target_directory = target_root / hashlib.sha256(
+                    relative_value.encode()
+                ).hexdigest()[:16]
+                env = clean_cargo_env()
+                env["RUSTFLAGS"] = "--force-warn=unsafe-code"
+                env["CARGO_TARGET_DIR"] = str(target_directory)
+                completed = self.command(
+                    [
+                        "cargo",
+                        "check",
+                        "--locked",
+                        "--all-targets",
+                        "--all-features",
+                        "--manifest-path",
+                        str(manifest),
+                        "--message-format=json",
+                    ],
+                    env=env,
+                )
+                unsafe_counts: dict[str, int] = defaultdict(int)
+                unsafe_first: dict[str, str] = {}
+                for line in completed.stdout.splitlines():
+                    try:
+                        message = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    reason = message.get("reason")
+                    if reason == "compiler-message":
+                        diagnostic = message.get("message", {})
+                        code = diagnostic.get("code") or {}
+                        if code.get("code") != "unsafe_code":
+                            continue
+                        package_id = message.get("package_id", "unknown")
+                        label = package_label(
+                            package_map.get(package_id, {"id": package_id})
+                        )
+                        unsafe_counts[label] += 1
+                        spans = diagnostic.get("spans", [])
+                        if label not in unsafe_first and spans:
+                            span = spans[0]
+                            unsafe_first[label] = (
+                                f"{span.get('file_name')}:{span.get('line_start')}"
+                            )
+                    elif reason == "build-script-executed":
+                        linked = message.get("linked_libs", [])
+                        linked_paths = message.get("linked_paths", [])
+                        if linked or linked_paths:
+                            package_id = message.get("package_id", "unknown")
+                            label = package_label(
+                                package_map.get(package_id, {"id": package_id})
+                            )
+                            self.fail(
+                                f"{scope}:{label}",
+                                "build script emitted native links: "
+                                f"libs={linked}, paths={linked_paths}",
+                            )
+                for label, count in sorted(unsafe_counts.items()):
+                    self.fail(
+                        f"{scope}:{label}",
+                        f"compiler emitted {count} active unsafe-code diagnostic(s); "
+                        f"first={unsafe_first.get(label, 'unknown')}",
+                    )
+                if completed.returncode != 0:
+                    self.fail(
+                        scope,
+                        "active excluded-workspace audit did not compile: "
+                        f"{tail(completed.stderr)}",
+                    )
+                for output_directory in sorted(target_directory.glob("**/build/*/out")):
+                    if output_directory.is_dir():
+                        audit_source_tree(
+                            self,
+                            f"{scope}:generated:{output_directory.parent.name}",
+                            output_directory,
+                            native_extensions,
+                            check_internal_entropy=False,
+                            scan_all_rust=True,
+                            required_rust_files=set(),
+                        )
 
     def audit_dependency_sources(
         self, policy: dict[str, Any], published_names: set[str]
@@ -760,6 +1154,12 @@ class BoundaryAudit:
                 for profile, package_ids in sorted(self.closures.items())
             },
             "archive_sha256": dict(sorted(self.archive_hashes.items())),
+            "owned_excluded_workspace_locks": dict(
+                sorted(self.excluded_lock_hashes.items())
+            ),
+            "owned_excluded_workspace_closures": dict(
+                sorted(self.excluded_workspace_closures.items())
+            ),
             "commands": self.commands,
             "violations": [
                 {"scope": violation.scope, "detail": violation.detail}
@@ -1287,12 +1687,14 @@ def main() -> int:
     audit.collect_closure("all-features", all_features, published_names)
     audit.collect_closure("no-default-features", no_default, published_names)
     audit.audit_package_metadata(policy)
+    audit.audit_owned_excluded_workspaces(policy, all_features)
     audit.audit_dependency_sources(policy, published_names)
     audit.package_and_audit_owned_sources(policy, all_features)
 
     if not args.scan_only:
         installed_targets = audit.validate_supported_targets(policy)
         audit.run_active_dependency_unsafe_scans(policy, installed_targets)
+        audit.run_owned_excluded_active_scans(policy)
         audit.run_no_std_contract_checks(policy, published_names, installed_targets)
 
     audit.write_report(policy)

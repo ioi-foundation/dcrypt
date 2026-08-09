@@ -56,7 +56,10 @@ Users of an affected release should assume the following:
   replay state.
 - Ciphertext emitted by the former `XChaCha20Poly1305` type is a dcrypt-specific
   legacy format, not standard XChaCha20-Poly1305. The remediated API does not
-  silently decrypt or relabel it.
+  silently decrypt or relabel it. Ciphertext produced from `v0.7.0-pre` through
+  `v1.2.3` can be handled only by the isolated, non-published
+  [decrypt-only migration tool](migration/legacy-xchacha20poly1305/README.md)
+  after its provenance has been established.
 - Former `Dilithium2/3/5` keys and signatures are dcrypt-specific legacy objects,
   not FIPS 204 encodings, and must not be relabeled as standard objects.
   Versioned hybrid framing rejects them, and paired expanded-key import detects

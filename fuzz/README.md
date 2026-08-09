@@ -15,6 +15,10 @@ public entry points that accept attacker-controlled encodings:
   encodings plus the retained P-224/P-256/P-384/P-521/K-256 ECDH-KEM types.
 - `bls12_381_decoders`: compressed and uncompressed G1/G2 encodings, strict
   subgroup/identity validation, and canonical or wide scalar inputs.
+- `legacy_xchacha_migration`: both arbitrary unauthenticated inputs and
+  synthesized authenticated ciphertext for the isolated legacy decryptor. Two
+  committed seeds force successful decryption with and without AAD; the
+  delimiter-based split does not cap AAD at 255 bytes.
 
 Build all targets with `cargo +nightly fuzz build`. Run an individual target,
 for example, with `cargo +nightly fuzz run stream_frames`.

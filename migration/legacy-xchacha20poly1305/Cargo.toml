@@ -3,12 +3,13 @@ name = "dcrypt-legacy-xchacha20poly1305-migration"
 version = "0.0.0"
 edition = "2021"
 publish = false
-description = "Isolated decrypt-only migration tool for dcrypt v1 custom XChaCha ciphertext"
+description = "Isolated decrypt-only migration tool for dcrypt v0.7.0-pre through v1.2.3 custom XChaCha ciphertext"
 license = "Apache-2.0"
 
 [dependencies]
-dcrypt-algorithms = { path = "../../crates/algorithms", default-features = false, features = ["std", "aead", "stream"] }
-dcrypt-internal = { path = "../../crates/internal", default-features = false, features = ["std"] }
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
+dcrypt-algorithms = { version = "=2.0.0", path = "../../crates/algorithms", default-features = false, features = ["alloc", "aead", "stream"] }
+dcrypt-internal = { version = "=2.0.0", path = "../../crates/internal", default-features = false, features = ["alloc"] }
 
 [workspace]
 members = ["."]

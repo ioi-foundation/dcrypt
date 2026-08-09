@@ -19,6 +19,11 @@ release is currently supported.
 The remaining compatibility and hardening findings are tracked in the
 workspace `SECURITY.md` and `CHANGELOG.md`.
 
+The custom construction shipped under the `XChaCha20Poly1305` name from
+`v0.7.0-pre` through `v1.2.3` is supported only by an isolated
+[decrypt-only migration tool](../../migration/legacy-xchacha20poly1305/README.md).
+It is not standard XChaCha20-Poly1305 and is not part of the published API.
+
 The v3 audit also identified a subgroup-validation failure in the former
 sect283k1/ECDH-B283 surface. See the
 [traditional-EC removal notice](V3-TRADITIONAL-EC-REMOVALS.md) for the affected
