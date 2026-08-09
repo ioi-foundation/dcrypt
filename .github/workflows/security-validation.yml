@@ -33,6 +33,8 @@ jobs:
         run: |
           python3 tools/verify-implementation-boundary.py --self-test
           tools/verify-implementation-boundary.sh
+      - name: Inspect optimized BLS secret-scalar assembly
+        run: tools/verify-bls-secret-assembly.sh
 
   format-and-check:
     name: Format and all-target workspace check
@@ -73,10 +75,10 @@ jobs:
         # dcrypt-tests contains the heavyweight suites gated in dedicated jobs below.
         run: cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
 
-  ml-dsa-acvp:
-    name: Exact ML-DSA FIPS 204 ACVP outputs
+  acvp-and-aes-cbc-properties:
+    name: Complete ACVP and AES-CBC property gates
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 180
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,25 +86,13 @@ jobs:
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: stable
-      - name: Compare ML-DSA results with bundled official expectedResults
+      - name: Run every official ACVP and regression-vector test
         run: >-
-          cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_
+          cargo test --release -p dcrypt-tests --test acvp_tests
           -- --test-threads=1 --nocapture
-
-  ml-kem-acvp:
-    name: Exact ML-KEM FIPS 203 ACVP outputs
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install stable Rust
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          toolchain: stable
-      - name: Compare ML-KEM results with bundled official expectedResults
+      - name: Run the AES-CBC property suite
         run: >-
-          cargo test --release -p dcrypt-tests --test acvp_tests test_ml_kem_
+          cargo test --release -p dcrypt-tests --test property_aes_cbc
           -- --test-threads=1 --nocapture
 
   independent-oracles:
@@ -214,16 +204,24 @@ jobs:
         run: >-
           cargo miri test -p dcrypt-sign --lib --all-features
           rejects_identity_public_key_and_universal_forgery
+      - name: Exercise the high-level BLS secret owner
+        run: >-
+          cargo miri test -p dcrypt-sign --lib --all-features
+          secret_key_is_canonical_nonzero_and_debug_redacted
+      - name: Exercise both protected BLS scalar bridges
+        run: >-
+          cargo miri test -p dcrypt-algorithms --lib --all-features
+          secret_big_endian_bridge_matches_g1_and_g2_scalar_multiplication
       - name: Exercise RFC 9380 and BLS subgroup rejection
         run: |
           cargo miri test -p dcrypt-algorithms --lib --all-features rfc9380_g1_random_oracle_vectors
           cargo miri test -p dcrypt-algorithms --lib --all-features rfc9380_g2_random_oracle_vectors
           cargo miri test -p dcrypt-algorithms --lib --all-features checked_decoders_reject_on_curve_non_subgroup_point
 
-  fuzz-build:
-    name: Build externally controlled decoder fuzz targets
+  bounded-fuzz:
+    name: Build and exercise externally controlled decoder fuzz targets
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -242,3 +240,12 @@ jobs:
           cargo fuzz build kem_decoders
           cargo fuzz build bls12_381_decoders
           cargo fuzz build legacy_xchacha_migration
+      - name: Run a bounded campaign for every fuzz target
+        run: |
+          cargo fuzz run signature_decoders -- -runs=1000
+          cargo fuzz run hybrid_decoders -- -runs=1000
+          cargo fuzz run symmetric_decoders -- -runs=1000
+          cargo fuzz run stream_frames -- -runs=1000
+          cargo fuzz run kem_decoders -- -runs=1000
+          cargo fuzz run bls12_381_decoders -- -runs=1000
+          cargo fuzz run legacy_xchacha_migration -- -runs=1000

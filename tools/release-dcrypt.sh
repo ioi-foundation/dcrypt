@@ -66,8 +66,8 @@ Options:
   --skip-tests         Development rehearsal only: skip workspace, vector,
                        interoperability, and isolated timing tests.
   --skip-checks        Development rehearsal only: skip format/check,
-                       audit/deny, Miri, and fuzz builds. The implementation-
-                       boundary gate cannot be skipped.
+                       audit/deny, Miri, and fuzz builds. The implementation
+                       boundary and BLS assembly gates cannot be skipped.
   --resume CRATE       Resume a partial --execute at CRATE, or use "auto" to
                        trust crates.io as the source of truth.
   --registry-wait SEC  Maximum registry propagation wait per crate (default 300).
@@ -239,7 +239,7 @@ require_security_subcommand() {
 
 run_check_gates() {
     if [[ "$SKIP_CHECKS" == true ]]; then
-        warn "format, static, supply-chain, Miri, and fuzz gates were explicitly skipped; the implementation-boundary gate still ran"
+        warn "format, static, supply-chain, Miri, and fuzz gates were explicitly skipped; the implementation-boundary and BLS assembly gates still ran"
         return
     fi
 
@@ -280,6 +280,12 @@ run_check_gates() {
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
             cargo +nightly miri test -p dcrypt-sign --lib --all-features \
                 rejects_identity_public_key_and_universal_forgery
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-sign --lib --all-features \
+                secret_key_is_canonical_nonzero_and_debug_redacted
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+                secret_big_endian_bridge_matches_g1_and_g2_scalar_multiplication
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
             cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
                 rfc9380_g1_random_oracle_vectors

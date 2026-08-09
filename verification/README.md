@@ -17,6 +17,17 @@ Run the independent traditional-EC scalar multiplication and ECDH checks with:
 cargo test --manifest-path verification/Cargo.toml --test traditional_ec_interop
 ```
 
+Run the independent BLS12-381 oracle checks and the frozen official Ethereum
+consensus adapter vectors with:
+
+```bash
+cargo test --manifest-path verification/Cargo.toml --test bls12_381_interop
+cargo test --manifest-path verification/Cargo.toml --test ethereum_consensus_bls
+```
+
+The Ethereum corpus records its exact upstream commit and per-file Git blob
+identifiers in `vectors/ethereum_consensus_spec_tests/PROVENANCE.md`.
+
 Reproduce the removed sect283k1 subgroup/serializer advisory proof with:
 
 ```bash

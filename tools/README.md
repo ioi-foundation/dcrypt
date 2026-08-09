@@ -35,6 +35,21 @@ bypass. `--skip-checks` skips only the separate format, audit/deny, Miri, and
 fuzz checks. Other CI jobs run independently so a boundary failure does not
 hide their diagnostics.
 
+Publish readiness also runs `verify-bls-secret-assembly.sh`. It compiles the
+protected G1 and G2 scalar-multiplication bridges with one generic codegen unit
+for Linux x86-64, Linux AArch64, WebAssembly, and Thumb, then fails closed
+unless each optimized entry point has its reviewed public-control branch
+fingerprint and target-specific mask-selection instructions. Native targets
+have only input rejection and two fixed loop backedges; WebAssembly also emits
+a fixed number of constant-size copy guards comparing immediate lengths. This
+deterministic compiler-shape regression is intentionally non-skippable for
+release modes.
+
+It is not a general constant-time proof: a compiler update that changes the
+shape must be reviewed on every target before the checked expectations are
+updated. Set `DCRYPT_KEEP_BLS_ASSEMBLY=1` to retain the emitted files for that
+manual review.
+
 ## Release model
 
 Releases use three explicit phases. Uploading is never combined with versioning

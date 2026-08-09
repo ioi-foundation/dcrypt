@@ -135,6 +135,14 @@ else
     exit 1
 fi
 
+printf "\n${BLUE}Optimized BLS secret-scalar compiler inspection${NC}\n"
+if "$SCRIPT_DIR/verify-bls-secret-assembly.sh"; then
+    pass "BLS G1/G2 secret-scalar assembly shape passed on every supported target"
+else
+    fail "BLS secret-scalar assembly inspection failed"
+    exit 1
+fi
+
 metadata_file=$(mktemp "${TMPDIR:-/tmp}/dcrypt-metadata.XXXXXX")
 trap 'rm -f "$metadata_file"' EXIT
 

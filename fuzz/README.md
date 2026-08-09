@@ -24,6 +24,8 @@ public entry points that accept attacker-controlled encodings:
 Build all targets with `cargo +nightly fuzz build`. Run an individual target,
 for example, with `cargo +nightly fuzz run stream_frames`.
 
-The CI job compiles every target. Sustained fuzz campaigns and corpus/artifact
-retention are release operations and should run outside the ordinary pull
-request time budget.
+The CI job compiles every target and runs each one for 1,000 executions. Cargo
+automatically supplies a target's default committed corpus when present; in
+particular, the two authenticated legacy-migration seeds are always exercised.
+Sustained fuzz campaigns and artifact retention remain release operations
+outside the ordinary pull-request time budget.
