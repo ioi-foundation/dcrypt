@@ -279,7 +279,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-algorithms"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "base64",
  "dcrypt-api",
@@ -291,14 +291,14 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-api"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "dcrypt-internal",
 ]
 
 [[package]]
 name = "dcrypt-common"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "dcrypt-api",
  "dcrypt-internal",
@@ -306,7 +306,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-internal"
-version = "2.0.0"
+version = "3.0.0"
 
 [[package]]
 name = "dcrypt-legacy-xchacha20poly1305-migration"
@@ -319,11 +319,11 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-params"
-version = "2.0.0"
+version = "3.0.0"
 
 [[package]]
 name = "dcrypt-sign"
-version = "2.0.0"
+version = "3.0.0"
 dependencies = [
  "dcrypt-algorithms",
  "dcrypt-api",

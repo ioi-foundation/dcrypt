@@ -9,15 +9,15 @@ license.workspace = true
 publish = false
 
 [dependencies]
-dcrypt-kem = { path = "../crates/kem", version = "=2.0.0" }
-dcrypt-sign = { path = "../crates/sign", version = "=2.0.0" }
-dcrypt-algorithms = { path = "../crates/algorithms", version = "=2.0.0" }
-dcrypt-params = { path = "../crates/params", version = "=2.0.0" }
-dcrypt-symmetric = { path = "../crates/symmetric", version = "=2.0.0" }
-dcrypt-hybrid = { path = "../crates/hybrid", version = "=2.0.0" }
-dcrypt-api = { version = "=2.0.0", path = "../crates/api" }
-dcrypt-common = { path = "../crates/common" , version = "=2.0.0" }
-dcrypt-internal = { path = "../crates/internal" , version = "=2.0.0" }
+dcrypt-kem = { path = "../crates/kem", version = "=3.0.0" }
+dcrypt-sign = { path = "../crates/sign", version = "=3.0.0" }
+dcrypt-algorithms = { path = "../crates/algorithms", version = "=3.0.0" }
+dcrypt-params = { path = "../crates/params", version = "=3.0.0" }
+dcrypt-symmetric = { path = "../crates/symmetric", version = "=3.0.0" }
+dcrypt-hybrid = { path = "../crates/hybrid", version = "=3.0.0" }
+dcrypt-api = { version = "=3.0.0", path = "../crates/api" }
+dcrypt-common = { path = "../crates/common" , version = "=3.0.0" }
+dcrypt-internal = { path = "../crates/internal" , version = "=3.0.0" }
 rand = { workspace = true, features = ["std", "std_rng", "getrandom"] }
 rand_chacha = { workspace = true }
 serde = { version = "1", features = ["derive"] }
