@@ -12,18 +12,18 @@ keywords.workspace = true
 
 [dependencies]
 # Core dependencies (always included)
-dcrypt-api = { version = "=2.0.0-alpha.1", path = "crates/api" }
-dcrypt-common = { version = "=2.0.0-alpha.1", path = "crates/common" }
-dcrypt-internal = { version = "=2.0.0-alpha.1", path = "crates/internal" }
-dcrypt-params = { version = "=2.0.0-alpha.1", path = "crates/params" }
+dcrypt-api = { version = "=2.0.0", path = "crates/api" }
+dcrypt-common = { version = "=2.0.0", path = "crates/common" }
+dcrypt-internal = { version = "=2.0.0", path = "crates/internal" }
+dcrypt-params = { version = "=2.0.0", path = "crates/params" }
 
 # Optional algorithm crates
-dcrypt-algorithms = { version = "=2.0.0-alpha.1", path = "crates/algorithms", optional = true }
-dcrypt-symmetric = { version = "=2.0.0-alpha.1", path = "crates/symmetric", optional = true }
-dcrypt-kem = { version = "=2.0.0-alpha.1", path = "crates/kem", optional = true }
-dcrypt-sign = { version = "=2.0.0-alpha.1", path = "crates/sign", optional = true }
-dcrypt-pke = { version = "=2.0.0-alpha.1", path = "crates/pke", optional = true }
-dcrypt-hybrid = { version = "=2.0.0-alpha.1", path = "crates/hybrid", optional = true }
+dcrypt-algorithms = { version = "=2.0.0", path = "crates/algorithms", optional = true }
+dcrypt-symmetric = { version = "=2.0.0", path = "crates/symmetric", optional = true }
+dcrypt-kem = { version = "=2.0.0", path = "crates/kem", optional = true }
+dcrypt-sign = { version = "=2.0.0", path = "crates/sign", optional = true }
+dcrypt-pke = { version = "=2.0.0", path = "crates/pke", optional = true }
+dcrypt-hybrid = { version = "=2.0.0", path = "crates/hybrid", optional = true }
 
 # Re-export workspace dependencies that users might need
 rand = { workspace = true, optional = true }
@@ -87,7 +87,7 @@ exclude = ["fuzz"]
 resolver = "2"
 
 [workspace.package]
-version     = "2.0.0-alpha.1"
+version     = "2.0.0"
 edition     = "2021"
 authors     = ["Heath Ledger"]
 description = "Rust APIs for classical, post-quantum, and hybrid cryptographic primitives"
