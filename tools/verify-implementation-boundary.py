@@ -137,6 +137,10 @@ MISLEADING_SECURE_OPERATION_API = re.compile(
     r"\b(?:trait\s+SecureOperation(?:Ext)?|"
     r"struct\s+SecureOperationBuilder|type\s+CleanupFn)\b"
 )
+REMOVED_CONSTANT_TIME_CONVENIENCE = re.compile(
+    r"\b(?:pub\s+fn\s+(?:ct_select|ct_assign|ct_eq_choice|ct_and|ct_or|"
+    r"ct_xor|ct_op|ct_mask)\b|pub\s+trait\s+ConstantTimeEquals\b)"
+)
 TARGETED_SECRET_SCRATCH = {
     "src/block/aes/mod.rs": re.compile(
         r"(?:\blet\s+mut\s+(?:round_keys_u32|round_key_bytes|state)"
@@ -2169,6 +2173,11 @@ def audit_source_tree(
                         MISLEADING_SECURE_OPERATION_API,
                         code_only,
                     ),
+                    (
+                        "removed raw constant-time convenience API",
+                        REMOVED_CONSTANT_TIME_CONVENIENCE,
+                        code_only,
+                    ),
                 )
             )
             if check_internal_entropy:
@@ -2301,6 +2310,7 @@ fn generate_j0() -> Result<[u8; 16]> { todo!() }
 let mut signs = [0u8; 8];
 let mut key_data = [0u8; 32];
 pub struct SecureOperationBuilder<T>(T);
+pub fn ct_xor<const N: usize>(a: &[u8; N], b: &[u8; N]) -> [u8; N] { *a }
 fn derive_key(input: &[u8]) -> Result<Vec<u8>> { todo!() }
 rng.try_fill_bytes(&mut secret)?;
 let mut key_words = [0u32; 8];
@@ -2347,6 +2357,7 @@ println!("cargo:rustc-link-lib=native");
     )
     assert UNPROTECTED_HIGH_LEVEL_KEY_COPY.search("let mut buffer_bytes = [0u8; 32];")
     assert len(MISLEADING_SECURE_OPERATION_API.findall(code_only)) == 1
+    assert len(REMOVED_CONSTANT_TIME_CONVENIENCE.findall(code_only)) == 1
     assert len(RAW_SECRET_BYTE_OUTPUT.findall(code_only)) == 1
     assert len(DIRECT_RNG_FILL.findall(code_only)) == 1
     assert (
