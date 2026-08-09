@@ -3,6 +3,8 @@ use dcrypt_algorithms::ec::{
     k256::{self, Scalar as K256Scalar, K256_SCALAR_SIZE},
     p224::{self, Scalar as P224Scalar, P224_SCALAR_SIZE},
     p256::{self, Scalar as P256Scalar, P256_SCALAR_SIZE},
+    p384::{self, Scalar as P384Scalar, P384_SCALAR_SIZE},
+    p521::{self, Scalar as P521Scalar, P521_SCALAR_SIZE},
 };
 use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
@@ -109,6 +111,60 @@ fn test_k256_scalar_mult_constant_time() {
 
     assert_scalar_mult_timing(
         "ECDH K-256 Scalar Mult",
+        || {
+            let _ = base_point.mul(&scalar_low);
+        },
+        |high_weight| {
+            if high_weight {
+                let _ = base_point.mul(&scalar_high);
+            } else {
+                let _ = base_point.mul(&scalar_low);
+            }
+        },
+    );
+}
+
+#[test]
+fn test_p384_scalar_mult_constant_time() {
+    let base_point = p384::base_point_g();
+
+    let mut low_weight_bytes = [0u8; P384_SCALAR_SIZE];
+    low_weight_bytes[P384_SCALAR_SIZE - 1] = 1;
+    let scalar_low = P384Scalar::new(low_weight_bytes).expect("Invalid scalar");
+
+    let mut high_weight_bytes = [0xFFu8; P384_SCALAR_SIZE];
+    high_weight_bytes[0] = 0x00; // Ensure < n
+    let scalar_high = P384Scalar::new(high_weight_bytes).expect("Invalid scalar");
+
+    assert_scalar_mult_timing(
+        "ECDH P-384 Scalar Mult",
+        || {
+            let _ = base_point.mul(&scalar_low);
+        },
+        |high_weight| {
+            if high_weight {
+                let _ = base_point.mul(&scalar_high);
+            } else {
+                let _ = base_point.mul(&scalar_low);
+            }
+        },
+    );
+}
+
+#[test]
+fn test_p521_scalar_mult_constant_time() {
+    let base_point = p521::base_point_g();
+
+    let mut low_weight_bytes = [0u8; P521_SCALAR_SIZE];
+    low_weight_bytes[P521_SCALAR_SIZE - 1] = 1;
+    let scalar_low = P521Scalar::new(low_weight_bytes).expect("Invalid scalar");
+
+    let mut high_weight_bytes = [0xFFu8; P521_SCALAR_SIZE];
+    high_weight_bytes[0] = 0x00; // Ensure < n
+    let scalar_high = P521Scalar::new(high_weight_bytes).expect("Invalid scalar");
+
+    assert_scalar_mult_timing(
+        "ECDH P-521 Scalar Mult",
         || {
             let _ = base_point.mul(&scalar_low);
         },
