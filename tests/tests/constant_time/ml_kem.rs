@@ -17,7 +17,9 @@ fn test_ml_kem768_decapsulate_success_path_constant_time() {
     let config = create_ml_kem_config();
     let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
-    let (pk, sk) = MlKem768::keypair(&mut rng).expect("Keygen failed");
+    let keypair = MlKem768::keypair(&mut rng).expect("Keygen failed");
+    let pk = MlKem768::public_key(&keypair);
+    let sk = MlKem768::secret_key(&keypair);
     let (valid_ct_a, _valid_ss_a) =
         MlKem768::encapsulate(&mut rng, &pk).expect("Encapsulation failed");
     let (valid_ct_b, _valid_ss_b) =
@@ -68,7 +70,9 @@ fn test_ml_kem768_decapsulate_rejection_path_constant_time() {
     let config = create_ml_kem_config();
     let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
-    let (pk, sk) = MlKem768::keypair(&mut rng).expect("Keygen failed");
+    let keypair = MlKem768::keypair(&mut rng).expect("Keygen failed");
+    let pk = MlKem768::public_key(&keypair);
+    let sk = MlKem768::secret_key(&keypair);
     let (valid_ct, _valid_ss) = MlKem768::encapsulate(&mut rng, &pk).expect("Encapsulation failed");
 
     let mut ct_bytes = valid_ct.to_bytes();
