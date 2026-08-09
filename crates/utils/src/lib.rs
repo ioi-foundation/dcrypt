@@ -12,4 +12,6 @@
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 extern crate alloc;
 
-pub mod data_conversion; // Added this line
+/// Text/binary conversion helpers require an allocator.
+#[cfg(any(feature = "std", feature = "alloc"))]
+pub mod data_conversion;
