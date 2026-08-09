@@ -133,6 +133,12 @@ UNPROTECTED_HIGH_LEVEL_KEY_COPY = re.compile(
     re.DOTALL,
 )
 BLS_SECRET_CAPABLE_MSM = re.compile(r"\bpub\s+fn\s+msm\s*\(")
+ARGON2_BLOCK_GUARDED_ZEROIZE = re.compile(
+    r"impl\s+Zeroize\s+for\s+Block\s*\{[^{}]*"
+    r"fn\s+zeroize\s*\(\s*&mut\s+self\s*\)\s*\{[^{}]*"
+    r"self\s*\.\s*0\s*\.\s*zeroize\s*\(\s*\)",
+    re.DOTALL,
+)
 MISLEADING_SECURE_OPERATION_API = re.compile(
     r"\b(?:trait\s+SecureOperation(?:Ext)?|"
     r"struct\s+SecureOperationBuilder|type\s+CleanupFn)\b"
@@ -232,6 +238,7 @@ TARGETED_LIFECYCLE_REQUIREMENTS = {
         re.compile(r"impl\s+Drop\s+for\s+Blake2s\b"),
     ),
     "src/kdf/argon2/mod.rs": (
+        ARGON2_BLOCK_GUARDED_ZEROIZE,
         re.compile(r"impl\s+Drop\s+for\s+Block\b"),
         re.compile(r"fn\s+argon2_g\s*\([^)]*\)\s*->\s*Zeroizing\s*<", re.DOTALL),
     ),
@@ -2358,6 +2365,13 @@ println!("cargo:rustc-link-lib=native");
     assert UNPROTECTED_HIGH_LEVEL_KEY_COPY.search("let mut buffer_bytes = [0u8; 32];")
     assert len(MISLEADING_SECURE_OPERATION_API.findall(code_only)) == 1
     assert len(REMOVED_CONSTANT_TIME_CONVENIENCE.findall(code_only)) == 1
+    assert ARGON2_BLOCK_GUARDED_ZEROIZE.search(
+        "impl Zeroize for Block { fn zeroize(&mut self) { self.0.zeroize(); } }"
+    )
+    assert not ARGON2_BLOCK_GUARDED_ZEROIZE.search(
+        "impl Zeroize for Block { fn zeroize(&mut self) { "
+        "self.0.iter_mut().for_each(|byte| *byte = 0); } }"
+    )
     assert len(RAW_SECRET_BYTE_OUTPUT.findall(code_only)) == 1
     assert len(DIRECT_RNG_FILL.findall(code_only)) == 1
     assert (

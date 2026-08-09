@@ -94,7 +94,7 @@ struct Block([u8; ARGON2_BLOCK_SIZE]);
 
 impl Zeroize for Block {
     fn zeroize(&mut self) {
-        self.0.iter_mut().for_each(|b| *b = 0);
+        self.0.zeroize();
     }
 }
 
