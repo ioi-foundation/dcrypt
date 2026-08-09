@@ -24,9 +24,6 @@ use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroizing;
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-
 const KDF_INFO: &[u8] = b"dcrypt-v3/ECDH-P224-KEM/shared-secret";
 const CONFIRMATION_LABEL: &[u8] = b"dcrypt-v3/ECDH-P224-KEM/confirmation";
 

@@ -650,12 +650,36 @@ class BoundaryAudit:
         target = policy["targets"]["no-std"]
         if target not in installed_targets:
             return
+        package_features = policy.get("no-std-package-features", {})
+        configured_packages = set(package_features)
+        if configured_packages != published_names:
+            missing = sorted(published_names - configured_packages)
+            extra = sorted(configured_packages - published_names)
+            if missing:
+                self.fail(
+                    "no-std-policy",
+                    "missing per-package feature profiles: " + ", ".join(missing),
+                )
+            if extra:
+                self.fail(
+                    "no-std-policy",
+                    "unknown per-package feature profiles: " + ", ".join(extra),
+                )
         with tempfile.TemporaryDirectory(prefix="dcrypt-no-std-") as temp:
             env = clean_cargo_env()
             env["RUSTFLAGS"] = ""
             env["CARGO_TARGET_DIR"] = temp
             for package_name in sorted(published_names):
                 scope = f"no-std:{package_name}"
+                features = package_features.get(package_name, [])
+                if not isinstance(features, list) or not all(
+                    isinstance(feature, str) and feature for feature in features
+                ):
+                    self.fail(scope, "no_std feature profile must be a string array")
+                    continue
+                feature_args = (
+                    ["--features", ",".join(features)] if features else []
+                )
                 tree = self.command(
                     [
                         "cargo",
@@ -664,6 +688,7 @@ class BoundaryAudit:
                         "--package",
                         package_name,
                         "--no-default-features",
+                        *feature_args,
                         "--target",
                         target,
                         "--edges",
@@ -704,6 +729,7 @@ class BoundaryAudit:
                         package_name,
                         "--lib",
                         "--no-default-features",
+                        *feature_args,
                         "--target",
                         target,
                     ],
@@ -722,6 +748,9 @@ class BoundaryAudit:
             "policy_sha256": sha256_file(POLICY_PATH),
             "lock_sha256": sha256_file(LOCK_PATH) if LOCK_PATH.is_file() else None,
             "published_packages": policy["published-packages"],
+            "no_std_package_features": policy.get(
+                "no-std-package-features", {}
+            ),
             "closures": {
                 profile: sorted(
                     package_label(self.packages[package_id])

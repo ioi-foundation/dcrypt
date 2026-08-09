@@ -25,9 +25,6 @@ use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroizing;
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-
 const KDF_INFO: &[u8] = b"dcrypt-v3/ECDH-P256-KEM/shared-secret";
 
 /// ECDH KEM with P-256 curve

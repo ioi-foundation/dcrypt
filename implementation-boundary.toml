@@ -253,3 +253,20 @@ linux-x86-64 = "x86_64-unknown-linux-gnu"
 linux-aarch64 = "aarch64-unknown-linux-gnu"
 wasm = "wasm32-unknown-unknown"
 no-std = "thumbv7em-none-eabihf"
+
+# Functional allocator-backed no_std profiles for every published crate. The
+# checker also retains a separate workspace-wide bare --no-default-features
+# build, so these profiles add coverage rather than weakening it.
+[no-std-package-features]
+dcrypt-internal = ["alloc"]
+dcrypt-params = []
+dcrypt-api = ["alloc"]
+dcrypt-common = ["alloc"]
+dcrypt-algorithms = ["alloc", "hash", "xof", "aead", "block", "kdf", "mac", "stream", "ec"]
+dcrypt-symmetric = ["alloc"]
+dcrypt-kem = ["alloc", "traditional", "post-quantum"]
+dcrypt-sign = ["alloc", "traditional", "post-quantum"]
+dcrypt-pke = ["alloc"]
+dcrypt-utils = ["alloc"]
+dcrypt-hybrid = ["alloc"]
+dcrypt = ["alloc", "algorithms", "symmetric", "kem", "sign", "pke", "hybrid", "traditional", "post-quantum"]
