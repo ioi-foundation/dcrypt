@@ -26,9 +26,17 @@ Owned excluded workspaces are declared explicitly in
 non-published, excluded from the release workspace, free of oracle and
 native/FFI/OS-entropy dependencies, and equal its exact external-package
 snapshot. The checker scans its complete normal/build closure and actively
-compiles every target for unsafe-code diagnostics and native build output. CI
-and the release script additionally run unsafe-deny, RustSec, and cargo-deny
-checks against the legacy migration workspace and its own tracked lockfile.
+compiles every target for unsafe-code diagnostics and native build output. The
+root `workspace.exclude` list must exactly equal the policy's verification,
+fuzz, and owned-workspace classifications. Release rehearsal and preparation
+enumerate that policy rather than hard-coding paths: they validate exact path
+pins, refresh every classified lockfile, format each workspace, test the
+verification and owned categories, and build and run every target in the fuzz
+category with a fixed seed and bounded campaign. The release
+script also runs `cargo audit` and `cargo deny` against every classified
+manifest or tracked lockfile. Those test-only checks provide dependency
+visibility for oracle and fuzz tooling; they do not make those implementations
+part of the published dependency closure or the zero-native release claim.
 
 The policy has no unsafe/native exceptions and the gate has no release-mode
 bypass. `--skip-checks` skips only the separate format, audit/deny, Miri, and
@@ -62,9 +70,14 @@ tools/release-dcrypt.sh --version 3.0.0
 ```
 
 The rehearsal checks the target version on crates.io, verifies Cargo metadata
-and exact internal dependency versions, runs the release gates, checks package
-file lists, and previews the `cargo-release` version changes. It does not edit,
-commit, tag, push, or publish anything.
+and exact internal dependency versions, runs the complete ACVP target, the
+AES-CBC property target, the separate statistical timing target, and the other
+release gates. Secret-bearing and rejection-path timing checks are blocking;
+the ML-DSA verification comparison is retained as an explicitly non-blocking
+public-input diagnostic because its messages, signatures, public key, validity,
+canonical-hint work, and `SampleInBall` rejection work are all public. The
+rehearsal then checks package file lists and previews the `cargo-release`
+version changes. It does not edit, commit, tag, push, or publish anything.
 
 For a quick script-only rehearsal while developing the workflow:
 

@@ -125,7 +125,7 @@ pub(crate) fn ecdh_component(group: &TestGroup, case: &TestCase) -> Result<()> {
         };
 
         if let Some(expected_z) = lookup(case, group, &["z", "sharedSecret"]) {
-            if z_hex != expected_z {
+            if !super::hex_equal(&z_hex, &expected_z) {
                 return Err(EngineError::Mismatch {
                     expected: expected_z,
                     actual: z_hex,

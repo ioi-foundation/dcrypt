@@ -101,7 +101,9 @@ TARGETED_SECRET_SCRATCH = {
         r"(?:\blet\s+(?:mut\s+)?(?:bytes|key|initial|state|output)"
         r"(?:\s*:\s*[^=;]+)?\s*=\s*\[|"
         r"\b(?:u32|u64)::from_le_bytes\s*\(\s*\[|"
-        r"\.to_le_bytes\s*\(\s*\))"
+        r"\.to_le_bytes\s*\(\s*\)|"
+        r"#\s*\[\s*derive\s*\([^]]*\bClone\b[^]]*\)\s*\]\s*"
+        r"pub\s+struct\s+ChaCha20Rng\b)"
     ),
 }
 TARGETED_LIFECYCLE_REQUIREMENTS = {
@@ -2073,6 +2075,9 @@ println!("cargo:rustc-link-lib=native");
     )
     assert TARGETED_SECRET_SCRATCH["src/random.rs"].search(
         "let mut bytes = [0u8; 32];"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/random.rs"].search(
+        "#[derive(Clone)]\npub struct ChaCha20Rng { key: [u32; 8] }"
     )
     assert UNSAFE_TOKEN.search("#![forbid(unsafe_code)]") is None
     assert has_crate_level_forbid("// header\n#![forbid(unsafe_code)]\nfn ok() {}")

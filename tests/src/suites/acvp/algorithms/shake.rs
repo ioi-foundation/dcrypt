@@ -140,7 +140,7 @@ pub(crate) fn shake_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
         // Check result if expected value was provided
         if let Some(expected) = expected_out {
-            if output_hex != expected {
+            if !super::hex_equal(&output_hex, &expected) {
                 return Err(EngineError::Mismatch {
                     expected,
                     actual: output_hex,
@@ -253,7 +253,7 @@ pub(crate) fn shake_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Check result if expected value was provided
     if let Some(expected) = expected_md {
-        if output_hex != expected {
+        if !super::hex_equal(&output_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: output_hex,
@@ -448,7 +448,7 @@ pub(crate) fn shake_ldt(group: &TestGroup, case: &TestCase) -> Result<()> {
 
         // Check result if expected value was provided
         if let Some(expected) = case.inputs.get("md").map(|v| v.as_string()) {
-            if output_hex != expected {
+            if !super::hex_equal(&output_hex, &expected) {
                 return Err(EngineError::Mismatch {
                     expected,
                     actual: output_hex,

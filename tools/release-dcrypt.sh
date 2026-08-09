@@ -67,8 +67,8 @@ Options:
   --skip-tests         Development rehearsal only: skip workspace, vector,
                        interoperability, and isolated timing tests.
   --skip-checks        Development rehearsal only: skip format/check,
-                       audit/deny, Miri, and fuzz builds. The implementation
-                       boundary and BLS assembly gates cannot be skipped.
+                       audit/deny, Miri, and bounded fuzz campaigns. The
+                       implementation-boundary and BLS assembly gates cannot be skipped.
   --resume CRATE       Resume a partial --execute at CRATE, or use "auto" to
                        trust crates.io as the source of truth.
   --registry-wait SEC  Maximum registry propagation wait per crate (default 300).
@@ -232,12 +232,12 @@ run_test_gates() {
     info "Running workspace tests"
     cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
 
-    info "Running exact ML-DSA ACVP gates"
-    cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_ -- \
+    info "Running the complete ACVP suite, including exact ML-DSA and ML-KEM outputs"
+    cargo test --release -p dcrypt-tests --test acvp_tests -- \
         --test-threads=1 --nocapture
 
-    info "Running exact ML-KEM ACVP gates"
-    cargo test --release -p dcrypt-tests --test acvp_tests test_ml_kem_ -- \
+    info "Running AES-CBC property tests"
+    cargo test --release -p dcrypt-tests --test property_aes_cbc -- \
         --test-threads=1 --nocapture
 
     local category workspace
@@ -355,13 +355,23 @@ run_check_gates() {
     if cargo_subcommand_available fuzz; then
         while IFS=$'\t' read -r category workspace; do
             [[ "$category" == "fuzz" ]] || continue
-            info "Building every cargo-fuzz target in $workspace"
+            info "Building and running every cargo-fuzz target in $workspace"
             (
                 cd "$PROJECT_ROOT/$workspace"
-                while IFS= read -r fuzz_target; do
-                    [[ -n "$fuzz_target" ]] || continue
+                local -a fuzz_targets=()
+                local fuzz_listing
+                fuzz_listing=$(cargo fuzz list)
+                mapfile -t fuzz_targets <<<"$fuzz_listing"
+                ((${#fuzz_targets[@]} > 0)) \
+                    || die "classified fuzz workspace has no cargo-fuzz targets: $workspace"
+                local fuzz_target
+                for fuzz_target in "${fuzz_targets[@]}"; do
+                    [[ -n "$fuzz_target" ]] \
+                        || die "cargo fuzz list returned an empty target in $workspace"
                     cargo fuzz build "$fuzz_target"
-                done < <(cargo fuzz list)
+                    cargo fuzz run "$fuzz_target" -- -runs=1000 -seed=424242
+                done
+                info "Completed 1000 deterministic runs for each of ${#fuzz_targets[@]} fuzz targets in $workspace"
             )
         done < <(classified_workspace_records)
     elif [[ "$MODE" == "dry-run" ]]; then

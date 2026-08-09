@@ -6,7 +6,7 @@
 #[cfg(feature = "alloc")]
 use crate::alloc_prelude::*;
 
-use crate::error::{validate, Result};
+use crate::error::{validate, Error, Result};
 use crate::hash::{HashAlgorithm, HashFunction};
 use crate::types::Digest;
 use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
@@ -115,6 +115,31 @@ const K512: [u64; 80] = [
     0x5fcb6fab3ad6faec,
     0x6c44198c4a475817,
 ];
+
+/// Validate an MSB-first bit string and split it into whole bytes plus an
+/// optional final partial byte. FIPS 180-4 permits messages whose length is
+/// not a multiple of eight bits; the unused low bits of the final storage byte
+/// are not part of the message and must be zero.
+fn split_bit_message(data: &[u8], bit_len: usize) -> Result<(&[u8], Option<(u8, u8)>)> {
+    let expected_bytes = bit_len.div_ceil(8);
+    validate::length("SHA-2 bit string", data.len(), expected_bytes)?;
+
+    let whole_bytes = bit_len / 8;
+    let trailing_bits = (bit_len % 8) as u8;
+    if trailing_bits == 0 {
+        return Ok((data, None));
+    }
+
+    let final_byte = data[whole_bytes];
+    let unused_mask = (1u8 << (8 - trailing_bits)) - 1;
+    validate::parameter(
+        final_byte & unused_mask == 0,
+        "data",
+        "unused low bits in the final SHA-2 input byte must be zero",
+    )?;
+
+    Ok((&data[..whole_bytes], Some((final_byte, trailing_bits))))
+}
 
 // Define algorithm marker types for each hash function
 /// Marker type for SHA-256 algorithm
@@ -416,26 +441,41 @@ impl Sha256 {
     }
 
     fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; SHA256_OUTPUT_SIZE]>> {
-        self.total_bytes += self.buffer_idx as u64;
-        let bit_len = self.total_bytes * 8;
+        self.finalize_internal_bits(None)
+    }
 
-        // Use ZeroizeGuard for sensitive padding operations
-        let pad_buffer = EphemeralSecret::new([0u8; SHA256_BLOCK_SIZE]);
+    fn finalize_internal_bits(
+        &mut self,
+        trailing: Option<(u8, u8)>,
+    ) -> Result<Zeroizing<[u8; SHA256_OUTPUT_SIZE]>> {
+        let trailing_bits = trailing.map_or(0, |(_, bits)| bits);
+        let bit_len = self
+            .total_bytes
+            .checked_add(self.buffer_idx as u64)
+            .and_then(|bytes| bytes.checked_mul(8))
+            .and_then(|bits| bits.checked_add(u64::from(trailing_bits)))
+            .ok_or(Error::Processing {
+                operation: "SHA-256 finalization",
+                details: "message bit length overflow",
+            })?;
 
-        // padding
-        self.buffer[self.buffer_idx] = 0x80;
-        if self.buffer_idx >= 56 {
-            for b in &mut self.buffer[self.buffer_idx + 1..] {
-                *b = 0;
-            }
+        // Append the first padding bit immediately after the final message bit.
+        // The optional byte is already validated to have zero unused low bits.
+        let occupied = if let Some((final_byte, bits)) = trailing {
+            debug_assert!((1..=7).contains(&bits));
+            self.buffer[self.buffer_idx] = final_byte | (0x80 >> bits);
+            self.buffer_idx + 1
+        } else {
+            self.buffer[self.buffer_idx] = 0x80;
+            self.buffer_idx + 1
+        };
+        self.buffer[occupied..].zeroize();
+
+        if occupied > 56 {
             let mut block = Zeroizing::new([0u8; SHA256_BLOCK_SIZE]);
             block.copy_from_slice(&self.buffer);
             Self::compress(&mut self.state, &block)?;
-            self.buffer = *pad_buffer;
-        } else {
-            for b in &mut self.buffer[self.buffer_idx + 1..56] {
-                *b = 0;
-            }
+            self.buffer.zeroize();
         }
 
         for (index, byte) in self.buffer[56..].iter_mut().enumerate() {
@@ -472,6 +512,27 @@ impl Sha224 {
             buffer_idx: 0,
             total_bytes: 0,
         }
+    }
+
+    /// Hash an MSB-first bit string of the exact length supplied.
+    ///
+    /// This explicit entry point exists for standards conformance inputs that
+    /// are not byte-aligned. Ordinary callers should use [`HashFunction`].
+    pub fn digest_bits(data: &[u8], bit_len: usize) -> Result<Digest<SHA224_OUTPUT_SIZE>> {
+        let full = sha256_digest_bits_with_state(data, bit_len, Self::init_state())?;
+        let mut digest = Digest::<SHA224_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA224_OUTPUT_SIZE]);
+        Ok(digest)
+    }
+}
+
+impl Sha256 {
+    /// Hash an MSB-first bit string of the exact length supplied.
+    pub fn digest_bits(data: &[u8], bit_len: usize) -> Result<Digest<SHA256_OUTPUT_SIZE>> {
+        let full = sha256_digest_bits_with_state(data, bit_len, Self::init_state())?;
+        let mut digest = Digest::<SHA256_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..]);
+        Ok(digest)
     }
 }
 
@@ -618,25 +679,39 @@ impl Sha512 {
     }
 
     fn finalize_internal_u128(&mut self) -> Result<Zeroizing<[u8; SHA512_OUTPUT_SIZE]>> {
-        self.total_bytes = self.total_bytes.wrapping_add(self.buffer_idx as u128);
-        let bit_len = self.total_bytes.wrapping_mul(8);
+        self.finalize_internal_bits_u128(None)
+    }
 
-        // Use EphemeralSecret for sensitive padding operations
-        let pad_buffer = EphemeralSecret::new([0u8; SHA512_BLOCK_SIZE]);
+    fn finalize_internal_bits_u128(
+        &mut self,
+        trailing: Option<(u8, u8)>,
+    ) -> Result<Zeroizing<[u8; SHA512_OUTPUT_SIZE]>> {
+        let trailing_bits = trailing.map_or(0, |(_, bits)| bits);
+        let bit_len = self
+            .total_bytes
+            .checked_add(self.buffer_idx as u128)
+            .and_then(|bytes| bytes.checked_mul(8))
+            .and_then(|bits| bits.checked_add(u128::from(trailing_bits)))
+            .ok_or(Error::Processing {
+                operation: "SHA-512 finalization",
+                details: "message bit length overflow",
+            })?;
 
-        self.buffer[self.buffer_idx] = 0x80;
-        if self.buffer_idx >= SHA512_BLOCK_SIZE - 16 {
-            for b in &mut self.buffer[self.buffer_idx + 1..] {
-                *b = 0;
-            }
+        let occupied = if let Some((final_byte, bits)) = trailing {
+            debug_assert!((1..=7).contains(&bits));
+            self.buffer[self.buffer_idx] = final_byte | (0x80 >> bits);
+            self.buffer_idx + 1
+        } else {
+            self.buffer[self.buffer_idx] = 0x80;
+            self.buffer_idx + 1
+        };
+        self.buffer[occupied..].zeroize();
+
+        if occupied > SHA512_BLOCK_SIZE - 16 {
             let mut block = Zeroizing::new([0u8; SHA512_BLOCK_SIZE]);
             block.copy_from_slice(&self.buffer);
             Self::compress(&mut self.state, &block)?;
-            self.buffer = *pad_buffer;
-        } else {
-            for b in &mut self.buffer[self.buffer_idx + 1..SHA512_BLOCK_SIZE - 16] {
-                *b = 0;
-            }
+            self.buffer.zeroize();
         }
 
         for (index, byte) in self.buffer[SHA512_BLOCK_SIZE - 16..].iter_mut().enumerate() {
@@ -705,6 +780,83 @@ impl Sha512_256 {
             total_bytes: 0,
         }
     }
+}
+
+impl Sha384 {
+    fn init_state() -> [u64; 8] {
+        [
+            0xcbbb9d5dc1059ed8,
+            0x629a292a367cd507,
+            0x9159015a3070dd17,
+            0x152fecd8f70e5939,
+            0x67332667ffc00b31,
+            0x8eb44a8768581511,
+            0xdb0c2e0d64f98fa7,
+            0x47b5481dbefa4fa4,
+        ]
+    }
+
+    /// Hash an MSB-first bit string of the exact length supplied.
+    pub fn digest_bits(data: &[u8], bit_len: usize) -> Result<Digest<SHA384_OUTPUT_SIZE>> {
+        let full = sha512_digest_bits_with_state(data, bit_len, Self::init_state())?;
+        let mut digest = Digest::<SHA384_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA384_OUTPUT_SIZE]);
+        Ok(digest)
+    }
+}
+
+impl Sha512 {
+    /// Hash an MSB-first bit string of the exact length supplied.
+    pub fn digest_bits(data: &[u8], bit_len: usize) -> Result<Digest<SHA512_OUTPUT_SIZE>> {
+        let full = sha512_digest_bits_with_state(data, bit_len, Self::init_state())?;
+        let mut digest = Digest::<SHA512_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..]);
+        Ok(digest)
+    }
+}
+
+impl Sha512_224 {
+    /// Hash an MSB-first bit string of the exact length supplied.
+    pub fn digest_bits(data: &[u8], bit_len: usize) -> Result<Digest<SHA224_OUTPUT_SIZE>> {
+        let full = sha512_digest_bits_with_state(data, bit_len, Self::init_state())?;
+        let mut digest = Digest::<SHA224_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA224_OUTPUT_SIZE]);
+        Ok(digest)
+    }
+}
+
+impl Sha512_256 {
+    /// Hash an MSB-first bit string of the exact length supplied.
+    pub fn digest_bits(data: &[u8], bit_len: usize) -> Result<Digest<SHA256_OUTPUT_SIZE>> {
+        let full = sha512_digest_bits_with_state(data, bit_len, Self::init_state())?;
+        let mut digest = Digest::<SHA256_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA256_OUTPUT_SIZE]);
+        Ok(digest)
+    }
+}
+
+fn sha256_digest_bits_with_state(
+    data: &[u8],
+    bit_len: usize,
+    state: [u32; 8],
+) -> Result<Zeroizing<[u8; SHA256_OUTPUT_SIZE]>> {
+    let (whole_bytes, trailing) = split_bit_message(data, bit_len)?;
+    let mut hash = Sha256::new();
+    hash.state = state;
+    hash.update_internal(whole_bytes)?;
+    hash.finalize_internal_bits(trailing)
+}
+
+fn sha512_digest_bits_with_state(
+    data: &[u8],
+    bit_len: usize,
+    state: [u64; 8],
+) -> Result<Zeroizing<[u8; SHA512_OUTPUT_SIZE]>> {
+    let (whole_bytes, trailing) = split_bit_message(data, bit_len)?;
+    let mut hash = Sha512::new();
+    hash.state = state;
+    hash.update_internal_u128(whole_bytes)?;
+    hash.finalize_internal_bits_u128(trailing)
 }
 
 // --- HashFunction impls with SecureZeroingType ---
@@ -803,16 +955,7 @@ impl HashFunction for Sha224 {
 impl SecureZeroingType for Sha384 {
     fn zeroed() -> Self {
         Sha384 {
-            state: [
-                0xcbbb9d5dc1059ed8,
-                0x629a292a367cd507,
-                0x9159015a3070dd17,
-                0x152fecd8f70e5939,
-                0x67332667ffc00b31,
-                0x8eb44a8768581511,
-                0xdb0c2e0d64f98fa7,
-                0x47b5481dbefa4fa4,
-            ],
+            state: Self::init_state(),
             buffer: [0u8; SHA512_BLOCK_SIZE],
             buffer_idx: 0,
             total_bytes: 0,

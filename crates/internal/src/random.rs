@@ -96,7 +96,15 @@ impl<R: CryptoRng + ?Sized> CryptoRng for &mut R {}
 /// This type never obtains operating-system entropy. A caller that uses it for
 /// cryptography must provide a fresh, unpredictable 32-byte seed and must not
 /// reuse that seed across independent generator instances.
-#[derive(Clone)]
+///
+/// The generator intentionally does not implement `Clone`: duplicating a
+/// stream state can repeat nonces or key material.
+///
+/// ```compile_fail
+/// use dcrypt_internal::random::ChaCha20Rng;
+/// let generator = ChaCha20Rng::from_seed([7u8; 32]);
+/// let duplicate = generator.clone();
+/// ```
 pub struct ChaCha20Rng {
     key: [u32; 8],
     counter: u32,

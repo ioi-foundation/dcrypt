@@ -10,6 +10,13 @@ use hex;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
 
+fn lookup<'a>(case: &'a TestCase, group: &'a TestGroup, name: &str) -> Option<String> {
+    case.inputs
+        .get(name)
+        .or_else(|| group.defaults.get(name))
+        .map(|value| value.as_string())
+}
+
 /// HMAC Algorithm Functional Test (AFT) handler
 pub(crate) fn hmac_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
     // Get inputs
@@ -40,43 +47,16 @@ pub(crate) fn hmac_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
     // Determine which HMAC variant to use based on algorithm name
     let algorithm = &group.algorithm;
 
-    let mac_hex = match algorithm.as_str() {
-        "HMAC-SHA-1" | "HMAC-SHA1" => {
-            let mac = Hmac::<Sha1>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA2-224" | "HMAC-SHA-224" | "HMAC-SHA224" => {
-            let mac = Hmac::<Sha224>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA2-256" | "HMAC-SHA-256" | "HMAC-SHA256" => {
-            let mac = Hmac::<Sha256>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA2-384" | "HMAC-SHA-384" | "HMAC-SHA384" => {
-            let mac = Hmac::<Sha384>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA2-512" | "HMAC-SHA-512" | "HMAC-SHA512" => {
-            let mac = Hmac::<Sha512>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA3-224" => {
-            let mac = Hmac::<Sha3_224>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA3-256" => {
-            let mac = Hmac::<Sha3_256>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA3-384" => {
-            let mac = Hmac::<Sha3_384>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
-        "HMAC-SHA3-512" => {
-            let mac = Hmac::<Sha3_512>::mac(&key, &msg)?;
-            hex::encode(&mac)
-        }
+    let mac = match algorithm.as_str() {
+        "HMAC-SHA-1" | "HMAC-SHA1" => Hmac::<Sha1>::mac(&key, &msg)?,
+        "HMAC-SHA2-224" | "HMAC-SHA-224" | "HMAC-SHA224" => Hmac::<Sha224>::mac(&key, &msg)?,
+        "HMAC-SHA2-256" | "HMAC-SHA-256" | "HMAC-SHA256" => Hmac::<Sha256>::mac(&key, &msg)?,
+        "HMAC-SHA2-384" | "HMAC-SHA-384" | "HMAC-SHA384" => Hmac::<Sha384>::mac(&key, &msg)?,
+        "HMAC-SHA2-512" | "HMAC-SHA-512" | "HMAC-SHA512" => Hmac::<Sha512>::mac(&key, &msg)?,
+        "HMAC-SHA3-224" => Hmac::<Sha3_224>::mac(&key, &msg)?,
+        "HMAC-SHA3-256" => Hmac::<Sha3_256>::mac(&key, &msg)?,
+        "HMAC-SHA3-384" => Hmac::<Sha3_384>::mac(&key, &msg)?,
+        "HMAC-SHA3-512" => Hmac::<Sha3_512>::mac(&key, &msg)?,
         _ => {
             return Err(EngineError::InvalidData(format!(
                 "Unsupported HMAC variant: {}",
@@ -85,9 +65,27 @@ pub(crate) fn hmac_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
         }
     };
 
+    let mac_len_bits = lookup(case, group, "macLen")
+        .ok_or(EngineError::MissingField("macLen"))?
+        .parse::<usize>()
+        .map_err(|_| EngineError::InvalidData("macLen must be an integer".into()))?;
+    if mac_len_bits % 8 != 0 {
+        return Err(EngineError::InvalidData(
+            "macLen must be a multiple of 8 bits".into(),
+        ));
+    }
+    let mac_len_bytes = mac_len_bits / 8;
+    if mac_len_bytes > mac.len() {
+        return Err(EngineError::InvalidData(format!(
+            "macLen {mac_len_bits} exceeds the {}-bit HMAC output",
+            mac.len() * 8
+        )));
+    }
+    let mac_hex = hex::encode(&mac[..mac_len_bytes]);
+
     // Check result if expected value was provided
     if let Some(expected) = expected_mac {
-        if mac_hex != expected {
+        if !super::hex_equal(&mac_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: mac_hex,

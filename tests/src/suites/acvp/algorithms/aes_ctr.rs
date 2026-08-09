@@ -82,6 +82,11 @@ fn aes_ctr_process(group: &TestGroup, case: &TestCase, is_encrypt: bool) -> Resu
     // Decode hex values
     let mut key_bytes = hex::decode(&key_hex)?;
     let input = hex::decode(&input_hex)?;
+    let payload_len_bits = lookup(case, group, &["payloadLen"])
+        .ok_or(EngineError::MissingField("payloadLen"))?
+        .parse::<usize>()
+        .map_err(|_| EngineError::InvalidData("payloadLen must be an integer".into()))?;
+    validate_payload_bitstring(&input, payload_len_bits)?;
 
     // Handle IV/counter - for encrypt, it might need to be generated
     let iv_bytes = if let Some(iv_hex) = lookup(case, group, &["iv", "ctr", "nonce", "counter"]) {
@@ -117,19 +122,19 @@ fn aes_ctr_process(group: &TestGroup, case: &TestCase, is_encrypt: bool) -> Resu
             let key = SecretBytes::<16>::from_slice(&key_bytes)
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes128::new(&key);
-            process_ctr_with_full_counter(cipher, &iv_bytes, &input)?
+            process_ctr_bits(cipher, &iv_bytes, &input, payload_len_bits)?
         }
         24 => {
             let key = SecretBytes::<24>::from_slice(&key_bytes)
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes192::new(&key);
-            process_ctr_with_full_counter(cipher, &iv_bytes, &input)?
+            process_ctr_bits(cipher, &iv_bytes, &input, payload_len_bits)?
         }
         32 => {
             let key = SecretBytes::<32>::from_slice(&key_bytes)
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes256::new(&key);
-            process_ctr_with_full_counter(cipher, &iv_bytes, &input)?
+            process_ctr_bits(cipher, &iv_bytes, &input, payload_len_bits)?
         }
         n => return Err(EngineError::KeySize(n)),
     };
@@ -156,6 +161,58 @@ fn aes_ctr_process(group: &TestGroup, case: &TestCase, is_encrypt: bool) -> Resu
             .insert(output_field.into(), hex::encode(&result));
         Ok(())
     }
+}
+
+/// Validate ACVP's canonical MSB-first representation of a bit string.
+///
+/// The byte-oriented CTR primitive intentionally has no bit-length semantics.
+/// ACVP carries that information separately in `payloadLen`, so this
+/// conformance layer requires exactly `ceil(payloadLen / 8)` bytes and zeroes
+/// in every unused low bit of the final byte.
+fn validate_payload_bitstring(data: &[u8], payload_len_bits: usize) -> Result<()> {
+    let expected_bytes = payload_len_bits
+        .checked_add(7)
+        .ok_or_else(|| EngineError::InvalidData("payloadLen is too large".into()))?
+        / 8;
+    if data.len() != expected_bytes {
+        return Err(EngineError::InvalidData(format!(
+            "payloadLen {payload_len_bits} requires {expected_bytes} bytes, got {}",
+            data.len()
+        )));
+    }
+
+    let used_bits = payload_len_bits % 8;
+    if used_bits != 0 {
+        let used_mask = u8::MAX << (8 - used_bits);
+        if data.last().is_some_and(|last| last & !used_mask != 0) {
+            return Err(EngineError::InvalidData(
+                "unused low payload bits must be zero".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn mask_unused_payload_bits(data: &mut [u8], payload_len_bits: usize) {
+    let used_bits = payload_len_bits % 8;
+    if used_bits != 0 {
+        let used_mask = u8::MAX << (8 - used_bits);
+        if let Some(last) = data.last_mut() {
+            *last &= used_mask;
+        }
+    }
+}
+
+fn process_ctr_bits<B: BlockCipher + Clone + Zeroize>(
+    cipher: B,
+    counter_block: &[u8],
+    data: &[u8],
+    payload_len_bits: usize,
+) -> Result<Vec<u8>> {
+    validate_payload_bitstring(data, payload_len_bits)?;
+    let mut result = process_ctr_with_full_counter(cipher, counter_block, data)?;
+    mask_unused_payload_bits(&mut result, payload_len_bits);
+    Ok(result)
 }
 
 /// Process CTR mode with a full 16-byte counter block (ACVP style)
@@ -291,7 +348,7 @@ fn aes_ctr_mct_process(group: &TestGroup, case: &TestCase, is_encrypt: bool) -> 
     // Check or store result
     if let Some(expected_hex) = case.inputs.get(output_field).map(|v| v.as_string()) {
         let result_hex = hex::encode(&data);
-        if result_hex == expected_hex {
+        if super::hex_equal(&result_hex, &expected_hex) {
             Ok(())
         } else {
             Err(EngineError::Mismatch {
@@ -313,4 +370,58 @@ pub fn register(map: &mut std::collections::HashMap<DispatchKey, HandlerFn>) {
     insert(map, "AES-CTR", "decrypt", "AFT", aes_ctr_decrypt);
     insert(map, "AES-CTR", "encrypt", "MCT", aes_ctr_mct_encrypt);
     insert(map, "AES-CTR", "decrypt", "MCT", aes_ctr_mct_decrypt);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn aes128() -> Aes128 {
+        Aes128::new(&SecretBytes::<16>::new([0x42; 16]))
+    }
+
+    #[test]
+    fn partial_payload_boundaries_mask_and_roundtrip() {
+        let mut counter = [0u8; 16];
+        counter[15] = 1;
+
+        for payload_len_bits in [1usize, 7, 8, 9, 15, 16] {
+            let bytes = (payload_len_bits + 7) / 8;
+            let mut plaintext = vec![0xA5; bytes];
+            mask_unused_payload_bits(&mut plaintext, payload_len_bits);
+
+            let ciphertext =
+                process_ctr_bits(aes128(), &counter, &plaintext, payload_len_bits).unwrap();
+            validate_payload_bitstring(&ciphertext, payload_len_bits).unwrap();
+
+            let recovered =
+                process_ctr_bits(aes128(), &counter, &ciphertext, payload_len_bits).unwrap();
+            assert_eq!(recovered, plaintext, "{payload_len_bits}-bit roundtrip");
+        }
+    }
+
+    #[test]
+    fn partial_payload_masks_exact_unused_low_bits() {
+        for (payload_len_bits, expected) in [
+            (1usize, vec![0x80]),
+            (7, vec![0xFE]),
+            (8, vec![0xFF]),
+            (9, vec![0xFF, 0x80]),
+            (15, vec![0xFF, 0xFE]),
+            (16, vec![0xFF, 0xFF]),
+        ] {
+            let mut value = vec![0xFF; expected.len()];
+            mask_unused_payload_bits(&mut value, payload_len_bits);
+            assert_eq!(value, expected, "{payload_len_bits}-bit mask");
+        }
+    }
+
+    #[test]
+    fn partial_payload_rejects_wrong_length_and_nonzero_unused_bits() {
+        assert!(validate_payload_bitstring(&[0x80], 9).is_err());
+        assert!(validate_payload_bitstring(&[0x80, 0x00], 8).is_err());
+        assert!(validate_payload_bitstring(&[0x01], 1).is_err());
+        assert!(validate_payload_bitstring(&[0xFF, 0x01], 9).is_err());
+        assert!(validate_payload_bitstring(&[], 0).is_ok());
+    }
 }

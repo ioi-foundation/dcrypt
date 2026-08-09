@@ -59,7 +59,7 @@ pub(crate) fn sha3_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Check result if expected value was provided
     if let Some(expected) = expected_md {
-        if digest_hex != expected {
+        if !super::hex_equal(&digest_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: digest_hex,
@@ -116,7 +116,7 @@ pub(crate) fn sha3_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Check result if expected value was provided
     if let Some(expected) = expected_md {
-        if digest_hex != expected {
+        if !super::hex_equal(&digest_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: digest_hex,
@@ -400,7 +400,7 @@ fn hash_and_check_result(group: &TestGroup, case: &TestCase, message: &[u8]) -> 
 
     // Check result if expected value was provided
     if let Some(expected) = expected_md {
-        if digest_hex != expected {
+        if !super::hex_equal(&digest_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: digest_hex,

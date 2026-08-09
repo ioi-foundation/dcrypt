@@ -2,7 +2,6 @@
 
 use crate::suites::acvp::error::{EngineError, Result};
 use crate::suites::acvp::model::{TestCase, TestGroup};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use dcrypt_algorithms::hash::sha1::Sha1;
 use dcrypt_algorithms::hash::sha2::{Sha224, Sha256, Sha384, Sha512};
 use dcrypt_algorithms::hash::sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512};
@@ -24,38 +23,6 @@ fn lookup<'a>(case: &'a TestCase, group: &'a TestGroup, names: &[&str]) -> Optio
         }
     }
     None
-}
-
-/// Decode a string that might be hex, base64, or raw ASCII
-fn decode_flexible(s: &str) -> Result<Vec<u8>> {
-    // First, check if it looks like hex (all chars are hex digits)
-    if s.chars().all(|c| c.is_ascii_hexdigit()) && s.len() % 2 == 0 {
-        if let Ok(decoded) = hex::decode(s) {
-            return Ok(decoded);
-        }
-    }
-
-    // Try Base64 decoding (with and without padding)
-    if let Ok(decoded) = BASE64.decode(s) {
-        return Ok(decoded);
-    }
-
-    // If the string length is not a multiple of 4, try adding padding
-    let padded = match s.len() % 4 {
-        0 => s.to_string(),
-        2 => format!("{}==", s),
-        3 => format!("{}=", s),
-        _ => s.to_string(),
-    };
-
-    if padded != s {
-        if let Ok(decoded) = BASE64.decode(&padded) {
-            return Ok(decoded);
-        }
-    }
-
-    // If all else fails, treat it as raw ASCII/UTF-8
-    Ok(s.as_bytes().to_vec())
 }
 
 /// PBKDF2 Algorithm Functional Test (AFT) handler
@@ -90,9 +57,11 @@ pub(crate) fn pbkdf2_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
     // Get expected derived key if provided (this is typically hex encoded)
     let expected_dk = lookup(case, group, &["derivedKey", "dk", "dkm"]);
 
-    // Decode inputs - try multiple encodings
-    let password = decode_flexible(&password_str)?;
-    let salt_bytes = decode_flexible(&salt_str)?;
+    // ACVP PBKDF encodes passwords as literal strings and salts as hexadecimal.
+    // Guessing encodings is not safe here: many ordinary ASCII passwords are also
+    // syntactically valid Base64 and would silently derive a different key.
+    let password = password_str.as_bytes();
+    let salt_bytes = hex::decode(&salt_str)?;
 
     // Get the HMAC algorithm
     let hmac_alg = lookup(case, group, &["hmacAlg"])
@@ -146,47 +115,47 @@ pub(crate) fn pbkdf2_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
     let dk_hex = match hmac_alg.as_str() {
         "SHA-1" | "SHA1" => {
             let pbkdf2 = Pbkdf2::<Sha1, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA-224" | "SHA224" | "SHA2-224" => {
             let pbkdf2 = Pbkdf2::<Sha224, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA-256" | "SHA256" | "SHA2-256" => {
             let pbkdf2 = Pbkdf2::<Sha256, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA-384" | "SHA384" | "SHA2-384" => {
             let pbkdf2 = Pbkdf2::<Sha384, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA-512" | "SHA512" | "SHA2-512" => {
             let pbkdf2 = Pbkdf2::<Sha512, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA3-224" | "SHA-3-224" => {
             let pbkdf2 = Pbkdf2::<Sha3_224, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA3-256" | "SHA-3-256" => {
             let pbkdf2 = Pbkdf2::<Sha3_256, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA3-384" | "SHA-3-384" => {
             let pbkdf2 = Pbkdf2::<Sha3_384, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         "SHA3-512" | "SHA-3-512" => {
             let pbkdf2 = Pbkdf2::<Sha3_512, 16>::with_params(params);
-            let dk = pbkdf2.derive_key(&password, Some(&salt_bytes), None, key_len_bytes)?;
+            let dk = pbkdf2.derive_key(password, Some(&salt_bytes), None, key_len_bytes)?;
             hex::encode(&dk)
         }
         _ => {
@@ -199,7 +168,7 @@ pub(crate) fn pbkdf2_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Check result if expected value was provided
     if let Some(expected) = expected_dk {
-        if dk_hex != expected {
+        if !super::hex_equal(&dk_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: dk_hex,

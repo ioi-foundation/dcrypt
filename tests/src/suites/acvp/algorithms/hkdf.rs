@@ -156,7 +156,7 @@ pub(crate) fn hkdf_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Check result if expected value was provided
     if let Some(expected) = expected_okm {
-        if okm_hex != expected {
+        if !super::hex_equal(&okm_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: okm_hex,

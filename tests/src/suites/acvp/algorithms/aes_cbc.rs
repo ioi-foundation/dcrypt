@@ -293,7 +293,7 @@ pub(crate) fn aes_cbc_mct_encrypt_optimized(_group: &TestGroup, case: &TestCase)
     if let Some(expected_hex) = case.inputs.get("ct").map(|v| v.as_string()) {
         // For test vectors, regular comparison is acceptable
         let result_hex = hex::encode(&pt);
-        if result_hex == expected_hex {
+        if super::hex_equal(&result_hex, &expected_hex) {
             Ok(())
         } else {
             Err(EngineError::Mismatch {
@@ -405,7 +405,7 @@ pub(crate) fn aes_cbc_mct_decrypt_optimized(_group: &TestGroup, case: &TestCase)
     if let Some(expected_hex) = case.inputs.get("pt").map(|v| v.as_string()) {
         // For test vectors, regular comparison is acceptable
         let result_hex = hex::encode(&ct);
-        if result_hex == expected_hex {
+        if super::hex_equal(&result_hex, &expected_hex) {
             Ok(())
         } else {
             Err(EngineError::Mismatch {

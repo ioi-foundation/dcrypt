@@ -120,10 +120,6 @@ keywords    = ["cryptography", "post-quantum", "crypto"]
 [workspace.dependencies]
 rand        = { version = "0.8.6", default-features = false }
 rand_chacha = "0.3.1"
-zeroize     = { version = "1.8.1", features = ["zeroize_derive"] }
-subtle      = { version = "2.6.1", default-features = false }
-serde       = { version = "1.0.219", features = ["derive"] }
-thiserror   = { version = "1.0.69" }
 
 [workspace.metadata.release]
 # All crates share the same version

@@ -21,6 +21,16 @@ pub(crate) fn sha2_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Decode the message from hex
     let msg_bytes = hex::decode(&msg_hex)?;
+    let bit_len = case
+        .inputs
+        .get("len")
+        .or_else(|| case.inputs.get("msgLen"))
+        .or_else(|| group.defaults.get("len"))
+        .or_else(|| group.defaults.get("msgLen"))
+        .map(|value| value.as_string().parse::<usize>())
+        .transpose()
+        .map_err(|_| EngineError::InvalidData("invalid SHA-2 message bit length".into()))?
+        .unwrap_or(msg_bytes.len() * 8);
 
     // Get expected digest if provided (for validation)
     let expected_md = case
@@ -34,27 +44,27 @@ pub(crate) fn sha2_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     let digest_hex = match algorithm.as_str() {
         "SHA2-224" | "SHA-224" => {
-            let digest = Sha224::digest(&msg_bytes)?;
+            let digest = Sha224::digest_bits(&msg_bytes, bit_len)?;
             hex::encode(digest.as_ref())
         }
         "SHA2-256" | "SHA-256" => {
-            let digest = Sha256::digest(&msg_bytes)?;
+            let digest = Sha256::digest_bits(&msg_bytes, bit_len)?;
             hex::encode(digest.as_ref())
         }
         "SHA2-384" | "SHA-384" => {
-            let digest = Sha384::digest(&msg_bytes)?;
+            let digest = Sha384::digest_bits(&msg_bytes, bit_len)?;
             hex::encode(digest.as_ref())
         }
         "SHA2-512" | "SHA-512" => {
-            let digest = Sha512::digest(&msg_bytes)?;
+            let digest = Sha512::digest_bits(&msg_bytes, bit_len)?;
             hex::encode(digest.as_ref())
         }
         "SHA2-512/224" | "SHA2-512-224" | "SHA-512/224" => {
-            let digest = Sha512_224::digest(&msg_bytes)?;
+            let digest = Sha512_224::digest_bits(&msg_bytes, bit_len)?;
             hex::encode(digest.as_ref())
         }
         "SHA2-512/256" | "SHA2-512-256" | "SHA-512/256" => {
-            let digest = Sha512_256::digest(&msg_bytes)?;
+            let digest = Sha512_256::digest_bits(&msg_bytes, bit_len)?;
             hex::encode(digest.as_ref())
         }
         _ => {
@@ -67,7 +77,7 @@ pub(crate) fn sha2_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Check result if expected value was provided
     if let Some(expected) = expected_md {
-        if digest_hex != expected {
+        if !super::hex_equal(&digest_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: digest_hex,
@@ -130,7 +140,7 @@ pub(crate) fn sha2_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Check result if expected value was provided
     if let Some(expected) = expected_md {
-        if digest_hex != expected {
+        if !super::hex_equal(&digest_hex, &expected) {
             return Err(EngineError::Mismatch {
                 expected,
                 actual: digest_hex,
@@ -347,12 +357,11 @@ fn handle_large_msg_test(
     // Get fullLength - try both as string and number
     let full_length_bits = large_msg
         .get("fullLength")
-        .map(|v| match v {
+        .and_then(|v| match v {
             FlexValue::String(s) => s.parse::<usize>().ok(),
-            FlexValue::Number(n) => n.as_u64().map(|x| x as usize),
+            FlexValue::Number(n) => n.as_u64().and_then(|x| usize::try_from(x).ok()),
             _ => None,
         })
-        .flatten()
         .ok_or(EngineError::MissingField("largeMsg.fullLength"))?;
 
     let expansion_technique = large_msg
@@ -371,61 +380,97 @@ fn handle_large_msg_test(
     // Decode the content pattern
     let content_bytes = hex::decode(&content_hex)?;
 
-    // For very large messages, check if we can handle them
-    const MAX_SIZE: usize = 100 * 1024 * 1024; // 100 MB limit
+    match expansion_technique.as_str() {
+        // LDT vectors intentionally reach multiple GiB. Feed a bounded repeating
+        // chunk into the incremental hash instead of allocating the full input.
+        "repeating" => hash_repeating_and_check(group, case, &content_bytes, full_length_bytes),
+        _ => Err(EngineError::InvalidData(format!(
+            "Unsupported expansion technique in largeMsg: {}",
+            expansion_technique
+        ))),
+    }
+}
 
-    if full_length_bytes > MAX_SIZE {
-        // Skip tests that are too large
-        eprintln!(
-            "Skipping LDT test {} - message size {} MB exceeds {} MB limit",
-            case.test_id,
-            full_length_bytes / (1024 * 1024),
-            MAX_SIZE / (1024 * 1024)
-        );
-
-        // If there's an expected digest, we need to return an error
-        if case.inputs.contains_key("md") {
-            return Err(EngineError::InvalidData(format!(
-                "Cannot process {} MB message in memory",
-                full_length_bytes / (1024 * 1024)
-            )));
-        }
-
-        // Otherwise, mark as skipped
-        case.outputs
-            .borrow_mut()
-            .insert("testPassed".into(), "false".into());
-        case.outputs.borrow_mut().insert(
-            "reason".into(),
-            format!(
-                "Message too large: {} MB",
-                full_length_bytes / (1024 * 1024)
-            ),
-        );
-
-        return Ok(());
+fn hash_repeating<H>(pattern: &[u8], target_len: usize) -> Result<String>
+where
+    H: HashFunction,
+    H::Output: AsRef<[u8]>,
+{
+    if target_len != 0 && pattern.is_empty() {
+        return Err(EngineError::InvalidData(
+            "non-zero length requested but repeating pattern is empty".into(),
+        ));
     }
 
-    // Generate the full message
-    let full_message = match expansion_technique.as_str() {
-        "repeating" => build_repeating(&content_bytes, full_length_bytes)?,
-        _ => {
+    let mut hash = H::new();
+    if target_len != 0 {
+        const TARGET_CHUNK: usize = 1024 * 1024;
+        let repeats = (TARGET_CHUNK / pattern.len()).max(1);
+        let chunk_len = repeats.checked_mul(pattern.len()).ok_or_else(|| {
+            EngineError::InvalidData("repeating SHA-2 chunk length overflow".into())
+        })?;
+        let mut chunk = Vec::with_capacity(chunk_len);
+        for _ in 0..repeats {
+            chunk.extend_from_slice(pattern);
+        }
+
+        let mut remaining = target_len;
+        while remaining >= chunk.len() {
+            hash.update(&chunk)?;
+            remaining -= chunk.len();
+        }
+        if remaining != 0 {
+            hash.update(&chunk[..remaining])?;
+        }
+    }
+
+    let digest = hash.finalize()?;
+    Ok(hex::encode(digest.as_ref()))
+}
+
+fn hash_repeating_and_check(
+    group: &TestGroup,
+    case: &TestCase,
+    pattern: &[u8],
+    target_len: usize,
+) -> Result<()> {
+    let digest_hex = match group.algorithm.as_str() {
+        "SHA2-224" | "SHA-224" => hash_repeating::<Sha224>(pattern, target_len)?,
+        "SHA2-256" | "SHA-256" => hash_repeating::<Sha256>(pattern, target_len)?,
+        "SHA2-384" | "SHA-384" => hash_repeating::<Sha384>(pattern, target_len)?,
+        "SHA2-512" | "SHA-512" => hash_repeating::<Sha512>(pattern, target_len)?,
+        "SHA2-512/224" | "SHA2-512-224" | "SHA-512/224" => {
+            hash_repeating::<Sha512_224>(pattern, target_len)?
+        }
+        "SHA2-512/256" | "SHA2-512-256" | "SHA-512/256" => {
+            hash_repeating::<Sha512_256>(pattern, target_len)?
+        }
+        algorithm => {
             return Err(EngineError::InvalidData(format!(
-                "Unsupported expansion technique in largeMsg: {}",
-                expansion_technique
+                "Unsupported SHA-2 variant: {}",
+                algorithm
             )))
         }
     };
+    check_digest(case, digest_hex)
+}
 
-    // Hash the message and check results
-    hash_and_check_result(group, case, &full_message)
+fn check_digest(case: &TestCase, digest_hex: String) -> Result<()> {
+    if let Some(expected) = case.inputs.get("md").map(|value| value.as_string()) {
+        if !super::hex_equal(&digest_hex, &expected) {
+            return Err(EngineError::Mismatch {
+                expected,
+                actual: digest_hex,
+            });
+        }
+    } else {
+        case.outputs.borrow_mut().insert("md".into(), digest_hex);
+    }
+    Ok(())
 }
 
 /// Common function to hash a message and check the result
 fn hash_and_check_result(group: &TestGroup, case: &TestCase, message: &[u8]) -> Result<()> {
-    // Get expected digest if provided
-    let expected_md = case.inputs.get("md").map(|v| v.as_string());
-
     // Determine which SHA-2 variant to use
     let algorithm = &group.algorithm;
 
@@ -462,20 +507,7 @@ fn hash_and_check_result(group: &TestGroup, case: &TestCase, message: &[u8]) -> 
         }
     };
 
-    // Check result if expected value was provided
-    if let Some(expected) = expected_md {
-        if digest_hex != expected {
-            return Err(EngineError::Mismatch {
-                expected,
-                actual: digest_hex,
-            });
-        }
-    } else {
-        // Store result for response generation
-        case.outputs.borrow_mut().insert("md".into(), digest_hex);
-    }
-
-    Ok(())
+    check_digest(case, digest_hex)
 }
 
 /// Build a message by repeating a pattern to reach target length
@@ -606,5 +638,31 @@ pub fn register(map: &mut std::collections::HashMap<DispatchKey, HandlerFn>) {
     // Added SHA2-512/256
     {
         insert(map, algo, "LDT", "LDT", sha2_ldt);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn repeating_stream_matches_materialized_message_across_chunk_boundary() {
+        let pattern = [0x12, 0x34, 0x56];
+        let target_len = 1024 * 1024 + 7;
+        let materialized = build_repeating(&pattern, target_len).unwrap();
+        let expected = hex::encode(Sha256::digest(&materialized).unwrap().as_ref());
+        assert_eq!(
+            hash_repeating::<Sha256>(&pattern, target_len).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn repeating_stream_rejects_empty_nonempty_message_pattern() {
+        assert!(hash_repeating::<Sha256>(&[], 1).is_err());
+        assert_eq!(
+            hash_repeating::<Sha256>(&[], 0).unwrap(),
+            hex::encode(Sha256::digest(&[]).unwrap().as_ref())
+        );
     }
 }

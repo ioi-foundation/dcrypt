@@ -104,6 +104,105 @@ fn test_sha512_256_abc() {
 }
 
 #[test]
+fn test_sha2_non_byte_aligned_acvp_vectors() {
+    // Published NIST ACVP vectors. Input bits are stored MSB-first.
+    let sha224 =
+        Sha224::digest_bits(&hex::decode("7CACC1C2B56D26A96D3A5B7648").unwrap(), 102).unwrap();
+    assert_eq!(
+        hex::encode(sha224.as_ref()),
+        "7b1b888dd4e5657ce7d20a6435b15c19ce2cf090d7928ed028220f44"
+    );
+
+    let sha384 = Sha384::digest_bits(&[0x5e], 7).unwrap();
+    assert_eq!(
+        hex::encode(sha384.as_ref()),
+        "2429a641d5826314c9963e9d8e72398f015c86cbb4cce398701a4817d6fec0c687ef1a7b228ac4eb5e2b687bc6aa1fb2"
+    );
+
+    let sha512_224 = Sha512_224::digest_bits(&[0x00], 3).unwrap();
+    assert_eq!(
+        hex::encode(sha512_224.as_ref()),
+        "22da154e08a398a7c8c335542c5217e3980a6cfdcfb8c634275698dd"
+    );
+}
+
+#[test]
+fn test_sha2_bit_input_validation_and_byte_equivalence() {
+    let byte_digest = Sha256::digest(b"abc").unwrap();
+    let bit_digest = Sha256::digest_bits(b"abc", 24).unwrap();
+    assert_eq!(byte_digest.as_ref(), bit_digest.as_ref());
+
+    assert!(Sha256::digest_bits(&[0x81], 1).is_err());
+    assert!(Sha256::digest_bits(&[], 1).is_err());
+    assert!(Sha256::digest_bits(&[0x80, 0x00], 1).is_err());
+}
+
+fn padded_bit_message(data: &[u8], bit_len: usize, block_bytes: usize) -> Vec<u8> {
+    let length_bytes = block_bytes / 8;
+    let padded_bits = (bit_len + 1 + length_bytes * 8).div_ceil(block_bytes * 8) * block_bytes * 8;
+    let mut padded = vec![0u8; padded_bits / 8];
+    for bit in 0..bit_len {
+        if data[bit / 8] & (0x80 >> (bit % 8)) != 0 {
+            padded[bit / 8] |= 0x80 >> (bit % 8);
+        }
+    }
+    padded[bit_len / 8] |= 0x80 >> (bit_len % 8);
+    let encoded_len = (bit_len as u128).to_be_bytes();
+    let start = padded.len() - length_bytes;
+    padded[start..].copy_from_slice(&encoded_len[16 - length_bytes..]);
+    padded
+}
+
+fn reference_sha256_bits(data: &[u8], bit_len: usize) -> Vec<u8> {
+    let padded = padded_bit_message(data, bit_len, SHA256_BLOCK_SIZE);
+    let mut state = Sha256::init_state();
+    for chunk in padded.chunks_exact(SHA256_BLOCK_SIZE) {
+        let mut block = [0u8; SHA256_BLOCK_SIZE];
+        block.copy_from_slice(chunk);
+        Sha256::compress(&mut state, &block).unwrap();
+    }
+    state.iter().flat_map(|word| word.to_be_bytes()).collect()
+}
+
+fn reference_sha512_bits(data: &[u8], bit_len: usize) -> Vec<u8> {
+    let padded = padded_bit_message(data, bit_len, SHA512_BLOCK_SIZE);
+    let mut state = Sha512::init_state();
+    for chunk in padded.chunks_exact(SHA512_BLOCK_SIZE) {
+        let mut block = [0u8; SHA512_BLOCK_SIZE];
+        block.copy_from_slice(chunk);
+        Sha512::compress(&mut state, &block).unwrap();
+    }
+    state.iter().flat_map(|word| word.to_be_bytes()).collect()
+}
+
+#[test]
+fn test_sha2_partial_bit_padding_boundaries() {
+    for byte_index in [55usize, 56, 63] {
+        let bit_len = byte_index * 8 + 3;
+        let mut message = vec![0xA5; bit_len.div_ceil(8)];
+        *message.last_mut().unwrap() = 0xA0;
+        let digest = Sha256::digest_bits(&message, bit_len).unwrap();
+        assert_eq!(
+            digest.as_ref(),
+            reference_sha256_bits(&message, bit_len),
+            "SHA-256 partial byte at buffer index {byte_index}"
+        );
+    }
+
+    for byte_index in [111usize, 112, 127] {
+        let bit_len = byte_index * 8 + 3;
+        let mut message = vec![0x5A; bit_len.div_ceil(8)];
+        *message.last_mut().unwrap() = 0xA0;
+        let digest = Sha512::digest_bits(&message, bit_len).unwrap();
+        assert_eq!(
+            digest.as_ref(),
+            reference_sha512_bits(&message, bit_len),
+            "SHA-512 partial byte at buffer index {byte_index}"
+        );
+    }
+}
+
+#[test]
 fn test_sha2_nist_short_vectors() {
     let dir = vectors_dir();
 
