@@ -1,4 +1,6 @@
 //! Standalone proof fixture for the removed sect283k1/ECDH-B283 surface.
+
+#![forbid(unsafe_code)]
 //!
 //! This deliberately models the relevant control flow from tagged v2 source
 //! commit `70da3cd` without restoring that code to any published crate. The

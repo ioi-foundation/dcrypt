@@ -26,7 +26,7 @@ use alloc::vec::Vec;
 use std::vec::Vec;
 
 use dcrypt_internal::constant_time::ConstantTimeEq;
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{
     boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
 };
@@ -376,12 +376,11 @@ where
         rng: &mut R,
     ) -> core::result::Result<<Self as SymmetricCipher>::Nonce, CoreError> {
         let mut nonce_data = [0u8; 12];
-        rng.try_fill_bytes(&mut nonce_data)
-            .map_err(|_| CoreError::Other {
-                context: "randomness",
-                #[cfg(feature = "std")]
-                message: "caller-provided randomness source failed".to_string(),
-            })?;
+        try_fill_bytes_zeroing_on_error(rng, &mut nonce_data).map_err(|_| CoreError::Other {
+            context: "randomness",
+            #[cfg(feature = "std")]
+            message: "caller-provided randomness source failed".to_string(),
+        })?;
         Ok(Nonce::<12>::new(nonce_data)) // Using generic Nonce::<12> instead of Nonce12
     }
 

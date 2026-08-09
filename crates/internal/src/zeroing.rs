@@ -223,19 +223,20 @@ pub fn zeroizing_bytes_from_slice(data: &[u8]) -> ZeroizingBytes {
     Zeroizing::new(boxed_bytes_from_slice(data))
 }
 
-/// Securely zero a slice of memory
+/// Explicitly overwrite every initialized byte in a slice.
 ///
-/// This function ensures that the contents of the slice are securely
-/// zeroed, even if the compiler would otherwise optimize the operation away.
+/// The implementation uses safe-Rust writes plus `compiler_fence` and
+/// `black_box` as best-effort optimization barriers. It does not claim
+/// compiler-guaranteed physical erasure of registers, copies, or freed memory.
 pub fn secure_zero(data: &mut [u8]) {
     data.zeroize();
 }
 
-/// Securely clone a slice into exact-size storage, zeroing the source
+/// Clone a slice into exact-size storage, then explicitly clear the source
 /// afterwards.
 ///
-/// This function clones the contents of the slice and then securely
-/// zeroes the original slice.
+/// This function clones the contents of the slice and then invokes the same
+/// best-effort initialized-byte clearing used by [`secure_zero`].
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub fn secure_clone_and_zero(data: &mut [u8]) -> Box<[u8]> {
     let result = boxed_bytes_from_slice(data);
@@ -243,11 +244,10 @@ pub fn secure_clone_and_zero(data: &mut [u8]) -> Box<[u8]> {
     result
 }
 
-/// Guard that zeroes memory when dropped
+/// Guard that invokes explicit initialized-byte clearing when dropped
 ///
-/// This struct provides a way to ensure that memory is zeroed when
-/// it goes out of scope, by automatically zeroing the contained
-/// buffer when the `ZeroGuard` is dropped.
+/// `Drop` invokes [`secure_zero`] on the contained buffer. The same compiler
+/// and out-of-scope-copy limitations documented there apply.
 pub struct ZeroGuard<'a>(&'a mut [u8]);
 
 impl<'a> ZeroGuard<'a> {

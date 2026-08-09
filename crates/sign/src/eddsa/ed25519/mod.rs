@@ -15,8 +15,8 @@ use dcrypt_api::{
     error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait, ZeroizingBytes,
 };
 use dcrypt_internal::{
-    zeroizing_bytes_from_slice, ConstantTimeEq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
-    Zeroizing,
+    try_fill_bytes_zeroing_on_error, zeroizing_bytes_from_slice, ConstantTimeEq, CryptoRng,
+    RngCore, Zeroize, ZeroizeOnDrop, Zeroizing,
 };
 
 use super::constants::{ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE};
@@ -208,12 +208,13 @@ impl SignatureTrait for Ed25519 {
     /// Generate a key from caller-provided cryptographic randomness.
     fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> ApiResult<Self::KeyPair> {
         let mut seed = Zeroizing::new([0u8; ED25519_SECRET_KEY_SIZE]);
-        rng.try_fill_bytes(&mut *seed)
-            .map_err(|_| ApiError::RandomGenerationError {
+        try_fill_bytes_zeroing_on_error(rng, &mut *seed).map_err(|_| {
+            ApiError::RandomGenerationError {
                 context: "Ed25519::keypair",
                 #[cfg(feature = "std")]
                 message: "caller-provided randomness source failed".into(),
-            })?;
+            }
+        })?;
         let secret = Ed25519SecretKey::from_seed(&seed)?;
         let public = secret.public_key()?;
         Ok((public, secret))

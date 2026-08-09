@@ -1,4 +1,5 @@
 #![no_main]
+#![forbid(unsafe_code)]
 
 use dcrypt_symmetric::streaming::chacha20poly1305::ChaCha20Poly1305DecryptStream;
 use dcrypt_symmetric::streaming::gcm::Aes128GcmDecryptStream;

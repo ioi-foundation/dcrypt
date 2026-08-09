@@ -7,8 +7,8 @@ use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
-use dcrypt_internal::random::{CryptoRng, Error as RandomError};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, Error as RandomError};
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 // ============================================================================
 // Arithmetic Helper Functions
@@ -594,8 +594,8 @@ impl Fp {
 
     /// Create random field element
     pub(crate) fn random(mut rng: impl CryptoRng) -> Result<Fp, RandomError> {
-        let mut bytes = [0u8; 96];
-        rng.try_fill_bytes(&mut bytes)?;
+        let mut bytes = Zeroizing::new([0u8; 96]);
+        try_fill_bytes_zeroing_on_error(&mut rng, &mut bytes[..])?;
 
         // Parse as big-endian to match Fp encoding
         Ok(Fp::from_u768([

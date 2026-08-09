@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use chacha20poly1305::aead::{Aead as OracleAead, KeyInit, Payload};
 use chacha20poly1305::{XChaCha20Poly1305 as OracleXChaCha20Poly1305, XNonce};
 use dcrypt_algorithms::aead::XChaCha20Poly1305;

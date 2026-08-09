@@ -198,7 +198,7 @@ fn debug_blake3_abc_step_by_step() {
     let input = b"abc";
 
     // Step 1: Initialize the chunk state
-    let mut chunk_state = ChunkState::new(IV, 0, 0);
+    let mut chunk_state = ChunkState::new(&IV, 0, 0);
 
     // Step 2: Update with the input "abc"
     chunk_state.update(input).unwrap();

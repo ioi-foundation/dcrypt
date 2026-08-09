@@ -10,7 +10,7 @@ use core::fmt;
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 use dcrypt_internal::constant_time::ConstantTimeEq;
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{
     zeroizing_bytes_from_slice, Zeroize, ZeroizeOnDrop, ZeroizingBytes,
 };
@@ -111,11 +111,11 @@ where
     pub fn try_from_slice(bytes: &[u8]) -> Result<Self> {
         validate::length("SymmetricKey::from_slice", bytes.len(), N)?;
 
-        let mut data = [0u8; N];
-        data.copy_from_slice(bytes);
+        let mut data = SecretBuffer::<N>::zeroed();
+        data.as_mut().copy_from_slice(bytes);
 
         Ok(Self {
-            data: SecretBuffer::new(data),
+            data,
             _algorithm: PhantomData,
         })
     }
@@ -189,10 +189,10 @@ impl<A: SymmetricAlgorithm, const N: usize> LocalConstantEq for SymmetricKey<A, 
 
 impl<A: SymmetricAlgorithm, const N: usize> RandomGeneration for SymmetricKey<A, N> {
     fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
-        let mut data = [0u8; N];
-        rng.try_fill_bytes(&mut data)?;
+        let mut data = SecretBuffer::<N>::zeroed();
+        try_fill_bytes_zeroing_on_error(rng, data.as_mut())?;
         Ok(Self {
-            data: SecretBuffer::new(data),
+            data,
             _algorithm: PhantomData,
         })
     }
@@ -316,11 +316,11 @@ where
     pub fn try_from_slice(bytes: &[u8]) -> Result<Self> {
         validate::length("AsymmetricSecretKey::from_slice", bytes.len(), N)?;
 
-        let mut data = [0u8; N];
-        data.copy_from_slice(bytes);
+        let mut data = SecretBuffer::<N>::zeroed();
+        data.as_mut().copy_from_slice(bytes);
 
         Ok(Self {
-            data: SecretBuffer::new(data),
+            data,
             _algorithm: PhantomData,
         })
     }

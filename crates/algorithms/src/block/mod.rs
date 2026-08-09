@@ -31,11 +31,11 @@ extern crate alloc;
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::error::{validate, Error, Result};
 use crate::types::{Nonce, SecretBytes};
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 
 pub mod aes;
 pub mod modes;
@@ -228,9 +228,9 @@ impl BlockCipher for TypedAes128 {
     }
 
     fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
-        let mut key = [0u8; 16];
-        rng.try_fill_bytes(&mut key)?;
-        Ok(SecretBytes::new(key))
+        let mut key = Zeroizing::new([0u8; 16]);
+        try_fill_bytes_zeroing_on_error(rng, &mut key[..])?;
+        Ok(SecretBytes::new(*key))
     }
 }
 
@@ -303,7 +303,7 @@ impl<C: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> BlockCipherMode
 
     fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Nonce> {
         let mut nonce = [0u8; 16];
-        rng.try_fill_bytes(&mut nonce)?;
+        try_fill_bytes_zeroing_on_error(rng, &mut nonce)?;
         Ok(Nonce::new(nonce))
     }
 }

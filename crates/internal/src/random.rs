@@ -23,15 +23,22 @@ impl std::error::Error for Error {}
 /// The byte-oriented randomness interface used by dcrypt.
 pub trait RngCore {
     fn next_u32(&mut self) -> u32 {
-        let mut bytes = [0u8; 4];
-        self.fill_bytes(&mut bytes);
-        u32::from_le_bytes(bytes)
+        let mut bytes = crate::zeroing::Zeroizing::new([0u8; 4]);
+        self.fill_bytes(&mut bytes[..]);
+        u32::from(bytes[0])
+            | (u32::from(bytes[1]) << 8)
+            | (u32::from(bytes[2]) << 16)
+            | (u32::from(bytes[3]) << 24)
     }
 
     fn next_u64(&mut self) -> u64 {
-        let mut bytes = [0u8; 8];
-        self.fill_bytes(&mut bytes);
-        u64::from_le_bytes(bytes)
+        let mut bytes = crate::zeroing::Zeroizing::new([0u8; 8]);
+        self.fill_bytes(&mut bytes[..]);
+        let mut value = crate::zeroing::Zeroizing::new(0u64);
+        for (index, byte) in bytes.iter().enumerate() {
+            *value |= u64::from(*byte) << (index * 8);
+        }
+        *value
     }
 
     fn fill_bytes(&mut self, destination: &mut [u8]) {
@@ -99,32 +106,30 @@ pub struct ChaCha20Rng {
 }
 
 impl ChaCha20Rng {
-    pub const fn from_seed(seed: [u8; 32]) -> Self {
-        let mut key = [0u32; 8];
-        let mut index = 0;
-        while index < 8 {
-            key[index] = u32::from_le_bytes([
-                seed[index * 4],
-                seed[index * 4 + 1],
-                seed[index * 4 + 2],
-                seed[index * 4 + 3],
-            ]);
-            index += 1;
-        }
-        Self {
-            key,
+    pub fn from_seed(seed: [u8; 32]) -> Self {
+        let seed = crate::zeroing::Zeroizing::new(seed);
+        let mut generator = Self {
+            key: [0u32; 8],
             counter: 0,
             buffer: [0u8; 64],
             offset: 64,
             exhausted: false,
+        };
+        for index in 0..8 {
+            let offset = index * 4;
+            generator.key[index] = u32::from(seed[offset])
+                | (u32::from(seed[offset + 1]) << 8)
+                | (u32::from(seed[offset + 2]) << 16)
+                | (u32::from(seed[offset + 3]) << 24);
         }
+        generator
     }
 
     fn refill(&mut self) -> Result<(), Error> {
         if self.exhausted {
             return Err(Error);
         }
-        self.buffer = chacha20_block(&self.key, self.counter);
+        chacha20_block(&self.key, self.counter, &mut self.buffer);
         self.offset = 0;
         if self.counter == u32::MAX {
             self.exhausted = true;
@@ -190,8 +195,8 @@ fn quarter_round(state: &mut [u32; 16], a: usize, b: usize, c: usize, d: usize) 
     state[b] = state[b].rotate_left(7);
 }
 
-fn chacha20_block(key: &[u32; 8], counter: u32) -> [u8; 64] {
-    let initial = [
+fn chacha20_block(key: &[u32; 8], counter: u32, output: &mut [u8; 64]) {
+    let initial = crate::zeroing::Zeroizing::new([
         0x6170_7865,
         0x3320_646e,
         0x7962_2d32,
@@ -208,8 +213,8 @@ fn chacha20_block(key: &[u32; 8], counter: u32) -> [u8; 64] {
         0,
         0,
         0,
-    ];
-    let mut state = initial;
+    ]);
+    let mut state = crate::zeroing::Zeroizing::new(*initial);
     for _ in 0..10 {
         quarter_round(&mut state, 0, 4, 8, 12);
         quarter_round(&mut state, 1, 5, 9, 13);
@@ -220,12 +225,12 @@ fn chacha20_block(key: &[u32; 8], counter: u32) -> [u8; 64] {
         quarter_round(&mut state, 2, 7, 8, 13);
         quarter_round(&mut state, 3, 4, 9, 14);
     }
-    let mut output = [0u8; 64];
     for index in 0..16 {
-        output[index * 4..index * 4 + 4]
-            .copy_from_slice(&state[index].wrapping_add(initial[index]).to_le_bytes());
+        let word = crate::zeroing::Zeroizing::new(state[index].wrapping_add(initial[index]));
+        for byte in 0..4 {
+            output[index * 4 + byte] = (*word >> (byte * 8)) as u8;
+        }
     }
-    output
 }
 
 #[cfg(test)]
@@ -246,9 +251,9 @@ mod tests {
     #[test]
     fn defensive_fill_erases_partial_rng_output_on_error() {
         let mut rng = PartiallyFailingRng;
-        let mut destination = [0xCC; 8];
-        assert!(try_fill_bytes_zeroing_on_error(&mut rng, &mut destination).is_err());
-        assert_eq!(destination, [0; 8]);
+        let mut destination = crate::zeroing::Zeroizing::new([0xCC; 8]);
+        assert!(try_fill_bytes_zeroing_on_error(&mut rng, &mut destination[..]).is_err());
+        assert_eq!(*destination, [0; 8]);
     }
 
     #[test]
@@ -257,9 +262,9 @@ mod tests {
         rng.counter = u32::MAX;
         rng.offset = rng.buffer.len();
 
-        let mut destination = [0xCC; 65];
-        assert!(rng.try_fill_bytes(&mut destination).is_err());
-        assert_eq!(destination, [0; 65]);
+        let mut destination = crate::zeroing::Zeroizing::new([0xCC; 65]);
+        assert!(rng.try_fill_bytes(&mut destination[..]).is_err());
+        assert_eq!(*destination, [0; 65]);
     }
 
     #[test]
@@ -271,28 +276,30 @@ mod tests {
             0xe0, 0x3f, 0xb8, 0xd8, 0x4a, 0x37, 0x6a, 0x43, 0xb8, 0xf4, 0x15, 0x18, 0xa1, 0x1c,
             0xc3, 0x87, 0xb6, 0x69, 0xb2, 0xee, 0x65, 0x86,
         ];
-        assert_eq!(chacha20_block(&[0u32; 8], 0), expected);
+        let mut actual = crate::zeroing::Zeroizing::new([0u8; 64]);
+        chacha20_block(&[0u32; 8], 0, &mut actual);
+        assert_eq!(*actual, expected);
     }
 
     #[test]
     fn chunking_does_not_change_the_stream() {
-        let seed = [0x42; 32];
-        let mut whole = ChaCha20Rng::from_seed(seed);
-        let mut chunked = ChaCha20Rng::from_seed(seed);
-        let mut left = [0u8; 137];
-        let mut right = [0u8; 137];
-        whole.fill_bytes(&mut left);
+        let seed = crate::zeroing::Zeroizing::new([0x42; 32]);
+        let mut whole = ChaCha20Rng::from_seed(*seed);
+        let mut chunked = ChaCha20Rng::from_seed(*seed);
+        let mut left = crate::zeroing::Zeroizing::new([0u8; 137]);
+        let mut right = crate::zeroing::Zeroizing::new([0u8; 137]);
+        whole.fill_bytes(&mut left[..]);
         chunked.fill_bytes(&mut right[..3]);
         chunked.fill_bytes(&mut right[3..91]);
         chunked.fill_bytes(&mut right[91..]);
-        assert_eq!(left, right);
+        assert_eq!(*left, *right);
     }
 
     #[test]
     fn explicit_zeroize_clears_generator_state() {
         let mut generator = ChaCha20Rng::from_seed([0x42; 32]);
-        let mut output = [0u8; 8];
-        generator.fill_bytes(&mut output);
+        let mut output = crate::zeroing::Zeroizing::new([0u8; 8]);
+        generator.fill_bytes(&mut output[..]);
         generator.zeroize();
         assert_eq!(generator.key, [0; 8]);
         assert_eq!(generator.counter, 0);

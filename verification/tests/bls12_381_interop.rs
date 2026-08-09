@@ -1,4 +1,6 @@
 //! Differential BLS12-381 checks against the excluded zkcrypto oracle.
+
+#![forbid(unsafe_code)]
 //!
 //! `verification` is excluded from the published workspace, so the oracle and
 //! its dependency graph never become normal or build dependencies of dcrypt.

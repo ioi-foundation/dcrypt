@@ -1,4 +1,5 @@
 #![no_main]
+#![forbid(unsafe_code)]
 
 use dcrypt_symmetric::{
     Aead, Aes128Gcm, Aes128Key, AesCiphertextPackage, ChaCha20Poly1305Cipher,

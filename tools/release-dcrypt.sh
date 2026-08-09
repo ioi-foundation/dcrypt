@@ -22,6 +22,7 @@ UPDATE_BENCHMARKS=false
 RESUME_FROM=""
 REGISTRY_WAIT_SECONDS=300
 ACTIVE_LOG=""
+CLASSIFIED_WORKSPACE_RECORDS=""
 
 cleanup() {
     if [[ -n "$ACTIVE_LOG" ]]; then
@@ -102,6 +103,35 @@ require_command() {
 
 cargo_subcommand_available() {
     cargo "$1" --version >/dev/null 2>&1
+}
+
+load_classified_workspace_records() {
+    local records
+    if ! records=$("$SCRIPT_DIR/verify-implementation-boundary.py" \
+        --list-classified-workspaces); then
+        die "could not load the authoritative classified-workspace policy"
+    fi
+    [[ -n "$records" ]] || die "classified-workspace policy is empty"
+    CLASSIFIED_WORKSPACE_RECORDS=$records
+}
+
+classified_workspace_records() {
+    [[ -n "$CLASSIFIED_WORKSPACE_RECORDS" ]] \
+        || die "classified-workspace policy was not loaded"
+    printf '%s\n' "$CLASSIFIED_WORKSPACE_RECORDS"
+}
+
+is_classified_workspace_release_path() {
+    local candidate=$1
+    local category workspace
+    while IFS=$'\t' read -r category workspace; do
+        [[ -n "$category" && -n "$workspace" ]] || continue
+        if [[ "$candidate" == "$workspace/Cargo.toml" || \
+              "$candidate" == "$workspace/Cargo.lock" ]]; then
+            return 0
+        fi
+    done < <(classified_workspace_records)
+    return 1
 }
 
 is_valid_semver() {
@@ -210,13 +240,27 @@ run_test_gates() {
     cargo test --release -p dcrypt-tests --test acvp_tests test_ml_kem_ -- \
         --test-threads=1 --nocapture
 
-    info "Running excluded independent interoperability oracles"
-    cargo test --release --locked --manifest-path \
-        "$PROJECT_ROOT/verification/Cargo.toml"
-
-    info "Testing the isolated decrypt-only legacy XChaCha migration tool"
-    cargo test --release --locked --manifest-path \
-        "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml"
+    local category workspace
+    while IFS=$'\t' read -r category workspace; do
+        [[ -n "$category" && -n "$workspace" ]] || continue
+        case "$category" in
+            verification)
+                info "Running excluded independent interoperability oracles: $workspace"
+                cargo test --release --locked --manifest-path \
+                    "$PROJECT_ROOT/$workspace/Cargo.toml"
+                ;;
+            owned)
+                info "Testing classified owned workspace: $workspace"
+                cargo test --release --locked --manifest-path \
+                    "$PROJECT_ROOT/$workspace/Cargo.toml"
+                ;;
+            fuzz)
+                ;;
+            *)
+                die "unsupported classified workspace category: $category"
+                ;;
+        esac
+    done < <(classified_workspace_records)
 
     info "Running isolated statistical timing regressions"
     cargo test -p dcrypt-tests --test constant_time_tests -- \
@@ -245,25 +289,32 @@ run_check_gates() {
 
     info "Running formatting and all-target/all-feature checks"
     cargo fmt --all -- --check
-    cargo fmt --manifest-path "$PROJECT_ROOT/verification/Cargo.toml" -- --check
-    cargo fmt --manifest-path "$PROJECT_ROOT/fuzz/Cargo.toml" -- --check
-    cargo fmt --manifest-path \
-        "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" -- --check
+    local category workspace
+    while IFS=$'\t' read -r category workspace; do
+        [[ -n "$category" && -n "$workspace" ]] || continue
+        cargo fmt --manifest-path "$PROJECT_ROOT/$workspace/Cargo.toml" -- --check
+        if [[ "$category" == "owned" ]]; then
+            RUSTFLAGS="-Dunsafe-code" cargo check --locked --all-targets --all-features \
+                --manifest-path "$PROJECT_ROOT/$workspace/Cargo.toml"
+        fi
+    done < <(classified_workspace_records)
     cargo check --workspace --all-targets --all-features
-    RUSTFLAGS="-Dunsafe-code" cargo check --locked --all-targets --all-features \
-        --manifest-path "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml"
 
     if require_security_subcommand audit "cargo install cargo-audit --locked"; then
         cargo audit
-        cargo audit --file \
-            "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.lock"
+        while IFS=$'\t' read -r category workspace; do
+            [[ -n "$category" && -n "$workspace" ]] || continue
+            cargo audit --file "$PROJECT_ROOT/$workspace/Cargo.lock"
+        done < <(classified_workspace_records)
     fi
 
     if require_security_subcommand deny "cargo install cargo-deny --locked"; then
         cargo deny --workspace --all-features check
-        cargo deny --manifest-path \
-            "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" \
-            --all-features check
+        while IFS=$'\t' read -r category workspace; do
+            [[ -n "$category" && -n "$workspace" ]] || continue
+            cargo deny --manifest-path "$PROJECT_ROOT/$workspace/Cargo.toml" \
+                --all-features check
+        done < <(classified_workspace_records)
     fi
 
     if cargo +nightly miri --version >/dev/null 2>&1; then
@@ -302,11 +353,17 @@ run_check_gates() {
     fi
 
     if cargo_subcommand_available fuzz; then
-        info "Building every cargo-fuzz target"
-        while IFS= read -r fuzz_target; do
-            [[ -n "$fuzz_target" ]] || continue
-            cargo fuzz build "$fuzz_target"
-        done < <(cargo fuzz list)
+        while IFS=$'\t' read -r category workspace; do
+            [[ "$category" == "fuzz" ]] || continue
+            info "Building every cargo-fuzz target in $workspace"
+            (
+                cd "$PROJECT_ROOT/$workspace"
+                while IFS= read -r fuzz_target; do
+                    [[ -n "$fuzz_target" ]] || continue
+                    cargo fuzz build "$fuzz_target"
+                done < <(cargo fuzz list)
+            )
+        done < <(classified_workspace_records)
     elif [[ "$MODE" == "dry-run" ]]; then
         warn "cargo-fuzz is unavailable"
     else
@@ -336,6 +393,7 @@ check_package_contents() {
 run_all_gates() {
     local version
     version=$(current_version)
+    validate_isolated_workspace_versions "$version"
     run_publish_verifier "$version"
     run_check_gates
     run_test_gates
@@ -365,7 +423,6 @@ validate_release_documentation() {
 validate_isolated_workspace_versions() {
     local expected=$1
     python3 "$SCRIPT_DIR/update-isolated-workspace-versions.py" \
-        --manifest "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" \
         --expect "$expected"
 }
 
@@ -373,7 +430,6 @@ update_isolated_workspace_versions() {
     local before=$1
     local after=$2
     python3 "$SCRIPT_DIR/update-isolated-workspace-versions.py" \
-        --manifest "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" \
         --from-version "$before" \
         --to-version "$after"
     validate_isolated_workspace_versions "$after"
@@ -387,10 +443,12 @@ create_release_commit_if_needed() {
         [[ -n "$status_line" ]] || continue
         path=${status_line:3}
         case "$path" in
-            Cargo.toml|crates/*/Cargo.toml|tests/Cargo.toml|Cargo.lock|fuzz/Cargo.lock|verification/Cargo.lock|migration/legacy-xchacha20poly1305/Cargo.toml|migration/legacy-xchacha20poly1305/Cargo.lock)
+            Cargo.toml|crates/*/Cargo.toml|tests/Cargo.toml|Cargo.lock)
                 ;;
             *)
-                unexpected+="  $path"$'\n'
+                if ! is_classified_workspace_release_path "$path"; then
+                    unexpected+="  $path"$'\n'
+                fi
                 ;;
         esac
     done < <(git status --porcelain --untracked-files=all)
@@ -401,21 +459,24 @@ create_release_commit_if_needed() {
     fi
 
     if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
-        git add Cargo.toml Cargo.lock crates/*/Cargo.toml tests/Cargo.toml \
-            fuzz/Cargo.lock verification/Cargo.lock \
-            migration/legacy-xchacha20poly1305/Cargo.toml \
-            migration/legacy-xchacha20poly1305/Cargo.lock
+        local -a generated_paths=(Cargo.toml Cargo.lock crates/*/Cargo.toml tests/Cargo.toml)
+        local category workspace
+        while IFS=$'\t' read -r category workspace; do
+            [[ -n "$category" && -n "$workspace" ]] || continue
+            generated_paths+=("$workspace/Cargo.toml" "$workspace/Cargo.lock")
+        done < <(classified_workspace_records)
+        git add "${generated_paths[@]}"
         git commit -m "chore: release version $VERSION"
     fi
 }
 
 refresh_isolated_workspace_locks() {
-    cargo metadata --format-version 1 --manifest-path \
-        "$PROJECT_ROOT/verification/Cargo.toml" >/dev/null
-    cargo metadata --format-version 1 --manifest-path \
-        "$PROJECT_ROOT/fuzz/Cargo.toml" >/dev/null
-    cargo metadata --format-version 1 --manifest-path \
-        "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" >/dev/null
+    local category workspace
+    while IFS=$'\t' read -r category workspace; do
+        [[ -n "$category" && -n "$workspace" ]] || continue
+        cargo metadata --format-version 1 --manifest-path \
+            "$PROJECT_ROOT/$workspace/Cargo.toml" >/dev/null
+    done < <(classified_workspace_records)
 }
 
 prepare_release() {
@@ -723,6 +784,7 @@ require_command git
 require_command jq
 require_command curl
 require_command python3
+load_classified_workspace_records
 cargo_subcommand_available release \
     || die "cargo-release is required (cargo install cargo-release --locked)"
 

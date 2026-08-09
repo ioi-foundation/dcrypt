@@ -1,4 +1,6 @@
 //! Differential checks for the published, owned traditional EC arithmetic.
+
+#![forbid(unsafe_code)]
 //!
 //! The RustCrypto crates imported here are independent test oracles. This
 //! workspace is excluded from dcrypt's published workspace and dependency

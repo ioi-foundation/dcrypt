@@ -1,4 +1,5 @@
 #![no_main]
+#![forbid(unsafe_code)]
 
 use dcrypt_algorithms::ec::bls12_381::{
     Bls12_381Scalar, G1Affine, G1Projective, G2Affine, G2Projective,

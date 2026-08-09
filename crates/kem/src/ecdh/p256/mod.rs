@@ -23,7 +23,7 @@ use dcrypt_api::{
     Kem, Key as ApiKey, Result as ApiResult, ZeroizingBytes,
 };
 use dcrypt_common::security::SecretBuffer;
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroizing;
 
 const KDF_INFO: &[u8] = b"dcrypt-v3/ECDH-P256-KEM/shared-secret";
@@ -266,7 +266,7 @@ impl Kem for EcdhP256 {
         // not an operation failure.
         let ephemeral_scalar = loop {
             let mut ephemeral_bytes = Zeroizing::new([0u8; ec_p256::P256_SCALAR_SIZE]);
-            rng.try_fill_bytes(ephemeral_bytes.as_mut()).map_err(|_| {
+            try_fill_bytes_zeroing_on_error(rng, ephemeral_bytes.as_mut()).map_err(|_| {
                 ApiError::RandomGenerationError {
                     context: "ECDH-P256 encapsulate",
                     #[cfg(feature = "std")]

@@ -27,7 +27,7 @@ use dcrypt_api::types::Ciphertext;
 // Import SecretBuffer for secure key storage
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::constant_time::ConstantTimeEq;
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Size constants
@@ -371,18 +371,16 @@ impl SymmetricCipher for ChaCha20Poly1305 {
     fn generate_key<R: RngCore + CryptoRng>(
         rng: &mut R,
     ) -> core::result::Result<Self::Key, CoreError> {
-        let mut key_data = [0u8; CHACHA20POLY1305_KEY_SIZE];
-        rng.try_fill_bytes(&mut key_data)
-            .map_err(core_random_error)?;
-        Ok(SecretBytes::new(key_data))
+        let mut key_data = Zeroizing::new([0u8; CHACHA20POLY1305_KEY_SIZE]);
+        try_fill_bytes_zeroing_on_error(rng, &mut key_data[..]).map_err(core_random_error)?;
+        Ok(SecretBytes::new(*key_data))
     }
 
     fn generate_nonce<R: RngCore + CryptoRng>(
         rng: &mut R,
     ) -> core::result::Result<Self::Nonce, CoreError> {
         let mut nonce_data = [0u8; CHACHA20POLY1305_NONCE_SIZE];
-        rng.try_fill_bytes(&mut nonce_data)
-            .map_err(core_random_error)?;
+        try_fill_bytes_zeroing_on_error(rng, &mut nonce_data).map_err(core_random_error)?;
         Ok(Nonce::new(nonce_data))
     }
 

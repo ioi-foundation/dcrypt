@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use dcrypt_api::Signature as _;
 use dcrypt_internal::ChaCha20Rng;
 use dcrypt_sign::mldsa::{

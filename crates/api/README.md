@@ -26,9 +26,9 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
 
 3.  **Types (`dcrypt_docs/api/types.rs`)**:
     Defines fundamental, security-conscious data types:
-    *   `SecretBytes<const N: usize>`: A fixed-size array for sensitive data, guaranteeing zeroization on drop and providing constant-time equality.
+    *   `SecretBytes<const N: usize>`: A fixed-size array for sensitive data that explicitly clears its owned initialized bytes on drop and provides constant-time equality. Clearing uses best-effort safe-Rust optimization barriers rather than a compiler-guaranteed physical-erasure primitive.
     *   `SecretVec`: Exact-size boxed storage for variable-length sensitive data. It never retains spare capacity, wipes old allocations before replacement, and zeroizes its current allocation on drop.
-    *   `Key`: A wrapper for cryptographic key data, ensuring zeroization.
+    *   `Key`: A wrapper for cryptographic key data that explicitly clears its owned initialized bytes on drop.
     *   `PublicKey`: A wrapper for public key data.
     *   `Ciphertext`: A wrapper for ciphertext data.
     *   These types often implement `AsRef<[u8]>`, `AsMut<[u8]>`, `Zeroize`, `Serialize`, and sometimes `PartialEq` (with constant-time comparison for secret types).

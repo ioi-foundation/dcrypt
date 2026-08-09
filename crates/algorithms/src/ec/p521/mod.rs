@@ -29,7 +29,7 @@ use crate::error::{Error, Result};
 use crate::hash::sha2::Sha512;
 use crate::kdf::hkdf::Hkdf;
 use crate::kdf::KeyDerivationFunction as KdfTrait;
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroizing;
 use dcrypt_params::traditional::ecdsa::NIST_P521;
 
@@ -63,7 +63,7 @@ pub fn generate_keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Scalar, 
 
     // Use rejection sampling for uniform distribution
     loop {
-        rng.try_fill_bytes(&mut scalar_bytes[..])?;
+        try_fill_bytes_zeroing_on_error(rng, &mut scalar_bytes[..])?;
         // P-521 scalars use 521 bits in a 66-byte container. Mask the seven
         // unused high bits, then reject zero or values at/above the order.
         // This samples uniformly without reducing a 528-bit value modulo n.

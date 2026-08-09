@@ -1,4 +1,5 @@
 #![no_main]
+#![forbid(unsafe_code)]
 
 use dcrypt_api::Signature;
 use dcrypt_sign::ecdsa::{common::SignatureComponents, EcdsaP384PublicKey, EcdsaP384Signature};

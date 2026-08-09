@@ -6,7 +6,7 @@ use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
-use dcrypt_internal::random::{CryptoRng, Error as RandomError};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, Error as RandomError};
 use dcrypt_internal::zeroing::Zeroize;
 
 use super::field::fp::Fp;
@@ -865,7 +865,7 @@ impl G1Projective {
         loop {
             let x = Fp::random(&mut rng)?;
             let mut sign = [0u8; 1];
-            rng.try_fill_bytes(&mut sign)?;
+            try_fill_bytes_zeroing_on_error(&mut rng, &mut sign)?;
             let flip_sign = sign[0] & 1 != 0;
 
             let p = ((x.square() * x) + B).sqrt().map(|y| G1Affine {

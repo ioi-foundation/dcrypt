@@ -16,7 +16,9 @@ extern crate alloc;
 #[cfg(test)]
 pub(crate) mod test_rng {
     use core::sync::atomic::{AtomicU64, Ordering};
-    use dcrypt_internal::random::{ChaCha20Rng, CryptoRng, Error, RngCore};
+    use dcrypt_internal::random::{
+        try_fill_bytes_zeroing_on_error, ChaCha20Rng, CryptoRng, Error, RngCore,
+    };
 
     static NEXT_STREAM: AtomicU64 = AtomicU64::new(1);
 
@@ -27,7 +29,8 @@ pub(crate) mod test_rng {
             let stream = NEXT_STREAM.fetch_add(1, Ordering::Relaxed);
             let mut seed = [0u8; 32];
             seed[..8].copy_from_slice(&stream.to_le_bytes());
-            ChaCha20Rng::from_seed(seed).try_fill_bytes(destination)
+            let mut rng = ChaCha20Rng::from_seed(seed);
+            try_fill_bytes_zeroing_on_error(&mut rng, destination)
         }
     }
 

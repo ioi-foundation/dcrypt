@@ -30,8 +30,10 @@
 //! # Implementation Notes
 //!
 //! This implementation prioritizes correctness and security over performance:
-//! - Uses secure memory handling with `SecretBuffer` for sensitive data
-//! - Implements proper zeroization of sensitive values
+//! - Uses exact owned secret storage for sensitive data
+//! - Explicitly clears initialized secret storage on drop using safe-Rust,
+//!   best-effort optimization barriers; this is not a guarantee that register
+//!   or compiler-created copies are physically erased
 //! - Based directly on the BLAKE3 reference implementation
 //! - Does not include SIMD optimizations
 //!
@@ -69,7 +71,7 @@
 use super::{Blake3Algorithm, DeriveKeyXof, ExtendableOutputFunction, KeyedXof};
 use crate::error::{validate, Error, Result};
 use crate::xof::XofAlgorithm;
-use dcrypt_common::security::{EphemeralSecret, SecretBuffer};
+use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::zeroing::{
     boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
 };
@@ -82,6 +84,9 @@ const OUT_LEN: usize = 32; // Standard output length (256 bits)
 const KEY_LEN: usize = 32; // Key length for keyed hashing (256 bits)
 const BLOCK_LEN: usize = 64; // Input block size (512 bits)
 const CHUNK_LEN: usize = 1024; // Chunk size (16 blocks)
+
+type ProtectedChainingValue = Zeroizing<[u32; 8]>;
+type ProtectedBlockWords = Zeroizing<[u32; 16]>;
 
 // Flags for domain separation and tree structure
 const CHUNK_START: u32 = 1 << 0; // First block of a chunk
@@ -107,12 +112,11 @@ const MSG_PERMUTATION: [usize; 16] = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9,
 fn words_from_little_endian_bytes(bytes: &[u8], words: &mut [u32]) {
     debug_assert_eq!(bytes.len(), 4 * words.len());
     for i in 0..words.len() {
-        words[i] = u32::from_le_bytes([
-            bytes[i * 4],
-            bytes[i * 4 + 1],
-            bytes[i * 4 + 2],
-            bytes[i * 4 + 3],
-        ]);
+        let offset = i * 4;
+        words[i] = u32::from(bytes[offset])
+            | (u32::from(bytes[offset + 1]) << 8)
+            | (u32::from(bytes[offset + 2]) << 16)
+            | (u32::from(bytes[offset + 3]) << 24);
     }
 }
 
@@ -120,8 +124,9 @@ fn words_from_little_endian_bytes(bytes: &[u8], words: &mut [u32]) {
 fn words_to_little_endian_bytes(words: &[u32], bytes: &mut [u8]) {
     debug_assert_eq!(bytes.len(), 4 * words.len());
     for i in 0..words.len() {
-        let word_bytes = words[i].to_le_bytes();
-        bytes[i * 4..i * 4 + 4].copy_from_slice(&word_bytes);
+        for byte in 0..4 {
+            bytes[i * 4 + byte] = (words[i] >> (byte * 8)) as u8;
+        }
     }
 }
 
@@ -158,11 +163,11 @@ fn round(state: &mut [u32; 16], m: &[u32; 16]) {
 
 // Permute message words for the next round
 fn permute(m: &mut [u32; 16]) {
-    let mut permuted = [0u32; 16];
+    let mut permuted = Zeroizing::new([0u32; 16]);
     for i in 0..16 {
         permuted[i] = m[MSG_PERMUTATION[i]];
     }
-    *m = permuted;
+    m.copy_from_slice(&*permuted);
 }
 
 // Compression function for BLAKE3
@@ -182,12 +187,12 @@ fn compress(
     counter: u64,
     block_len: u32,
     flags: u32,
-) -> [u32; 16] {
+) -> ProtectedBlockWords {
     let counter_low = counter as u32;
     let counter_high = (counter >> 32) as u32;
 
     // Initialize state with chaining value and IV
-    let mut state = [
+    let mut state = Zeroizing::new([
         chaining_value[0],
         chaining_value[1],
         chaining_value[2],
@@ -204,9 +209,9 @@ fn compress(
         counter_high,
         block_len,
         flags,
-    ];
+    ]);
 
-    let mut block = *block_words;
+    let mut block = Zeroizing::new(*block_words);
 
     // BLAKE3 uses exactly 7 rounds
     for r in 0..7 {
@@ -220,7 +225,7 @@ fn compress(
     }
 
     // Create output array for the compression function
-    let mut output = [0u32; 16];
+    let mut output = Zeroizing::new([0u32; 16]);
 
     // First 8 words: XOR the first half of the state with the second half
     for i in 0..8 {
@@ -236,8 +241,8 @@ fn compress(
 }
 
 // Get the first 8 words as a chaining value
-fn first_8_words(compression_output: &[u32; 16]) -> [u32; 8] {
-    let mut result = [0u32; 8];
+fn first_8_words(compression_output: &[u32; 16]) -> ProtectedChainingValue {
+    let mut result = Zeroizing::new([0u32; 8]);
     result.copy_from_slice(&compression_output[0..8]);
     result
 }
@@ -262,15 +267,24 @@ impl Zeroize for Output {
     }
 }
 
+impl Drop for Output {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Output {}
+
 impl Output {
-    fn chaining_value(&self) -> [u32; 8] {
-        first_8_words(&compress(
+    fn chaining_value(&self) -> ProtectedChainingValue {
+        let compression_output = compress(
             &self.input_chaining_value,
             &self.block_words,
             self.counter,
             self.block_len,
             self.flags,
-        ))
+        );
+        first_8_words(&compression_output)
     }
 
     fn root_output_bytes(&self, out_slice: &mut [u8]) {
@@ -285,13 +299,14 @@ impl Output {
 
             // Copy output bytes - ensure little-endian encoding
             for (i, word) in words.iter().enumerate() {
-                let word_bytes = word.to_le_bytes();
                 let start = i * 4;
                 if start >= out_block.len() {
                     break;
                 }
                 let end = core::cmp::min((i + 1) * 4, out_block.len());
-                out_block[start..end].copy_from_slice(&word_bytes[..(end - start)]);
+                for (offset, byte) in out_block[start..end].iter_mut().enumerate() {
+                    *byte = (word >> (offset * 8)) as u8;
+                }
             }
         }
     }
@@ -319,16 +334,26 @@ impl Zeroize for ChunkState {
     }
 }
 
+impl Drop for ChunkState {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for ChunkState {}
+
 impl ChunkState {
-    fn new(key_words: [u32; 8], chunk_counter: u64, flags: u32) -> Self {
-        Self {
-            chaining_value: key_words,
+    fn new(key_words: &[u32; 8], chunk_counter: u64, flags: u32) -> Self {
+        let mut state = Self {
+            chaining_value: [0; 8],
             chunk_counter,
             block: [0; BLOCK_LEN],
             block_len: 0,
             blocks_compressed: 0,
             flags,
-        }
+        };
+        state.chaining_value.copy_from_slice(key_words);
+        state
     }
 
     fn len(&self) -> usize {
@@ -355,19 +380,21 @@ impl ChunkState {
         while !input.is_empty() {
             // If the block is full, compress it
             if self.block_len as usize == BLOCK_LEN {
-                let mut block_words = [0u32; 16];
-                words_from_little_endian_bytes(&self.block, &mut block_words);
+                let mut block_words = Zeroizing::new([0u32; 16]);
+                words_from_little_endian_bytes(&self.block, &mut block_words[..]);
 
-                self.chaining_value = first_8_words(&compress(
+                let compression_output = compress(
                     &self.chaining_value,
                     &block_words,
                     self.chunk_counter,
                     BLOCK_LEN as u32,
                     self.flags | self.start_flag(),
-                ));
+                );
+                let chaining_value = first_8_words(&compression_output);
+                self.chaining_value.copy_from_slice(&*chaining_value);
 
                 self.blocks_compressed += 1;
-                self.block = [0; BLOCK_LEN];
+                self.block.zeroize();
                 self.block_len = 0;
             }
 
@@ -393,15 +420,12 @@ impl ChunkState {
 
     fn output(&self) -> Output {
         // Zero-pad the block to create a full set of block words
-        let mut block_words = [0u32; 16];
-        let mut padded_block = [0u8; BLOCK_LEN];
-        padded_block[..self.block_len as usize]
-            .copy_from_slice(&self.block[..self.block_len as usize]);
-        words_from_little_endian_bytes(&padded_block, &mut block_words);
+        let mut block_words = Zeroizing::new([0u32; 16]);
+        words_from_little_endian_bytes(&self.block, &mut block_words[..]);
 
         Output {
             input_chaining_value: self.chaining_value,
-            block_words,
+            block_words: *block_words,
             counter: self.chunk_counter,
             block_len: self.block_len as u32,
             flags: self.flags | self.start_flag() | CHUNK_END,
@@ -411,18 +435,20 @@ impl ChunkState {
 
 // Parent node creation
 fn parent_output(
-    left_child_cv: [u32; 8],
-    right_child_cv: [u32; 8],
-    key_words: [u32; 8],
+    left_child_cv: &[u32; 8],
+    right_child_cv: &[u32; 8],
+    key_words: &[u32; 8],
     flags: u32,
 ) -> Output {
-    let mut block_words = [0u32; 16];
-    block_words[..8].copy_from_slice(&left_child_cv);
-    block_words[8..].copy_from_slice(&right_child_cv);
+    let mut block_words = Zeroizing::new([0u32; 16]);
+    block_words[..8].copy_from_slice(left_child_cv);
+    block_words[8..].copy_from_slice(right_child_cv);
 
+    let mut input_chaining_value = Zeroizing::new([0u32; 8]);
+    input_chaining_value.copy_from_slice(key_words);
     Output {
-        input_chaining_value: key_words,
-        block_words,
+        input_chaining_value: *input_chaining_value,
+        block_words: *block_words,
         counter: 0,
         block_len: BLOCK_LEN as u32,
         flags: PARENT | flags,
@@ -431,11 +457,11 @@ fn parent_output(
 
 // Parent chaining value
 fn parent_cv(
-    left_child_cv: [u32; 8],
-    right_child_cv: [u32; 8],
-    key_words: [u32; 8],
+    left_child_cv: &[u32; 8],
+    right_child_cv: &[u32; 8],
+    key_words: &[u32; 8],
     flags: u32,
-) -> [u32; 8] {
+) -> ProtectedChainingValue {
     parent_output(left_child_cv, right_child_cv, key_words, flags).chaining_value()
 }
 
@@ -455,10 +481,11 @@ fn parent_cv(
 ///
 /// # Security
 ///
-/// All sensitive data (keys and intermediate values) are:
-/// - Stored in secure memory containers
-/// - Properly zeroized on drop
-/// - Protected against timing attacks
+/// Owned keys and intermediate arrays use exact or fixed-size secret containers
+/// whose drop paths explicitly clear initialized storage. Safe Rust cannot
+/// guarantee physical erasure of register or compiler-created copies. The
+/// scalar compression schedule is intended to avoid secret-dependent control
+/// flow, but that is not a blanket timing proof for every compiler and target.
 ///
 /// # Thread Safety
 ///
@@ -493,23 +520,22 @@ impl Zeroize for Blake3Xof {
 
 impl Blake3Xof {
     // Convert key words from SecretBuffer to [u32; 8]
-    fn get_key_words(&self) -> [u32; 8] {
-        let mut words = [0u32; 8];
+    fn get_key_words(&self) -> ProtectedChainingValue {
+        let mut words = Zeroizing::new([0u32; 8]);
         let key_bytes = self.key_words.as_ref();
-        words_from_little_endian_bytes(key_bytes, &mut words);
+        words_from_little_endian_bytes(key_bytes, &mut words[..]);
         words
     }
 
-    fn push_stack(&mut self, mut cv: [u32; 8]) {
+    fn push_stack(&mut self, cv: ProtectedChainingValue) {
         let current_len = self.cv_stack.len();
         let mut replacement = Zeroizing::new(vec![[0u32; 8]; current_len + 1].into_boxed_slice());
         replacement[..current_len].copy_from_slice(&self.cv_stack);
-        replacement[current_len] = cv;
-        cv.zeroize();
+        replacement[current_len].copy_from_slice(&*cv);
         self.cv_stack = replacement;
     }
 
-    fn pop_stack(&mut self) -> Result<[u32; 8]> {
+    fn pop_stack(&mut self) -> Result<ProtectedChainingValue> {
         let current_len = self.cv_stack.len();
         if current_len == 0 {
             return Err(Error::Processing {
@@ -517,7 +543,7 @@ impl Blake3Xof {
                 details: "Stack underflow",
             });
         }
-        let value = self.cv_stack[current_len - 1];
+        let value = Zeroizing::new(self.cv_stack[current_len - 1]);
         let mut replacement = Zeroizing::new(vec![[0u32; 8]; current_len - 1].into_boxed_slice());
         replacement.copy_from_slice(&self.cv_stack[..current_len - 1]);
         self.cv_stack = replacement;
@@ -526,11 +552,13 @@ impl Blake3Xof {
 
     fn add_chunk_chaining_value(
         &mut self,
-        mut new_cv: [u32; 8],
+        mut new_cv: ProtectedChainingValue,
         mut total_chunks: u64,
     ) -> Result<()> {
         while total_chunks & 1 == 0 {
-            new_cv = parent_cv(self.pop_stack()?, new_cv, self.get_key_words(), self.flags);
+            let left_cv = self.pop_stack()?;
+            let key_words = self.get_key_words();
+            new_cv = parent_cv(&left_cv, &new_cv, &key_words, self.flags);
             total_chunks >>= 1;
         }
         self.push_stack(new_cv);
@@ -543,10 +571,12 @@ impl Blake3Xof {
 
         while parent_nodes_remaining > 0 {
             parent_nodes_remaining -= 1;
+            let right_cv = output.chaining_value();
+            let key_words = self.get_key_words();
             output = parent_output(
-                self.cv_stack[parent_nodes_remaining],
-                output.chaining_value(),
-                self.get_key_words(),
+                &self.cv_stack[parent_nodes_remaining],
+                &right_cv,
+                &key_words,
                 self.flags,
             );
         }
@@ -593,12 +623,12 @@ impl ExtendableOutputFunction for Blake3Xof {
     /// to accept input data via the `update` method.
     fn new() -> Self {
         // Convert IV to bytes for SecretBuffer storage
-        let mut key_bytes = [0u8; 32];
-        words_to_little_endian_bytes(&IV, &mut key_bytes);
+        let mut key_bytes = Zeroizing::new([0u8; 32]);
+        words_to_little_endian_bytes(&IV, &mut key_bytes[..]);
 
         Self {
-            chunk_state: ChunkState::new(IV, 0, 0),
-            key_words: SecretBuffer::new(key_bytes),
+            chunk_state: ChunkState::new(&IV, 0, 0),
+            key_words: SecretBuffer::new(*key_bytes),
             cv_stack: Zeroizing::new(Box::default()),
             flags: 0,
         }
@@ -610,7 +640,8 @@ impl ExtendableOutputFunction for Blake3Xof {
                 let chunk_cv = self.chunk_state.output().chaining_value();
                 let total_chunks = self.chunk_state.chunk_counter + 1;
                 self.add_chunk_chaining_value(chunk_cv, total_chunks)?;
-                self.chunk_state = ChunkState::new(self.get_key_words(), total_chunks, self.flags);
+                let key_words = self.get_key_words();
+                self.chunk_state = ChunkState::new(&key_words, total_chunks, self.flags);
             }
 
             let want = CHUNK_LEN - self.chunk_state.len();
@@ -665,25 +696,20 @@ impl KeyedXof for Blake3Xof {
         validate::length("BLAKE3 key", key.len(), KEY_LEN)?;
 
         // Create SecretBuffer for the key
-        let key_buf = SecretBuffer::new({
-            let mut arr = [0u8; 32];
-            arr.copy_from_slice(key);
-            arr
-        });
+        let mut key_bytes = Zeroizing::new([0u8; KEY_LEN]);
+        key_bytes.copy_from_slice(key);
+        let key_buf = SecretBuffer::new(*key_bytes);
 
         // Convert key to key words for chunk state initialization
-        let mut key_words = [0u32; 8];
-        words_from_little_endian_bytes(key, &mut key_words);
+        let mut key_words = Zeroizing::new([0u32; 8]);
+        words_from_little_endian_bytes(key, &mut key_words[..]);
 
         let instance = Self {
-            chunk_state: ChunkState::new(key_words, 0, KEYED_HASH),
+            chunk_state: ChunkState::new(&key_words, 0, KEYED_HASH),
             key_words: key_buf,
             cv_stack: Zeroizing::new(Box::default()),
             flags: KEYED_HASH,
         };
-
-        // Zeroize the temporary key_words
-        key_words.zeroize();
 
         Ok(instance)
     }
@@ -709,30 +735,24 @@ impl DeriveKeyXof for Blake3Xof {
         context_hasher.update(context)?;
 
         // Create key from context using DERIVE_KEY_CONTEXT flag
-        let context_key = EphemeralSecret::new({
-            let mut tmp = [0u8; KEY_LEN];
-            let mut output = context_hasher.chunk_state.output();
-            output.flags |= DERIVE_KEY_CONTEXT;
-            output.root_output_bytes(&mut tmp);
-            tmp
-        });
+        let mut context_key = Zeroizing::new([0u8; KEY_LEN]);
+        let mut output = context_hasher.chunk_state.output();
+        output.flags |= DERIVE_KEY_CONTEXT;
+        output.root_output_bytes(&mut *context_key);
 
         // Create SecretBuffer for the context key
         let key_buf = SecretBuffer::new(*context_key);
 
         // Convert context key to key words for chunk state initialization
-        let mut key_words = [0u32; 8];
-        words_from_little_endian_bytes(context_key.as_ref(), &mut key_words);
+        let mut key_words = Zeroizing::new([0u32; 8]);
+        words_from_little_endian_bytes(context_key.as_ref(), &mut key_words[..]);
 
         let instance = Self {
-            chunk_state: ChunkState::new(key_words, 0, DERIVE_KEY_MATERIAL),
+            chunk_state: ChunkState::new(&key_words, 0, DERIVE_KEY_MATERIAL),
             key_words: key_buf,
             cv_stack: Zeroizing::new(Box::default()),
             flags: DERIVE_KEY_MATERIAL,
         };
-
-        // Zeroize the temporary key_words
-        key_words.zeroize();
 
         Ok(instance)
     }

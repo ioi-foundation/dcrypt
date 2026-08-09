@@ -9,8 +9,7 @@ pub use dcrypt_api::error::{ResultExt, SecureErrorHandling, ERROR_REGISTRY};
 
 // Import for conversions
 use dcrypt_algorithms::error::Error as PrimitiveError;
-use dcrypt_internal::random::CryptoRng;
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng};
 
 /// Fill a buffer from caller-owned cryptographic randomness.
 ///
@@ -21,8 +20,7 @@ pub(crate) fn fill_random<R: CryptoRng + ?Sized>(
     destination: &mut [u8],
     context: &'static str,
 ) -> Result<()> {
-    if rng.try_fill_bytes(destination).is_err() {
-        destination.zeroize();
+    if try_fill_bytes_zeroing_on_error(rng, destination).is_err() {
         return Err(Error::RandomGenerationError {
             context,
             #[cfg(feature = "std")]

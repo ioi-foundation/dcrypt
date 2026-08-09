@@ -13,13 +13,13 @@ unsafe_code = "forbid"
 
 [dev-dependencies]
 bls12_381 = { version = "=0.8.0", default-features = false, features = ["alloc", "experimental", "groups", "pairings"] }
-dcrypt-algorithms = { path = "../crates/algorithms" }
-dcrypt-api = { path = "../crates/api" }
-dcrypt-internal = { path = "../crates/internal" }
-dcrypt-sign = { path = "../crates/sign" }
+dcrypt-algorithms = { version = "=2.0.0", path = "../crates/algorithms" }
+dcrypt-api = { version = "=2.0.0", path = "../crates/api" }
+dcrypt-internal = { version = "=2.0.0", path = "../crates/internal" }
+dcrypt-sign = { version = "=2.0.0", path = "../crates/sign" }
 chacha20poly1305 = { version = "=0.10.1", default-features = false, features = ["alloc"] }
 chacha20 = { version = "=0.9.1", default-features = false }
-dcrypt-legacy-xchacha20poly1305-migration = { path = "../migration/legacy-xchacha20poly1305" }
+dcrypt-legacy-xchacha20poly1305-migration = { version = "=0.0.0", path = "../migration/legacy-xchacha20poly1305" }
 fips204 = { version = "=0.4.6", default-features = false, features = ["ml-dsa-44", "ml-dsa-65", "ml-dsa-87"] }
 hkdf = "=0.12.4"
 k256 = { version = "=0.13.4", default-features = false, features = ["arithmetic", "ecdh"] }

@@ -95,22 +95,27 @@ impl Poly1305 {
     /* ------------------------------------------------------------------ */
 
     /// Extract r values from the secure buffer
-    fn get_r(&self) -> [u64; 3] {
+    fn get_r(&self) -> Zeroizing<[u64; 3]> {
         let bytes = self.r.as_ref();
-        [
-            u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
-            u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
-            u64::from_le_bytes(bytes[16..24].try_into().unwrap()),
-        ]
+        let mut words = Zeroizing::new([0u64; 3]);
+        for (word_index, word) in words.iter_mut().enumerate() {
+            for byte_index in 0..8 {
+                *word |= u64::from(bytes[word_index * 8 + byte_index]) << (byte_index * 8);
+            }
+        }
+        words
     }
 
     /// Extract s values from the secure buffer
-    fn get_s(&self) -> [u64; 2] {
+    fn get_s(&self) -> Zeroizing<[u64; 2]> {
         let bytes = self.s.as_ref();
-        [
-            u64::from_le_bytes(bytes[0..8].try_into().unwrap()),
-            u64::from_le_bytes(bytes[8..16].try_into().unwrap()),
-        ]
+        let mut words = Zeroizing::new([0u64; 2]);
+        for (word_index, word) in words.iter_mut().enumerate() {
+            for byte_index in 0..8 {
+                *word |= u64::from(bytes[word_index * 8 + byte_index]) << (byte_index * 8);
+            }
+        }
+        words
     }
 
     /* ------------------------------------------------------------------ */
@@ -139,8 +144,8 @@ impl Poly1305 {
     /// internal key material has been moved.
     pub fn finalize(self) -> Tag<POLY1305_TAG_SIZE> {
         // 1) polynomial evaluation h = Σ (block · r^i)
-        let mut h = [0u64; 3];
-        let r = Zeroizing::new(self.get_r());
+        let mut h = Zeroizing::new([0u64; 3]);
+        let r = self.get_r();
 
         for block in self.data.chunks(16) {
             let mut buf = Zeroizing::new([0u8; 16]);
@@ -151,18 +156,22 @@ impl Poly1305 {
                 buf[block.len()] = 1;
                 0
             };
-            let n0 = u64::from_le_bytes(buf[0..8].try_into().unwrap());
-            let n1 = u64::from_le_bytes(buf[8..16].try_into().unwrap());
+            let mut n = Zeroizing::new([0u64; 2]);
+            for (word_index, word) in n.iter_mut().enumerate() {
+                for byte_index in 0..8 {
+                    *word |= u64::from(buf[word_index * 8 + byte_index]) << (byte_index * 8);
+                }
+            }
 
             // h += n (carry-prop)
-            let (h0, c0) = h[0].overflowing_add(n0);
-            let (h1a, c1a) = h[1].overflowing_add(n1);
-            let (h1, c1b) = h1a.overflowing_add(c0 as u64);
-            let c1 = (c1a || c1b) as u64;
-            let (h2a, _) = h[2].overflowing_add(n2);
-            let (h2, _) = h2a.overflowing_add(c1);
+            let mut sum = Zeroizing::new(u128::from(h[0]) + u128::from(n[0]));
+            h[0] = *sum as u64;
+            *sum = u128::from(h[1]) + u128::from(n[1]) + (*sum >> 64);
+            h[1] = *sum as u64;
+            h[2] = h[2].wrapping_add(n2).wrapping_add((*sum >> 64) as u64);
 
-            h = mul_reduce([h0, h1, h2], &r);
+            let reduced = mul_reduce(&h, &r);
+            h.copy_from_slice(&*reduced);
         }
 
         // 2) final reduction mod p = 2^130 − 5 (branch-free)
@@ -170,27 +179,38 @@ impl Poly1305 {
         const P1: u64 = 0xffff_ffff_ffff_ffff;
         const P2: u64 = 3;
 
-        let (g0, b0) = h[0].overflowing_sub(P0);
-        let (g1a, b1a) = h[1].overflowing_sub(P1);
-        let (g1, b1b) = g1a.overflowing_sub(b0 as u64);
-        let borrow1 = (b1a || b1b) as u64;
-        let (g2, borrow2_bool) = h[2].overflowing_sub(P2 + borrow1);
+        let mut g = Zeroizing::new([0u64; 3]);
+        let mut borrow = Zeroizing::new(0u64);
+        let mut wide = Zeroizing::new((1u128 << 64) + u128::from(h[0]) - u128::from(P0));
+        g[0] = *wide as u64;
+        *borrow = 1 - (*wide >> 64) as u64;
+        *wide = (1u128 << 64) + u128::from(h[1]) - u128::from(P1) - u128::from(*borrow);
+        g[1] = *wide as u64;
+        *borrow = 1 - (*wide >> 64) as u64;
+        *wide = (1u128 << 64) + u128::from(h[2]) - u128::from(P2) - u128::from(*borrow);
+        g[2] = *wide as u64;
+        *borrow = 1 - (*wide >> 64) as u64;
 
         // mask = 0xFFFF… when borrow2 == 0, else 0x0
-        let mask = (borrow2_bool as u64).wrapping_sub(1);
-        h[0] = (h[0] & !mask) | (g0 & mask);
-        h[1] = (h[1] & !mask) | (g1 & mask);
-        h[2] = (h[2] & !mask) | (g2 & mask);
+        let mask = Zeroizing::new(borrow.wrapping_sub(1));
+        h[0] = (h[0] & !*mask) | (g[0] & *mask);
+        h[1] = (h[1] & !*mask) | (g[1] & *mask);
+        h[2] = (h[2] & !*mask) | (g[2] & *mask);
 
         // 3) add s (mod 2^128)
-        let s = Zeroizing::new(self.get_s());
-        let (t0, carry0) = h[0].overflowing_add(s[0]);
-        let (t1a, _) = h[1].overflowing_add(s[1]);
-        let (t1, _) = t1a.overflowing_add(carry0 as u64);
+        let s = self.get_s();
+        *wide = u128::from(h[0]) + u128::from(s[0]);
+        let mut tag_words = Zeroizing::new([0u64; 2]);
+        tag_words[0] = *wide as u64;
+        *wide = u128::from(h[1]) + u128::from(s[1]) + (*wide >> 64);
+        tag_words[1] = *wide as u64;
 
         let mut out = [0u8; POLY1305_TAG_SIZE];
-        out[..8].copy_from_slice(&t0.to_le_bytes());
-        out[8..16].copy_from_slice(&t1.to_le_bytes());
+        for (word_index, word) in tag_words.iter().enumerate() {
+            for byte_index in 0..8 {
+                out[word_index * 8 + byte_index] = (word >> (byte_index * 8)) as u8;
+            }
+        }
         Tag::new(out)
     }
 }
@@ -198,52 +218,52 @@ impl Poly1305 {
 /* ---------------------------------------------------------------------- */
 /*                SCHOOLBOOK MUL & REDUCE (2^130 − 5)                     */
 /* ---------------------------------------------------------------------- */
-fn mul_reduce(h: [u64; 3], r: &[u64; 3]) -> [u64; 3] {
-    let (h0, h1, h2) = (h[0] as u128, h[1] as u128, h[2] as u128);
-    let (r0, r1, r2) = (r[0] as u128, r[1] as u128, r[2] as u128);
+fn mul_reduce(h: &[u64; 3], r: &[u64; 3]) -> Zeroizing<[u64; 3]> {
+    let operands = Zeroizing::new([
+        u128::from(h[0]),
+        u128::from(h[1]),
+        u128::from(h[2]),
+        u128::from(r[0]),
+        u128::from(r[1]),
+        u128::from(r[2]),
+    ]);
 
     // schoolbook multiply
-    let mut t0 = h0 * r0;
-    let mut t1 = h0 * r1 + h1 * r0;
-    let mut t2 = h0 * r2 + h1 * r1 + h2 * r0;
-    let mut t3 = h1 * r2 + h2 * r1;
-    let mut t4 = h2 * r2;
+    let mut products = Zeroizing::new([0u128; 5]);
+    products[0] = operands[0] * operands[3];
+    products[1] = operands[0] * operands[4] + operands[1] * operands[3];
+    products[2] = operands[0] * operands[5] + operands[1] * operands[4] + operands[2] * operands[3];
+    products[3] = operands[1] * operands[5] + operands[2] * operands[4];
+    products[4] = operands[2] * operands[5];
 
     // propagate carries
-    let c1 = (t0 >> 64) as u64;
-    t0 &= u128::from(u64::MAX);
-    t1 += c1 as u128;
-    let c2 = (t1 >> 64) as u64;
-    t1 &= u128::from(u64::MAX);
-    t2 += c2 as u128;
-    let c3 = (t2 >> 64) as u64;
-    t2 &= u128::from(u64::MAX);
-    t3 += c3 as u128;
-    let c4 = (t3 >> 64) as u64;
-    t3 &= u128::from(u64::MAX);
-    t4 += c4 as u128;
-    let _c5 = (t4 >> 64) as u64;
-    t4 &= u128::from(u64::MAX);
+    for limb in 0..4 {
+        products[limb + 1] += products[limb] >> 64;
+        products[limb] &= u128::from(u64::MAX);
+    }
+    products[4] &= u128::from(u64::MAX);
 
     // fold bits ≥2^130 back in via 2^130 ≡ 5 (mod p)
-    let high = (t2 >> 2) + (t3 << 62) + (t4 << 126);
-    let low2 = t2 & 0x3;
+    let high = Zeroizing::new((products[2] >> 2) + (products[3] << 62) + (products[4] << 126));
 
     // combine low limbs with folded carry
-    let mut m0 = t0 + high * 5;
-    let mut m1 = t1;
-    let mut m2 = low2;
+    let mut reduced = Zeroizing::new([0u128; 3]);
+    reduced[0] = products[0] + *high * 5;
+    reduced[1] = products[1];
+    reduced[2] = products[2] & 0x3;
 
     // final carry
-    let f1 = (m0 >> 64) as u64;
-    m0 &= u128::from(u64::MAX);
-    m1 += f1 as u128;
-    let f2 = (m1 >> 64) as u64;
-    m1 &= u128::from(u64::MAX);
-    m2 += f2 as u128;
+    reduced[1] += reduced[0] >> 64;
+    reduced[0] &= u128::from(u64::MAX);
+    reduced[2] += reduced[1] >> 64;
+    reduced[1] &= u128::from(u64::MAX);
+    reduced[2] &= 0x3fff_ffff_ffff_ffff;
 
-    m2 &= 0x3fff_ffff_ffff_ffff;
-    [m0 as u64, m1 as u64, m2 as u64]
+    let mut result = Zeroizing::new([0u64; 3]);
+    for (output, value) in result.iter_mut().zip(reduced.iter()) {
+        *output = *value as u64;
+    }
+    result
 }
 
 #[cfg(test)]

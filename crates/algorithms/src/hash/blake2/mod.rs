@@ -11,10 +11,7 @@
 #[cfg(feature = "alloc")]
 use crate::alloc_prelude::*;
 
-#[cfg(not(feature = "std"))]
-use core::{cmp::min, convert::TryInto};
-#[cfg(feature = "std")]
-use core::{cmp::min, convert::TryInto};
+use core::cmp::min;
 
 use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
@@ -30,6 +27,26 @@ const BLAKE2B_BLOCK_SIZE: usize = 128;
 const BLAKE2B_MAX_OUTPUT_SIZE: usize = 64;
 const BLAKE2B_ROUNDS: usize = 12;
 const BLAKE2B_KEY_SIZE: usize = 64; // Maximum key size for keyed mode
+
+#[inline(always)]
+fn read_u64_le(bytes: &[u8]) -> u64 {
+    debug_assert!(bytes.len() >= 8);
+    let mut word = Zeroizing::new(0u64);
+    for (index, byte) in bytes[..8].iter().enumerate() {
+        *word |= u64::from(*byte) << (index * 8);
+    }
+    *word
+}
+
+#[inline(always)]
+fn read_u32_le(bytes: &[u8]) -> u32 {
+    debug_assert!(bytes.len() >= 4);
+    let mut word = Zeroizing::new(0u32);
+    for (index, byte) in bytes[..4].iter().enumerate() {
+        *word |= u32::from(*byte) << (index * 8);
+    }
+    *word
+}
 
 // Export constants for Argon2 module to use
 pub(crate) const BLAKE2B_IV: [u64; 8] = [
@@ -112,10 +129,8 @@ impl Blake2b {
         if !(1..=BLAKE2B_MAX_OUTPUT_SIZE).contains(&out_len) {
             panic!("Blake2b output size must be between 1 and 64 bytes");
         }
-        let mut h = BLAKE2B_IV;
-        h[0] ^= 0x0101_0000u64 | out_len as u64; // digest_len | fanout=1 | depth=1
-        Self {
-            h,
+        let mut instance = Self {
+            h: BLAKE2B_IV,
             t: [0; 2],
             f: [0; 2],
             buf: [0; BLAKE2B_BLOCK_SIZE],
@@ -123,7 +138,9 @@ impl Blake2b {
             out_len,
             key: None,
             is_keyed: false,
-        }
+        };
+        instance.h[0] ^= 0x0101_0000u64 | out_len as u64;
+        instance
     }
 
     /// Generic constructor with a fully specified parameter block.
@@ -139,13 +156,8 @@ impl Blake2b {
             panic!("Blake2b output size must be between 1 and 64 bytes");
         }
 
-        let mut h = BLAKE2B_IV;
-        for (i, chunk) in param.chunks_exact(8).enumerate() {
-            h[i] ^= u64::from_le_bytes(chunk.try_into().unwrap());
-        }
-
-        Self {
-            h,
+        let mut instance = Self {
+            h: BLAKE2B_IV,
             t: [0; 2],
             f: [0; 2],
             buf: [0; BLAKE2B_BLOCK_SIZE],
@@ -153,7 +165,11 @@ impl Blake2b {
             out_len,
             key: None,
             is_keyed: false,
+        };
+        for (i, chunk) in param.chunks_exact(8).enumerate() {
+            instance.h[i] ^= read_u64_le(chunk);
         }
+        instance
     }
 
     /// Creates a new Blake2b instance with a key (keyed mode).
@@ -163,6 +179,12 @@ impl Blake2b {
     /// * `key` - The key bytes (must be between 1 and 64 bytes)
     /// * `out_len` - The desired output size in bytes (must be between 1 and 64)
     pub fn with_key(key: &[u8], out_len: usize) -> Result<Self> {
+        if !(1..=BLAKE2B_MAX_OUTPUT_SIZE).contains(&out_len) {
+            return Err(Error::param(
+                "out_len",
+                "BLAKE2b output size must be between 1 and 64 bytes",
+            ));
+        }
         if key.is_empty() || key.len() > BLAKE2B_KEY_SIZE {
             return Err(Error::param(
                 "key",
@@ -171,26 +193,25 @@ impl Blake2b {
         }
 
         // Store the original key in SecretBuffer
-        let mut key_secret_buf_content = [0u8; BLAKE2B_KEY_SIZE];
-        key_secret_buf_content[..key.len()].copy_from_slice(key);
+        let mut key_secret_buf = SecretBuffer::<BLAKE2B_KEY_SIZE>::zeroed();
+        key_secret_buf.as_mut()[..key.len()].copy_from_slice(key);
 
-        let mut h = BLAKE2B_IV;
         let param0 = (out_len as u64)               // digest_length (byte 0)
                    | ((key.len() as u64) << 8)      // key_length (byte 1)
                    | (1u64 << 16)                   // fanout = 1 (byte 2)
                    | (1u64 << 24); // depth = 1 (byte 3)
-        h[0] ^= param0;
 
         let mut blake2b = Blake2b {
-            h,
+            h: BLAKE2B_IV,
             t: [0; 2],
             f: [0; 2],
             buf: [0; BLAKE2B_BLOCK_SIZE],
             buf_len: 0,
             out_len,
-            key: Some(SecretBuffer::new(key_secret_buf_content)),
+            key: Some(key_secret_buf),
             is_keyed: true,
         };
+        blake2b.h[0] ^= param0;
 
         // If keyed, process the key block first.
         let mut key_block_padded = Zeroizing::new([0u8; BLAKE2B_BLOCK_SIZE]);
@@ -230,12 +251,7 @@ impl Blake2b {
         for (i, elem) in m.iter_mut().enumerate().take(16) {
             let idx = i * 8;
             validate::max_length("BLAKE2b buffer slice", idx + 8, self.buf.len())?;
-            *elem = u64::from_le_bytes(self.buf[idx..idx + 8].try_into().map_err(|_| {
-                Error::Processing {
-                    operation: "BLAKE2b compression",
-                    details: "Failed to convert bytes to u64",
-                }
-            })?);
+            *elem = read_u64_le(&self.buf[idx..idx + 8]);
         }
         for s in BLAKE2B_SIGMA.iter().take(BLAKE2B_ROUNDS) {
             Self::blake2b_g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
@@ -418,12 +434,9 @@ impl Blake2s {
         if out_len == 0 || out_len > BLAKE2S_MAX_OUTPUT_SIZE {
             panic!("Blake2s output size must be between 1 and 32 bytes");
         }
-        let mut h = BLAKE2S_IV;
-        // Use | for parameter construction instead of ^ to ensure correct parameter block
         let param0 = (out_len as u32) | (1u32 << 16) | (1u32 << 24); // 0x01010000 | out_len
-        h[0] ^= param0;
-        Blake2s {
-            h,
+        let mut instance = Blake2s {
+            h: BLAKE2S_IV,
             t: [0; 2],
             f: [0; 2],
             buf: [0; BLAKE2S_BLOCK_SIZE],
@@ -431,7 +444,9 @@ impl Blake2s {
             out_len,
             key: None,
             is_keyed: false,
-        }
+        };
+        instance.h[0] ^= param0;
+        instance
     }
 
     /// Creates a new Blake2s instance with a key (keyed mode).
@@ -441,6 +456,12 @@ impl Blake2s {
     /// * `key` - The key bytes (must be between 1 and 32 bytes)
     /// * `out_len` - The desired output size in bytes (must be between 1 and 32)
     pub fn with_key(key: &[u8], out_len: usize) -> Result<Self> {
+        if !(1..=BLAKE2S_MAX_OUTPUT_SIZE).contains(&out_len) {
+            return Err(Error::param(
+                "out_len",
+                "BLAKE2s output size must be between 1 and 32 bytes",
+            ));
+        }
         if key.is_empty() || key.len() > BLAKE2S_KEY_SIZE {
             return Err(Error::param(
                 "key",
@@ -449,27 +470,26 @@ impl Blake2s {
         }
 
         // Store the original key in SecretBuffer
-        let mut key_secret_buf_content = [0u8; BLAKE2S_KEY_SIZE];
-        key_secret_buf_content[..key.len()].copy_from_slice(key);
+        let mut key_secret_buf = SecretBuffer::<BLAKE2S_KEY_SIZE>::zeroed();
+        key_secret_buf.as_mut()[..key.len()].copy_from_slice(key);
 
-        let mut h = BLAKE2S_IV;
         // Use | for parameter construction instead of ^ to ensure correct parameter block
         let param0 = (out_len as u32)             // digest_length (byte 0)
                    | ((key.len() as u32) << 8)    // key_length (byte 1)
                    | (1u32 << 16)                 // fanout = 1 (byte 2)
                    | (1u32 << 24); // depth = 1 (byte 3)
-        h[0] ^= param0;
 
         let mut blake2s = Blake2s {
-            h,
+            h: BLAKE2S_IV,
             t: [0; 2],
             f: [0; 2],
             buf: [0; BLAKE2S_BLOCK_SIZE],
             buf_len: 0,
             out_len,
-            key: Some(SecretBuffer::new(key_secret_buf_content)),
+            key: Some(key_secret_buf),
             is_keyed: true,
         };
+        blake2s.h[0] ^= param0;
 
         // If keyed, process the key block first.
         // The key K is padded with zero bytes to fill a full block (64 bytes for Blake2s).
@@ -508,13 +528,7 @@ impl Blake2s {
             // Validate buffer bounds
             validate::max_length("BLAKE2s buffer slice", idx + 4, self.buf.len())?;
 
-            // Convert bytes to u32 with proper error handling
-            *elem = u32::from_le_bytes(self.buf[idx..idx + 4].try_into().map_err(|_| {
-                Error::Processing {
-                    operation: "BLAKE2s compression",
-                    details: "Failed to convert bytes to u32",
-                }
-            })?);
+            *elem = read_u32_le(&self.buf[idx..idx + 4]);
         }
 
         // Use EphemeralSecret to ensure intermediate values are zeroized

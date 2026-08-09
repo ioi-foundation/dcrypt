@@ -14,7 +14,9 @@ use crate::error::Error as SignError;
 use alloc::{format, string::ToString, vec::Vec};
 use core::{fmt, marker::PhantomData};
 use dcrypt_api::{Result as ApiResult, SecretVec, Signature as SignatureTrait, ZeroizingBytes};
-use dcrypt_internal::{CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::{
+    try_fill_bytes_zeroing_on_error, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing,
+};
 use dcrypt_params::pqc::ml_dsa::{MlDsa44Params, MlDsa65Params, MlDsa87Params, MlDsaSchemeParams};
 
 mod arithmetic;
@@ -348,7 +350,7 @@ where
     ) -> ApiResult<MlDsaSignature> {
         let formatted = format_pure_message(message, context).map_err(dcrypt_api::Error::from)?;
         let mut randomizer = Zeroizing::new([0u8; 32]);
-        rng.try_fill_bytes(&mut *randomizer)
+        try_fill_bytes_zeroing_on_error(rng, &mut *randomizer)
             .map_err(|error| dcrypt_api::Error::from(SignError::Rng(error.to_string())))?;
         let result = P::sign_internal(&formatted, secret_key.as_ref(), &randomizer, None)
             .map(MlDsaSignature)

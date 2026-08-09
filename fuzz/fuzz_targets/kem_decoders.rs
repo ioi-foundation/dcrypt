@@ -1,4 +1,5 @@
 #![no_main]
+#![forbid(unsafe_code)]
 
 use dcrypt_kem::ecdh::{
     EcdhK256Ciphertext, EcdhK256PublicKey, EcdhK256SecretKey, EcdhP224Ciphertext,

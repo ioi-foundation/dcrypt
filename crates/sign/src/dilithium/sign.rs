@@ -41,8 +41,8 @@ use dcrypt_algorithms::xof::shake::ShakeXof256;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use dcrypt_api::SecretVec;
 use dcrypt_internal::{
-    boxed_bytes_zeroed, Choice, ConditionallySelectable, ConstantTimeEq, CryptoRng, RngCore,
-    Zeroize, Zeroizing,
+    boxed_bytes_zeroed, try_fill_bytes_zeroing_on_error, Choice, ConditionallySelectable,
+    ConstantTimeEq, CryptoRng, RngCore, Zeroize, Zeroizing,
 };
 use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N};
 
@@ -237,7 +237,7 @@ where
     R: RngCore + CryptoRng,
 {
     let mut xi = Zeroizing::new([0u8; 32]);
-    rng.try_fill_bytes(&mut *xi)
+    try_fill_bytes_zeroing_on_error(rng, &mut *xi)
         .map_err(|error| SignError::Rng(error.to_string()))?;
     keypair_from_seed_internal::<P>(&xi)
 }

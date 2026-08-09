@@ -25,7 +25,8 @@ use core::convert::TryInto;
 use core::time::Duration;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{
-    boxed_bytes_zeroed, zeroizing_bytes_from_slice, Zeroize, Zeroizing, ZeroizingBytes,
+    boxed_bytes_zeroed, zeroizing_bytes_from_slice, Zeroize, ZeroizeOnDrop, Zeroizing,
+    ZeroizingBytes,
 };
 
 // Argon2 specific constants
@@ -97,6 +98,14 @@ impl Zeroize for Block {
     }
 }
 
+impl Drop for Block {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Block {}
+
 /// Memory block type alias
 // ─── BLAMKA round + G mixing ──────────────────────────────────────────
 
@@ -107,45 +116,66 @@ fn mul_alpha(x: u64, y: u64) -> u64 {
 }
 
 #[inline(always)]
-fn blamka(a: u64, b: u64, c: u64, d: u64) -> (u64, u64, u64, u64) {
-    let mut a = a;
-    let mut b = b;
-    let mut c = c;
-    let mut d = d;
-
-    a = a.wrapping_add(b).wrapping_add(mul_alpha(a, b));
-    d ^= a;
-    d = d.rotate_right(32);
-    c = c.wrapping_add(d).wrapping_add(mul_alpha(c, d));
-    b ^= c;
-    b = b.rotate_right(24);
-    a = a.wrapping_add(b).wrapping_add(mul_alpha(a, b));
-    d ^= a;
-    d = d.rotate_right(16);
-    c = c.wrapping_add(d).wrapping_add(mul_alpha(c, d));
-    b ^= c;
-    b = b.rotate_right(63);
-
-    (a, b, c, d)
+fn blamka(lanes: &mut [u64; 4]) {
+    lanes[0] = lanes[0]
+        .wrapping_add(lanes[1])
+        .wrapping_add(mul_alpha(lanes[0], lanes[1]));
+    lanes[3] ^= lanes[0];
+    lanes[3] = lanes[3].rotate_right(32);
+    lanes[2] = lanes[2]
+        .wrapping_add(lanes[3])
+        .wrapping_add(mul_alpha(lanes[2], lanes[3]));
+    lanes[1] ^= lanes[2];
+    lanes[1] = lanes[1].rotate_right(24);
+    lanes[0] = lanes[0]
+        .wrapping_add(lanes[1])
+        .wrapping_add(mul_alpha(lanes[0], lanes[1]));
+    lanes[3] ^= lanes[0];
+    lanes[3] = lanes[3].rotate_right(16);
+    lanes[2] = lanes[2]
+        .wrapping_add(lanes[3])
+        .wrapping_add(mul_alpha(lanes[2], lanes[3]));
+    lanes[1] ^= lanes[2];
+    lanes[1] = lanes[1].rotate_right(63);
 }
 
 #[inline(always)]
 fn blamka_round(state: &mut [u64; 16]) {
     // Column step
     for &(i, j, k, l) in &[(0, 4, 8, 12), (1, 5, 9, 13), (2, 6, 10, 14), (3, 7, 11, 15)] {
-        let (na, nb, nc, nd) = blamka(state[i], state[j], state[k], state[l]);
-        state[i] = na;
-        state[j] = nb;
-        state[k] = nc;
-        state[l] = nd;
+        let mut lanes = Zeroizing::new([state[i], state[j], state[k], state[l]]);
+        blamka(&mut lanes);
+        state[i] = lanes[0];
+        state[j] = lanes[1];
+        state[k] = lanes[2];
+        state[l] = lanes[3];
     }
     // Diagonal step
     for &(i, j, k, l) in &[(0, 5, 10, 15), (1, 6, 11, 12), (2, 7, 8, 13), (3, 4, 9, 14)] {
-        let (na, nb, nc, nd) = blamka(state[i], state[j], state[k], state[l]);
-        state[i] = na;
-        state[j] = nb;
-        state[k] = nc;
-        state[l] = nd;
+        let mut lanes = Zeroizing::new([state[i], state[j], state[k], state[l]]);
+        blamka(&mut lanes);
+        state[i] = lanes[0];
+        state[j] = lanes[1];
+        state[k] = lanes[2];
+        state[l] = lanes[3];
+    }
+}
+
+#[inline(always)]
+fn read_u64_le(bytes: &[u8]) -> u64 {
+    debug_assert!(bytes.len() >= 8);
+    let mut value = Zeroizing::new(0u64);
+    for (shift, byte) in bytes[..8].iter().enumerate() {
+        *value |= u64::from(*byte) << (shift * 8);
+    }
+    *value
+}
+
+#[inline(always)]
+fn write_u64_le(bytes: &mut [u8], value: u64) {
+    debug_assert!(bytes.len() >= 8);
+    for (shift, byte) in bytes[..8].iter_mut().enumerate() {
+        *byte = (value >> (shift * 8)) as u8;
     }
 }
 
@@ -154,9 +184,9 @@ fn blamka_round(state: &mut [u64; 16]) {
 fn argon2_g(
     x: &[u64; ARGON2_QWORDS_IN_BLOCK],
     y: &[u64; ARGON2_QWORDS_IN_BLOCK],
-) -> [u64; ARGON2_QWORDS_IN_BLOCK] {
+) -> Zeroizing<[u64; ARGON2_QWORDS_IN_BLOCK]> {
     // 1) R = X ⊕ Y
-    let mut r = [0u64; ARGON2_QWORDS_IN_BLOCK];
+    let mut r = Zeroizing::new([0u64; ARGON2_QWORDS_IN_BLOCK]);
     for i in 0..ARGON2_QWORDS_IN_BLOCK {
         r[i] = x[i] ^ y[i];
     }
@@ -170,7 +200,7 @@ fn argon2_g(
     // 3) Column rounds - correct 16-word selection
     for reg in 0..8 {
         // eight 128-bit registers per row
-        let mut tmp = [0u64; 16];
+        let mut tmp = Zeroizing::new([0u64; 16]);
         for row in 0..8 {
             // RFC 9106 Fig. 15 – R is 8×8 of 16-byte registers,
             // so successive rows are 16 q-words apart and successive
@@ -371,15 +401,15 @@ fn fill_address_block_for_segment(
 
     // 2) write the first 7 qwords: pass, lane, slice, m′, t, y, counter
     let mut off = 0;
-    buf.0[off..off + 8].copy_from_slice(&(pass as u64).to_le_bytes());
+    write_u64_le(&mut buf.0[off..off + 8], pass as u64);
     off += 8;
-    buf.0[off..off + 8].copy_from_slice(&(lane as u64).to_le_bytes());
+    write_u64_le(&mut buf.0[off..off + 8], lane as u64);
     off += 8;
-    buf.0[off..off + 8].copy_from_slice(&(slice as u64).to_le_bytes());
+    write_u64_le(&mut buf.0[off..off + 8], slice as u64);
     off += 8;
-    buf.0[off..off + 8].copy_from_slice(&(m_prime as u64).to_le_bytes());
+    write_u64_le(&mut buf.0[off..off + 8], m_prime as u64);
     off += 8;
-    buf.0[off..off + 8].copy_from_slice(&(t_cost as u64).to_le_bytes());
+    write_u64_le(&mut buf.0[off..off + 8], t_cost as u64);
     off += 8;
 
     let y = match alg {
@@ -387,31 +417,31 @@ fn fill_address_block_for_segment(
         Algorithm::Argon2id => 2,
         _ => 0,
     };
-    buf.0[off..off + 8].copy_from_slice(&(y as u64).to_le_bytes());
+    write_u64_le(&mut buf.0[off..off + 8], y as u64);
     off += 8;
 
     // Set the counter (monotonically increasing for each block in the segment)
-    buf.0[off..off + 8].copy_from_slice(&counter.to_le_bytes());
+    write_u64_le(&mut buf.0[off..off + 8], counter);
     // No need to bump off further, the rest is zero
 
     // unpack into u64 array for G function - FIXED: Using iterator
-    let mut input_q = [0u64; ARGON2_QWORDS_IN_BLOCK];
+    let mut input_q = Zeroizing::new([0u64; ARGON2_QWORDS_IN_BLOCK]);
     for (i, chunk) in buf
         .0
         .chunks_exact(8)
         .enumerate()
         .take(ARGON2_QWORDS_IN_BLOCK)
     {
-        input_q[i] = u64::from_le_bytes(chunk.try_into().unwrap());
+        input_q[i] = read_u64_le(chunk);
     }
 
     // Apply G twice, per RFC 9106 § 3.3
-    let zero = [0u64; ARGON2_QWORDS_IN_BLOCK];
-    let block0 = argon2_g(&zero, &input_q);
-    let block1 = argon2_g(&zero, &block0);
+    const ZERO_QWORDS: [u64; ARGON2_QWORDS_IN_BLOCK] = [0u64; ARGON2_QWORDS_IN_BLOCK];
+    let block0 = argon2_g(&ZERO_QWORDS, &input_q);
+    let block1 = argon2_g(&ZERO_QWORDS, &block0);
 
     // Copy result to output array
-    address_qwords.copy_from_slice(&block1);
+    address_qwords.copy_from_slice(&block1[..]);
     Ok(())
 }
 
@@ -584,7 +614,7 @@ fn internal_argon2_core(
     h0.zeroize();
 
     // This array will hold the generated address block for data-independent addressing
-    let mut address_block_qwords = [0u64; ARGON2_QWORDS_IN_BLOCK];
+    let mut address_block_qwords = Zeroizing::new([0u64; ARGON2_QWORDS_IN_BLOCK]);
     let mut input_block_buffer = Block([0u8; ARGON2_BLOCK_SIZE]);
 
     for pass_idx in 0..time_cost_iterations {
@@ -633,7 +663,7 @@ fn internal_argon2_core(
 
                             // Generate a fresh address block
                             fill_address_block_for_segment(
-                                &mut address_block_qwords,
+                                &mut *address_block_qwords,
                                 pass_idx,
                                 lane_idx,
                                 slice_idx,
@@ -649,9 +679,7 @@ fn internal_argon2_core(
                         address_block_qwords[block_in_segment_idx as usize % ARGON2_QWORDS_IN_BLOCK]
                     } else {
                         // For data-dependent addressing, get the first 8 bytes of the previous block
-                        let mut buf = [0u8; 8];
-                        buf.copy_from_slice(&memory_matrix[prev_block_abs_idx].0[0..8]);
-                        u64::from_le_bytes(buf)
+                        read_u64_le(&memory_matrix[prev_block_abs_idx].0[..8])
                     };
 
                     // --- get the two 32-bit words out of the 64-bit pseudo-random value ---
@@ -683,17 +711,16 @@ fn internal_argon2_core(
                     let ref_block_data = &memory_matrix[ref_block_abs_idx].0;
 
                     // Get the current block's data (needed for pass > 0) - clone it to avoid borrowing issues
-                    let cur_block_data = if pass_idx > 0 {
-                        let mut data = [0u8; ARGON2_BLOCK_SIZE];
-                        data.copy_from_slice(&memory_matrix[current_block_abs_idx].0);
-                        data
-                    } else {
-                        [0u8; ARGON2_BLOCK_SIZE] // Dummy array for pass 0, won't be used
-                    };
+                    let mut cur_block_data = Block([0u8; ARGON2_BLOCK_SIZE]);
+                    if pass_idx > 0 {
+                        cur_block_data
+                            .0
+                            .copy_from_slice(&memory_matrix[current_block_abs_idx].0);
+                    }
 
                     // Parse the blocks into 128-u64 arrays with proper XOR for pass > 0
-                    let mut xv = [0u64; ARGON2_QWORDS_IN_BLOCK];
-                    let mut yv = [0u64; ARGON2_QWORDS_IN_BLOCK];
+                    let mut xv = Zeroizing::new([0u64; ARGON2_QWORDS_IN_BLOCK]);
+                    let mut yv = Zeroizing::new([0u64; ARGON2_QWORDS_IN_BLOCK]);
 
                     // FIXED: Using iterator instead of index loop
                     for (i, chunk) in prev_block_data
@@ -701,7 +728,7 @@ fn internal_argon2_core(
                         .enumerate()
                         .take(ARGON2_QWORDS_IN_BLOCK)
                     {
-                        xv[i] = u64::from_le_bytes(chunk.try_into().unwrap());
+                        xv[i] = read_u64_le(chunk);
                     }
 
                     // FIXED: Using iterator instead of index loop
@@ -710,28 +737,20 @@ fn internal_argon2_core(
                         .enumerate()
                         .take(ARGON2_QWORDS_IN_BLOCK)
                     {
-                        yv[i] = u64::from_le_bytes(chunk.try_into().unwrap());
+                        yv[i] = read_u64_le(chunk);
                     }
 
                     // Mix with the true Argon2 G function
                     let gq = argon2_g(&xv, &yv);
 
-                    // Serialize back into bytes - FIXED: Using iterator
-                    let mut gbytes = [0u8; ARGON2_BLOCK_SIZE];
-                    for (i, &qword) in gq.iter().enumerate().take(ARGON2_QWORDS_IN_BLOCK) {
-                        let start = i * 8;
-                        gbytes[start..start + 8].copy_from_slice(&qword.to_le_bytes());
-                    }
-
-                    // Final update matches RFC spec exactly
-                    if pass_idx == 0 {
-                        memory_matrix[current_block_abs_idx]
-                            .0
-                            .copy_from_slice(&gbytes);
-                    } else {
-                        for k in 0..ARGON2_BLOCK_SIZE {
-                            memory_matrix[current_block_abs_idx].0[k] =
-                                gbytes[k] ^ cur_block_data[k];
+                    // Serialize directly into the protected memory matrix. Avoid
+                    // creating a second 1 KiB byte-array copy of the mixed block.
+                    for (word_index, &qword) in gq.iter().enumerate().take(ARGON2_QWORDS_IN_BLOCK) {
+                        for byte_index in 0..8 {
+                            let output_index = word_index * 8 + byte_index;
+                            memory_matrix[current_block_abs_idx].0[output_index] =
+                                ((qword >> (byte_index * 8)) as u8)
+                                    ^ cur_block_data.0[output_index];
                         }
                     }
                 }

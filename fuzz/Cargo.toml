@@ -9,13 +9,13 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "=0.4.13"
-dcrypt-api = { path = "../crates/api" }
-dcrypt-algorithms = { path = "../crates/algorithms", features = ["ec"] }
-dcrypt-hybrid = { path = "../crates/hybrid" }
-dcrypt-kem = { path = "../crates/kem", features = ["post-quantum", "traditional"] }
-dcrypt-sign = { path = "../crates/sign" }
-dcrypt-symmetric = { path = "../crates/symmetric" }
-dcrypt-legacy-xchacha20poly1305-migration = { path = "../migration/legacy-xchacha20poly1305" }
+dcrypt-api = { version = "=2.0.0", path = "../crates/api" }
+dcrypt-algorithms = { version = "=2.0.0", path = "../crates/algorithms", features = ["ec"] }
+dcrypt-hybrid = { version = "=2.0.0", path = "../crates/hybrid" }
+dcrypt-kem = { version = "=2.0.0", path = "../crates/kem", features = ["post-quantum", "traditional"] }
+dcrypt-sign = { version = "=2.0.0", path = "../crates/sign" }
+dcrypt-symmetric = { version = "=2.0.0", path = "../crates/symmetric" }
+dcrypt-legacy-xchacha20poly1305-migration = { version = "=0.0.0", path = "../migration/legacy-xchacha20poly1305" }
 
 [[bin]]
 name = "signature_decoders"

@@ -1,4 +1,5 @@
 #![no_main]
+#![forbid(unsafe_code)]
 
 use dcrypt_algorithms::aead::chacha20poly1305::ChaCha20Poly1305;
 use dcrypt_algorithms::stream::chacha::chacha20::ChaCha20;

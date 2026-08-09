@@ -8,7 +8,7 @@ use crate::alloc_prelude::*;
 
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{validate, Result};
@@ -137,7 +137,7 @@ impl<const N: usize> ConstantTimeEq for Tag<N> {
 impl<const N: usize> RandomGeneration for Tag<N> {
     fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
         let mut data = [0u8; N];
-        rng.try_fill_bytes(&mut data)?;
+        try_fill_bytes_zeroing_on_error(rng, &mut data)?;
         Ok(Self { data })
     }
 }

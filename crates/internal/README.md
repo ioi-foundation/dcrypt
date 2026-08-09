@@ -32,7 +32,7 @@ The `internal` crate provides low-level utility functions and modules that are s
         *   `boxed_bytes_zeroed` / `boxed_bytes_from_slice`: Create exact-size boxed byte storage before secret data is written.
         *   `ZeroizingBytes`: An exact-size `Zeroizing<Box<[u8]>>` alias for secret-returning APIs.
         *   `secure_clone_and_zero(data: &mut [u8]) -> Box<[u8]>`: Clones a slice into exact-size storage and then zeroes the original.
-    *   **`ZeroGuard<'a>` Struct**: An RAII guard that ensures a mutable byte slice is zeroed when the guard goes out of scope.
+    *   **`ZeroGuard<'a>` Struct**: An RAII guard that invokes best-effort explicit clearing of a mutable byte slice when it goes out of scope; safe Rust cannot promise physical erasure of compiler or register copies.
 
 4.  **SIMD Utilities (`simd` module in `lib.rs`)** (conditional on `simd` feature):
     *   **Purpose**: Placeholder for SIMD (Single Instruction, Multiple Data) related utility functions, such as checking for SIMD availability.

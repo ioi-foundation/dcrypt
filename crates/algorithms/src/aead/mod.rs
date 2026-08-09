@@ -59,8 +59,8 @@ use crate::error::{Error, Result};
 use crate::types::{Nonce, SecretBytes};
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 /// Marker trait for AEAD algorithms
 pub trait AeadAlgorithm {
@@ -197,14 +197,14 @@ impl AeadCipher for ChaCha20Poly1305Cipher {
     }
 
     fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
-        let mut key = [0u8; 32];
-        rng.try_fill_bytes(&mut key)?;
-        Ok(SecretBytes::new(key))
+        let mut key = Zeroizing::new([0u8; 32]);
+        try_fill_bytes_zeroing_on_error(rng, &mut key[..])?;
+        Ok(SecretBytes::new(*key))
     }
 
     fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Nonce<12>> {
         let mut nonce = [0u8; 12];
-        rng.try_fill_bytes(&mut nonce)?;
+        try_fill_bytes_zeroing_on_error(rng, &mut nonce)?;
         Ok(Nonce::<12>::new(nonce))
     }
 }

@@ -20,8 +20,8 @@ use crate::error::{validate, Result};
 use crate::types::SecretBytes;
 use core::sync::atomic::{compiler_fence, Ordering};
 use dcrypt_common::security::SecretBuffer;
-use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_params::utils::symmetric::{
     AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, AES_BLOCK_SIZE,
 };
@@ -489,9 +489,9 @@ impl BlockCipher for Aes128 {
     }
 
     fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
-        let mut key_data = [0u8; AES128_KEY_SIZE];
-        rng.try_fill_bytes(&mut key_data)?;
-        Ok(SecretBytes::new(key_data))
+        let mut key_data = Zeroizing::new([0u8; AES128_KEY_SIZE]);
+        try_fill_bytes_zeroing_on_error(rng, &mut key_data[..])?;
+        Ok(SecretBytes::new(*key_data))
     }
 }
 
@@ -623,9 +623,9 @@ impl BlockCipher for Aes192 {
     }
 
     fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
-        let mut key_data = [0u8; AES192_KEY_SIZE];
-        rng.try_fill_bytes(&mut key_data)?;
-        Ok(SecretBytes::new(key_data))
+        let mut key_data = Zeroizing::new([0u8; AES192_KEY_SIZE]);
+        try_fill_bytes_zeroing_on_error(rng, &mut key_data[..])?;
+        Ok(SecretBytes::new(*key_data))
     }
 }
 
@@ -759,9 +759,9 @@ impl BlockCipher for Aes256 {
     }
 
     fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
-        let mut key_data = [0u8; AES256_KEY_SIZE];
-        rng.try_fill_bytes(&mut key_data)?;
-        Ok(SecretBytes::new(key_data))
+        let mut key_data = Zeroizing::new([0u8; AES256_KEY_SIZE]);
+        try_fill_bytes_zeroing_on_error(rng, &mut key_data[..])?;
+        Ok(SecretBytes::new(*key_data))
     }
 }
 

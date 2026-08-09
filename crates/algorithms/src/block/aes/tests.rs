@@ -1,8 +1,28 @@
 use super::*;
 use crate::error::Error;
 use crate::types::SecretBytes;
+use dcrypt_internal::random::{CryptoRng, Error as RandomError, RngCore};
 use dcrypt_params::utils::symmetric::AES_BLOCK_SIZE;
 use hex;
+
+struct PartiallyFailingRng;
+
+impl RngCore for PartiallyFailingRng {
+    fn try_fill_bytes(&mut self, destination: &mut [u8]) -> core::result::Result<(), RandomError> {
+        let written = core::cmp::min(5, destination.len());
+        destination[..written].fill(0xA5);
+        Err(RandomError)
+    }
+}
+
+impl CryptoRng for PartiallyFailingRng {}
+
+#[test]
+fn generated_keys_propagate_partial_rng_failures() {
+    assert!(Aes128::generate_key(&mut PartiallyFailingRng).is_err());
+    assert!(Aes192::generate_key(&mut PartiallyFailingRng).is_err());
+    assert!(Aes256::generate_key(&mut PartiallyFailingRng).is_err());
+}
 
 #[test]
 fn test_aes128_encrypt() {

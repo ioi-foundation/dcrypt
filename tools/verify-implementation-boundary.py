@@ -76,6 +76,61 @@ RAW_SECRET_BYTE_OUTPUT = re.compile(
     r"\[\s*u8\s*;)",
     re.DOTALL,
 )
+DIRECT_RNG_FILL = re.compile(r"\.\s*try_fill_bytes\s*\(")
+TARGETED_SECRET_SCRATCH = {
+    "src/xof/blake3/mod.rs": re.compile(
+        r"(?:\blet\s+mut\s+(?:permuted|state|block|output|result|block_words|"
+        r"padded_block|words|key_bytes|arr|key_words|tmp|input_chaining_value)"
+        r"(?:\s*:\s*[^=;]+)?\s*=\s*\[|"
+        r"\b(?:u32|u64)::from_le_bytes\s*\(\s*\[)"
+    ),
+    "src/hash/blake2/mod.rs": re.compile(
+        r"(?:\blet\s+mut\s+key_secret_buf_content(?:\s*:\s*[^=;]+)?\s*=\s*\[|"
+        r"\blet\s+mut\s+h\s*=\s*BLAKE2[BS]_IV\b|"
+        r"\b(?:u32|u64)::from_le_bytes\s*\(\s*\[)"
+    ),
+    "src/kdf/argon2/mod.rs": re.compile(
+        r"\blet\s+mut\s+(?:r|tmp|input_q|address_block_qwords|buf|data|xv|yv|gbytes)"
+        r"(?:\s*:\s*[^=;]+)?\s*=\s*\["
+    ),
+    "src/mac/poly1305/mod.rs": re.compile(
+        r"\blet\s+mut\s+(?:h|products|reduced|tag_words|operands)"
+        r"(?:\s*:\s*[^=;]+)?\s*=\s*\["
+    ),
+    "src/random.rs": re.compile(
+        r"(?:\blet\s+(?:mut\s+)?(?:bytes|key|initial|state|output)"
+        r"(?:\s*:\s*[^=;]+)?\s*=\s*\[|"
+        r"\b(?:u32|u64)::from_le_bytes\s*\(\s*\[|"
+        r"\.to_le_bytes\s*\(\s*\))"
+    ),
+}
+TARGETED_LIFECYCLE_REQUIREMENTS = {
+    "src/xof/blake3/mod.rs": (
+        re.compile(r"type\s+ProtectedChainingValue\s*=\s*Zeroizing\s*<"),
+        re.compile(r"impl\s+Drop\s+for\s+Output\b"),
+        re.compile(r"impl\s+Drop\s+for\s+ChunkState\b"),
+    ),
+    "src/hash/blake2/mod.rs": (
+        re.compile(r"SecretBuffer\s*::\s*<\s*BLAKE2B_KEY_SIZE\s*>\s*::\s*zeroed"),
+        re.compile(r"SecretBuffer\s*::\s*<\s*BLAKE2S_KEY_SIZE\s*>\s*::\s*zeroed"),
+        re.compile(r"impl\s+Drop\s+for\s+Blake2b\b"),
+        re.compile(r"impl\s+Drop\s+for\s+Blake2s\b"),
+    ),
+    "src/kdf/argon2/mod.rs": (
+        re.compile(r"impl\s+Drop\s+for\s+Block\b"),
+        re.compile(r"fn\s+argon2_g\s*\([^)]*\)\s*->\s*Zeroizing\s*<", re.DOTALL),
+    ),
+    "src/mac/poly1305/mod.rs": (
+        re.compile(r"fn\s+mul_reduce\s*\([^)]*\)\s*->\s*Zeroizing\s*<", re.DOTALL),
+        re.compile(r"let\s+mut\s+h\s*=\s*Zeroizing\s*::\s*new"),
+    ),
+    "src/random.rs": (
+        re.compile(r"let\s+seed\s*=\s*crate::zeroing::Zeroizing\s*::\s*new\s*\(\s*seed\s*\)"),
+        re.compile(r"let\s+initial\s*=\s*crate::zeroing::Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+mut\s+state\s*=\s*crate::zeroing::Zeroizing\s*::\s*new"),
+        re.compile(r"fn\s+chacha20_block\s*\([^)]*output:\s*&mut\s*\[u8;\s*64\]", re.DOTALL),
+    ),
+}
 VERSIONED_SHARED_OBJECT = re.compile(r"\.so(?:\.\d+)*$", re.IGNORECASE)
 VERSIONED_DYLIB = re.compile(r"(?:\.\d+)*\.dylib$", re.IGNORECASE)
 NATIVE_MAGIC = (
@@ -272,6 +327,9 @@ class BoundaryAudit:
         package_map = {
             package["id"]: package for package in all_features.get("packages", [])
         }
+        published_package_ids = published_workspace_package_ids(
+            all_features, published_names
+        )
         publishable_names = {
             package_map[package_id]["name"]
             for package_id in workspace_members
@@ -287,15 +345,17 @@ class BoundaryAudit:
 
         external_labels = {
             package_label(package)
-            for package in self.packages.values()
-            if package["name"] not in published_names
+            for package_id, package in self.packages.items()
+            if package_id not in published_package_ids
         }
-        unknown_labels = sorted(external_labels - allowed_dependencies)
-        if unknown_labels:
+        missing_labels, unknown_labels = dependency_snapshot_difference(
+            external_labels, allowed_dependencies
+        )
+        if missing_labels or unknown_labels:
             self.fail(
                 "dependency-snapshot",
-                "normal/build closure contains package(s) absent from the exact policy "
-                f"snapshot: {', '.join(unknown_labels)}",
+                "normal/build dependency snapshot mismatch; "
+                f"missing={missing_labels}, extra={unknown_labels}",
             )
 
         for package_id, package in sorted(self.packages.items()):
@@ -314,7 +374,7 @@ class BoundaryAudit:
                     )
             if name in forbidden or name.endswith(suffixes):
                 self.fail(label, "forbidden native/FFI/OS-entropy bridge package")
-            if name in oracle_names and name not in published_names:
+            if name in oracle_names and package_id not in published_package_ids:
                 self.fail(
                     label,
                     "external cryptographic implementation appears in the normal/build closure",
@@ -322,7 +382,7 @@ class BoundaryAudit:
 
         for package_id in sorted(workspace_members):
             package = package_map[package_id]
-            if package["name"] in published_names:
+            if package_id in published_package_ids:
                 for dependency in package.get("dependencies", []):
                     if dependency.get("kind") not in (None, "normal", "build"):
                         continue
@@ -343,7 +403,7 @@ class BoundaryAudit:
             )
             if not dependency_oracles:
                 continue
-            if package["name"] in published_names:
+            if package_id in published_package_ids:
                 self.fail(
                     package_label(package),
                     "external cryptographic implementation(s) appear in a published "
@@ -359,12 +419,39 @@ class BoundaryAudit:
 
         self.audit_verification_workspace(policy, all_features)
 
+    def audit_workspace_exclude_classification(self, policy: dict[str, Any]) -> None:
+        try:
+            classified = classified_excluded_workspaces(policy)
+            root_manifest = tomllib.loads((PROJECT_ROOT / "Cargo.toml").read_text())
+        except (OSError, tomllib.TOMLDecodeError, ValueError) as error:
+            self.fail("workspace-exclude", str(error))
+            return
+
+        declared_values = root_manifest.get("workspace", {}).get("exclude", [])
+        if not isinstance(declared_values, list) or not all(
+            isinstance(value, str) and value for value in declared_values
+        ):
+            self.fail("workspace-exclude", "root [workspace].exclude must be a string array")
+            return
+
+        declared = {Path(value).as_posix() for value in declared_values}
+        missing, extra = excluded_classification_difference(declared_values, classified)
+        if len(declared) != len(declared_values):
+            self.fail("workspace-exclude", "root [workspace].exclude contains duplicates")
+        if missing or extra:
+            self.fail(
+                "workspace-exclude",
+                "root [workspace].exclude classification mismatch; "
+                f"missing={sorted(missing)}, extra={sorted(extra)}",
+            )
+
     def audit_verification_workspace(
         self, policy: dict[str, Any], main_metadata: dict[str, Any]
     ) -> None:
         relative_workspace = Path(policy["verification-workspace"])
         verification_root = (PROJECT_ROOT / relative_workspace).resolve()
         verification_manifest = verification_root / "Cargo.toml"
+        verification_lock = verification_root / "Cargo.lock"
         try:
             root_manifest = tomllib.loads((PROJECT_ROOT / "Cargo.toml").read_text())
         except (OSError, tomllib.TOMLDecodeError) as error:
@@ -398,6 +485,23 @@ class BoundaryAudit:
                 f"{relative_workspace.as_posix()}/Cargo.toml",
             )
             return
+        if not verification_lock.is_file():
+            self.fail("oracle-isolation", "verification/Cargo.lock is missing")
+            return
+        tracked_lock = self.command(
+            [
+                "git",
+                "ls-files",
+                "--error-unmatch",
+                "--",
+                verification_lock.relative_to(PROJECT_ROOT).as_posix(),
+            ]
+        )
+        if tracked_lock.returncode != 0:
+            self.fail("oracle-isolation", "verification/Cargo.lock must be git-tracked")
+        self.excluded_lock_hashes[relative_workspace.as_posix()] = sha256_file(
+            verification_lock
+        )
 
         completed = self.command(
             [
@@ -441,6 +545,13 @@ class BoundaryAudit:
             if package.get("publish") != []:
                 self.fail(label, "verification package must set package.publish = false")
             for dependency in package.get("dependencies", []):
+                requirement = dependency.get("req", "")
+                if not is_exact_requirement(requirement):
+                    self.fail(
+                        label,
+                        "verification dependency is not exactly pinned: "
+                        f"{dependency['name']} {requirement!r}",
+                    )
                 if (
                     dependency["name"] in oracle_names
                     and dependency.get("kind") != "dev"
@@ -450,6 +561,177 @@ class BoundaryAudit:
                         "verification oracle dependency must be dev/test-only: "
                         f"{dependency['name']} ({dependency.get('kind') or 'normal'})",
                     )
+            for target in package.get("targets", []):
+                source = Path(target.get("src_path", "")).resolve()
+                if source.is_file() and not has_crate_level_forbid(
+                    source.read_text(errors="replace")
+                ):
+                    self.fail(
+                        label,
+                        "verification target lacks top-level #![forbid(unsafe_code)]: "
+                        f"{source}",
+                    )
+
+        audit_source_tree(
+            self,
+            "verification:owned-sources",
+            verification_root,
+            set(policy["native-extensions"]),
+            check_internal_entropy=False,
+            scan_all_rust=True,
+            required_rust_files=set(),
+        )
+
+    def audit_fuzz_workspace(
+        self, policy: dict[str, Any], main_metadata: dict[str, Any]
+    ) -> None:
+        relative_value = policy.get("fuzz-workspace")
+        allowed_value = policy.get("fuzz-allowed-external-normal-build-packages")
+        if not isinstance(relative_value, str) or not relative_value:
+            self.fail("fuzz-workspace", "policy path must be a non-empty string")
+            return
+        if not isinstance(allowed_value, list) or not all(
+            isinstance(label, str) and label for label in allowed_value
+        ):
+            self.fail(
+                "fuzz-workspace",
+                "fuzz-allowed-external-normal-build-packages must be a string array",
+            )
+            return
+
+        relative = Path(relative_value)
+        workspace_root = (PROJECT_ROOT / relative).resolve()
+        manifest = workspace_root / "Cargo.toml"
+        lock = workspace_root / "Cargo.lock"
+        scope = f"fuzz:{relative.as_posix()}"
+        if not manifest.is_file() or not lock.is_file():
+            self.fail(scope, "independent Cargo.toml and Cargo.lock are required")
+            return
+        tracked_lock = self.command(
+            [
+                "git",
+                "ls-files",
+                "--error-unmatch",
+                "--",
+                lock.relative_to(PROJECT_ROOT).as_posix(),
+            ]
+        )
+        if tracked_lock.returncode != 0:
+            self.fail(scope, "fuzz workspace Cargo.lock must be git-tracked")
+        self.excluded_lock_hashes[relative.as_posix()] = sha256_file(lock)
+
+        completed = self.command(
+            [
+                "cargo",
+                "metadata",
+                "--locked",
+                "--all-features",
+                "--format-version",
+                "1",
+                "--manifest-path",
+                str(manifest),
+            ],
+            env=clean_cargo_env(),
+        )
+        if completed.returncode != 0:
+            self.fail(scope, f"cargo metadata failed: {tail(completed.stderr)}")
+            return
+        try:
+            metadata = json.loads(completed.stdout)
+        except json.JSONDecodeError as error:
+            self.fail(scope, f"cargo metadata returned invalid JSON: {error}")
+            return
+        if Path(metadata.get("workspace_root", "")).resolve() != workspace_root:
+            self.fail(scope, "Cargo.toml must define an independent Cargo workspace")
+
+        members = set(metadata.get("workspace_members", []))
+        packages = {package["id"]: package for package in metadata.get("packages", [])}
+        if not members:
+            self.fail(scope, "fuzz workspace has no members")
+            return
+        for package_id in sorted(members):
+            package = packages.get(package_id)
+            if package is None:
+                self.fail(scope, f"missing member metadata for {package_id}")
+                continue
+            label = package_label(package)
+            if package.get("publish") != []:
+                self.fail(label, "fuzz workspace package must set publish = false")
+            if package.get("metadata", {}).get("cargo-fuzz") is not True:
+                self.fail(label, "fuzz workspace package lacks package.metadata.cargo-fuzz=true")
+            for target in package.get("targets", []):
+                source = Path(target.get("src_path", "")).resolve()
+                if not source.is_file():
+                    self.fail(label, f"Cargo target source is missing: {source}")
+                elif not has_crate_level_forbid(source.read_text(errors="replace")):
+                    self.fail(
+                        label,
+                        "fuzz target lacks top-level #![forbid(unsafe_code)]: "
+                        f"{source}",
+                    )
+
+            try:
+                member_manifest = tomllib.loads(Path(package["manifest_path"]).read_text())
+            except (OSError, tomllib.TOMLDecodeError) as error:
+                self.fail(label, f"cannot parse member Cargo.toml: {error}")
+                continue
+            for table_name, dependency_name, specification in iter_manifest_dependencies(
+                member_manifest
+            ):
+                requirement = (
+                    specification
+                    if isinstance(specification, str)
+                    else specification.get("version", "")
+                    if isinstance(specification, dict)
+                    else ""
+                )
+                if not isinstance(requirement, str) or not is_exact_requirement(requirement):
+                    self.fail(
+                        label,
+                        "fuzz normal/build dependency is not exactly pinned: "
+                        f"{table_name}.{dependency_name} {requirement!r}",
+                    )
+
+        closure = self.normal_build_closure(scope, metadata, members)
+        closure_packages = [
+            packages[package_id]
+            for package_id in sorted(closure)
+            if package_id in packages
+        ]
+        external_labels: set[str] = set()
+        for package in closure_packages:
+            label = package_label(package)
+            package_root = Path(package["manifest_path"]).resolve().parent
+            if not package_root.is_relative_to(PROJECT_ROOT):
+                external_labels.add(label)
+                if package.get("source") != (
+                    "registry+https://github.com/rust-lang/crates.io-index"
+                ):
+                    self.fail(label, "external fuzz dependency is not from crates.io")
+                continue
+            required_sources = cargo_target_sources(self, package, package_root)
+            audit_source_tree(
+                self,
+                f"{scope}:{label}",
+                package_root,
+                set(policy["native-extensions"]),
+                check_internal_entropy=True,
+                scan_all_rust=True,
+                required_rust_files=required_sources,
+            )
+
+        allowed_labels = set(allowed_value)
+        if external_labels != allowed_labels:
+            self.fail(
+                scope,
+                "external normal/build dependency snapshot mismatch; "
+                f"missing={sorted(allowed_labels - external_labels)}, "
+                f"extra={sorted(external_labels - allowed_labels)}",
+            )
+        self.excluded_workspace_closures[relative.as_posix()] = sorted(
+            package_label(package) for package in closure_packages
+        )
+        self.excluded_workspace_metadata[relative.as_posix()] = metadata
 
     def audit_owned_excluded_workspaces(
         self, policy: dict[str, Any], main_metadata: dict[str, Any]
@@ -808,11 +1090,40 @@ class BoundaryAudit:
                             required_rust_files=set(),
                         )
 
+    def run_fuzz_active_scan(self, policy: dict[str, Any]) -> None:
+        relative_value = policy.get("fuzz-workspace")
+        if not isinstance(relative_value, str) or not relative_value:
+            return
+        manifest = PROJECT_ROOT / relative_value / "Cargo.toml"
+        with tempfile.TemporaryDirectory(prefix="dcrypt-fuzz-boundary-") as temp:
+            env = clean_cargo_env()
+            env["CARGO_TARGET_DIR"] = temp
+            completed = self.command(
+                [
+                    "cargo",
+                    "check",
+                    "--locked",
+                    "--all-targets",
+                    "--all-features",
+                    "--manifest-path",
+                    str(manifest),
+                ],
+                env=env,
+            )
+            if completed.returncode != 0:
+                self.fail(
+                    f"fuzz:{relative_value}:active",
+                    f"fuzz workspace did not compile: {tail(completed.stderr)}",
+                )
+
     def audit_dependency_sources(
         self, policy: dict[str, Any], published_names: set[str]
     ) -> None:
+        published_package_ids = published_workspace_package_ids(
+            self.metadata_profiles.get("all-features", {}), published_names
+        )
         for package in sorted(self.packages.values(), key=package_label):
-            if package["name"] in published_names:
+            if package["id"] in published_package_ids:
                 continue
             root = Path(package["manifest_path"]).resolve().parent
             if not root.is_dir():
@@ -832,9 +1143,11 @@ class BoundaryAudit:
     def package_and_audit_owned_sources(
         self, policy: dict[str, Any], metadata: dict[str, Any]
     ) -> None:
+        workspace_members = set(metadata.get("workspace_members", []))
         packages_by_name = {
             package["name"]: package
             for package in metadata.get("packages", [])
+            if package["id"] in workspace_members
             if package["name"] in set(policy["published-packages"])
         }
         with tempfile.TemporaryDirectory(prefix="dcrypt-package-audit-") as temp:
@@ -1184,6 +1497,77 @@ class BoundaryAudit:
         self.report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 
 
+def classified_excluded_workspaces(policy: dict[str, Any]) -> list[tuple[str, str]]:
+    entries: list[tuple[str, str]] = []
+    for category, key in (
+        ("verification", "verification-workspace"),
+        ("fuzz", "fuzz-workspace"),
+    ):
+        value = policy.get(key)
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"policy {key} must be a non-empty string")
+        entries.append((category, Path(value).as_posix()))
+
+    configurations = policy.get("owned-excluded-workspaces", [])
+    if not isinstance(configurations, list):
+        raise ValueError("policy owned-excluded-workspaces must be an array")
+    for configuration in configurations:
+        if not isinstance(configuration, dict):
+            raise ValueError("each owned excluded workspace entry must be a table")
+        value = configuration.get("path")
+        if not isinstance(value, str) or not value:
+            raise ValueError("owned excluded workspace path must be a non-empty string")
+        entries.append(("owned", Path(value).as_posix()))
+
+    paths = [path for _, path in entries]
+    if len(set(paths)) != len(paths):
+        raise ValueError("classified excluded workspace paths must be unique")
+    for path in paths:
+        candidate = Path(path)
+        resolved = (PROJECT_ROOT / candidate).resolve()
+        if (
+            candidate.is_absolute()
+            or resolved == PROJECT_ROOT
+            or not resolved.is_relative_to(PROJECT_ROOT)
+        ):
+            raise ValueError(f"classified workspace path escapes repository: {path}")
+    return entries
+
+
+def excluded_classification_difference(
+    declared: Iterable[str], classified: Iterable[tuple[str, str]]
+) -> tuple[set[str], set[str]]:
+    declared_paths = {Path(path).as_posix() for path in declared}
+    classified_paths = {path for _, path in classified}
+    return classified_paths - declared_paths, declared_paths - classified_paths
+
+
+def dependency_snapshot_difference(
+    actual: Iterable[str], allowed: Iterable[str]
+) -> tuple[list[str], list[str]]:
+    """Return stale policy entries and unclassified dependency entries."""
+
+    actual_labels = set(actual)
+    allowed_labels = set(allowed)
+    return (
+        sorted(allowed_labels - actual_labels),
+        sorted(actual_labels - allowed_labels),
+    )
+
+
+def published_workspace_package_ids(
+    metadata: dict[str, Any], published_names: set[str]
+) -> set[str]:
+    """Identify owned published crates by workspace identity, never by name alone."""
+
+    workspace_members = set(metadata.get("workspace_members", []))
+    return {
+        package["id"]
+        for package in metadata.get("packages", [])
+        if package["id"] in workspace_members and package["name"] in published_names
+    }
+
+
 def package_label(package: dict[str, Any]) -> str:
     if "name" in package and "version" in package:
         return f"{package['name']}@{package['version']}"
@@ -1531,6 +1915,10 @@ def audit_source_tree(
             "test.rs",
             "tests.rs",
         }
+        is_production_source = (
+            (relative.parts and relative.parts[0] == "src" and not is_test_module)
+            or (relative.parts and relative.parts[0] == "fuzz_targets")
+        )
         if (
             check_internal_entropy
             and relative.parts
@@ -1554,6 +1942,35 @@ def audit_source_tree(
                         code_only,
                     )
                 )
+        if is_production_source and not (
+            "dcrypt-internal" in label and relative.as_posix() == "src/random.rs"
+        ):
+            patterns.append(
+                (
+                    "direct fallible RNG fill outside the zero-on-error boundary",
+                    DIRECT_RNG_FILL,
+                    code_only,
+                )
+            )
+        target_path = relative.as_posix()
+        targeted_lifecycle_source = "dcrypt-algorithms" in label or (
+            "dcrypt-internal" in label and target_path == "src/random.rs"
+        )
+        if targeted_lifecycle_source:
+            scratch_pattern = TARGETED_SECRET_SCRATCH.get(target_path)
+            if scratch_pattern is not None:
+                patterns.append(
+                    (
+                        "unprotected targeted secret scratch",
+                        scratch_pattern,
+                        code_only,
+                    )
+                )
+                for requirement in TARGETED_LIFECYCLE_REQUIREMENTS[target_path]:
+                    if requirement.search(code_only) is None:
+                        findings["missing targeted zeroizing lifecycle guard"].append(
+                            relative.as_posix()
+                        )
         for kind, pattern, searchable in patterns:
             match = pattern.search(searchable)
             if match:
@@ -1599,6 +2016,11 @@ def parse_args() -> argparse.Namespace:
         help="run metadata and source/package audits without compiler target checks",
     )
     parser.add_argument(
+        "--list-classified-workspaces",
+        action="store_true",
+        help="print the authoritative excluded-workspace category and path pairs",
+    )
+    parser.add_argument(
         "--report",
         type=Path,
         default=PROJECT_ROOT / "target" / "implementation-boundary" / "report.json",
@@ -1615,6 +2037,8 @@ const RAW: &str = r###"unsafe /* extern \\"C\\" */"###;
 #![forbid(unsafe_code)]
 let secret: Zeroizing<Vec<u8>> = todo!();
 fn derive_key(input: &[u8]) -> Result<Vec<u8>> { todo!() }
+rng.try_fill_bytes(&mut secret)?;
+let mut key_words = [0u32; 8];
 unsafe fn bad() {}
 extern "C" { fn foreign(); }
 #[link(name = "native")]
@@ -1642,6 +2066,14 @@ println!("cargo:rustc-link-lib=native");
     assert len(BUILD_LINK_DIRECTIVE.findall(commentless)) == 2
     assert len(GROWABLE_ZEROIZING_BYTES.findall(code_only)) == 1
     assert len(RAW_SECRET_BYTE_OUTPUT.findall(code_only)) == 1
+    assert len(DIRECT_RNG_FILL.findall(code_only)) == 1
+    assert (
+        len(TARGETED_SECRET_SCRATCH["src/xof/blake3/mod.rs"].findall(code_only))
+        == 1
+    )
+    assert TARGETED_SECRET_SCRATCH["src/random.rs"].search(
+        "let mut bytes = [0u8; 32];"
+    )
     assert UNSAFE_TOKEN.search("#![forbid(unsafe_code)]") is None
     assert has_crate_level_forbid("// header\n#![forbid(unsafe_code)]\nfn ok() {}")
     assert not has_crate_level_forbid("mod nested { #![forbid(unsafe_code)] }")
@@ -1649,6 +2081,37 @@ println!("cargo:rustc-link-lib=native");
     assert is_exact_requirement("=1.2.3")
     assert not is_exact_requirement("1.2.3")
     assert not is_exact_requirement("^1.2.3")
+    classified = classified_excluded_workspaces(
+        {
+            "verification-workspace": "verification",
+            "fuzz-workspace": "fuzz",
+            "owned-excluded-workspaces": [{"path": "migration/tool"}],
+        }
+    )
+    assert excluded_classification_difference(
+        ["verification", "fuzz", "migration/tool"], classified
+    ) == (set(), set())
+    assert excluded_classification_difference(
+        ["verification", "fuzz", "unclassified"], classified
+    ) == ({"migration/tool"}, {"unclassified"})
+    assert dependency_snapshot_difference(
+        {"base64@0.22.1", "hex@0.4.3"},
+        {"base64@0.22.1", "hex@0.4.3", "stale@1.0.0"},
+    ) == (["stale@1.0.0"], [])
+    assert dependency_snapshot_difference(
+        {"base64@0.22.1", "unknown@1.0.0"},
+        {"base64@0.22.1"},
+    ) == ([], ["unknown@1.0.0"])
+    identity_fixture = {
+        "workspace_members": ["path+dcrypt-params@2.0.0"],
+        "packages": [
+            {"id": "path+dcrypt-params@2.0.0", "name": "dcrypt-params"},
+            {"id": "registry+dcrypt-params@1.2.2", "name": "dcrypt-params"},
+        ],
+    }
+    assert published_workspace_package_ids(identity_fixture, {"dcrypt-params"}) == {
+        "path+dcrypt-params@2.0.0"
+    }
 
     with tempfile.TemporaryDirectory(prefix="dcrypt-boundary-self-test-") as temp:
         root = Path(temp)
@@ -1680,6 +2143,15 @@ def main() -> int:
     if sys.version_info < (3, 11):
         print("error: Python 3.11 or newer is required", file=sys.stderr)
         return 2
+    if args.list_classified_workspaces:
+        try:
+            policy = tomllib.loads(POLICY_PATH.read_text())
+            for category, path in classified_excluded_workspaces(policy):
+                print(f"{category}\t{path}")
+        except (OSError, tomllib.TOMLDecodeError, ValueError) as error:
+            print(f"error: cannot list classified workspaces: {error}", file=sys.stderr)
+            return 2
+        return 0
     if args.self_test:
         self_test()
         print("implementation-boundary scanner self-test passed")
@@ -1719,7 +2191,9 @@ def main() -> int:
     no_default = audit.cargo_metadata("no-default-features", ["--no-default-features"])
     audit.collect_closure("all-features", all_features, published_names)
     audit.collect_closure("no-default-features", no_default, published_names)
+    audit.audit_workspace_exclude_classification(policy)
     audit.audit_package_metadata(policy)
+    audit.audit_fuzz_workspace(policy, all_features)
     audit.audit_owned_excluded_workspaces(policy, all_features)
     audit.audit_dependency_sources(policy, published_names)
     audit.package_and_audit_owned_sources(policy, all_features)
@@ -1728,6 +2202,7 @@ def main() -> int:
         installed_targets = audit.validate_supported_targets(policy)
         audit.run_active_dependency_unsafe_scans(policy, installed_targets)
         audit.run_owned_excluded_active_scans(policy)
+        audit.run_fuzz_active_scan(policy)
         audit.run_no_std_contract_checks(policy, published_names, installed_targets)
 
     audit.write_report(policy)

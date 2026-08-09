@@ -1,4 +1,5 @@
 #![no_main]
+#![forbid(unsafe_code)]
 
 use dcrypt_api::traits::{Serialize, SerializeSecret};
 use dcrypt_api::Signature;

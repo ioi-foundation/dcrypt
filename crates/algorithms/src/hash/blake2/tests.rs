@@ -117,6 +117,32 @@ fn test_blake2s_abc() {
 }
 
 #[test]
+fn keyed_blake2_matches_independent_known_answers() {
+    let mut blake2b = Blake2b::with_key(b"key", 64).unwrap();
+    blake2b.update(b"abc").unwrap();
+    assert_eq!(
+        hex::encode(blake2b.finalize().unwrap()),
+        "5c6a9a4ae911c02fb7e71a991eb9aea371ae993d4842d206e6020d46f5e41358\
+         c6d5c277c110ef86c959ed63e6ecaaaceaaff38019a43264ae06acf73b9550b1"
+    );
+
+    let mut blake2s = Blake2s::with_key(b"key", 32).unwrap();
+    blake2s.update(b"abc").unwrap();
+    assert_eq!(
+        hex::encode(blake2s.finalize().unwrap()),
+        "3f9723437b033bf0c1f4df43cafd0776068cb0a95912de13f3b2952a3aba764d"
+    );
+}
+
+#[test]
+fn keyed_blake2_rejects_invalid_output_lengths_before_key_staging() {
+    assert!(Blake2b::with_key(b"key", 0).is_err());
+    assert!(Blake2b::with_key(b"key", 65).is_err());
+    assert!(Blake2s::with_key(b"key", 0).is_err());
+    assert!(Blake2s::with_key(b"key", 33).is_err());
+}
+
+#[test]
 fn test_blake2b_multiblock() {
     let message = vec![b'a'; 200];
     let expected = "\

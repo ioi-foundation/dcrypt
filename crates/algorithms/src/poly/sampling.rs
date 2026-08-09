@@ -3,7 +3,8 @@
 use super::params::Modulus;
 use super::polynomial::Polynomial;
 use crate::error::{Error, Result};
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroizing;
 
 /// Trait for sampling polynomials uniformly at random
 pub trait UniformSampler<M: Modulus> {
@@ -54,9 +55,9 @@ fn sample_uniform_small<M: Modulus, R: RngCore + CryptoRng>(
 
     for i in 0..n {
         loop {
-            let mut bytes = [0u8; 2];
-            rng.try_fill_bytes(&mut bytes)?;
-            let sample = u16::from_le_bytes(bytes) as u32;
+            let mut bytes = Zeroizing::new([0u8; 2]);
+            try_fill_bytes_zeroing_on_error(rng, &mut bytes[..])?;
+            let sample = u32::from(bytes[0]) | (u32::from(bytes[1]) << 8);
 
             // Rejection sampling for uniform distribution
             if sample < threshold {
@@ -82,9 +83,10 @@ fn sample_uniform_medium<M: Modulus, R: RngCore + CryptoRng>(
 
     for i in 0..n {
         loop {
-            let mut bytes = [0u8; 3];
-            rng.try_fill_bytes(&mut bytes)?;
-            let sample = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], 0]);
+            let mut bytes = Zeroizing::new([0u8; 3]);
+            try_fill_bytes_zeroing_on_error(rng, &mut bytes[..])?;
+            let sample =
+                u32::from(bytes[0]) | (u32::from(bytes[1]) << 8) | (u32::from(bytes[2]) << 16);
 
             if sample < threshold {
                 poly.coeffs[i] = sample % q;
@@ -109,10 +111,13 @@ fn sample_uniform_large<M: Modulus, R: RngCore + CryptoRng>(
 
     for i in 0..n {
         loop {
-            let mut bytes = [0u8; 4];
-            rng.try_fill_bytes(&mut bytes)?;
+            let mut bytes = Zeroizing::new([0u8; 4]);
+            try_fill_bytes_zeroing_on_error(rng, &mut bytes[..])?;
             bytes[3] &= 0x7F; // Clear MSB
-            let sample = u32::from_le_bytes(bytes);
+            let sample = u32::from(bytes[0])
+                | (u32::from(bytes[1]) << 8)
+                | (u32::from(bytes[2]) << 16)
+                | (u32::from(bytes[3]) << 24);
 
             if sample < threshold {
                 poly.coeffs[i] = sample % q;
@@ -139,10 +144,10 @@ impl<M: Modulus> CbdSampler<M> for DefaultSamplers {
 
         // CBD(eta): sample 2*eta bits, compute sum of first eta bits minus sum of second eta bits
         let bytes_per_sample = (2 * eta as usize).div_ceil(8); // FIXED: Use div_ceil
-        let mut buffer = [0u8; 4]; // Max 32 bits for eta=16
+        let mut buffer = Zeroizing::new([0u8; 4]); // Max 32 bits for eta=16
 
         for i in 0..n {
-            rng.try_fill_bytes(&mut buffer[..bytes_per_sample])?;
+            try_fill_bytes_zeroing_on_error(rng, &mut buffer[..bytes_per_sample])?;
 
             let mut a = 0i32;
             let mut b = 0i32;
