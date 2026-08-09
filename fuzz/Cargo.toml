@@ -8,13 +8,14 @@ edition = "2021"
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = "0.4.13"
+libfuzzer-sys = "=0.4.13"
 dcrypt-api = { path = "../crates/api" }
 dcrypt-algorithms = { path = "../crates/algorithms", features = ["ec"] }
 dcrypt-hybrid = { path = "../crates/hybrid" }
 dcrypt-kem = { path = "../crates/kem", features = ["post-quantum", "traditional"] }
 dcrypt-sign = { path = "../crates/sign" }
 dcrypt-symmetric = { path = "../crates/symmetric" }
+dcrypt-legacy-xchacha20poly1305-migration = { path = "../migration/legacy-xchacha20poly1305" }
 
 [[bin]]
 name = "signature_decoders"
@@ -54,6 +55,13 @@ bench = false
 [[bin]]
 name = "bls12_381_decoders"
 path = "fuzz_targets/bls12_381_decoders.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "legacy_xchacha_migration"
+path = "fuzz_targets/legacy_xchacha_migration.rs"
 test = false
 doc = false
 bench = false

@@ -30,18 +30,15 @@ fn minus_one<const N: usize>(mut value: [u8; N]) -> [u8; N] {
 
 #[test]
 fn canonical_scalar_boundaries_match_independent_oracles() {
-    let p224_order = decode_hex::<28>(
-        "ffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d",
-    );
+    let p224_order = decode_hex::<28>("ffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d");
     assert!(owned_p224::Scalar::new(p224_order).is_err());
     assert!(p224::SecretKey::from_slice(&p224_order).is_err());
     let p224_max = minus_one(p224_order);
     assert!(owned_p224::Scalar::new(p224_max).is_ok());
     assert!(p224::SecretKey::from_slice(&p224_max).is_ok());
 
-    let p256_order = decode_hex::<32>(
-        "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551",
-    );
+    let p256_order =
+        decode_hex::<32>("ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551");
     assert!(owned_p256::Scalar::new(p256_order).is_err());
     assert!(p256::SecretKey::from_slice(&p256_order).is_err());
     let p256_max = minus_one(p256_order);
@@ -66,9 +63,8 @@ fn canonical_scalar_boundaries_match_independent_oracles() {
     assert!(owned_p521::Scalar::new(p521_max).is_ok());
     assert!(p521::SecretKey::from_slice(&p521_max).is_ok());
 
-    let k256_order = decode_hex::<32>(
-        "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
-    );
+    let k256_order =
+        decode_hex::<32>("fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141");
     assert!(owned_k256::Scalar::new(k256_order).is_err());
     assert!(k256::SecretKey::from_slice(&k256_order).is_err());
     let k256_max = minus_one(k256_order);
@@ -104,7 +100,9 @@ fn p224_base_multiplication_and_ecdh_match_oracle() {
     };
     let peer_owned = owned_p224::Scalar::new(peer_bytes).unwrap();
     let peer_point = owned_p224::scalar_mult_base_g(&peer_owned).unwrap();
-    let peer_oracle = p224::SecretKey::from_slice(&peer_bytes).unwrap().public_key();
+    let peer_oracle = p224::SecretKey::from_slice(&peer_bytes)
+        .unwrap()
+        .public_key();
 
     for bytes in candidates::<28>(0x7f) {
         let scalar = owned_p224::Scalar::new(bytes).unwrap();
@@ -112,7 +110,10 @@ fn p224_base_multiplication_and_ecdh_match_oracle() {
         let oracle_secret = p224::SecretKey::from_slice(&bytes).unwrap();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret.public_key().to_encoded_point(false).as_bytes(),
+            oracle_secret
+                .public_key()
+                .to_encoded_point(false)
+                .as_bytes(),
         );
 
         let shared = owned_p224::scalar_mult(&scalar, &peer_point).unwrap();
@@ -134,7 +135,9 @@ fn p256_base_multiplication_and_ecdh_match_oracle() {
     };
     let peer_owned = owned_p256::Scalar::new(peer_bytes).unwrap();
     let peer_point = owned_p256::scalar_mult_base_g(&peer_owned).unwrap();
-    let peer_oracle = p256::SecretKey::from_slice(&peer_bytes).unwrap().public_key();
+    let peer_oracle = p256::SecretKey::from_slice(&peer_bytes)
+        .unwrap()
+        .public_key();
 
     for bytes in candidates::<32>(0x7f) {
         let scalar = owned_p256::Scalar::new(bytes).unwrap();
@@ -142,7 +145,10 @@ fn p256_base_multiplication_and_ecdh_match_oracle() {
         let oracle_secret = p256::SecretKey::from_slice(&bytes).unwrap();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret.public_key().to_encoded_point(false).as_bytes(),
+            oracle_secret
+                .public_key()
+                .to_encoded_point(false)
+                .as_bytes(),
         );
 
         let shared = owned_p256::scalar_mult(&scalar, &peer_point).unwrap();
@@ -164,7 +170,9 @@ fn p384_base_multiplication_and_ecdh_match_oracle() {
     };
     let peer_owned = owned_p384::Scalar::new(peer_bytes).unwrap();
     let peer_point = owned_p384::scalar_mult_base_g(&peer_owned).unwrap();
-    let peer_oracle = p384::SecretKey::from_slice(&peer_bytes).unwrap().public_key();
+    let peer_oracle = p384::SecretKey::from_slice(&peer_bytes)
+        .unwrap()
+        .public_key();
 
     for bytes in candidates::<48>(0x7f) {
         let scalar = owned_p384::Scalar::new(bytes).unwrap();
@@ -172,7 +180,10 @@ fn p384_base_multiplication_and_ecdh_match_oracle() {
         let oracle_secret = p384::SecretKey::from_slice(&bytes).unwrap();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret.public_key().to_encoded_point(false).as_bytes(),
+            oracle_secret
+                .public_key()
+                .to_encoded_point(false)
+                .as_bytes(),
         );
 
         let shared = owned_p384::scalar_mult(&scalar, &peer_point).unwrap();
@@ -194,7 +205,9 @@ fn p521_base_multiplication_and_ecdh_match_oracle() {
     };
     let peer_owned = owned_p521::Scalar::new(peer_bytes).unwrap();
     let peer_point = owned_p521::scalar_mult_base_g(&peer_owned).unwrap();
-    let peer_oracle = p521::SecretKey::from_slice(&peer_bytes).unwrap().public_key();
+    let peer_oracle = p521::SecretKey::from_slice(&peer_bytes)
+        .unwrap()
+        .public_key();
 
     for bytes in candidates::<66>(0x01) {
         let Ok(scalar) = owned_p521::Scalar::new(bytes) else {
@@ -204,7 +217,10 @@ fn p521_base_multiplication_and_ecdh_match_oracle() {
         let oracle_secret = p521::SecretKey::from_slice(&bytes).unwrap();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret.public_key().to_encoded_point(false).as_bytes(),
+            oracle_secret
+                .public_key()
+                .to_encoded_point(false)
+                .as_bytes(),
         );
 
         let shared = owned_p521::scalar_mult(&scalar, &peer_point).unwrap();
@@ -226,7 +242,9 @@ fn secp256k1_base_multiplication_and_ecdh_match_oracle() {
     };
     let peer_owned = owned_k256::Scalar::new(peer_bytes).unwrap();
     let peer_point = owned_k256::scalar_mult_base_g(&peer_owned).unwrap();
-    let peer_oracle = k256::SecretKey::from_slice(&peer_bytes).unwrap().public_key();
+    let peer_oracle = k256::SecretKey::from_slice(&peer_bytes)
+        .unwrap()
+        .public_key();
 
     for bytes in candidates::<32>(0x7f) {
         let scalar = owned_k256::Scalar::new(bytes).unwrap();
@@ -234,7 +252,10 @@ fn secp256k1_base_multiplication_and_ecdh_match_oracle() {
         let oracle_secret = k256::SecretKey::from_slice(&bytes).unwrap();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret.public_key().to_encoded_point(false).as_bytes(),
+            oracle_secret
+                .public_key()
+                .to_encoded_point(false)
+                .as_bytes(),
         );
 
         let shared = owned_k256::scalar_mult(&scalar, &peer_point).unwrap();

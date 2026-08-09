@@ -47,7 +47,11 @@ jobs:
           toolchain: stable
           components: rustfmt
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        run: |
+          cargo fmt --all -- --check
+          cargo fmt --manifest-path verification/Cargo.toml -- --check
+          cargo fmt --manifest-path fuzz/Cargo.toml -- --check
+          cargo fmt --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml -- --check
       - name: Check every workspace target with every feature
         run: cargo check --workspace --all-targets --all-features
 
@@ -111,6 +115,10 @@ jobs:
           toolchain: stable
       - name: Run the non-published differential verification workspace
         run: cargo test --release --locked --manifest-path verification/Cargo.toml
+      - name: Test the isolated decrypt-only legacy migration tool
+        run: >-
+          cargo test --release --locked --manifest-path
+          migration/legacy-xchacha20poly1305/Cargo.toml
 
   statistical-timing:
     name: Repository statistical timing regressions (not dudect or ctgrind)
@@ -225,3 +233,4 @@ jobs:
           cargo fuzz build stream_frames
           cargo fuzz build kem_decoders
           cargo fuzz build bls12_381_decoders
+          cargo fuzz build legacy_xchacha_migration

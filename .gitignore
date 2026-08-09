@@ -11,6 +11,9 @@ tools/*
 tree.md
 Cargo.lock
 !/Cargo.lock
+!/fuzz/Cargo.lock
+!/verification/Cargo.lock
+!/migration/legacy-xchacha20poly1305/Cargo.lock
 .gitignore
 !fuzz/.gitignore
 output.txt

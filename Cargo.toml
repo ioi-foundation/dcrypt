@@ -84,7 +84,7 @@ members = [
     "crates/utils",
     "tests"
 ]
-exclude = ["fuzz", "verification"]
+exclude = ["fuzz", "verification", "migration/legacy-xchacha20poly1305"]
 resolver = "2"
 
 [workspace.package]

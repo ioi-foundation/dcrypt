@@ -1,0 +1,18 @@
+[package]
+name = "dcrypt-legacy-xchacha20poly1305-migration"
+version = "0.0.0"
+edition = "2021"
+publish = false
+description = "Isolated decrypt-only migration tool for dcrypt v1 custom XChaCha ciphertext"
+license = "Apache-2.0"
+
+[dependencies]
+dcrypt-algorithms = { path = "../../crates/algorithms", default-features = false, features = ["std", "aead", "stream"] }
+dcrypt-internal = { path = "../../crates/internal", default-features = false, features = ["std"] }
+
+[workspace]
+members = ["."]
+resolver = "2"
+
+[lints.rust]
+unsafe_code = "forbid"

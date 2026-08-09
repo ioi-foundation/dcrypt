@@ -1,8 +1,7 @@
 use dcrypt_api::Signature as _;
 use dcrypt_internal::ChaCha20Rng;
 use dcrypt_sign::mldsa::{
-    MlDsa44 as DcryptMlDsa44, MlDsa65 as DcryptMlDsa65, MlDsa87 as DcryptMlDsa87,
-    MlDsaSignature,
+    MlDsa44 as DcryptMlDsa44, MlDsa65 as DcryptMlDsa65, MlDsa87 as DcryptMlDsa87, MlDsaSignature,
 };
 use fips204::traits::{SerDes, Signer, Verifier};
 

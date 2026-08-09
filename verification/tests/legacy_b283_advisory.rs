@@ -45,10 +45,7 @@ fn order_two_scalar_mul(scalar: &[u8], point: LegacyPoint) -> LegacyPoint {
     }
 }
 
-fn legacy_decapsulate_x(
-    scalar: &[u8],
-    ciphertext: &[u8],
-) -> Result<[u8; FIELD_LEN], LegacyError> {
+fn legacy_decapsulate_x(scalar: &[u8], ciphertext: &[u8]) -> Result<[u8; FIELD_LEN], LegacyError> {
     let point = legacy_deserialize_compressed(ciphertext)?;
     if point == LegacyPoint::Identity {
         return Err(LegacyError::SharedIdentity);

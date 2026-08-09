@@ -214,6 +214,10 @@ run_test_gates() {
     cargo test --release --locked --manifest-path \
         "$PROJECT_ROOT/verification/Cargo.toml"
 
+    info "Testing the isolated decrypt-only legacy XChaCha migration tool"
+    cargo test --release --locked --manifest-path \
+        "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml"
+
     info "Running isolated statistical timing regressions"
     cargo test -p dcrypt-tests --test constant_time_tests -- \
         --test-threads=1 --nocapture
@@ -241,7 +245,13 @@ run_check_gates() {
 
     info "Running formatting and all-target/all-feature checks"
     cargo fmt --all -- --check
+    cargo fmt --manifest-path "$PROJECT_ROOT/verification/Cargo.toml" -- --check
+    cargo fmt --manifest-path "$PROJECT_ROOT/fuzz/Cargo.toml" -- --check
+    cargo fmt --manifest-path \
+        "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" -- --check
     cargo check --workspace --all-targets --all-features
+    RUSTFLAGS="-Dunsafe-code" cargo check --locked --all-targets \
+        --manifest-path "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml"
 
     if require_security_subcommand audit "cargo install cargo-audit --locked"; then
         cargo audit
@@ -349,7 +359,7 @@ create_release_commit_if_needed() {
         [[ -n "$status_line" ]] || continue
         path=${status_line:3}
         case "$path" in
-            Cargo.toml|crates/*/Cargo.toml|tests/Cargo.toml|Cargo.lock)
+            Cargo.toml|crates/*/Cargo.toml|tests/Cargo.toml|Cargo.lock|fuzz/Cargo.lock|verification/Cargo.lock|migration/legacy-xchacha20poly1305/Cargo.lock)
                 ;;
             *)
                 unexpected+="  $path"$'\n'
@@ -363,9 +373,20 @@ create_release_commit_if_needed() {
     fi
 
     if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
-        git add Cargo.toml Cargo.lock crates/*/Cargo.toml tests/Cargo.toml
+        git add Cargo.toml Cargo.lock crates/*/Cargo.toml tests/Cargo.toml \
+            fuzz/Cargo.lock verification/Cargo.lock \
+            migration/legacy-xchacha20poly1305/Cargo.lock
         git commit -m "chore: release version $VERSION"
     fi
+}
+
+refresh_isolated_workspace_locks() {
+    cargo metadata --format-version 1 --manifest-path \
+        "$PROJECT_ROOT/verification/Cargo.toml" >/dev/null
+    cargo metadata --format-version 1 --manifest-path \
+        "$PROJECT_ROOT/fuzz/Cargo.toml" >/dev/null
+    cargo metadata --format-version 1 --manifest-path \
+        "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" >/dev/null
 }
 
 prepare_release() {
@@ -380,6 +401,7 @@ prepare_release() {
     if [[ "$before_version" != "$VERSION" ]]; then
         info "Updating workspace from $before_version to $VERSION"
         cargo release version "$VERSION" --execute --no-confirm
+        refresh_isolated_workspace_locks
         create_release_commit_if_needed
     else
         info "Workspace is already versioned as $VERSION"
