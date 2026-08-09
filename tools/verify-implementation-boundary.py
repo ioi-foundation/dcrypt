@@ -140,6 +140,26 @@ ECDSA_PROTECTED_CANDIDATE_X = re.compile(
     r"\blet\s+r_bytes\s*=\s*Zeroizing\s*::\s*new\s*\(\s*"
     r"kg\s*\.\s*x_coordinate_bytes\s*\(\s*\)\s*\)"
 )
+UNPROTECTED_RETAINED_EC_FIELD_SCRATCH = re.compile(
+    r"\blet\s+mut\s+(?:limbs|t|prod|s|wide|first|out|result|r)\b"
+    r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0(?:u32|u64|u128|i128)?\s*;"
+)
+UNPROTECTED_RETAINED_EC_POINT_SCRATCH = re.compile(
+    r"(?:\blet\s+mut\s+(?:x_bytes|y_bytes)\b(?:\s*:\s*[^=;]+)?\s*=\s*\[|"
+    r"\blet\s+mut\s+(?:result|r0|r1)\s*=\s*ProjectivePoint|"
+    r"\blet\s+(?:doubled|added|result_added|selected|t0|t1)\s*=\s*"
+    r"(?:result\s*\.\s*double|doubled\s*\.\s*add|r0\s*\.\s*(?:add|double)|"
+    r"ProjectivePoint\s*::\s*conditional_select))"
+)
+EC_FIELD_ZEROIZE_REQUIREMENT = re.compile(r"impl\s+Zeroize\s+for\s+FieldElement\b")
+EC_POINT_ZEROIZE_REQUIREMENT = re.compile(r"impl\s+Zeroize\s+for\s+Point\b")
+EC_POINT_DROP_REQUIREMENT = re.compile(r"impl\s+Drop\s+for\s+Point\b")
+EC_POINT_ZEROIZE_ON_DROP_REQUIREMENT = re.compile(
+    r"impl\s+ZeroizeOnDrop\s+for\s+Point\b"
+)
+EC_PROJECTIVE_ZEROIZE_REQUIREMENT = re.compile(
+    r"impl\s+Zeroize\s+for\s+ProjectivePoint\b"
+)
 BLS_SECRET_CAPABLE_MSM = re.compile(r"\bpub\s+fn\s+msm\s*\(")
 ARGON2_BLOCK_GUARDED_ZEROIZE = re.compile(
     r"impl\s+Zeroize\s+for\s+Block\s*\{[^{}]*"
@@ -222,6 +242,22 @@ TARGETED_SECRET_SCRATCH = {
         r"\blet\s+mut\s+accumulator\s*=\s*Self::identity\s*\()",
         re.DOTALL,
     ),
+    "src/ec/p224/field.rs": UNPROTECTED_RETAINED_EC_FIELD_SCRATCH,
+    "src/ec/p256/field.rs": UNPROTECTED_RETAINED_EC_FIELD_SCRATCH,
+    "src/ec/p384/field.rs": UNPROTECTED_RETAINED_EC_FIELD_SCRATCH,
+    "src/ec/p521/field.rs": UNPROTECTED_RETAINED_EC_FIELD_SCRATCH,
+    "src/ec/k256/field.rs": UNPROTECTED_RETAINED_EC_FIELD_SCRATCH,
+    "src/ec/p224/point.rs": UNPROTECTED_RETAINED_EC_POINT_SCRATCH,
+    "src/ec/p256/point.rs": UNPROTECTED_RETAINED_EC_POINT_SCRATCH,
+    "src/ec/k256/point.rs": UNPROTECTED_RETAINED_EC_POINT_SCRATCH,
+    "src/ec/p384/point.rs": re.compile(
+        UNPROTECTED_RETAINED_EC_POINT_SCRATCH.pattern
+        + r"|\blet\s+p[12]\s*=\s*(?:self|other)\s*\.\s*to_projective\s*\(\s*\)"
+    ),
+    "src/ec/p521/point.rs": re.compile(
+        UNPROTECTED_RETAINED_EC_POINT_SCRATCH.pattern
+        + r"|\bfn\s+select_field\b"
+    ),
     "src/ec/bls12_381/g1.rs": BLS_SECRET_CAPABLE_MSM,
     "src/ec/bls12_381/g2.rs": BLS_SECRET_CAPABLE_MSM,
 }
@@ -296,6 +332,90 @@ TARGETED_LIFECYCLE_REQUIREMENTS = {
         re.compile(r"accumulator\s*=\s*Zeroizing\s*::\s*new\s*\(\s*Self::identity"),
         re.compile(r"doubled\s*=\s*Zeroizing\s*::\s*new"),
         re.compile(r"added\s*=\s*Zeroizing\s*::\s*new"),
+    ),
+    "src/ec/p224/field.rs": (
+        EC_FIELD_ZEROIZE_REQUIREMENT,
+        re.compile(r"fn\s+adc7\b[^{}]*?->\s*\(\s*Zeroizing\s*<", re.DOTALL),
+        re.compile(r"fn\s+sbb7\b[^{}]*?->\s*\(\s*Zeroizing\s*<", re.DOTALL),
+        re.compile(r"fn\s+reduce_wide\s*\(\s*t\s*:\s*Zeroizing\s*<", re.DOTALL),
+    ),
+    "src/ec/p256/field.rs": (
+        EC_FIELD_ZEROIZE_REQUIREMENT,
+        re.compile(r"fn\s+adc8\b[^{}]*?->\s*\(\s*Zeroizing\s*<", re.DOTALL),
+        re.compile(r"fn\s+sbb8\b[^{}]*?->\s*\(\s*Zeroizing\s*<", re.DOTALL),
+        re.compile(r"fn\s+reduce_wide\s*\(\s*t\s*:\s*Zeroizing\s*<", re.DOTALL),
+    ),
+    "src/ec/k256/field.rs": (
+        EC_FIELD_ZEROIZE_REQUIREMENT,
+        re.compile(r"fn\s+adc8\b[^{}]*?->\s*\(\s*Zeroizing\s*<", re.DOTALL),
+        re.compile(r"fn\s+sbb8\b[^{}]*?->\s*\(\s*Zeroizing\s*<", re.DOTALL),
+        re.compile(r"fn\s+reduce_wide\s*\(\s*t\s*:\s*Zeroizing\s*<", re.DOTALL),
+    ),
+    "src/ec/p384/field.rs": (
+        EC_FIELD_ZEROIZE_REQUIREMENT,
+        re.compile(r"Zeroizing\s*::\s*new\s*\(\s*\[\s*0u128\s*;\s*24\s*\]\s*\)"),
+        re.compile(r"Zeroizing\s*::\s*new\s*\(\s*\[\s*0u32\s*;\s*24\s*\]\s*\)"),
+        re.compile(r"Zeroizing\s*::\s*new\s*\(\s*\[\s*0i128\s*;\s*24\s*\]\s*\)"),
+    ),
+    "src/ec/p521/field.rs": (
+        EC_FIELD_ZEROIZE_REQUIREMENT,
+        re.compile(r"Zeroizing\s*::\s*new\s*\(\s*\[\s*0u128\s*;\s*34\s*\]\s*\)"),
+        re.compile(r"Zeroizing\s*::\s*new\s*\(\s*\[\s*0u32\s*;\s*34\s*\]\s*\)"),
+        re.compile(r"Zeroizing\s*::\s*new\s*\(\s*\[\s*0u32\s*;\s*18\s*\]\s*\)"),
+    ),
+    "src/ec/p224/point.rs": (
+        EC_POINT_ZEROIZE_REQUIREMENT,
+        EC_POINT_DROP_REQUIREMENT,
+        EC_POINT_ZEROIZE_ON_DROP_REQUIREMENT,
+        EC_PROJECTIVE_ZEROIZE_REQUIREMENT,
+        re.compile(r"fn\s+to_projective\s*\([^)]*\)\s*->\s*Zeroizing\s*<\s*ProjectivePoint"),
+        re.compile(r"let\s+mut\s+result\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+doubled\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+added\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"result\s*\.\s*zeroize\s*\(\s*\)"),
+    ),
+    "src/ec/p256/point.rs": (
+        EC_POINT_ZEROIZE_REQUIREMENT,
+        EC_POINT_DROP_REQUIREMENT,
+        EC_POINT_ZEROIZE_ON_DROP_REQUIREMENT,
+        EC_PROJECTIVE_ZEROIZE_REQUIREMENT,
+        re.compile(r"fn\s+to_projective\s*\([^)]*\)\s*->\s*Zeroizing\s*<\s*ProjectivePoint"),
+        re.compile(r"let\s+mut\s+result\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+doubled\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+result_added\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"result\s*\.\s*zeroize\s*\(\s*\)"),
+    ),
+    "src/ec/k256/point.rs": (
+        EC_POINT_ZEROIZE_REQUIREMENT,
+        EC_POINT_DROP_REQUIREMENT,
+        EC_POINT_ZEROIZE_ON_DROP_REQUIREMENT,
+        EC_PROJECTIVE_ZEROIZE_REQUIREMENT,
+        re.compile(r"fn\s+to_projective\s*\([^)]*\)\s*->\s*Zeroizing\s*<\s*ProjectivePoint"),
+        re.compile(r"let\s+mut\s+result\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+doubled\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+result_added\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"result\s*\.\s*zeroize\s*\(\s*\)"),
+    ),
+    "src/ec/p384/point.rs": (
+        EC_POINT_ZEROIZE_REQUIREMENT,
+        EC_POINT_DROP_REQUIREMENT,
+        EC_POINT_ZEROIZE_ON_DROP_REQUIREMENT,
+        EC_PROJECTIVE_ZEROIZE_REQUIREMENT,
+        re.compile(r"let\s+mut\s+result\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+doubled\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+result_added\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"result\s*\.\s*zeroize\s*\(\s*\)"),
+    ),
+    "src/ec/p521/point.rs": (
+        EC_POINT_ZEROIZE_REQUIREMENT,
+        EC_POINT_DROP_REQUIREMENT,
+        EC_POINT_ZEROIZE_ON_DROP_REQUIREMENT,
+        EC_PROJECTIVE_ZEROIZE_REQUIREMENT,
+        re.compile(r"let\s+mut\s+r0\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+mut\s+r1\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+t0\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"let\s+t1\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"r[01]\s*\.\s*zeroize\s*\(\s*\)"),
     ),
     "src/ecdsa/p224/mod.rs": (ECDSA_PROTECTED_CANDIDATE_X,),
     "src/ecdsa/p256/mod.rs": (ECDSA_PROTECTED_CANDIDATE_X,),
@@ -2391,6 +2511,21 @@ println!("cargo:rustc-link-lib=native");
     )
     assert not UNPROTECTED_ECDSA_CANDIDATE_X.search(
         "let r_bytes = Zeroizing::new(kg.x_coordinate_bytes());"
+    )
+    assert UNPROTECTED_RETAINED_EC_FIELD_SCRATCH.search(
+        "let mut wide = [0u128; 34];"
+    )
+    assert not UNPROTECTED_RETAINED_EC_FIELD_SCRATCH.search(
+        "let mut wide = Zeroizing::new([0u128; 34]);"
+    )
+    assert UNPROTECTED_RETAINED_EC_POINT_SCRATCH.search(
+        "let result_added = doubled.add(&base);"
+    )
+    assert UNPROTECTED_RETAINED_EC_POINT_SCRATCH.search(
+        "let mut x_bytes = [0u8; 66];"
+    )
+    assert not UNPROTECTED_RETAINED_EC_POINT_SCRATCH.search(
+        "let result_added = Zeroizing::new(doubled.add(&base));"
     )
     assert len(MISLEADING_SECURE_OPERATION_API.findall(code_only)) == 1
     assert len(REMOVED_CONSTANT_TIME_CONVENIENCE.findall(code_only)) == 1
