@@ -136,9 +136,8 @@ impl EcdhP521SecretKey {
                 actual: bytes.len(),
             });
         }
-        let mut buffer_bytes = [0u8; ec_p521::P521_SCALAR_SIZE];
-        buffer_bytes.copy_from_slice(bytes);
-        let buffer = SecretBuffer::new(buffer_bytes);
+        let mut buffer = SecretBuffer::zeroed();
+        buffer.as_mut().copy_from_slice(bytes);
         let scalar = ec_p521::Scalar::from_secret_buffer(buffer.clone())
             .map_err(|e| ApiError::from(KemError::from(e)))?;
         drop(scalar);
