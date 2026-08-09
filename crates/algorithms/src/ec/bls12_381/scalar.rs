@@ -92,6 +92,27 @@ const MODULUS: Scalar = Scalar([
     0x73ed_a753_299d_7d48,
 ]);
 
+/// Scalar modulus encoded as a canonical 32-byte big-endian integer.
+const MODULUS_BE: [u8; 32] = [
+    0x73, 0xed, 0xa7, 0x53, 0x29, 0x9d, 0x7d, 0x48, 0x33, 0x39, 0xd8, 0x08, 0x09, 0xa1, 0xd8, 0x05,
+    0x53, 0xbd, 0xa4, 0x02, 0xff, 0xfe, 0x5b, 0xfe, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x01,
+];
+
+/// Validate a borrowed big-endian secret-key scalar without constructing a
+/// `Copy` field element or duplicating the secret byte array.
+pub(crate) fn secret_be_bytes_are_valid(bytes: &[u8; 32]) -> Choice {
+    let mut nonzero = 0u8;
+    let mut borrow = 0u16;
+    for index in (0..bytes.len()).rev() {
+        nonzero |= bytes[index];
+        let rhs = (MODULUS_BE[index] as u16) + borrow;
+        let difference = (bytes[index] as u16).wrapping_sub(rhs);
+        borrow = (difference >> 15) & 1;
+    }
+
+    Choice::from(borrow as u8) & !nonzero.ct_eq(&0u8)
+}
+
 /// INV = -(q^{-1} mod 2^64) mod 2^64
 const INV: u64 = 0xffff_fffe_ffff_ffff;
 
@@ -380,6 +401,12 @@ impl Scalar {
         (self.0[0] | self.0[1] | self.0[2] | self.0[3]).ct_eq(&0)
     }
 
+    /// Validate canonical, nonzero big-endian secret-key bytes without
+    /// constructing a field element or copying the input.
+    pub fn secret_key_bytes_are_valid(bytes: &[u8; 32]) -> Choice {
+        secret_be_bytes_are_valid(bytes)
+    }
+
     /// Double this element
     #[inline]
     pub const fn double(&self) -> Scalar {
@@ -437,6 +464,16 @@ impl Scalar {
     /// Convert this scalar to its canonical 32-byte big-endian integer.
     pub fn to_be_bytes(&self) -> [u8; 32] {
         let mut bytes = self.to_bytes();
+        bytes.reverse();
+        bytes
+    }
+
+    /// Convert this scalar to canonical big-endian bytes in a clearing owner.
+    ///
+    /// Secret-key code should prefer this method to [`Self::to_be_bytes`],
+    /// whose plain array return type is intended for public field elements.
+    pub fn to_be_bytes_zeroizing(&self) -> Zeroizing<[u8; 32]> {
+        let mut bytes = Zeroizing::new(self.to_bytes());
         bytes.reverse();
         bytes
     }
@@ -1000,6 +1037,30 @@ fn test_from_bytes_enforces_canonical_scalar_encoding() {
         Scalar::from_be_bytes(&forty_two.to_be_bytes()).unwrap(),
         forty_two
     );
+}
+
+#[test]
+fn borrowed_secret_validation_matches_canonical_scalar_decoder() {
+    let mut bytes = [0u8; 32];
+    for counter in 0u16..2048 {
+        for (index, byte) in bytes.iter_mut().enumerate() {
+            *byte = (counter as u8)
+                .wrapping_mul(73)
+                .wrapping_add((counter >> 8) as u8)
+                .wrapping_add((index as u8).wrapping_mul(19));
+        }
+
+        let decoded = Scalar::from_be_bytes(&bytes).into_option();
+        let expected = decoded
+            .as_ref()
+            .map(|scalar| !bool::from(scalar.is_zero()))
+            .unwrap_or(false);
+        assert_eq!(
+            bool::from(Scalar::secret_key_bytes_are_valid(&bytes)),
+            expected,
+            "mismatch at corpus item {counter}",
+        );
+    }
 }
 
 #[cfg(test)]

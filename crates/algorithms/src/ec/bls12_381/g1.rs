@@ -10,6 +10,7 @@ use dcrypt_internal::random::{CryptoRng, Error as RandomError};
 use dcrypt_internal::zeroing::Zeroize;
 
 use super::field::fp::Fp;
+use super::scalar::secret_be_bytes_are_valid;
 use super::Scalar;
 #[cfg(feature = "alloc")]
 use alloc::vec;
@@ -591,7 +592,10 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G1Projective {
     type Output = G1Projective;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
-        self.multiply(&other.to_bytes())
+        let mut bytes = other.to_bytes();
+        let result = self.multiply(&bytes);
+        bytes.zeroize();
+        result
     }
 }
 
@@ -608,7 +612,10 @@ impl<'a, 'b> Mul<&'b Scalar> for &'a G1Affine {
     type Output = G1Projective;
 
     fn mul(self, other: &'b Scalar) -> Self::Output {
-        G1Projective::from(self).multiply(&other.to_bytes())
+        let mut bytes = other.to_bytes();
+        let result = G1Projective::from(self).multiply(&bytes);
+        bytes.zeroize();
+        result
     }
 }
 
@@ -817,6 +824,40 @@ impl G1Projective {
             y: G1Affine::generator().y,
             z: Fp::one(),
         }
+    }
+
+    /// Multiply by a canonical, nonzero scalar encoded as a 32-byte
+    /// big-endian secret key.
+    ///
+    /// This path validates and consumes the borrowed big-endian bytes directly:
+    /// it does not construct the generic `Copy` scalar type or materialize a
+    /// second byte-order representation. Multiplication uses exactly 256
+    /// MSB-first rounds, always computes both the doubled and added candidate,
+    /// and selects with a constant-time mask. Secret-derived point scratch is
+    /// explicitly cleared after every round. Platform-specific compiler
+    /// inspection is still required for a concrete side-channel claim.
+    pub fn multiply_secret_be_bytes(&self, secret: &[u8; 32]) -> Result<Self> {
+        if !bool::from(secret_be_bytes_are_valid(secret)) {
+            return Err(Error::param(
+                "secret_scalar",
+                "scalar must be canonical and nonzero",
+            ));
+        }
+
+        let mut accumulator = Self::identity();
+        for byte in secret {
+            for bit_index in (0..8).rev() {
+                let mut doubled = accumulator.double();
+                accumulator.zeroize();
+                let mut added = doubled + self;
+                let mut bit = Choice::from((byte >> bit_index) & 1);
+                accumulator = Self::conditional_select(&doubled, &added, bit);
+                bit.zeroize();
+                doubled.zeroize();
+                added.zeroize();
+            }
+        }
+        Ok(accumulator)
     }
 
     /// Random point generation.

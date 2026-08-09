@@ -12,40 +12,39 @@
 //! ciphersuite's validation rules. `Bls12_381Scalar` is a generic `Copy` field
 //! element, not a protected long-lived secret-key container; explicitly clear
 //! an arithmetic scalar after use.
-//! External public keys and signatures should be decoded with
-//! `G1Projective::from_bytes_validated` or
-//! `G2Projective::from_bytes_validated`, which also reject the identity.
+//! External public keys should be decoded with
+//! `G1Projective::from_bytes_validated`, which rejects the identity. Complete
+//! BLS ciphersuites have more nuanced signature identity rules, so callers
+//! should use the high-level types in `dcrypt-sign` rather than assembling a
+//! signature protocol from these primitives.
 //!
 //! ```
 //! use dcrypt_algorithms::ec::bls12_381::{
-//!     pairing, Bls12_381Scalar, G1Affine, G1Projective, G2Affine, G2Projective,
+//!     pairing, G1Affine, G1Projective, G2Affine, G2Projective,
 //! };
 //! use dcrypt_api::types::SecretBytes;
-//! use dcrypt_internal::zeroing::Zeroize;
 //!
 //! // Demonstration only: KeyGen normally derives 48 pseudorandom OKM bytes
-//! // using HKDF. SecretBytes zeroizes this exact-size OKM owner.
-//! let mut okm = [0u8; 48];
-//! okm[47] = 42; // OS2IP-style big-endian integer.
-//! let secret_bytes = SecretBytes::new(okm);
-//! let mut secret_scalar = Bls12_381Scalar::from_be_bytes_mod_order(secret_bytes.as_ref())?;
-//! if bool::from(secret_scalar.is_zero()) {
-//!     return Err(dcrypt_algorithms::Error::param("secret_key", "zero scalar"));
-//! }
+//! // using HKDF and reduces it modulo r. SecretBytes owns and clears the
+//! // resulting canonical big-endian scalar.
+//! let mut encoded_secret = [0u8; 32];
+//! encoded_secret[31] = 42;
+//! let secret_bytes = SecretBytes::new(encoded_secret);
 //!
-//! let public_key = G1Affine::from(G1Projective::generator() * secret_scalar);
+//! let public_key = G1Affine::from(
+//!     G1Projective::generator().multiply_secret_be_bytes(&secret_bytes)?,
+//! );
 //! let message_point = G2Projective::hash_to_curve(
 //!     b"message",
 //!     b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_",
 //! )?;
-//! let signature = G2Affine::from(message_point * secret_scalar);
+//! let signature = G2Affine::from(message_point.multiply_secret_be_bytes(&secret_bytes)?);
 //! let message_point = G2Affine::from(message_point);
 //!
 //! assert_eq!(
 //!     pairing(&public_key, &message_point),
 //!     pairing(&G1Affine::generator(), &signature),
 //! );
-//! secret_scalar.zeroize();
 //! drop(secret_bytes);
 //! # Ok::<(), dcrypt_algorithms::Error>(())
 //! ```

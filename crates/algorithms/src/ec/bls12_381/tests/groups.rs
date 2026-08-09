@@ -74,6 +74,46 @@ fn test_g1_scalar_multiplication_distributivity() {
 }
 
 #[test]
+fn secret_big_endian_bridge_matches_g1_and_g2_scalar_multiplication() {
+    let scalar = Scalar::from(42u64);
+    let secret = scalar.to_be_bytes();
+
+    assert_eq!(
+        G1Projective::generator()
+            .multiply_secret_be_bytes(&secret)
+            .unwrap(),
+        G1Projective::generator() * scalar
+    );
+    assert_eq!(
+        G2Projective::generator()
+            .multiply_secret_be_bytes(&secret)
+            .unwrap(),
+        G2Projective::generator() * scalar
+    );
+
+    assert!(G1Projective::generator()
+        .multiply_secret_be_bytes(&[0u8; 32])
+        .is_err());
+    assert!(G2Projective::generator()
+        .multiply_secret_be_bytes(&[0xffu8; 32])
+        .is_err());
+
+    let modulus = [
+        0x73, 0xed, 0xa7, 0x53, 0x29, 0x9d, 0x7d, 0x48, 0x33, 0x39, 0xd8, 0x08, 0x09, 0xa1, 0xd8,
+        0x05, 0x53, 0xbd, 0xa4, 0x02, 0xff, 0xfe, 0x5b, 0xfe, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00,
+        0x00, 0x01,
+    ];
+    assert!(G1Projective::generator()
+        .multiply_secret_be_bytes(&modulus)
+        .is_err());
+    let mut largest = modulus;
+    largest[31] -= 1;
+    assert!(G2Projective::generator()
+        .multiply_secret_be_bytes(&largest)
+        .is_ok());
+}
+
+#[test]
 fn test_g1_double_vs_add() {
     let g1 = G1Projective::generator();
     let p = g1 * Scalar::from(42u64);
