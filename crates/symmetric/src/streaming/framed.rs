@@ -6,11 +6,10 @@ use crate::aead::chacha20poly1305::{
 use crate::aead::gcm::{Aes128Gcm, Aes256Gcm, GcmNonce};
 use crate::aes::keys::{Aes128Key, Aes256Key};
 use crate::cipher::{Aead, SymmetricCipher};
-use crate::error::{validate_stream_state, Result, SymmetricResultExt};
+use crate::error::{fill_random, validate_stream_state, Result, SymmetricResultExt};
 use crate::streaming::{StreamingDecrypt, StreamingEncrypt};
-use rand::{rngs::OsRng, RngCore};
+use dcrypt_internal::{CryptoRng, Zeroize, Zeroizing};
 use std::io::{Read, Write};
-use zeroize::{Zeroize, Zeroizing};
 
 pub(crate) const MAGIC: &[u8; 8] = b"DCRSTRM2";
 pub(crate) const VERSION: u8 = 2;
@@ -35,7 +34,6 @@ pub trait FramedAead: Sized {
     const ALGORITHM_ID: u8;
 
     fn from_key(key: &Self::Key) -> Result<Self>;
-    fn random_nonce() -> [u8; NONCE_SIZE];
     fn seal(&self, nonce: &[u8; NONCE_SIZE], plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>>;
     fn open(&self, nonce: &[u8; NONCE_SIZE], ciphertext: &[u8], aad: &[u8]) -> Result<Vec<u8>>;
 }
@@ -48,10 +46,6 @@ macro_rules! impl_gcm_framed_aead {
 
             fn from_key(key: &Self::Key) -> Result<Self> {
                 <Self as SymmetricCipher>::new(key)
-            }
-
-            fn random_nonce() -> [u8; NONCE_SIZE] {
-                *<Self as Aead>::generate_nonce().as_bytes()
             }
 
             fn seal(
@@ -84,10 +78,6 @@ impl FramedAead for ChaCha20Poly1305Cipher {
 
     fn from_key(key: &Self::Key) -> Result<Self> {
         <Self as SymmetricCipher>::new(key)
-    }
-
-    fn random_nonce() -> [u8; NONCE_SIZE] {
-        *<Self as Aead>::generate_nonce().as_bytes()
     }
 
     fn seal(&self, nonce: &[u8; NONCE_SIZE], plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>> {
@@ -161,8 +151,14 @@ pub struct FramedEncryptStream<W: Write, C: FramedAead> {
 }
 
 impl<W: Write, C: FramedAead> FramedEncryptStream<W, C> {
-    /// Start a new version-2 authenticated stream.
-    pub fn new(mut writer: W, key: &C::Key, aad: Option<&[u8]>) -> Result<Self> {
+    /// Starts an authenticated stream using caller-owned randomness for its
+    /// stream identifier and base nonce.
+    pub fn new<Rng: CryptoRng + ?Sized>(
+        mut writer: W,
+        key: &C::Key,
+        aad: Option<&[u8]>,
+        rng: &mut Rng,
+    ) -> Result<Self> {
         let user_aad = aad.unwrap_or(&[]);
         validate_stream_state(
             user_aad.len() <= USER_AAD_MAX,
@@ -172,8 +168,9 @@ impl<W: Write, C: FramedAead> FramedEncryptStream<W, C> {
 
         let cipher = C::from_key(key)?;
         let mut stream_id = [0u8; STREAM_ID_SIZE];
-        OsRng.fill_bytes(&mut stream_id);
-        let base_nonce = C::random_nonce();
+        fill_random(rng, &mut stream_id, "stream identifier generation")?;
+        let mut base_nonce = [0u8; NONCE_SIZE];
+        fill_random(rng, &mut base_nonce, "stream base nonce generation")?;
 
         writer.write_all(MAGIC).map_io_err()?;
         writer.write_all(&[VERSION]).map_io_err()?;
@@ -494,16 +491,54 @@ impl<R: Read, C: FramedAead> StreamingDecrypt<R> for FramedDecryptStream<R, C> {
 mod tests {
     use super::*;
     use crate::aes::keys::Aes128Key;
+    use dcrypt_internal::{random::Error as RandomError, ChaCha20Rng, RngCore};
+
+    struct FailSecondFill {
+        calls: usize,
+    }
+
+    impl RngCore for FailSecondFill {
+        fn try_fill_bytes(
+            &mut self,
+            destination: &mut [u8],
+        ) -> core::result::Result<(), RandomError> {
+            self.calls += 1;
+            destination.fill(0x7f);
+            if self.calls == 2 {
+                Err(RandomError)
+            } else {
+                Ok(())
+            }
+        }
+    }
+
+    impl CryptoRng for FailSecondFill {}
 
     #[test]
     fn sequence_exhaustion_is_rejected_before_nonce_reuse() {
         let key = Aes128Key::new([0x42; 16]);
+        let mut rng = ChaCha20Rng::from_seed([0x33; 32]);
         let mut stream =
-            FramedEncryptStream::<Vec<u8>, Aes128Gcm>::new(Vec::new(), &key, None).unwrap();
+            FramedEncryptStream::<Vec<u8>, Aes128Gcm>::new(Vec::new(), &key, None, &mut rng)
+                .unwrap();
         stream.sequence = u64::MAX;
 
         let frame = vec![0x5a; FRAME_PLAINTEXT_MAX];
         assert!(StreamingEncrypt::write(&mut stream, &frame).is_err());
         assert_eq!(stream.sequence, u64::MAX);
+    }
+
+    #[test]
+    fn stream_header_is_not_written_when_randomness_fails() {
+        let key = Aes128Key::new([0x42; 16]);
+        let mut output = Vec::new();
+        let mut rng = FailSecondFill { calls: 0 };
+        let result =
+            FramedEncryptStream::<&mut Vec<u8>, Aes128Gcm>::new(&mut output, &key, None, &mut rng);
+        assert!(matches!(
+            result,
+            Err(crate::Error::RandomGenerationError { .. })
+        ));
+        assert!(output.is_empty());
     }
 }

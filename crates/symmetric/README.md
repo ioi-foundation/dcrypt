@@ -2,15 +2,13 @@
 
 High-level AEAD and authenticated streaming adapters for dcrypt.
 
-> Security notice: `v1.2.3` is confirmed affected, earlier releases have not
-> been cleared, and `v2.0.0` is the first remediated release. In particular,
-> v1.2.3's streaming format is structurally
-> unauthenticated and its XChaCha20-Poly1305 implementation is not the standard
-> construction. The remediated release has not received an independent
-> post-remediation audit or FIPS validation. See the workspace `SECURITY.md`
-> before using it.
+The unreleased v3 API never obtains entropy from the operating system. Every
+randomized key, nonce, salt, package, and stream constructor takes a mutable
+caller-owned `CryptoRng`, and failures from that source are returned to the
+caller. Byte-array constructors and encryption methods with an explicit nonce
+remain available.
 
-## Implemented interfaces
+Implemented interfaces:
 
 - AES-128-GCM and AES-256-GCM with 96-bit nonces and 128-bit tags.
 - ChaCha20-Poly1305 with 96-bit nonces.
@@ -20,32 +18,35 @@ High-level AEAD and authenticated streaming adapters for dcrypt.
   buffering.
 
 The former dcrypt XChaCha format is intentionally not accepted by the standard
-API. Treat ciphertext created by confirmed-affected `v1.2.3` as a distinct
-legacy format. Earlier ciphertext also requires provenance and format review
-because its exact affected range has not been established. Migrate legacy data
-only through an explicitly trusted, application-specific process.
+API. Treat ciphertext created by confirmed-affected v1.2.3 as a distinct legacy
+format and migrate it only in an isolated, explicitly trusted process.
 
-The streaming module currently requires `std`. The crate's historical
-`no_std` feature surface is not a supported or validated build configuration.
+## Dependency
 
-## Development dependency
-
-Use the remediated major release and pin the exact version selected for review:
+Pin the exact release selected for review:
 
 ```toml
 [dependencies]
-dcrypt-symmetric = "=2.0.0"
+dcrypt-symmetric = "=3.0.0"
 ```
+
+The allocation-backed core works without `std`:
+
+```toml
+dcrypt-symmetric = { version = "=3.0.0", default-features = false, features = ["alloc"] }
+```
+
+Authenticated I/O streaming is available only with the default `std` feature.
 
 ## AES-256-GCM
 
 ```rust
-use dcrypt_symmetric::{Aead, Aes256Gcm, Aes256Key, Result, SymmetricCipher};
+use dcrypt_symmetric::{Aead, Aes256Gcm, Aes256Key, CryptoRng, Result, SymmetricCipher};
 
-fn round_trip() -> Result<()> {
-    let key = Aes256Key::generate();
+fn round_trip(rng: &mut impl CryptoRng) -> Result<()> {
+    let key = Aes256Key::generate(rng)?;
+    let nonce = Aes256Gcm::generate_nonce(rng)?;
     let cipher = Aes256Gcm::new(&key)?;
-    let nonce = Aes256Gcm::generate_nonce();
     let aad = b"record-type/example";
     let plaintext = b"authenticated plaintext";
 
@@ -70,14 +71,15 @@ use dcrypt_symmetric::streaming::chacha20poly1305::{
     ChaCha20Poly1305DecryptStream, ChaCha20Poly1305EncryptStream,
 };
 use dcrypt_symmetric::streaming::{StreamingDecrypt, StreamingEncrypt};
-use dcrypt_symmetric::{ChaCha20Poly1305Key, Result};
+use dcrypt_symmetric::{ChaCha20Poly1305Key, CryptoRng, Result};
 use std::io::Cursor;
 
-fn streaming_round_trip() -> Result<()> {
-    let key = ChaCha20Poly1305Key::generate();
+fn streaming_round_trip(rng: &mut impl CryptoRng) -> Result<()> {
+    let key = ChaCha20Poly1305Key::generate(rng)?;
     let aad = Some(b"unique-record-id/42".as_slice());
 
-    let mut encryptor = ChaCha20Poly1305EncryptStream::new(Vec::new(), &key, aad)?;
+    let mut encryptor =
+        ChaCha20Poly1305EncryptStream::new(Vec::new(), &key, aad, rng)?;
     encryptor.write(b"first chunk")?;
     encryptor.write(b" and second chunk")?;
     let ciphertext = encryptor.finalize()?;
@@ -101,11 +103,8 @@ fn streaming_round_trip() -> Result<()> {
 
 The frame sequence prevents frame replay within one stream. Preventing replay
 of an entire valid stream remains an application responsibility; bind a unique
-record/session identifier in AAD and track it externally.
+record or session identifier in AAD and track it externally.
 
-## Assurance boundary
-
-Key wrappers attempt to zero owned storage, but cannot guarantee erasure of
-caller copies, registers, compiler temporaries, or allocator history. No
-blanket constant-time, production-safety, FIPS-validation, or `no_std` claim is
-made for this release.
+Key wrappers erase their owned storage on drop, but cannot guarantee erasure of
+caller copies, registers, compiler temporaries, or allocator history. No FIPS
+validation or independent post-remediation audit is claimed.

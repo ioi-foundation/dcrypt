@@ -3,14 +3,34 @@
 //! This module provides a simplified error handling layer that uses the API error system
 //! and adds conversions for symmetric-specific error types.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 // Re-export the primary API error system
 pub use dcrypt_api::error::{validate, Error, Result};
 pub use dcrypt_api::error::{ResultExt, SecureErrorHandling, ERROR_REGISTRY};
 
 // Import for conversions
 use dcrypt_algorithms::error::Error as PrimitiveError;
+use dcrypt_internal::random::CryptoRng;
+use dcrypt_internal::zeroing::Zeroize;
+
+/// Fill a buffer from caller-owned cryptographic randomness.
+///
+/// A failed source is reported to the caller and any partially written bytes
+/// are erased before returning.
+pub(crate) fn fill_random<R: CryptoRng + ?Sized>(
+    rng: &mut R,
+    destination: &mut [u8],
+    context: &'static str,
+) -> Result<()> {
+    if rng.try_fill_bytes(destination).is_err() {
+        destination.zeroize();
+        return Err(Error::RandomGenerationError {
+            context,
+            #[cfg(feature = "std")]
+            message: "caller-provided randomness source failed".into(),
+        });
+    }
+    Ok(())
+}
 
 // Helper functions to convert errors (instead of From impls which violate orphan rules)
 
@@ -22,11 +42,15 @@ pub fn from_primitive_error(err: PrimitiveError) -> Error {
             #[cfg(feature = "std")]
             message: "authentication tag verification failed".to_string(),
         },
-        PrimitiveError::Other(msg) => Error::Other {
-            context: "primitive operation",
-            #[cfg(feature = "std")]
-            message: msg.to_string(),
-        },
+        PrimitiveError::Other(message) => {
+            #[cfg(not(feature = "std"))]
+            let _ = message;
+            Error::Other {
+                context: "primitive operation",
+                #[cfg(feature = "std")]
+                message: message.to_string(),
+            }
+        }
         _ => Error::Other {
             context: "primitive operation",
             #[cfg(feature = "std")]
@@ -126,4 +150,35 @@ pub fn validate_key_derivation(
     details: &'static str,
 ) -> Result<()> {
     validate::parameter(condition, algorithm, details)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use dcrypt_internal::{random::Error as RandomError, RngCore};
+
+    struct PartialFailure;
+
+    impl RngCore for PartialFailure {
+        fn try_fill_bytes(
+            &mut self,
+            destination: &mut [u8],
+        ) -> core::result::Result<(), RandomError> {
+            if let Some(first) = destination.first_mut() {
+                *first = 0xaa;
+            }
+            Err(RandomError)
+        }
+    }
+
+    impl CryptoRng for PartialFailure {}
+
+    #[test]
+    fn random_failures_are_propagated_and_partial_output_is_erased() {
+        let mut rng = PartialFailure;
+        let mut output = [0x55; 16];
+        let error = fill_random(&mut rng, &mut output, "test RNG").unwrap_err();
+        assert!(matches!(error, Error::RandomGenerationError { .. }));
+        assert_eq!(output, [0; 16]);
+    }
 }

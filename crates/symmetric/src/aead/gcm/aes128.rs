@@ -1,5 +1,8 @@
 //! AES-128 cipher implementations
 
+use alloc::vec::Vec;
+use dcrypt_internal::CryptoRng;
+
 use super::types::{AesCiphertextPackage, GcmNonce};
 use super::Aes128Gcm;
 use crate::aes::keys::Aes128Key;
@@ -7,20 +10,21 @@ use crate::cipher::{Aead, SymmetricCipher};
 use crate::error::Result;
 
 impl Aes128Gcm {
-    /// Generates a new AES-128-GCM instance with a random key
-    pub fn generate() -> Result<(Self, Aes128Key)> {
-        let key = Aes128Key::generate();
+    /// Generates an AES-128-GCM instance using caller-owned randomness.
+    pub fn generate<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<(Self, Aes128Key)> {
+        let key = Aes128Key::generate(rng)?;
         let cipher = Self::new(&key)?;
         Ok((cipher, key))
     }
 
-    /// Convenience method for encryption with a new random nonce
-    pub fn encrypt_with_random_nonce(
+    /// Encrypts with a nonce drawn from caller-owned randomness.
+    pub fn encrypt_with_random_nonce<R: CryptoRng + ?Sized>(
         &self,
+        rng: &mut R,
         plaintext: &[u8],
         aad: Option<&[u8]>,
     ) -> Result<(Vec<u8>, GcmNonce)> {
-        let nonce = Self::generate_nonce();
+        let nonce = Self::generate_nonce(rng)?;
         let ciphertext = self.encrypt(&nonce, plaintext, aad)?;
         Ok((ciphertext, nonce))
     }
@@ -41,12 +45,13 @@ impl Aes128Gcm {
     }
 
     /// Encrypts data and returns a package containing both nonce and ciphertext
-    pub fn encrypt_to_package(
+    pub fn encrypt_to_package<R: CryptoRng + ?Sized>(
         &self,
+        rng: &mut R,
         plaintext: &[u8],
         aad: Option<&[u8]>,
     ) -> Result<AesCiphertextPackage> {
-        let (ciphertext, nonce) = self.encrypt_with_random_nonce(plaintext, aad)?;
+        let (ciphertext, nonce) = self.encrypt_with_random_nonce(rng, plaintext, aad)?;
         Ok(AesCiphertextPackage::new(nonce, ciphertext))
     }
 
@@ -62,14 +67,15 @@ impl Aes128Gcm {
 
 // Additional standalone functions
 
-/// Creates a new AES-128-GCM instance with a random key and encrypts data
-pub fn aes128_encrypt(
+/// Creates an AES-128-GCM key and nonce from caller-owned randomness and encrypts data.
+pub fn aes128_encrypt<R: CryptoRng + ?Sized>(
+    rng: &mut R,
     plaintext: &[u8],
     aad: Option<&[u8]>,
 ) -> Result<(Vec<u8>, Aes128Key, GcmNonce)> {
-    let key = Aes128Key::generate();
+    let key = Aes128Key::generate(rng)?;
     let cipher = Aes128Gcm::new(&key)?;
-    let nonce = Aes128Gcm::generate_nonce();
+    let nonce = Aes128Gcm::generate_nonce(rng)?;
 
     let ciphertext = cipher.encrypt(&nonce, plaintext, aad)?;
 
@@ -88,13 +94,14 @@ pub fn aes128_decrypt(
 }
 
 /// Encrypts data and returns a complete package with everything needed for decryption
-pub fn aes128_encrypt_package(
+pub fn aes128_encrypt_package<R: CryptoRng + ?Sized>(
+    rng: &mut R,
     plaintext: &[u8],
     aad: Option<&[u8]>,
 ) -> Result<(AesCiphertextPackage, Aes128Key)> {
-    let key = Aes128Key::generate();
+    let key = Aes128Key::generate(rng)?;
     let cipher = Aes128Gcm::new(&key)?;
-    let package = cipher.encrypt_to_package(plaintext, aad)?;
+    let package = cipher.encrypt_to_package(rng, plaintext, aad)?;
 
     Ok((package, key))
 }

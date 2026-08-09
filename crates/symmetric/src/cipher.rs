@@ -3,8 +3,8 @@
 //! This module defines the core traits used by all symmetric
 //! encryption algorithms in the library.
 
-#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+use dcrypt_internal::CryptoRng;
 
 use crate::error::Result;
 
@@ -40,6 +40,6 @@ pub trait Aead: SymmetricCipher {
         aad: Option<&[u8]>,
     ) -> Result<Vec<u8>>;
 
-    /// Generates a secure random nonce
-    fn generate_nonce() -> Self::Nonce;
+    /// Generates a nonce using caller-owned cryptographic randomness.
+    fn generate_nonce<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self::Nonce>;
 }

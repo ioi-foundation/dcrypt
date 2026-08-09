@@ -7,6 +7,7 @@ use super::framed::{FramedDecryptStream, FramedEncryptStream};
 use super::{StreamingDecrypt, StreamingEncrypt};
 use crate::aead::chacha20poly1305::{ChaCha20Poly1305Cipher, ChaCha20Poly1305Key};
 use crate::error::{Result, SymmetricResultExt};
+use dcrypt_internal::CryptoRng;
 use std::io::{Read, Write};
 
 /// ChaCha20-Poly1305 writer using authenticated version-2 frames.
@@ -15,13 +16,14 @@ pub type ChaCha20Poly1305EncryptStream<W> = FramedEncryptStream<W, ChaCha20Poly1
 pub type ChaCha20Poly1305DecryptStream<R> = FramedDecryptStream<R, ChaCha20Poly1305Cipher>;
 
 /// Encrypt a reader into the authenticated ChaCha20-Poly1305 stream format.
-pub fn encrypt_file<R: Read, W: Write>(
+pub fn encrypt_file<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     mut reader: R,
     writer: W,
     key: &ChaCha20Poly1305Key,
     aad: Option<&[u8]>,
+    rng: &mut Rng,
 ) -> Result<()> {
-    let mut stream = ChaCha20Poly1305EncryptStream::new(writer, key, aad)?;
+    let mut stream = ChaCha20Poly1305EncryptStream::new(writer, key, aad, rng)?;
     let mut buffer = [0u8; 8192];
     loop {
         let read = reader.read(&mut buffer).map_io_err()?;
@@ -57,14 +59,16 @@ pub fn decrypt_file<R: Read, W: Write>(
 mod tests {
     use super::*;
     use crate::streaming::framed::FRAME_PLAINTEXT_MAX;
+    use dcrypt_internal::ChaCha20Rng;
     use std::io::Cursor;
 
     #[test]
     fn round_trip_across_frames_with_tiny_reads() {
         let key = ChaCha20Poly1305Key::new([0x24; 32]);
         let plaintext = vec![0xa5; FRAME_PLAINTEXT_MAX + 333];
+        let mut rng = ChaCha20Rng::from_seed([0x55; 32]);
         let mut encryptor =
-            ChaCha20Poly1305EncryptStream::new(Vec::new(), &key, Some(b"aad")).unwrap();
+            ChaCha20Poly1305EncryptStream::new(Vec::new(), &key, Some(b"aad"), &mut rng).unwrap();
         encryptor.write(&plaintext).unwrap();
         let ciphertext = encryptor.finalize().unwrap();
 

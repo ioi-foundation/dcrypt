@@ -8,6 +8,7 @@ use super::{StreamingDecrypt, StreamingEncrypt};
 use crate::aead::gcm::{Aes128Gcm, Aes256Gcm};
 use crate::aes::keys::{Aes128Key, Aes256Key};
 use crate::error::{Result, SymmetricResultExt};
+use dcrypt_internal::CryptoRng;
 use std::io::{Read, Write};
 
 /// AES-128-GCM writer using authenticated version-2 frames.
@@ -20,13 +21,14 @@ pub type Aes256GcmEncryptStream<W> = FramedEncryptStream<W, Aes256Gcm>;
 pub type Aes256GcmDecryptStream<R> = FramedDecryptStream<R, Aes256Gcm>;
 
 /// Encrypt a reader into the authenticated AES-128-GCM stream format.
-pub fn encrypt_file_aes128<R: Read, W: Write>(
+pub fn encrypt_file_aes128<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     mut reader: R,
     writer: W,
     key: &Aes128Key,
     aad: Option<&[u8]>,
+    rng: &mut Rng,
 ) -> Result<()> {
-    let mut stream = Aes128GcmEncryptStream::new(writer, key, aad)?;
+    let mut stream = Aes128GcmEncryptStream::new(writer, key, aad, rng)?;
     let mut buffer = [0u8; 8192];
     loop {
         let read = reader.read(&mut buffer).map_io_err()?;
@@ -59,13 +61,14 @@ pub fn decrypt_file_aes128<R: Read, W: Write>(
 }
 
 /// Encrypt a reader into the authenticated AES-256-GCM stream format.
-pub fn encrypt_file_aes256<R: Read, W: Write>(
+pub fn encrypt_file_aes256<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     mut reader: R,
     writer: W,
     key: &Aes256Key,
     aad: Option<&[u8]>,
+    rng: &mut Rng,
 ) -> Result<()> {
-    let mut stream = Aes256GcmEncryptStream::new(writer, key, aad)?;
+    let mut stream = Aes256GcmEncryptStream::new(writer, key, aad, rng)?;
     let mut buffer = [0u8; 8192];
     loop {
         let read = reader.read(&mut buffer).map_io_err()?;
@@ -101,11 +104,14 @@ pub fn decrypt_file_aes256<R: Read, W: Write>(
 mod tests {
     use super::*;
     use crate::streaming::framed::{FRAME_HEADER_SIZE, FRAME_PLAINTEXT_MAX, HEADER_SIZE};
+    use dcrypt_internal::ChaCha20Rng;
     use std::io::Cursor;
 
     fn encrypted(plaintext: &[u8]) -> (Vec<u8>, Aes128Key) {
         let key = Aes128Key::new([0x42; 16]);
-        let mut stream = Aes128GcmEncryptStream::new(Vec::new(), &key, Some(b"context")).unwrap();
+        let mut rng = ChaCha20Rng::from_seed([0x66; 32]);
+        let mut stream =
+            Aes128GcmEncryptStream::new(Vec::new(), &key, Some(b"context"), &mut rng).unwrap();
         stream.write(plaintext).unwrap();
         (stream.finalize().unwrap(), key)
     }
@@ -122,6 +128,13 @@ mod tests {
             plaintext.extend_from_slice(&buffer[..read]);
         }
         Ok(plaintext)
+    }
+
+    #[test]
+    fn caller_seeded_stream_header_is_deterministic() {
+        let (left, _) = encrypted(b"same input");
+        let (right, _) = encrypted(b"same input");
+        assert_eq!(left, right);
     }
 
     #[test]

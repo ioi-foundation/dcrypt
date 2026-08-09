@@ -12,34 +12,23 @@ publish = true
 default = ["std"]
 std = [
     "alloc",
-    "dcrypt-api/std", 
-    "dcrypt-common/std", 
-    "dcrypt-internal/std"
+    "dcrypt-api/std",
+    "dcrypt-internal/std",
+    "dcrypt-algorithms/std",
 ]
-no_std = [
-    "alloc",
-    "dcrypt-api/no_std", 
-    "dcrypt-common/no_std", 
-    "dcrypt-internal/no_std"
+alloc = [
+    "dcrypt-api/alloc",
+    "dcrypt-internal/alloc",
+    "dcrypt-algorithms/alloc",
 ]
-alloc = ["dcrypt-api/alloc", "dcrypt-common/alloc", "dcrypt-internal/alloc", "dcrypt-algorithms/alloc"]
-[dependencies]
-dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false }
-dcrypt-common = { path = "../common", version = "=2.0.0", default-features = false }
-dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
-dcrypt-params = { path = "../params", version = "=2.0.0" }
-dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0" }
-zeroize = { workspace = true }
-base64 = "0.13"
-hmac = "0.12"
-pbkdf2 = "0.11"
-sha2 = "0.10"
-rand = { workspace = true }
-hkdf = "0.12"  # Add this missing dependency
-byteorder = "1.4"  # Make sure this is included 
-subtle = "2.4"   # Make sure constant-time comparison is available
+no_std = ["alloc"]
 
-[dev-dependencies]
+[dependencies]
+dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false, features = ["alloc"] }
+dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false, features = ["alloc"] }
+dcrypt-params = { path = "../params", version = "=2.0.0" }
+dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["aead", "block", "hash", "kdf", "mac", "stream"] }
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
 
 [package.metadata.release]
 publish = true
