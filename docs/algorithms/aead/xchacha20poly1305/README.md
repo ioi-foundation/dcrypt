@@ -6,7 +6,12 @@ This module provides an implementation of the **XChaCha20-Poly1305** Authenticat
 
 Like its predecessor, XChaCha20-Poly1305 provides strong confidentiality and integrity for encrypted messages.
 
-> **Migration note:** dcrypt v1.2.3 is confirmed to emit a nonstandard custom construction under this name; the exact earlier introduced-version range is under investigation. This implementation follows standard XChaCha20-Poly1305 and intentionally does not accept those legacy ciphertexts. Existing data must be migrated with a separately isolated copy of the legacy decryptor; it must not be relabeled as standard XChaCha20-Poly1305.
+> **Migration note:** every published `dcrypt-algorithms` version from
+> `0.9.0-beta.1` through `1.2.3` emitted a nonstandard custom construction
+> under this name. This implementation follows standard XChaCha20-Poly1305 and
+> intentionally does not accept those legacy ciphertexts. Existing data must
+> be migrated with the separately isolated decrypt-only tool; it must not be
+> relabeled as standard XChaCha20-Poly1305.
 
 ## The Nonce Advantage: Why Use XChaCha20?
 
@@ -25,8 +30,12 @@ This makes XChaCha20 an excellent choice for systems where managing a sequential
 ## Security Considerations
 
 *   **Nonce Safety:** The primary security advantage of this algorithm is its large nonce size, which makes random nonce generation a safe practice. **However, it is still a critical violation to ever reuse a (key, nonce) pair.**
-*   **Vetted Implementation:** Encryption and verification are delegated to RustCrypto's standard `chacha20poly1305` implementation.
-*   **Memory Hygiene:** The adapter's owned key buffer is zeroized on drop. This does not erase caller, compiler, register, or allocator copies.
+*   **Owned Implementation:** HChaCha20 and the composed ChaCha20-Poly1305
+    implementation are dcrypt-owned safe Rust and are checked against published
+    vectors and an independent oracle outside the published dependency graph.
+*   **Memory Hygiene:** The adapter explicitly clears its initialized owned key
+    bytes on drop. This does not erase caller, compiler, register, or allocator
+    copies.
 *   **Cryptography:** The cryptographic core of this algorithm is based on the well-vetted ChaCha20 stream cipher and the Poly1305 message authentication code.
 
 ## Usage

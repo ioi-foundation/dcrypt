@@ -2,16 +2,18 @@
 
 ## Security release boundary
 
-`v1.2.3` is confirmed affected by the vulnerabilities listed in
-[`SECURITY.md`](SECURITY.md). Exact introduced-version ranges for earlier
-releases remain under investigation. `v2.0.0` is the first remediated release;
-it passed the repository validation gates but has not received an independent
-post-remediation audit or FIPS validation.
+Every published pre-v2 line contains one or more vulnerabilities documented in
+[`docs/security`](docs/security/README.md). `v2.0.0` retained the first four
+stop-ship remediations but was withdrawn after the v3 audit found additional
+algorithm, validation, and implementation-policy failures. Its immutable tag is
+historical provenance, not a supported upgrade target.
 
-The remediation is versioned `2.0.0` and must remain on the new SemVer-major
-line. It must not be published as `1.2.x` or another backwards-compatible
-update. This boundary is required because the remediation deliberately changes
-public APIs and rejects affected serialized formats.
+The supported corrective release is versioned `3.0.0` and must remain on the
+new SemVer-major line. It must not be published as `2.0.1`, `1.2.x`, or another
+backwards-compatible update. This boundary is required because the correction
+changes randomness ownership and public APIs, removes affected algorithms, and
+rejects legacy serialized formats. Passing repository gates is not an
+independent cryptographic audit, formal verification, or FIPS validation.
 
 ## Required migration notes
 
@@ -34,6 +36,14 @@ Every release candidate must document these breaking changes:
   must not be silently relabeled. Versioned formats reject v1 objects; bare
   ML-DSA expanded-secret bytes require provenance or paired validation because
   they carry no self-identifying version.
+- Randomized key, nonce, salt, signing, encapsulation, streaming, and file APIs
+  require a caller-owned `CryptoRng`; dcrypt does not obtain operating-system
+  entropy.
+- `Kyber*`/`Dilithium*`, B-283, and P-192 public surfaces are removed. Migrate
+  to the final-standard `MlKem*`/`MlDsa*` names and retained curves rather than
+  relabeling old objects.
+- Standard BLS callers use the complete high-level Basic, Augmentation, or PoP
+  profile. Ethereum consensus callers select the separately named Eth2 adapter.
 
 ## Release gates
 
@@ -45,14 +55,14 @@ The new major release is gated on:
 2. Clearly disclose that independent cryptographic and protocol review of the
    remediated implementation remains outstanding. Passing self-roundtrip tests
    is not presented as an independent audit.
-3. Verify that release notes identify `v1.2.3` as confirmed affected, state that
-   earlier introduced-version ranges remain under investigation, and link
-   incident-response guidance for historical data and keys.
+3. Verify that release notes identify all unsupported/yanked lines, link each
+   advisory's artifact-derived affected range, and provide incident-response
+   guidance for historical data and keys.
 4. Verify that all crates in the release use the same new major version and that
    no dependency requirement can resolve back to an affected `1.x` crate.
 5. Run the repository's publish-readiness and dry-run tooling, inspect the exact
    artifacts, and publish only after all blockers are closed.
 
-Affected `1.x` versions should be yanked where operationally feasible. A yank is
-not a patch and does not change the security status of already downloaded
-artifacts.
+Every affected pre-v3 package/version should be yanked after `3.0.0` is live and
+verified. A yank is not a patch and does not change the security status of
+already downloaded artifacts or existing lockfiles.

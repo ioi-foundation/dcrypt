@@ -56,8 +56,8 @@ Users of an affected release should assume the following:
   replay state.
 - Ciphertext emitted by the former `XChaCha20Poly1305` type is a dcrypt-specific
   legacy format, not standard XChaCha20-Poly1305. The remediated API does not
-  silently decrypt or relabel it. Ciphertext produced from tagged source `v0.5.0` through
-  `v1.2.3` can be handled only by the isolated, non-published
+  silently decrypt or relabel it. Ciphertext produced from tagged source
+  `v0.5.0` through `v1.2.3` can be handled only by the isolated, non-published
   [decrypt-only migration tool](migration/legacy-xchacha20poly1305/README.md)
   after its provenance has been established.
 - Former `Dilithium2/3/5` keys and signatures are dcrypt-specific legacy objects,
@@ -89,7 +89,7 @@ Users of an affected release should assume the following:
   without subgroup validation. Applications that processed attacker-controlled
   B-283 public keys or ciphertexts must treat derived keys and protected data as
   potentially compromised and rotate the corresponding long-term keys. The
-  affected tag range and evidence are documented in
+  affected published-artifact range and evidence are documented in
   [`docs/security/V3-TRADITIONAL-EC-REMOVALS.md`](docs/security/V3-TRADITIONAL-EC-REMOVALS.md).
 - P-192 is not offered by v3 for new signing or encryption. Migrate P-192 keys
   and protocols to a retained, independently reviewed suite. P-224 remains only

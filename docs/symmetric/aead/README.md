@@ -20,10 +20,10 @@ The primary AEAD schemes exposed through this module are:
     *   Includes `ChaCha20Poly1305CiphertextPackage` for bundling nonce and ciphertext.
     *   Offers key derivation (`derive_chacha20poly1305_key`) and salt generation utilities.
 
-    The XChaCha adapter now uses the standard HChaCha20 construction. Published
-    dcrypt v1.2.3 is confirmed to emit a different, nonstandard format under the
-    same name; the exact earlier introduced-version range is under investigation.
-    The current API intentionally rejects that legacy ciphertext.
+    The XChaCha adapter now uses the standard HChaCha20 construction. Every
+    published `dcrypt-symmetric` version from `0.9.0-beta.1` through `1.2.3`
+    exposed a different, nonstandard format under the same name. The current
+    API intentionally rejects that legacy ciphertext.
     Migration requires a separately isolated decrypt-only legacy tool.
 
 2.  **AES-GCM (`gcm`)**:
@@ -45,7 +45,8 @@ The cipher structs in this module (e.g., `ChaCha20Poly1305Cipher`, `Aes128Gcm`) 
     *   `type Nonce`: Specifies the dedicated nonce type (e.g., `GcmNonce`).
     *   `encrypt(&self, nonce: &Self::Nonce, plaintext: &[u8], aad: Option<&[u8]>) -> Result<Vec<u8>>`.
     *   `decrypt(&self, nonce: &Self::Nonce, ciphertext: &[u8], aad: Option<&[u8]>) -> Result<Vec<u8>>`.
-    *   `generate_nonce() -> Self::Nonce`: Generates a cryptographically secure random nonce suitable for the algorithm.
+    *   `generate_nonce(rng: &mut impl CryptoRng) -> Result<Self::Nonce>`:
+        obtains nonce bytes only from the caller-owned cryptographic RNG.
 
 ## Key and Nonce Management
 
@@ -53,11 +54,11 @@ A key design goal of this module is to provide type-safe and convenient ways to 
 
 -   **Key Types** (e.g., `ChaCha20Poly1305Key`, `Aes128Key`):
     *   Fixed-size arrays wrapped in structs that implement `Zeroize` and `ZeroizeOnDrop`.
-    *   Provide `generate()` methods for creating random keys.
+    *   Provide fallible `generate(rng)` methods using caller-owned randomness.
     *   Offer `to_secure_string()` and `from_secure_string()` for a simple, somewhat protected way to serialize/deserialize keys (primarily for illustrative or specific storage scenarios, not a replacement for robust key management systems).
 -   **Nonce Types** (e.g., `ChaCha20Poly1305Nonce`, `GcmNonce`):
     *   Fixed-size arrays ensuring correct nonce length for the algorithm.
-    *   Provide `generate()` methods.
+    *   Provide fallible `generate(rng)` methods.
     *   Offer `to_string()` (base64) and `from_string()` for serialization.
 -   **Ciphertext Packages** (e.g., `ChaCha20Poly1305CiphertextPackage`):
     *   Structs that combine a nonce and its corresponding ciphertext.
@@ -69,19 +70,21 @@ A key design goal of this module is to provide type-safe and convenient ways to 
 use dcrypt_symmetric::aes::{Aes256Gcm, Aes256Key, GcmNonce, AesCiphertextPackage};
 use dcrypt_symmetric::cipher::{SymmetricCipher, Aead};
 use dcrypt_symmetric::error::Result;
+use dcrypt_internal::CryptoRng;
 
-fn aes_gcm_example() -> Result<()> {
+fn aes_gcm_example(rng: &mut impl CryptoRng) -> Result<()> {
     // Generate key and cipher instance
-    let (cipher, key) = Aes256Gcm::generate()?; // Helper that generates key and new()
+    let (cipher, key) = Aes256Gcm::generate(rng)?; // Helper that generates key and new()
     // Or:
-    // let key = Aes256Key::generate();
+    // let key = Aes256Key::generate(rng)?;
     // let cipher = Aes256Gcm::new(&key)?;
 
     let plaintext = b"Sensitive data requiring strong authenticated encryption.";
     let aad = Some(b"Metadata that needs authentication but not encryption.");
 
     // Encrypt using a randomly generated nonce
-    let (ciphertext_bytes, nonce_used) = cipher.encrypt_with_random_nonce(plaintext, aad)?;
+    let (ciphertext_bytes, nonce_used) =
+        cipher.encrypt_with_random_nonce(rng, plaintext, aad)?;
     println!("AES-256-GCM Ciphertext (hex): {}", hex::encode(&ciphertext_bytes));
     println!("AES-256-GCM Nonce (base64): {}", nonce_used.to_string());
 
@@ -91,7 +94,7 @@ fn aes_gcm_example() -> Result<()> {
     println!("AES-256-GCM Decryption successful!");
 
     // Using CiphertextPackage
-    let package = cipher.encrypt_to_package(plaintext, aad)?;
+    let package = cipher.encrypt_to_package(rng, plaintext, aad)?;
     let serialized_package = package.to_string();
     println!("Serialized Package: {}", serialized_package);
 

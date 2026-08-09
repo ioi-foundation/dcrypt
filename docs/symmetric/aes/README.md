@@ -7,7 +7,7 @@ This module within the `dcrypt-symmetric` crate focuses on providing high-level 
 1.  **AES Key Types (`keys.rs`)**:
     *   **`Aes128Key`**: A type-safe wrapper for 128-bit (16-byte) AES keys.
         *   Implements `Clone`, `Zeroize`, and `ZeroizeOnDrop`.
-        *   Provides `new([u8; 16])`, `generate()` (random key), `as_bytes()`.
+        *   Provides `new([u8; 16])`, fallible `generate(rng)` using caller-owned randomness, and `as_bytes()`.
         *   Includes `to_secure_string()` and `from_secure_string()` for a basic, somewhat protected string serialization (base64 encoded with a prefix).
     *   **`Aes256Key`**: A type-safe wrapper for 256-bit (32-byte) AES keys.
         *   Similar features and security properties as `Aes128Key`.
@@ -15,7 +15,7 @@ This module within the `dcrypt-symmetric` crate focuses on providing high-level 
         *   `derive_aes128_key(password: &[u8], salt: &[u8], iterations: u32) -> Result<Aes128Key>`
         *   `derive_aes256_key(password: &[u8], salt: &[u8], iterations: u32) -> Result<Aes256Key>`
         *   Both use PBKDF2-HMAC-SHA256 for deriving keys from passwords.
-    *   **`generate_salt(size: usize) -> Vec<u8>`**: A utility to generate a random salt for key derivation.
+    *   **`generate_salt(rng, size) -> Result<Vec<u8>>`**: A utility that obtains a key-derivation salt from caller-owned cryptographic randomness.
 
 2.  **Re-exported AEAD Ciphers**:
     This module re-exports AES-GCM cipher implementations from `symmetric::aead::gcm`:
@@ -44,23 +44,24 @@ The `symmetric::aes` module aims to:
 use dcrypt_symmetric::aes::{Aes128Gcm, Aes128Key, GcmNonce, aes128_encrypt_package, aes128_decrypt_package};
 use dcrypt_symmetric::cipher::{SymmetricCipher, Aead}; // Core traits from this crate
 use dcrypt_symmetric::error::Result;
+use dcrypt_internal::CryptoRng;
 
-fn main_aes_gcm_example() -> Result<()> {
+fn main_aes_gcm_example(rng: &mut impl CryptoRng) -> Result<()> {
     // Method 1: Explicit key generation and cipher instantiation
-    let key1 = Aes128Key::generate();
+    let key1 = Aes128Key::generate(rng)?;
     let cipher1 = Aes128Gcm::new(&key1)?; // Create cipher with the key
 
     let plaintext = b"Secret data for AES-128-GCM.";
     let aad = Some(b"Associated data.");
 
-    let nonce1 = Aes128Gcm::generate_nonce(); // Generate a nonce
+    let nonce1 = Aes128Gcm::generate_nonce(rng)?; // Draw a nonce from the caller's RNG
     let ciphertext1 = cipher1.encrypt(&nonce1, plaintext, aad)?;
     let decrypted1 = cipher1.decrypt(&nonce1, &ciphertext1, aad)?;
     assert_eq!(plaintext, decrypted1.as_slice());
     println!("Method 1: Encryption/Decryption successful!");
 
     // Method 2: Using convenience package functions
-    let (package, key2) = aes128_encrypt_package(plaintext, aad)?;
+    let (package, key2) = aes128_encrypt_package(rng, plaintext, aad)?;
     let serialized_package = package.to_string();
     println!("Serialized Package: {}", serialized_package);
 

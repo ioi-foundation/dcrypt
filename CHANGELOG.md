@@ -41,8 +41,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   and uncleared. The immutable `v2.0.0` tag is retained for provenance.
 - Established `v3.0.0` as the planned corrective line because the implementation
   boundary and caller-supplied-randomness contract require breaking changes.
-- Removed the affected sect283k1/ECDH-B283 implementation. Tagged releases
-  `v0.9.0-beta.1` through withdrawn `v2.0.0` accepted an order-two peer point
+- Removed the affected sect283k1/ECDH-B283 implementation. Published artifacts
+  from `0.9.0-beta.1` through withdrawn `2.0.0` accepted an order-two peer point
   without subgroup validation and used an incorrect group-order constant,
   allowing a malicious ciphertext to expose secret-scalar parity and, for one
   parity, produce a predictable KEM secret. See
@@ -61,6 +61,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   those operations under a key reused both the ChaCha20 keystream and Poly1305
   one-time key. The supported API requires an explicit nonce for every
   operation.
+- Replaced the nonstandard construction exposed as `XChaCha20Poly1305` by every
+  published `dcrypt-algorithms` and `dcrypt-symmetric` version from
+  `0.9.0-beta.1` through `1.2.3`. Explicit-nonce ciphertext from those releases
+  is not standard XChaCha20-Poly1305 and is accepted only by the isolated
+  decrypt-only migration tool.
 - Extended exact-size secret ownership and best-effort explicit clearing across
   hashes, XOFs, MACs, KDFs, password hashing, key generation, KEMs, and signature
   operations. Secret APIs no longer return `Vec`-backed buffers with

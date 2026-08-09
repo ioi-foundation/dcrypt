@@ -5,11 +5,11 @@
 //! RFC 8439 ChaCha20-Poly1305 implementation uses the nonce
 //! `00000000 || nonce[16..24]`.
 //!
-//! dcrypt v1.2.3 is confirmed to have used a nonstandard construction under
-//! this name; the exact earlier introduced-version range is under investigation.
-//! This standard implementation intentionally does not decrypt
-//! those bytes. Migrate legacy data only through a separately isolated,
-//! decrypt-only compatibility tool; never relabel it as XChaCha20-Poly1305.
+//! Every published `dcrypt-algorithms` version from `0.9.0-beta.1` through
+//! `1.2.3` used a nonstandard construction under this name. This standard
+//! implementation intentionally does not decrypt those bytes. Migrate legacy
+//! data only through the separately isolated decrypt-only tool; never relabel
+//! it as XChaCha20-Poly1305.
 
 use crate::aead::chacha20poly1305::{
     ChaCha20Poly1305, CHACHA20POLY1305_KEY_SIZE, CHACHA20POLY1305_TAG_SIZE,
@@ -30,7 +30,7 @@ pub const XCHACHA20POLY1305_NONCE_SIZE: usize = 24;
 /// Standard XChaCha20-Poly1305 with an extended 24-byte nonce.
 ///
 /// This type does not accept the nonstandard ciphertext format emitted by
-/// the affected legacy format (confirmed in dcrypt v1.2.3).
+/// the affected legacy format published from `0.9.0-beta.1` through `1.2.3`.
 #[derive(Clone)]
 pub struct XChaCha20Poly1305 {
     key: SecretBuffer<CHACHA20POLY1305_KEY_SIZE>,

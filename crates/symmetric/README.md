@@ -18,7 +18,8 @@ Implemented interfaces:
   buffering.
 
 The former dcrypt XChaCha format is intentionally not accepted by the standard
-API. Treat ciphertext created by confirmed-affected v1.2.3 as a distinct legacy
+API. Every published `dcrypt-symmetric` release from `0.9.0-beta.1` through
+`1.2.3` exposed that construction. Treat its ciphertext as a distinct legacy
 format and migrate it only in an isolated, explicitly trusted process.
 
 ## Dependency

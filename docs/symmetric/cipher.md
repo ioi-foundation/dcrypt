@@ -27,7 +27,7 @@ This file defines the core traits that all symmetric encryption algorithms withi
             *   `ciphertext`: The encrypted data, including the authentication tag.
             *   `aad`: Optional Associated Data that was authenticated during encryption.
             *   Returns the original plaintext if decryption and authentication are successful. Otherwise, returns an error (e.g., `Error::Primitive(PrimitiveError::Authentication { .. })` if the tag is invalid).
-        *   `generate_nonce() -> Self::Nonce`: A static method to generate a cryptographically secure random nonce appropriate for the AEAD scheme.
+        *   `generate_nonce(rng: &mut impl CryptoRng) -> Result<Self::Nonce>`: A static method that obtains an appropriate nonce from caller-owned cryptographic randomness.
 
 ## How These Traits Are Used
 
@@ -40,17 +40,24 @@ This file defines the core traits that all symmetric encryption algorithms withi
 ```rust
 use dcrypt_symmetric::cipher::{SymmetricCipher, Aead};
 use dcrypt_symmetric::error::Result;
+use dcrypt_internal::CryptoRng;
 use std::fmt::Debug; // For printing
 
 // A generic function that can encrypt data using any AEAD cipher
-fn perform_aead_encryption<C>(key: &C::Key, plaintext: &[u8], aad: Option<&[u8]>) -> Result<()>
+fn perform_aead_encryption<C, R>(
+    rng: &mut R,
+    key: &C::Key,
+    plaintext: &[u8],
+    aad: Option<&[u8]>,
+) -> Result<()>
 where
     C: SymmetricCipher + Aead, // Cipher C must implement both traits
     C::Key: Debug, // For printing (keys usually redact themselves)
     C::Nonce: Debug, // For printing
+    R: CryptoRng + ?Sized,
 {
     let cipher = C::new(key)?;
-    let nonce = C::generate_nonce();
+    let nonce = C::generate_nonce(rng)?;
 
     println!("Using cipher: {}", C::name());
     println!("With key: {:?}", key); // Key's Debug impl should redact
@@ -69,8 +76,10 @@ where
 // Example with a concrete cipher would then call this:
 // use dcrypt_symmetric::aead::gcm::Aes128Gcm;
 // use dcrypt_symmetric::aes::Aes128Key;
-// let my_key = Aes128Key::generate();
-// perform_aead_encryption::<Aes128Gcm>(&my_key, b"test data", None).unwrap();
+// fn concrete_example(rng: &mut impl CryptoRng) -> Result<()> {
+//     let my_key = Aes128Key::generate(rng)?;
+//     perform_aead_encryption::<Aes128Gcm, _>(rng, &my_key, b"test data", None)
+// }
 ```
 
 These traits form the core API contract for symmetric ciphers within the `dcrypt-symmetric` crate, promoting consistency and safety.

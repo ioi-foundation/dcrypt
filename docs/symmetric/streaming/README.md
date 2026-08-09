@@ -48,10 +48,11 @@ use dcrypt_symmetric::aes::Aes128Key;
 use dcrypt_symmetric::streaming::gcm::{Aes128GcmEncryptStream, Aes128GcmDecryptStream};
 use dcrypt_symmetric::streaming::{StreamingEncrypt, StreamingDecrypt};
 use dcrypt_symmetric::error::Result;
+use dcrypt_internal::CryptoRng;
 use std::io::{Cursor, Read, Write}; // For in-memory Read/Write
 
-fn streaming_aes128_gcm_example() -> Result<()> {
-    let key = Aes128Key::generate();
+fn streaming_aes128_gcm_example(rng: &mut impl CryptoRng) -> Result<()> {
+    let key = Aes128Key::generate(rng)?;
     let aad = Some(b"Authenticated context for streaming");
 
     // --- Encryption ---
@@ -59,7 +60,7 @@ fn streaming_aes128_gcm_example() -> Result<()> {
     // The final authenticated frame is written only by explicit finalization.
     {
         let mut writer_cursor = Cursor::new(&mut ciphertext_buffer);
-        let mut encrypt_stream = Aes128GcmEncryptStream::new(writer_cursor, &key, aad)?;
+        let mut encrypt_stream = Aes128GcmEncryptStream::new(writer_cursor, &key, aad, rng)?;
 
         encrypt_stream.write(b"This is the first segment of a long message.")?;
         encrypt_stream.write(b"Followed by a second segment.")?;
