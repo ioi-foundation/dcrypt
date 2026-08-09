@@ -24,7 +24,7 @@ pub struct EcdsaP384;
 ///
 /// Format: 97 bytes total (1 byte prefix + 48 bytes X + 48 bytes Y)
 #[derive(Clone)]
-pub struct EcdsaP384PublicKey(pub [u8; ec::P384_POINT_UNCOMPRESSED_SIZE]);
+pub struct EcdsaP384PublicKey(pub(crate) [u8; ec::P384_POINT_UNCOMPRESSED_SIZE]);
 
 /// P-384 secret key
 ///
@@ -59,7 +59,7 @@ impl ZeroizeOnDrop for EcdsaP384SecretKey {}
 ///
 /// Format: SEQUENCE { r INTEGER, s INTEGER }
 #[derive(Clone)]
-pub struct EcdsaP384Signature(pub Vec<u8>);
+pub struct EcdsaP384Signature(pub(crate) Vec<u8>);
 
 // AsRef/AsMut implementations for byte access
 impl AsRef<[u8]> for EcdsaP384PublicKey {
@@ -101,6 +101,13 @@ impl EcdsaP384PublicKey {
     /// Parse an uncompressed P-384 public key with on-curve validation.
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         let point = ec::Point::deserialize_uncompressed(bytes).map_err(ApiError::from)?;
+        if point.is_identity() {
+            return Err(ApiError::InvalidParameter {
+                context: "ECDSA-P384 public key",
+                #[cfg(feature = "std")]
+                message: "Identity is not a valid ECDSA public key".to_string(),
+            });
+        }
         Ok(Self(point.serialize_uncompressed()))
     }
 

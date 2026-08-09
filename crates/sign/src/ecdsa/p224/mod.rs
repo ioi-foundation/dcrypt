@@ -12,7 +12,9 @@ use dcrypt_algorithms::ec::p224 as ec;
 use dcrypt_algorithms::hash::sha2::Sha224;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
-use dcrypt_internal::{constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::{
+    constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing,
+};
 use dcrypt_params::traditional::ecdsa::NIST_P224;
 
 /// ECDSA signature scheme using NIST P-224 curve (secp224r1)
@@ -20,7 +22,7 @@ pub struct EcdsaP224;
 
 /// P-224 public key in uncompressed format (0x04 || X || Y)
 #[derive(Clone)]
-pub struct EcdsaP224PublicKey(pub [u8; ec::P224_POINT_UNCOMPRESSED_SIZE]);
+pub struct EcdsaP224PublicKey(pub(crate) [u8; ec::P224_POINT_UNCOMPRESSED_SIZE]);
 
 /// P-224 secret key
 #[derive(Clone)]
@@ -46,7 +48,7 @@ impl ZeroizeOnDrop for EcdsaP224SecretKey {}
 
 /// P-224 signature encoded in ASN.1 DER format
 #[derive(Clone)]
-pub struct EcdsaP224Signature(pub Vec<u8>);
+pub struct EcdsaP224Signature(pub(crate) Vec<u8>);
 
 // AsRef/AsMut implementations
 impl AsRef<[u8]> for EcdsaP224PublicKey {
@@ -74,6 +76,57 @@ impl AsRef<[u8]> for EcdsaP224Signature {
 impl AsMut<[u8]> for EcdsaP224Signature {
     fn as_mut(&mut self) -> &mut [u8] {
         &mut self.0
+    }
+}
+
+impl EcdsaP224PublicKey {
+    /// Parse an uncompressed P-224 public key with on-curve validation.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let point = ec::Point::deserialize_uncompressed(bytes).map_err(ApiError::from)?;
+        if point.is_identity() {
+            return Err(ApiError::InvalidParameter {
+                context: "ECDSA-P224 public key",
+                #[cfg(feature = "std")]
+                message: "Identity is not a valid ECDSA public key".to_string(),
+            });
+        }
+        Ok(Self(point.serialize_uncompressed()))
+    }
+
+    /// Return the SEC1 uncompressed encoding.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl EcdsaP224SecretKey {
+    /// Parse a canonical, nonzero P-224 secret scalar.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let raw = ec::Scalar::deserialize(bytes).map_err(ApiError::from)?;
+        let mut serialized = [0u8; ec::P224_SCALAR_SIZE];
+        serialized.copy_from_slice(bytes);
+        Ok(Self {
+            raw,
+            bytes: serialized,
+        })
+    }
+
+    /// Export the secret scalar in a zeroizing buffer.
+    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(self.bytes.to_vec())
+    }
+}
+
+impl EcdsaP224Signature {
+    /// Parse a strictly encoded ASN.1 DER ECDSA signature.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        SignatureComponents::from_der(bytes)?;
+        Ok(Self(bytes.to_vec()))
+    }
+
+    /// Return the DER encoding.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 

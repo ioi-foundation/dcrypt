@@ -10,7 +10,9 @@ use dcrypt_algorithms::ec::p256 as ec;
 use dcrypt_algorithms::hash::sha2::Sha256;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
-use dcrypt_internal::{constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::{
+    constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing,
+};
 use dcrypt_params::traditional::ecdsa::NIST_P256;
 
 /// ECDSA signature scheme using NIST P-256 curve (secp256r1)
@@ -22,7 +24,7 @@ pub struct EcdsaP256;
 ///
 /// Format: 65 bytes total (1 byte prefix + 32 bytes X + 32 bytes Y)
 #[derive(Clone)]
-pub struct EcdsaP256PublicKey(pub [u8; ec::P256_POINT_UNCOMPRESSED_SIZE]);
+pub struct EcdsaP256PublicKey(pub(crate) [u8; ec::P256_POINT_UNCOMPRESSED_SIZE]);
 
 /// P-256 secret key
 ///
@@ -57,7 +59,7 @@ impl ZeroizeOnDrop for EcdsaP256SecretKey {}
 ///
 /// Format: SEQUENCE { r INTEGER, s INTEGER }
 #[derive(Clone)]
-pub struct EcdsaP256Signature(pub Vec<u8>);
+pub struct EcdsaP256Signature(pub(crate) Vec<u8>);
 
 // AsRef/AsMut implementations for byte access
 impl AsRef<[u8]> for EcdsaP256PublicKey {
@@ -92,6 +94,57 @@ impl AsRef<[u8]> for EcdsaP256Signature {
 impl AsMut<[u8]> for EcdsaP256Signature {
     fn as_mut(&mut self) -> &mut [u8] {
         &mut self.0
+    }
+}
+
+impl EcdsaP256PublicKey {
+    /// Parse an uncompressed P-256 public key with on-curve validation.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let point = ec::Point::deserialize_uncompressed(bytes).map_err(ApiError::from)?;
+        if point.is_identity() {
+            return Err(ApiError::InvalidParameter {
+                context: "ECDSA-P256 public key",
+                #[cfg(feature = "std")]
+                message: "Identity is not a valid ECDSA public key".to_string(),
+            });
+        }
+        Ok(Self(point.serialize_uncompressed()))
+    }
+
+    /// Return the SEC1 uncompressed encoding.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl EcdsaP256SecretKey {
+    /// Parse a canonical, nonzero P-256 secret scalar.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let raw = ec::Scalar::deserialize(bytes).map_err(ApiError::from)?;
+        let mut serialized = [0u8; ec::P256_SCALAR_SIZE];
+        serialized.copy_from_slice(bytes);
+        Ok(Self {
+            raw,
+            bytes: serialized,
+        })
+    }
+
+    /// Export the secret scalar in a zeroizing buffer.
+    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(self.bytes.to_vec())
+    }
+}
+
+impl EcdsaP256Signature {
+    /// Parse a strictly encoded ASN.1 DER ECDSA signature.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        SignatureComponents::from_der(bytes)?;
+        Ok(Self(bytes.to_vec()))
+    }
+
+    /// Return the DER encoding.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 

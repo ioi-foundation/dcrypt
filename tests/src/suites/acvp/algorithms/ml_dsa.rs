@@ -16,8 +16,8 @@ use dcrypt_algorithms::hash::{
 use dcrypt_algorithms::xof::{ExtendableOutputFunction, ShakeXof128, ShakeXof256};
 use dcrypt_api::Signature;
 use dcrypt_internal::random::{CryptoRng, Error as RngError, RngCore};
-use dcrypt_sign::dilithium::{
-    DilithiumPublicKey, DilithiumSecretKey, DilithiumSignatureData, MlDsa44, MlDsa65, MlDsa87,
+use dcrypt_sign::mldsa::{
+    MlDsa44, MlDsa65, MlDsa87, MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature,
 };
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, fs, path::Path};
@@ -243,7 +243,7 @@ fn check_expected_bool(
 fn keypair<R: CryptoRng + RngCore>(
     parameter_set: ParameterSet,
     rng: &mut R,
-) -> Result<(DilithiumPublicKey, DilithiumSecretKey)> {
+) -> Result<(MlDsaPublicKey, MlDsaSecretKey)> {
     match parameter_set {
         ParameterSet::MlDsa44 => MlDsa44::keypair(rng),
         ParameterSet::MlDsa65 => MlDsa65::keypair(rng),
@@ -384,7 +384,7 @@ fn hash_ml_dsa_message(message: &[u8], context: &[u8], algorithm: &str) -> Resul
     Ok(formatted)
 }
 
-fn decode_secret_key(parameter_set: ParameterSet, bytes: &[u8]) -> Result<DilithiumSecretKey> {
+fn decode_secret_key(parameter_set: ParameterSet, bytes: &[u8]) -> Result<MlDsaSecretKey> {
     if bytes.len() != parameter_set.secret_key_len() {
         return Err(EngineError::InvalidData(format!(
             "{} expanded private key must be {} bytes, got {}",
@@ -393,7 +393,7 @@ fn decode_secret_key(parameter_set: ParameterSet, bytes: &[u8]) -> Result<Dilith
             bytes.len()
         )));
     }
-    DilithiumSecretKey::from_bytes(bytes).map_err(|error| {
+    MlDsaSecretKey::from_bytes(bytes).map_err(|error| {
         EngineError::Crypto(format!(
             "{} expanded private key validation failed: {error:?}",
             parameter_set.name()
@@ -405,7 +405,7 @@ fn sign_external(
     parameter_set: ParameterSet,
     message: &[u8],
     context: &[u8],
-    secret_key: &DilithiumSecretKey,
+    secret_key: &MlDsaSecretKey,
     randomizer: [u8; 32],
 ) -> Result<Vec<u8>> {
     let mut rng = ReplayRng::new(randomizer.to_vec());
@@ -433,7 +433,7 @@ fn sign_external(
 fn sign_internal_message(
     parameter_set: ParameterSet,
     formatted_message: &[u8],
-    secret_key: &DilithiumSecretKey,
+    secret_key: &MlDsaSecretKey,
     randomizer: &[u8; 32],
 ) -> Result<Vec<u8>> {
     let result = match parameter_set {
@@ -460,7 +460,7 @@ fn sign_internal_message(
 fn sign_mu(
     parameter_set: ParameterSet,
     mu: &[u8],
-    secret_key: &DilithiumSecretKey,
+    secret_key: &MlDsaSecretKey,
     randomizer: &[u8; 32],
 ) -> Result<Vec<u8>> {
     let mu: &[u8; 64] = mu.try_into().map_err(|_| {
@@ -488,8 +488,8 @@ fn verify_external(
     parameter_set: ParameterSet,
     message: &[u8],
     context: &[u8],
-    signature: &DilithiumSignatureData,
-    public_key: &DilithiumPublicKey,
+    signature: &MlDsaSignature,
+    public_key: &MlDsaPublicKey,
 ) -> bool {
     match parameter_set {
         ParameterSet::MlDsa44 => {
@@ -508,8 +508,8 @@ fn verify_external(
 fn verify_internal_message(
     parameter_set: ParameterSet,
     formatted_message: &[u8],
-    signature: &DilithiumSignatureData,
-    public_key: &DilithiumPublicKey,
+    signature: &MlDsaSignature,
+    public_key: &MlDsaPublicKey,
 ) -> bool {
     match parameter_set {
         ParameterSet::MlDsa44 => {
@@ -528,8 +528,8 @@ fn verify_internal_message(
 fn verify_mu(
     parameter_set: ParameterSet,
     mu: &[u8],
-    signature: &DilithiumSignatureData,
-    public_key: &DilithiumPublicKey,
+    signature: &MlDsaSignature,
+    public_key: &MlDsaPublicKey,
 ) -> bool {
     let Ok(mu) = <&[u8; 64]>::try_from(mu) else {
         return false;
@@ -647,8 +647,8 @@ pub(crate) fn ml_dsa_sigver(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     // Exercise dcrypt's strict key/signature decoders before entering either
     // verification backend. Noncanonical hint encodings are negative vectors.
-    let decoded_public = DilithiumPublicKey::from_bytes(&public_key_bytes);
-    let decoded_signature = DilithiumSignatureData::from_bytes(&signature_bytes);
+    let decoded_public = MlDsaPublicKey::from_bytes(&public_key_bytes);
+    let decoded_signature = MlDsaSignature::from_bytes(&signature_bytes);
     let test_passed = if let (Ok(public_key), Ok(signature)) = (decoded_public, decoded_signature) {
         match signature_interface(group)? {
             SignatureInterface::ExternalPure => {

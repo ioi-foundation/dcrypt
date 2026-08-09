@@ -5,25 +5,11 @@ use crate::suites::acvp::model::{TestCase, TestGroup};
 use crate::test_rng::ChaCha20Rng;
 use dcrypt_api::Signature;
 use dcrypt_sign::ecdsa::{
-    EcdsaP192,
-    EcdsaP192PublicKey,
-    EcdsaP192Signature, // Added P-192
-    EcdsaP224,
-    EcdsaP224PublicKey,
-    EcdsaP224Signature,
-    EcdsaP256,
-    EcdsaP256PublicKey,
-    EcdsaP256Signature,
-    EcdsaP384,
-    EcdsaP384PublicKey,
-    EcdsaP384Signature,
-    EcdsaP521,
-    EcdsaP521PublicKey,
-    EcdsaP521Signature,
+    EcdsaP224, EcdsaP224PublicKey, EcdsaP224Signature, EcdsaP256, EcdsaP256PublicKey,
+    EcdsaP256Signature, EcdsaP384, EcdsaP384PublicKey, EcdsaP384Signature, EcdsaP521,
+    EcdsaP521PublicKey, EcdsaP521Signature,
 };
 use hex;
-// Import P-192 constants
-use dcrypt_algorithms::ec::p192 as ec_p192;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
 
@@ -47,31 +33,6 @@ pub(crate) fn ecdsa_keygen(group: &TestGroup, case: &TestCase) -> Result<()> {
     };
 
     match curve.as_str() {
-        "P-192" | "secp192r1" => {
-            // Added P-192
-            let (public_key, secret_key) = EcdsaP192::keypair(&mut rng).map_err(|e| {
-                EngineError::Crypto(format!("P-192 keypair generation failed: {:?}", e))
-            })?;
-            let d_bytes = secret_key.as_ref();
-            let pub_bytes = public_key.as_ref();
-            if pub_bytes.len() == ec_p192::P192_POINT_UNCOMPRESSED_SIZE && pub_bytes[0] == 0x04 {
-                case.outputs
-                    .borrow_mut()
-                    .insert("d".into(), hex::encode(d_bytes));
-                case.outputs.borrow_mut().insert(
-                    "qx".into(),
-                    hex::encode(&pub_bytes[1..1 + ec_p192::P192_FIELD_ELEMENT_SIZE]),
-                );
-                case.outputs.borrow_mut().insert(
-                    "qy".into(),
-                    hex::encode(&pub_bytes[1 + ec_p192::P192_FIELD_ELEMENT_SIZE..]),
-                );
-            } else {
-                return Err(EngineError::Crypto(
-                    "Invalid P-192 public key format".into(),
-                ));
-            }
-        }
         "P-224" | "secp224r1" => {
             let (public_key, secret_key) = EcdsaP224::keypair(&mut rng).map_err(|e| {
                 EngineError::Crypto(format!("P-224 keypair generation failed: {:?}", e))
@@ -207,7 +168,6 @@ pub(crate) fn ecdsa_keyver(group: &TestGroup, case: &TestCase) -> Result<()> {
     let qy_bytes = hex::decode(&qy_hex)?;
 
     let is_valid = match curve.as_str() {
-        "P-192" | "secp192r1" => verify_p192_public_key(&qx_bytes, &qy_bytes), // Added P-192
         "P-224" | "secp224r1" => verify_p224_public_key(&qx_bytes, &qy_bytes),
         "P-256" | "secp256r1" => verify_p256_public_key(&qx_bytes, &qy_bytes),
         "P-384" | "secp384r1" => verify_p384_public_key(&qx_bytes, &qy_bytes),
@@ -253,38 +213,6 @@ pub(crate) fn ecdsa_siggen(group: &TestGroup, case: &TestCase) -> Result<()> {
     let mut rng = ChaCha20Rng::from_entropy();
 
     match curve.as_str() {
-        "P-192" | "secp192r1" => {
-            // Added P-192
-            let (public_key, secret_key) = EcdsaP192::keypair(&mut rng).map_err(|e| {
-                EngineError::Crypto(format!(
-                    "P-192 keypair generation failed for siggen: {:?}",
-                    e
-                ))
-            })?;
-            let signature = EcdsaP192::sign(&msg_bytes, &secret_key)
-                .map_err(|e| EngineError::Crypto(format!("P-192 signing failed: {:?}", e)))?;
-            let pub_bytes = public_key.as_ref();
-            if pub_bytes.len() == ec_p192::P192_POINT_UNCOMPRESSED_SIZE && pub_bytes[0] == 0x04 {
-                case.outputs.borrow_mut().insert(
-                    "qx".into(),
-                    hex::encode(&pub_bytes[1..1 + ec_p192::P192_FIELD_ELEMENT_SIZE]),
-                );
-                case.outputs.borrow_mut().insert(
-                    "qy".into(),
-                    hex::encode(&pub_bytes[1 + ec_p192::P192_FIELD_ELEMENT_SIZE..]),
-                );
-            }
-            case.outputs
-                .borrow_mut()
-                .insert("d".into(), hex::encode(secret_key.as_ref()));
-            let (r, s) = parse_der_signature(signature.as_ref())?;
-            case.outputs
-                .borrow_mut()
-                .insert("r".into(), hex::encode(&r));
-            case.outputs
-                .borrow_mut()
-                .insert("s".into(), hex::encode(&s));
-        }
         "P-224" | "secp224r1" => {
             let (public_key, secret_key) = EcdsaP224::keypair(&mut rng).map_err(|e| {
                 EngineError::Crypto(format!(
@@ -461,35 +389,28 @@ pub(crate) fn ecdsa_sigver(group: &TestGroup, case: &TestCase) -> Result<()> {
     let s_bytes = hex::decode(&s_hex)?;
 
     let result = match curve.as_str() {
-        "P-192" | "secp192r1" => {
-            // Added P-192
-            let public_key = create_p192_public_key(&qx_hex, &qy_hex)?;
-            let signature = create_der_signature(&r_bytes, &s_bytes)?;
-            let sig = EcdsaP192Signature(signature);
-            EcdsaP192::verify(&msg_bytes, &sig, &public_key).is_ok()
-        }
         "P-224" | "secp224r1" => {
             let public_key = create_p224_public_key(&qx_hex, &qy_hex)?;
             let signature = create_der_signature(&r_bytes, &s_bytes)?;
-            let sig = EcdsaP224Signature(signature);
+            let sig = EcdsaP224Signature::from_bytes(&signature)?;
             EcdsaP224::verify(&msg_bytes, &sig, &public_key).is_ok()
         }
         "P-256" | "secp256r1" => {
             let public_key = create_p256_public_key(&qx_hex, &qy_hex)?;
             let signature = create_der_signature(&r_bytes, &s_bytes)?;
-            let sig = EcdsaP256Signature(signature);
+            let sig = EcdsaP256Signature::from_bytes(&signature)?;
             EcdsaP256::verify(&msg_bytes, &sig, &public_key).is_ok()
         }
         "P-384" | "secp384r1" => {
             let public_key = create_p384_public_key(&qx_hex, &qy_hex)?;
             let signature = create_der_signature(&r_bytes, &s_bytes)?;
-            let sig = EcdsaP384Signature(signature);
+            let sig = EcdsaP384Signature::from_bytes(&signature)?;
             EcdsaP384::verify(&msg_bytes, &sig, &public_key).is_ok()
         }
         "P-521" | "secp521r1" => {
             let public_key = create_p521_public_key(&qx_hex, &qy_hex)?;
             let signature = create_der_signature(&r_bytes, &s_bytes)?;
-            let sig = EcdsaP521Signature(signature);
+            let sig = EcdsaP521Signature::from_bytes(&signature)?;
             EcdsaP521::verify(&msg_bytes, &sig, &public_key).is_ok()
         }
         s if s.starts_with("K-") || s.starts_with("B-") => {
@@ -513,18 +434,6 @@ pub(crate) fn ecdsa_sigver(group: &TestGroup, case: &TestCase) -> Result<()> {
 }
 
 /* Helper functions */
-fn verify_p192_public_key(qx: &[u8], qy: &[u8]) -> bool {
-    // Added P-192 helper
-    if qx.len() != ec_p192::P192_FIELD_ELEMENT_SIZE || qy.len() != ec_p192::P192_FIELD_ELEMENT_SIZE
-    {
-        return false;
-    }
-    let mut point = vec![0x04];
-    point.extend_from_slice(qx);
-    point.extend_from_slice(qy);
-    point.len() == ec_p192::P192_POINT_UNCOMPRESSED_SIZE
-}
-
 fn verify_p224_public_key(qx: &[u8], qy: &[u8]) -> bool {
     if qx.len() != 28 || qy.len() != 28 {
         // P-224 coordinates are 28 bytes
@@ -533,7 +442,7 @@ fn verify_p224_public_key(qx: &[u8], qy: &[u8]) -> bool {
     let mut point = vec![0x04];
     point.extend_from_slice(qx);
     point.extend_from_slice(qy);
-    point.len() == 57 // P-224 uncompressed point size
+    EcdsaP224PublicKey::from_bytes(&point).is_ok()
 }
 
 fn verify_p256_public_key(qx: &[u8], qy: &[u8]) -> bool {
@@ -543,7 +452,7 @@ fn verify_p256_public_key(qx: &[u8], qy: &[u8]) -> bool {
     let mut point = vec![0x04];
     point.extend_from_slice(qx);
     point.extend_from_slice(qy);
-    point.len() == 65
+    EcdsaP256PublicKey::from_bytes(&point).is_ok()
 }
 
 fn verify_p384_public_key(qx: &[u8], qy: &[u8]) -> bool {
@@ -553,7 +462,7 @@ fn verify_p384_public_key(qx: &[u8], qy: &[u8]) -> bool {
     let mut point = vec![0x04];
     point.extend_from_slice(qx);
     point.extend_from_slice(qy);
-    point.len() == 97
+    EcdsaP384PublicKey::from_bytes(&point).is_ok()
 }
 
 fn verify_p521_public_key(qx: &[u8], qy: &[u8]) -> bool {
@@ -563,25 +472,7 @@ fn verify_p521_public_key(qx: &[u8], qy: &[u8]) -> bool {
     let mut point = vec![0x04];
     point.extend_from_slice(qx);
     point.extend_from_slice(qy);
-    point.len() == 133
-}
-
-fn create_p192_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP192PublicKey> {
-    // Added P-192 helper
-    let qx_bytes = hex::decode(qx_hex)?;
-    let qy_bytes = hex::decode(qy_hex)?;
-    if qx_bytes.len() != ec_p192::P192_FIELD_ELEMENT_SIZE
-        || qy_bytes.len() != ec_p192::P192_FIELD_ELEMENT_SIZE
-    {
-        return Err(EngineError::InvalidData(
-            "Invalid P-192 public key component size".into(),
-        ));
-    }
-    let mut key = [0u8; ec_p192::P192_POINT_UNCOMPRESSED_SIZE];
-    key[0] = 0x04;
-    key[1..1 + ec_p192::P192_FIELD_ELEMENT_SIZE].copy_from_slice(&qx_bytes);
-    key[1 + ec_p192::P192_FIELD_ELEMENT_SIZE..].copy_from_slice(&qy_bytes);
-    Ok(EcdsaP192PublicKey(key))
+    EcdsaP521PublicKey::from_bytes(&point).is_ok()
 }
 
 fn create_p224_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP224PublicKey> {
@@ -596,7 +487,7 @@ fn create_p224_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP224PublicK
     key[0] = 0x04;
     key[1..29].copy_from_slice(&qx_bytes);
     key[29..57].copy_from_slice(&qy_bytes);
-    Ok(EcdsaP224PublicKey(key))
+    EcdsaP224PublicKey::from_bytes(&key).map_err(EngineError::from)
 }
 
 fn create_p256_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP256PublicKey> {
@@ -611,7 +502,7 @@ fn create_p256_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP256PublicK
     key[0] = 0x04;
     key[1..33].copy_from_slice(&qx_bytes);
     key[33..65].copy_from_slice(&qy_bytes);
-    Ok(EcdsaP256PublicKey(key))
+    EcdsaP256PublicKey::from_bytes(&key).map_err(EngineError::from)
 }
 
 fn create_p384_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP384PublicKey> {
@@ -626,7 +517,7 @@ fn create_p384_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP384PublicK
     key[0] = 0x04;
     key[1..49].copy_from_slice(&qx_bytes);
     key[49..97].copy_from_slice(&qy_bytes);
-    Ok(EcdsaP384PublicKey(key))
+    EcdsaP384PublicKey::from_bytes(&key).map_err(EngineError::from)
 }
 
 fn create_p521_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP521PublicKey> {
@@ -641,7 +532,7 @@ fn create_p521_public_key(qx_hex: &str, qy_hex: &str) -> Result<EcdsaP521PublicK
     key[0] = 0x04;
     key[1..67].copy_from_slice(&qx_bytes);
     key[67..133].copy_from_slice(&qy_bytes);
-    Ok(EcdsaP521PublicKey(key))
+    EcdsaP521PublicKey::from_bytes(&key).map_err(EngineError::from)
 }
 
 fn create_der_signature(r: &[u8], s: &[u8]) -> Result<Vec<u8>> {

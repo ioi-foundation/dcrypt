@@ -1,7 +1,7 @@
 #![no_main]
 
 use dcrypt_api::Signature;
-use dcrypt_sign::dilithium::{DilithiumPublicKey, DilithiumSecretKey, DilithiumSignatureData};
+use dcrypt_sign::mldsa::{MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature};
 use dcrypt_sign::ecdsa::{common::SignatureComponents, EcdsaP384PublicKey, EcdsaP384Signature};
 use dcrypt_sign::eddsa::{Ed25519, Ed25519PublicKey, Ed25519Signature};
 use libfuzzer_sys::fuzz_target;
@@ -48,12 +48,12 @@ fuzz_target!(|input: &[u8]| {
     let ml_dsa_public = expanded(input, 1, public_len);
     let ml_dsa_secret = expanded(input, 29, secret_len);
     let ml_dsa_signature = expanded(input, 61, signature_len);
-    let _ = DilithiumPublicKey::from_bytes(&ml_dsa_public);
-    let _ = DilithiumSecretKey::from_bytes(&ml_dsa_secret);
-    let _ = DilithiumSignatureData::from_bytes(&ml_dsa_signature);
+    let _ = MlDsaPublicKey::from_bytes(&ml_dsa_public);
+    let _ = MlDsaSecretKey::from_bytes(&ml_dsa_secret);
+    let _ = MlDsaSignature::from_bytes(&ml_dsa_signature);
 
     // Preserve direct malformed-length coverage as well.
-    let _ = DilithiumPublicKey::from_bytes(input);
-    let _ = DilithiumSecretKey::from_bytes(input);
-    let _ = DilithiumSignatureData::from_bytes(input);
+    let _ = MlDsaPublicKey::from_bytes(input);
+    let _ = MlDsaSecretKey::from_bytes(input);
+    let _ = MlDsaSignature::from_bytes(input);
 });

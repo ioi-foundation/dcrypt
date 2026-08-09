@@ -10,7 +10,9 @@ use dcrypt_algorithms::ec::p521 as ec;
 use dcrypt_algorithms::hash::sha2::Sha512;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
-use dcrypt_internal::{constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::{
+    constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing,
+};
 use dcrypt_params::traditional::ecdsa::NIST_P521;
 
 /// ECDSA signature scheme using NIST P-521 curve (secp521r1)
@@ -23,7 +25,7 @@ pub struct EcdsaP521;
 ///
 /// Format: 133 bytes total (1 byte prefix + 66 bytes X + 66 bytes Y)
 #[derive(Clone)]
-pub struct EcdsaP521PublicKey(pub [u8; ec::P521_POINT_UNCOMPRESSED_SIZE]);
+pub struct EcdsaP521PublicKey(pub(crate) [u8; ec::P521_POINT_UNCOMPRESSED_SIZE]);
 
 /// P-521 secret key
 ///
@@ -58,7 +60,7 @@ impl ZeroizeOnDrop for EcdsaP521SecretKey {}
 ///
 /// Format: SEQUENCE { r INTEGER, s INTEGER }
 #[derive(Clone)]
-pub struct EcdsaP521Signature(pub Vec<u8>);
+pub struct EcdsaP521Signature(pub(crate) Vec<u8>);
 
 // AsRef/AsMut implementations for byte access
 impl AsRef<[u8]> for EcdsaP521PublicKey {
@@ -93,6 +95,57 @@ impl AsRef<[u8]> for EcdsaP521Signature {
 impl AsMut<[u8]> for EcdsaP521Signature {
     fn as_mut(&mut self) -> &mut [u8] {
         &mut self.0
+    }
+}
+
+impl EcdsaP521PublicKey {
+    /// Parse an uncompressed P-521 public key with on-curve validation.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let point = ec::Point::deserialize_uncompressed(bytes).map_err(ApiError::from)?;
+        if point.is_identity() {
+            return Err(ApiError::InvalidParameter {
+                context: "ECDSA-P521 public key",
+                #[cfg(feature = "std")]
+                message: "Identity is not a valid ECDSA public key".to_string(),
+            });
+        }
+        Ok(Self(point.serialize_uncompressed()))
+    }
+
+    /// Return the SEC1 uncompressed encoding.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl EcdsaP521SecretKey {
+    /// Parse a canonical, nonzero P-521 secret scalar.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        let raw = ec::Scalar::deserialize(bytes).map_err(ApiError::from)?;
+        let mut serialized = [0u8; ec::P521_SCALAR_SIZE];
+        serialized.copy_from_slice(bytes);
+        Ok(Self {
+            raw,
+            bytes: serialized,
+        })
+    }
+
+    /// Export the secret scalar in a zeroizing buffer.
+    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(self.bytes.to_vec())
+    }
+}
+
+impl EcdsaP521Signature {
+    /// Parse a strictly encoded ASN.1 DER ECDSA signature.
+    pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        SignatureComponents::from_der(bytes)?;
+        Ok(Self(bytes.to_vec()))
+    }
+
+    /// Return the DER encoding.
+    pub fn to_bytes(&self) -> &[u8] {
+        &self.0
     }
 }
 

@@ -1,11 +1,10 @@
 use dcrypt_api::Signature as _;
-use dcrypt_sign::dilithium::{
-    DilithiumSignatureData, MlDsa44 as DcryptMlDsa44, MlDsa65 as DcryptMlDsa65,
-    MlDsa87 as DcryptMlDsa87,
+use dcrypt_internal::ChaCha20Rng;
+use dcrypt_sign::mldsa::{
+    MlDsa44 as DcryptMlDsa44, MlDsa65 as DcryptMlDsa65, MlDsa87 as DcryptMlDsa87,
+    MlDsaSignature,
 };
 use fips204::traits::{SerDes, Signer, Verifier};
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
 
 const MESSAGE: &[u8] = b"FIPS 204 ML-DSA interoperability test";
 const CONTEXT: &[u8] = b"dcrypt verification workspace";
@@ -89,7 +88,7 @@ macro_rules! interoperability_test {
             assert_eq!(fips_deterministic.as_slice(), deterministic.as_ref());
             assert_eq!(fips_randomized.as_slice(), randomized.as_ref());
             for signature in [&fips_deterministic[..], &fips_randomized[..]] {
-                let signature = DilithiumSignatureData::from_bytes(signature).unwrap();
+                let signature = MlDsaSignature::from_bytes(signature).unwrap();
                 assert!(<$dcrypt>::verify_with_context(
                     MESSAGE,
                     CONTEXT,
@@ -137,7 +136,7 @@ macro_rules! interoperability_test {
                 libcrux_deterministic.as_slice(),
                 libcrux_randomized.as_slice(),
             ] {
-                let signature = DilithiumSignatureData::from_bytes(signature).unwrap();
+                let signature = MlDsaSignature::from_bytes(signature).unwrap();
                 assert!(<$dcrypt>::verify_with_context(
                     MESSAGE,
                     CONTEXT,
@@ -185,7 +184,7 @@ macro_rules! interoperability_test {
                 rustcrypto_deterministic.as_slice(),
                 rustcrypto_randomized.as_slice(),
             ] {
-                let signature = DilithiumSignatureData::from_bytes(signature).unwrap();
+                let signature = MlDsaSignature::from_bytes(signature).unwrap();
                 assert!(<$dcrypt>::verify_with_context(
                     MESSAGE,
                     CONTEXT,

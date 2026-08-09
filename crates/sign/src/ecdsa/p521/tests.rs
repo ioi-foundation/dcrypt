@@ -11,6 +11,23 @@ use dcrypt_internal::ChaCha20Rng;
 fn test_rng() -> ChaCha20Rng {
     ChaCha20Rng::from_seed([0x42; 32])
 }
+
+#[test]
+fn validated_p521_imports_roundtrip_and_reject_malformed_values() {
+    let (public, secret) = EcdsaP521::keypair(&mut test_rng()).unwrap();
+    let signature = EcdsaP521::sign(b"validated import", &secret).unwrap();
+
+    let imported_public = EcdsaP521PublicKey::from_bytes(public.as_ref()).unwrap();
+    let secret_bytes = secret.to_bytes_zeroizing();
+    let imported_secret = EcdsaP521SecretKey::from_bytes(&secret_bytes).unwrap();
+    let imported_signature = EcdsaP521Signature::from_bytes(signature.as_ref()).unwrap();
+    assert!(EcdsaP521::verify(b"validated import", &imported_signature, &imported_public).is_ok());
+    assert_eq!(imported_secret.as_ref(), secret.as_ref());
+
+    assert!(EcdsaP521PublicKey::from_bytes(&[0u8; ec::P521_POINT_UNCOMPRESSED_SIZE]).is_err());
+    assert!(EcdsaP521SecretKey::from_bytes(&[0u8; ec::P521_SCALAR_SIZE]).is_err());
+    assert!(EcdsaP521Signature::from_bytes(&[0x30, 0x00]).is_err());
+}
 use std::fs;
 use std::path::PathBuf;
 

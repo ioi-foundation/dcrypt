@@ -13,6 +13,23 @@ fn test_rng() -> ChaCha20Rng {
 }
 
 #[test]
+fn validated_p256_imports_roundtrip_and_reject_malformed_values() {
+    let (public, secret) = EcdsaP256::keypair(&mut test_rng()).unwrap();
+    let signature = EcdsaP256::sign(b"validated import", &secret).unwrap();
+
+    let imported_public = EcdsaP256PublicKey::from_bytes(public.as_ref()).unwrap();
+    let secret_bytes = secret.to_bytes_zeroizing();
+    let imported_secret = EcdsaP256SecretKey::from_bytes(&secret_bytes).unwrap();
+    let imported_signature = EcdsaP256Signature::from_bytes(signature.as_ref()).unwrap();
+    assert!(EcdsaP256::verify(b"validated import", &imported_signature, &imported_public).is_ok());
+    assert_eq!(imported_secret.as_ref(), secret.as_ref());
+
+    assert!(EcdsaP256PublicKey::from_bytes(&[0u8; ec::P256_POINT_UNCOMPRESSED_SIZE]).is_err());
+    assert!(EcdsaP256SecretKey::from_bytes(&[0u8; ec::P256_SCALAR_SIZE]).is_err());
+    assert!(EcdsaP256Signature::from_bytes(&[0x30, 0x00]).is_err());
+}
+
+#[test]
 fn rfc6979_sha256_sample_signature_matches() {
     let bytes: [u8; ec::P256_SCALAR_SIZE] =
         hex::decode("C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721")

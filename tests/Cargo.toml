@@ -18,7 +18,7 @@ dcrypt-hybrid = { path = "../crates/hybrid", version = "=2.0.0" }
 dcrypt-api = { version = "=2.0.0", path = "../crates/api" }
 dcrypt-common = { path = "../crates/common" , version = "=2.0.0" }
 dcrypt-internal = { path = "../crates/internal" , version = "=2.0.0" }
-rand = { workspace = true }
+rand = { workspace = true, features = ["std", "std_rng", "getrandom"] }
 rand_chacha = { workspace = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

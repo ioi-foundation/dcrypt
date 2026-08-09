@@ -148,3 +148,20 @@ fn test_ecdsa_p224_verify_wrong_public_key() {
         "Verification should fail with wrong public key"
     );
 }
+
+#[test]
+fn validated_p224_imports_roundtrip_and_reject_malformed_values() {
+    let (public, secret) = EcdsaP224::keypair(&mut test_rng()).unwrap();
+    let signature = EcdsaP224::sign(b"validated import", &secret).unwrap();
+
+    let imported_public = EcdsaP224PublicKey::from_bytes(public.as_ref()).unwrap();
+    let secret_bytes = secret.to_bytes_zeroizing();
+    let imported_secret = EcdsaP224SecretKey::from_bytes(&secret_bytes).unwrap();
+    let imported_signature = EcdsaP224Signature::from_bytes(signature.as_ref()).unwrap();
+    assert!(EcdsaP224::verify(b"validated import", &imported_signature, &imported_public).is_ok());
+    assert_eq!(imported_secret.as_ref(), secret.as_ref());
+
+    assert!(EcdsaP224PublicKey::from_bytes(&[0u8; ec::P224_POINT_UNCOMPRESSED_SIZE]).is_err());
+    assert!(EcdsaP224SecretKey::from_bytes(&[0u8; ec::P224_SCALAR_SIZE]).is_err());
+    assert!(EcdsaP224Signature::from_bytes(&[0x30, 0x00]).is_err());
+}

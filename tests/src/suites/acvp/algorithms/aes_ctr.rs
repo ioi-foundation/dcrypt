@@ -7,9 +7,9 @@ use dcrypt_algorithms::block::aes::{Aes128, Aes192, Aes256};
 use dcrypt_algorithms::block::modes::ctr::{CounterPosition, Ctr};
 use dcrypt_algorithms::block::BlockCipher;
 use dcrypt_algorithms::types::{Nonce, SecretBytes};
+use dcrypt_internal::Zeroize;
 use rand::{thread_rng, RngCore};
 use subtle::ConstantTimeEq;
-use zeroize::Zeroize;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
 
@@ -159,7 +159,7 @@ fn aes_ctr_process(group: &TestGroup, case: &TestCase, is_encrypt: bool) -> Resu
 }
 
 /// Process CTR mode with a full 16-byte counter block (ACVP style)
-fn process_ctr_with_full_counter<B: BlockCipher + Clone + zeroize::Zeroize>(
+fn process_ctr_with_full_counter<B: BlockCipher + Clone + Zeroize>(
     cipher: B,
     counter_block: &[u8],
     data: &[u8],

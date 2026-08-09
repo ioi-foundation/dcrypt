@@ -3,6 +3,7 @@ use dcrypt_algorithms::kdf::argon2::{Algorithm, Argon2, Params};
 use dcrypt_algorithms::kdf::PasswordHashFunction;
 use dcrypt_algorithms::types::Salt;
 use dcrypt_api::types::SecretBytes;
+use dcrypt_internal::Zeroizing;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
 
@@ -57,7 +58,7 @@ fn test_argon2id_verify_constant_time() {
         .iter()
         .cloned()
         .collect(),
-        salt: salt.as_ref().to_vec().into(),
+        salt: Zeroizing::new(salt.as_ref().to_vec()),
         hash: hash_result,
     };
 
