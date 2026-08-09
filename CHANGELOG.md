@@ -7,6 +7,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Added dcrypt-owned, safe-Rust implementations of final FIPS 203
+  `MlKem512`, `MlKem768`, and `MlKem1024`, including distinct validation rules
+  for externally supplied encapsulation keys and decapsulation-key internals,
+  final implicit rejection, and exact-size protected secret exports.
+- Added complete high-level BLS12-381 minimum-public-key signature profiles for
+  CFRG BLS draft-07 Basic, Message Augmentation, and Proof of Possession, plus a
+  separately named Ethereum PoP-v4 adapter. The implementation includes owned
+  RFC 9380 G1/G2 hash-to-curve, strict point decoding, protected non-copying
+  secret keys, fixed domain separation tags, proof-aware aggregation, and the
+  Ethereum empty-public-key fast-aggregate rule. No external hash-to-curve
+  implementation is used at runtime.
+- Added an isolated, non-published, decrypt-only migration tool for ciphertext
+  produced by the historical dcrypt construction named
+  `XChaCha20Poly1305`. The tool requires an explicit format acknowledgement,
+  validates historical key encodings, never overwrites output, and publishes
+  completed plaintext only through same-filesystem atomic hard linking.
+- Added an excluded verification workspace for independent standards and
+  interoperability oracles. Oracle implementations are not reachable from any
+  published crate's normal or build dependency graph.
+
 ### Security
 
 - Withdrew `v2.0.0`. That release retains important remediations for the four
@@ -28,9 +50,51 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Retained P-224 for approximately 112-bit transition/interoperability uses and
   removed low-level P-192 plus its ECDH, ECIES, and ECDSA public surfaces. NIST
   SP 800-186 limits P-192 to legacy use.
+- Replaced the former G1/G2 hash-to-curve paths with exact RFC 9380 simplified
+  SWU and isogeny maps, fixed XMD/hash-to-field byte interpretation, and made
+  compressed point decoding enforce canonical encoding and subgroup membership.
+  The high-level BLS public-key parser additionally rejects identity.
+- Removed the former `Kyber*` implementation, which did not implement final
+  FIPS 203 ML-KEM despite being presented as such, and replaced it with the
+  final-standard `MlKem*` surface.
+- Removed the historical all-zero-nonce XChaCha convenience operations. Reusing
+  those operations under a key reused both the ChaCha20 keystream and Poly1305
+  one-time key. The supported API requires an explicit nonce for every
+  operation.
+- Extended exact-size secret ownership and best-effort explicit clearing across
+  hashes, XOFs, MACs, KDFs, password hashing, key generation, KEMs, and signature
+  operations. Secret APIs no longer return `Vec`-backed buffers with
+  inaccessible spare capacity. These safe-Rust clearing operations are an
+  implementation hardening measure, not a promise that every compiler or
+  platform physically erases all historical register and stack copies.
+- Added a fail-closed implementation-boundary gate over every packaged crate and
+  every classified excluded workspace. It rejects unsafe Rust, FFI, native
+  sources/linking, OS entropy, unclassified workspaces, closure drift, inexact
+  internal pins, and generated build output outside the declared contract.
 
 ### Changed
 
+- All randomness-consuming public operations now take a caller-provided
+  `CryptoRng + RngCore` and propagate partial-write failures after clearing the
+  destination. Published dcrypt crates no longer bundle an operating-system RNG.
+- Replaced runtime RustCrypto/libcrux cryptographic backends with dcrypt-owned
+  implementations. The published normal/build closure is reduced to exact
+  `base64 0.22.1` and `hex 0.4.3` dependencies and contains no unsafe Rust,
+  native code, FFI, build scripts, or native-link metadata.
+- Restored and corrected the dcrypt-owned ML-DSA implementation for all FIPS 204
+  parameter sets, including final message/context domain separation, 64-byte
+  `tr`, `RejBoundedPoly`, canonical hints, expanded-key coherence, deterministic
+  signing, and caller-randomized hedged signing.
+- Replaced the Ed25519 backend with dcrypt-owned safe-Rust field, scalar, and
+  Edwards arithmetic. Verification rejects noncanonical, identity, small-order,
+  and non-torsion-free points and requires canonical `S < L`; signing uses a
+  fixed-step secret-scalar path.
+- Implemented standard XChaCha20-Poly1305 using owned HChaCha20 composed with the
+  owned ChaCha20-Poly1305 implementation. Nonces are explicit and the legacy
+  custom wire construction is available only through the migration tool.
+- Secret byte ownership now uses exact-size boxed slices. Secret serialization,
+  KDF/MAC output, key material, and replacement paths avoid `Vec` capacity and
+  clear initialized bytes on replacement and drop.
 - Traditional P-224/P-256/P-384/P-521/secp256k1 scalar imports now require a
   canonical nonzero value below the group order. Point decoders require
   canonical field coordinates, a valid SEC 1 prefix, and an on-curve,
@@ -38,6 +102,56 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Versioned ECDH-KEM and ECIES KDF transcripts bind the shared x-coordinate,
   ephemeral encoded point, and recipient encoded public key. ECIES rejects
   malformed nonce lengths before performing ECDH.
+- Workspace facade features now activate the promised traditional,
+  post-quantum, and hybrid crates consistently across `std`, `alloc`, and
+  supported `no_std` profiles.
+
+### Removed
+
+- Removed B-283/sect283k1 and P-192 arithmetic, ECDH-KEM, ECIES, signature,
+  parameter, benchmark, and facade surfaces. B-283 contained a demonstrated
+  small-subgroup failure; P-192 is limited by NIST to legacy use.
+- Removed placeholder or nonfunctional Falcon, Rainbow, SPHINCS+, McEliece,
+  NTRU, Saber, DH, DSA, and RSA surfaces rather than presenting unavailable
+  algorithms as implemented.
+- Removed pre-standard `Kyber*` and `Dilithium*` public compatibility names.
+  Final-standard APIs use `MlKem*` and `MlDsa*` names and encodings.
+- Removed implicit key, salt, and nonce generation backed by `OsRng`,
+  `thread_rng`, or `getrandom`, along with all runtime libcrux, dalek,
+  RustCrypto AEAD, `libc`, native-intrinsic, and FFI dependency paths.
+
+### Validation
+
+- Exact official ACVP gates cover 240 ML-KEM cases (75 key generation, 75
+  encapsulation, 30 decapsulation, and 60 key-validation cases) and all 615
+  ML-DSA cases (75 key generation, 360 signature generation, and 180 signature
+  verification cases) across every standardized parameter set.
+- RFC 9380 vectors, independent G1/G2 hash-to-curve and encoding oracles,
+  four published EIP-2333 master-key vectors, draft-07 BLS domain separation,
+  and Ethereum aggregate behavior cover the standard BLS surface.
+- The release workflow packages and scans all twelve crates, compiles supported
+  Linux x86-64, Linux AArch64, WASM, and bare-metal `no_std` profiles, and runs
+  workspace tests/doctests, Miri, Loom, fuzz-target builds, statistical timing
+  regressions, cargo-audit, cargo-deny, independent oracles, and clean-room
+  package verification. Passing these gates is not an independent audit,
+  formal verification, FIPS validation, or proof of constant-time behavior.
+
+### Migration
+
+- Randomized constructors, key generation, encapsulation, signing, nonce/salt
+  generation, streaming encryption, and file encryption now require a mutable
+  caller-owned cryptographic RNG and return randomness failures. Callers must
+  choose, seed, and protect that RNG outside dcrypt.
+- Migrate `Kyber512/768/1024` to `MlKem512/768/1024` and
+  `Dilithium2/3/5` to `MlDsa44/65/87`. Historical keys, signatures, and
+  ciphertexts are not relabeled because their formats and algorithms differ.
+- Standard BLS callers should use the high-level Basic, Augmentation, or Proof
+  of Possession profile. Ethereum consensus integrations must select the
+  separately named Eth2 adapter and retain the protocol's proof-registration
+  precondition; do not assemble ciphersuites from low-level pairing primitives.
+- The v3 ECDH-KEM and ECIES transcript version is intentionally wire-incompatible
+  with older ciphertext. Removed B-283/P-192 objects require a protocol and key
+  migration, not reinterpretation as a retained curve.
 
 ## [2.0.0] - 2026-08-08
 
