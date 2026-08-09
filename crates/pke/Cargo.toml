@@ -38,11 +38,6 @@ dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-featur
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
 dcrypt-params = { path = "../params", version = "=2.0.0" }
 
-[dev-dependencies]
-hex = "0.4"
-rand = { version = "=0.8.7" }
-rand_chacha = { workspace = true }
-
 [package.metadata.release]
 publish = true
 
