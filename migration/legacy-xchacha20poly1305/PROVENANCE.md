@@ -35,11 +35,17 @@ version before `2.0.0` contains the legacy construction. Treat untagged builds
 derived from the full tagged source interval as affected too. The
 construction derives a 32-byte subkey from bytes 0 through 31 of an ordinary
 IETF ChaCha20 counter-zero stream using nonce bytes 0 through 11, then invokes
-ChaCha20-Poly1305 using nonce bytes 12 through 23. v0.x serialized symmetric
-keys used the uppercase `DCRYPT-` prefix; v1.x changed it to lowercase
-`dcrypt-`. The migration CLI accepts both exact historical forms. This is not HChaCha20 and is
-not standard XChaCha20-Poly1305. The v2 source replaced it with the standard
-construction; the migration crate intentionally retains only decryption.
+ChaCha20-Poly1305 using nonce bytes 12 through 23. Tagged source used the
+uppercase `DCRYPT-` serialized-key prefix through `v0.14.0-beta.7` and the
+lowercase `dcrypt-` prefix beginning at tag `v1.0.0` (commit
+`62af06a135a22214072ed54852c68b5ea766c746`). Published artifacts differ at
+that boundary: the `dcrypt-symmetric` `1.0.0` archive (VCS revision
+`ac38279a30a9f7aad247abef6cfece93c963ea20`) still uses the uppercase form,
+while `1.0.1` (VCS revision `b72522b4dc4c7bc5c4234a4cdbed4757b04531a5`)
+begins the lowercase form. The migration CLI accepts both exact historical
+forms. This is not HChaCha20 and is not standard XChaCha20-Poly1305. The v2
+source replaced it with the standard construction; the migration crate
+intentionally retains only decryption.
 
 ## Artifact identity
 
@@ -63,6 +69,14 @@ to the corresponding files at the `v1.2.3` tag. Their SHA-256 digests are:
 The old archive is not a dependency of this repository. It was used only in a
 temporary isolated generator and differential review so a yanked implementation
 cannot enter the current normal/build graph.
+
+The published-prefix boundary above was checked from the exact crates.io
+artifacts, whose downloaded SHA-256 values matched the registry index:
+
+```text
+b0d721f6d90612b8f7e8aad41f3c5f8b08869c35d3b20c66e56ec33fd6a40a0  dcrypt-symmetric-1.0.0.crate
+689a164a9026a2c27a424f10e4aab2d7beb4cf0406bb28bccd204d6306e8e38e  dcrypt-symmetric-1.0.1.crate
+```
 
 ## Fixed vector
 

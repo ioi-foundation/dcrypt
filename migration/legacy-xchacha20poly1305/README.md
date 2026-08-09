@@ -22,10 +22,12 @@ raw-key files according to the host platform's storage model.
 
 - Supply exactly one key input. `--key-file` accepts a regular file containing
   exactly 32 raw key bytes. `--serialized-key-file` strictly accepts the
-  exact historical `DCRYPT-CHACHA20POLY1305-KEY:<base64>` (v0.x) or
-  `dcrypt-CHACHA20POLY1305-KEY:<base64>` (v1.x) representation, with at most
-  one trailing LF or CRLF. Both readers are bounded. Keep either file
-  owner-only (for example mode `0600` on Unix).
+  exact historical `DCRYPT-CHACHA20POLY1305-KEY:<base64>` or
+  `dcrypt-CHACHA20POLY1305-KEY:<base64>` representation, with at most one
+  trailing LF or CRLF. Published artifacts used the uppercase form through
+  `dcrypt-symmetric` `1.0.0` and the lowercase form beginning with `1.0.1`;
+  tagged source made that transition at `v1.0.0`. Both readers are bounded.
+  Keep either file owner-only (for example mode `0600` on Unix).
 - Supply exactly one nonce input. `--nonce-hex` accepts exactly 48 hexadecimal
   characters; `--nonce-base64` strictly accepts the base64 representation
   emitted by the historical 24-byte nonce type.

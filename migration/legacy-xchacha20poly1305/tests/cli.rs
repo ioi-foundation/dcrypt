@@ -8,9 +8,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const ACKNOWLEDGEMENT: &str = "dcrypt-v0.5.0-through-v1.2.3-custom-xchacha20poly1305";
 const NONCE_HEX: &str = "242424242424242424242424242424242424242424242424";
 const NONCE_BASE64: &str = "JCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk";
-const SERIALIZED_KEY_V0: &str =
+const SERIALIZED_KEY_UPPERCASE: &str =
     "DCRYPT-CHACHA20POLY1305-KEY:QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=";
-const SERIALIZED_KEY_V1: &str =
+const SERIALIZED_KEY_LOWERCASE: &str =
     "dcrypt-CHACHA20POLY1305-KEY:QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=";
 const CIPHERTEXT: [u8; 55] = [
     0x67, 0x2c, 0x3b, 0x97, 0xcd, 0x47, 0x79, 0xf4, 0x49, 0xbd, 0x39, 0xba, 0x13, 0xbf, 0x4d, 0x21,
@@ -115,7 +115,10 @@ fn authenticated_migration_creates_a_new_private_output_without_residue() {
 
 #[test]
 fn serialized_key_and_base64_nonce_are_strictly_supported() {
-    for serialized_key in [SERIALIZED_KEY_V0, SERIALIZED_KEY_V1] {
+    // Both exact forms appeared in released artifacts. In particular, the
+    // published 1.0.0 archive still used uppercase even though tagged 1.0.0
+    // source had already moved to lowercase.
+    for serialized_key in [SERIALIZED_KEY_UPPERCASE, SERIALIZED_KEY_LOWERCASE] {
         let directory = TestDirectory::new();
         let key = directory.0.join("key.txt");
         let input = directory.0.join("ciphertext.bin");
@@ -159,7 +162,7 @@ fn malformed_legacy_serializations_are_rejected_before_output_creation() {
     let output = directory.0.join("plaintext.bin");
     fs::write(
         &key,
-        SERIALIZED_KEY_V1.replacen("dcrypt", "Dcrypt", 1),
+        SERIALIZED_KEY_LOWERCASE.replacen("dcrypt", "Dcrypt", 1),
     )
     .unwrap();
     fs::write(&input, CIPHERTEXT).unwrap();
@@ -182,7 +185,7 @@ fn malformed_legacy_serializations_are_rejected_before_output_creation() {
     assert!(!result.status.success());
     assert!(!output.exists());
 
-    fs::write(&key, SERIALIZED_KEY_V1).unwrap();
+    fs::write(&key, SERIALIZED_KEY_LOWERCASE).unwrap();
     let result = binary()
         .args([
             "--acknowledge-format",
@@ -263,7 +266,7 @@ fn duplicate_and_mixed_format_options_are_rejected() {
 
     let directory = TestDirectory::new();
     let serialized = directory.0.join("serialized-key.txt");
-    fs::write(&serialized, SERIALIZED_KEY_V1).unwrap();
+    fs::write(&serialized, SERIALIZED_KEY_LOWERCASE).unwrap();
     let (mut mixed_key, output) = raw_command(&directory.0, ACKNOWLEDGEMENT, &CIPHERTEXT);
     mixed_key.args(["--serialized-key-file", serialized.to_str().unwrap()]);
     let result = mixed_key.output().unwrap();
