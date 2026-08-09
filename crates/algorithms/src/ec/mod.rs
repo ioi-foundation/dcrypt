@@ -40,3 +40,76 @@ impl CoordinateSystem for Affine {}
 /// Jacobian projective coordinates (X:Y:Z) where x = X/Z² and y = Y/Z³
 pub struct Jacobian;
 impl CoordinateSystem for Jacobian {}
+
+#[cfg(test)]
+mod scalar_storage_policy_tests {
+    const SCALAR_SOURCES: [(&str, &str); 5] = [
+        ("p224", include_str!("p224/scalar.rs")),
+        ("p256", include_str!("p256/scalar.rs")),
+        ("p384", include_str!("p384/scalar.rs")),
+        ("p521", include_str!("p521/scalar.rs")),
+        ("k256", include_str!("k256/scalar.rs")),
+    ];
+
+    #[test]
+    fn retained_scalar_sources_keep_secret_storage_raii_protected() {
+        for (curve, source) in SCALAR_SOURCES {
+            assert!(
+                source.contains("Self::from_secret_buffer(SecretBuffer::new(data))"),
+                "{curve} must protect raw constructor input before validation"
+            );
+            assert!(
+                source.contains("let mut protected = SecretBuffer::zeroed();")
+                    && source.contains("protected.as_mut().copy_from_slice(bytes);"),
+                "{curve} deserialization must copy directly into protected storage"
+            );
+            assert!(
+                source.contains("pub fn serialize(&self) -> SecretBuffer<"),
+                "{curve} serialization must return protected exact-size storage"
+            );
+
+            for forbidden in [
+                "-> [u8;",
+                "-> [u32;",
+                ".to_be_bytes()",
+                ".to_le_bytes()",
+                "from_be_bytes([",
+                "from_le_bytes([",
+                "let original = *bytes",
+                "bytes[i] = u8::conditional_select",
+            ] {
+                assert!(
+                    !source.contains(forbidden),
+                    "{curve} scalar source contains forbidden unprotected storage pattern: {forbidden}"
+                );
+            }
+
+            for line in source.lines() {
+                let line = line.trim_start();
+                let raw_local_array = line.starts_with("let ")
+                    && (line.contains(" = [")
+                        || line.contains(": [u8;")
+                        || line.contains(": [u32;"));
+                assert!(
+                    !raw_local_array,
+                    "{curve} scalar source declares an unprotected local array: {line}"
+                );
+            }
+        }
+
+        for (curve, source) in SCALAR_SOURCES.into_iter().take(4) {
+            assert!(
+                source.contains("let mut protected = SecretBuffer::new(data);"),
+                "{curve} reduction must protect raw input before arithmetic"
+            );
+            assert!(
+                source.contains("Zeroizing::new([0u32;"),
+                "{curve} limb scratch must use zeroize-on-drop storage"
+            );
+            assert!(
+                source.contains("#[inline(never)]\n    fn select_secret_buffer("),
+                "{curve} selection must retain its compiler-reviewed mask boundary"
+            );
+        }
+    }
+}

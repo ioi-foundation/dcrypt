@@ -20,14 +20,21 @@ fn intermediate_scalar_reduction_allows_zero_and_reduces_order() {
     }
     let mut one = [0u8; P521_SCALAR_SIZE];
     one[P521_SCALAR_SIZE - 1] = 1;
-    assert_eq!(Scalar::from_bytes_reduced(order_plus_one).serialize(), one);
+    assert_eq!(
+        Scalar::from_bytes_reduced(order_plus_one)
+            .serialize()
+            .as_ref(),
+        &one
+    );
 
     let expected_max = hex::decode(
         "000000000000000000000000000000000000000000000000000000000000000002d73cbc3e206834ca4019ff5b847b2d17e2251b23bb31dc28a2482470b763cdfb7f",
     )
     .unwrap();
     assert_eq!(
-        Scalar::from_bytes_reduced([0xff; P521_SCALAR_SIZE]).serialize(),
+        Scalar::from_bytes_reduced([0xff; P521_SCALAR_SIZE])
+            .serialize()
+            .as_ref(),
         expected_max.as_slice()
     );
 }
@@ -301,7 +308,7 @@ fn test_scalar_multiplication() -> Result<()> {
     assert_eq!(g2, g_plus_g);
 
     // Test 0*G = O
-    let zero = Scalar::from_bytes_unchecked([0u8; 66]);
+    let zero = Scalar::from_bytes_reduced([0u8; 66]);
     let result = g.mul(&zero)?;
     assert!(result.is_identity());
 

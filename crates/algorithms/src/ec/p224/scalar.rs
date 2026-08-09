@@ -4,7 +4,7 @@ use crate::ec::p224::constants::P224_SCALAR_SIZE;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_params::traditional::ecdsa::NIST_P224;
 
 /// P-224 scalar value for use in elliptic curve operations
@@ -34,8 +34,7 @@ impl Scalar {
     /// Private keys, nonces, and serialized signature components must be in
     /// `1..n`. Non-canonical inputs are rejected rather than reduced.
     pub fn new(data: [u8; P224_SCALAR_SIZE]) -> Result<Self> {
-        Self::validate_canonical_nonzero(&data)?;
-        Ok(Scalar(SecretBuffer::new(data)))
+        Self::from_secret_buffer(SecretBuffer::new(data))
     }
 
     /// Interpret a 224-bit integer modulo the group order, including zero.
@@ -44,17 +43,18 @@ impl Scalar {
     /// intermediates such as ECDSA hash and x-coordinate reduction. Use
     /// [`Self::new`] for private scalars, nonces, and serialized signature
     /// components, where zero is invalid.
-    pub fn from_bytes_reduced(mut data: [u8; P224_SCALAR_SIZE]) -> Self {
-        Self::reduce_scalar_bytes_allow_zero(&mut data);
-        Self::from_bytes_unchecked(data)
+    pub fn from_bytes_reduced(data: [u8; P224_SCALAR_SIZE]) -> Self {
+        let mut protected = SecretBuffer::new(data);
+        Self::reduce_scalar_bytes_allow_zero(&mut protected);
+        Self::from_secret_buffer_unchecked(protected)
     }
 
     /// Internal constructor that allows zero values
     ///
     /// Used for intermediate arithmetic operations where zero is a valid result.
     /// Should NOT be used for secret keys, nonces, or final signature components.
-    fn from_bytes_unchecked(bytes: [u8; P224_SCALAR_SIZE]) -> Self {
-        Scalar(SecretBuffer::new(bytes))
+    fn from_secret_buffer_unchecked(buffer: SecretBuffer<P224_SCALAR_SIZE>) -> Self {
+        Scalar(buffer)
     }
 
     /// Create a scalar from an existing SecretBuffer
@@ -62,10 +62,8 @@ impl Scalar {
     /// Performs the same canonical validation as `new()` but starts
     /// from a SecretBuffer instead of a raw byte array.
     pub fn from_secret_buffer(buffer: SecretBuffer<P224_SCALAR_SIZE>) -> Result<Self> {
-        let mut bytes = [0u8; P224_SCALAR_SIZE];
-        bytes.copy_from_slice(buffer.as_ref());
-
-        Self::new(bytes)
+        Self::validate_canonical_nonzero(buffer.as_ref())?;
+        Ok(Self::from_secret_buffer_unchecked(buffer))
     }
 
     /// Access the underlying SecretBuffer containing the scalar value
@@ -73,14 +71,13 @@ impl Scalar {
         &self.0
     }
 
-    /// Serialize the scalar to a byte array
+    /// Serialize the scalar to protected exact-size storage.
     ///
     /// Returns the scalar in big-endian byte representation.
-    /// The output is suitable for storage or transmission.
-    pub fn serialize(&self) -> [u8; P224_SCALAR_SIZE] {
-        let mut result = [0u8; P224_SCALAR_SIZE];
-        result.copy_from_slice(self.0.as_ref());
-        result
+    /// The output clears itself on drop. Callers that deliberately expose a
+    /// public signature component may copy from its borrowed slice.
+    pub fn serialize(&self) -> SecretBuffer<P224_SCALAR_SIZE> {
+        self.0.clone()
     }
 
     /// Deserialize a scalar from bytes with validation
@@ -90,10 +87,9 @@ impl Scalar {
     pub fn deserialize(bytes: &[u8]) -> Result<Self> {
         validate::length("P-224 Scalar", bytes.len(), P224_SCALAR_SIZE)?;
 
-        let mut scalar_bytes = [0u8; P224_SCALAR_SIZE];
-        scalar_bytes.copy_from_slice(bytes);
-
-        Self::new(scalar_bytes)
+        let mut protected = SecretBuffer::zeroed();
+        protected.as_mut().copy_from_slice(bytes);
+        Self::from_secret_buffer(protected)
     }
 
     /// Check if the scalar represents zero
@@ -111,20 +107,18 @@ impl Scalar {
     /// Convert big-endian bytes to little-endian limbs
     /// Input bytes are already big-endian from parameter tables
     #[inline(always)]
-    fn to_le_limbs(bytes_be: &[u8; 28]) -> [u32; 7] {
-        let mut limbs = [0u32; 7];
+    fn to_le_limbs(bytes_be: &[u8]) -> Zeroizing<[u32; 7]> {
+        let mut limbs = Zeroizing::new([0u32; 7]);
 
         // Read big-endian bytes directly into little-endian limbs
         // bytes[0..4] is most significant, goes to limbs[6]
         // bytes[24..28] is least significant, goes to limbs[0]
         for i in 0..7 {
             let offset = i * 4;
-            limbs[6 - i] = u32::from_be_bytes([
-                bytes_be[offset],
-                bytes_be[offset + 1],
-                bytes_be[offset + 2],
-                bytes_be[offset + 3],
-            ]);
+            limbs[6 - i] = ((bytes_be[offset] as u32) << 24)
+                | ((bytes_be[offset + 1] as u32) << 16)
+                | ((bytes_be[offset + 2] as u32) << 8)
+                | bytes_be[offset + 3] as u32;
         }
         limbs
     }
@@ -132,26 +126,29 @@ impl Scalar {
     /// Convert little-endian limbs to big-endian bytes
     /// The inverse of to_le_limbs
     #[inline(always)]
-    fn limbs_to_be(limbs: &[u32; 7]) -> [u8; 28] {
-        let mut out = [0u8; 28];
+    fn limbs_to_secret_buffer(limbs: &[u32; 7]) -> SecretBuffer<P224_SCALAR_SIZE> {
+        let mut out = SecretBuffer::zeroed();
 
         // Write little-endian limbs to big-endian bytes
         // limbs[6] is most significant, goes to bytes[0..4]
         // limbs[0] is least significant, goes to bytes[24..28]
         for i in 0..7 {
-            let bytes = limbs[6 - i].to_be_bytes();
+            let limb = limbs[6 - i];
             let offset = i * 4;
-            out[offset..offset + 4].copy_from_slice(&bytes);
+            out[offset] = (limb >> 24) as u8;
+            out[offset + 1] = (limb >> 16) as u8;
+            out[offset + 2] = (limb >> 8) as u8;
+            out[offset + 3] = limb as u8;
         }
         out
     }
 
     /// Add two scalars modulo the curve order n
     pub fn add_mod_n(&self, other: &Self) -> Result<Self> {
-        let self_limbs = Self::to_le_limbs(&self.serialize());
-        let other_limbs = Self::to_le_limbs(&other.serialize());
+        let self_limbs = Self::to_le_limbs(self.0.as_ref());
+        let other_limbs = Self::to_le_limbs(other.0.as_ref());
 
-        let mut r = [0u32; 7];
+        let mut r = Zeroizing::new([0u32; 7]);
         let mut carry = 0u64;
 
         // Plain 224-bit add
@@ -161,24 +158,20 @@ impl Scalar {
             carry = tmp >> 32;
         }
 
-        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
-        let mut reduced = r;
-        let borrow = Self::sub_in_place(&mut reduced, &Self::N_LIMBS);
+        let unreduced = Self::from_secret_buffer_unchecked(Self::limbs_to_secret_buffer(&r));
+        let borrow = Self::sub_in_place(&mut r, &Self::N_LIMBS);
         let need_reduce = Choice::from((carry as u8) | ((borrow ^ 1) as u8));
+        let reduced = Self::from_secret_buffer_unchecked(Self::limbs_to_secret_buffer(&r));
 
-        Ok(Self::conditional_select(
-            &unreduced,
-            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
-            need_reduce,
-        ))
+        Ok(Self::conditional_select(&unreduced, &reduced, need_reduce))
     }
 
     /// Subtract two scalars modulo the curve order n
     pub fn sub_mod_n(&self, other: &Self) -> Result<Self> {
-        let self_limbs = Self::to_le_limbs(&self.serialize());
-        let other_limbs = Self::to_le_limbs(&other.serialize());
+        let self_limbs = Self::to_le_limbs(self.0.as_ref());
+        let other_limbs = Self::to_le_limbs(other.0.as_ref());
 
-        let mut r = [0u32; 7];
+        let mut r = Zeroizing::new([0u32; 7]);
         let mut borrow = 0u64;
 
         for (i, result) in r.iter_mut().enumerate() {
@@ -189,18 +182,18 @@ impl Scalar {
             borrow = (tmp >> 63) & 1;
         }
 
-        let unreduced = Self::from_bytes_unchecked(Self::limbs_to_be(&r));
-        let mut reduced = r;
+        let unreduced = Self::from_secret_buffer_unchecked(Self::limbs_to_secret_buffer(&r));
         let mut carry = 0u64;
-        for (i, result) in reduced.iter_mut().enumerate() {
+        for (i, result) in r.iter_mut().enumerate() {
             let tmp = *result as u64 + Self::N_LIMBS[i] as u64 + carry;
             *result = tmp as u32;
             carry = tmp >> 32;
         }
+        let reduced = Self::from_secret_buffer_unchecked(Self::limbs_to_secret_buffer(&r));
 
         Ok(Self::conditional_select(
             &unreduced,
-            &Self::from_bytes_unchecked(Self::limbs_to_be(&reduced)),
+            &reduced,
             Choice::from(borrow as u8),
         ))
     }
@@ -211,10 +204,10 @@ impl Scalar {
     /// Processes bits from MSB to LSB to ensure correct powers of 2.
     pub fn mul_mod_n(&self, other: &Self) -> Result<Self> {
         // Start with zero (additive identity)
-        let mut acc = Self::from_bytes_unchecked([0u8; P224_SCALAR_SIZE]);
+        let mut acc = Self::zero();
 
         // Process each bit from MSB to LSB
-        for byte in other.serialize() {
+        for &byte in other.0.as_ref() {
             for i in (0..8).rev() {
                 // MSB first within each byte
                 // Double the accumulator: acc = acc * 2 (mod n)
@@ -238,8 +231,8 @@ impl Scalar {
         }
 
         // Step 1: form exponent = n-2
-        let mut exp = NIST_P224.n; // big-endian [u8;28]
-                                   // subtract 2 with borrow
+        let mut exp = Zeroizing::new(NIST_P224.n); // public, fixed exponent
+                                                   // subtract 2 with borrow
         let mut borrow = 2u16;
         for i in (0..P224_SCALAR_SIZE).rev() {
             let v = exp[i] as i16 - (borrow as i16);
@@ -257,15 +250,10 @@ impl Scalar {
         //    for each bit of exp from MSB to LSB:
         //        result = result^2 mod n
         //        if bit == 1 { result = result * a mod n }
-        let mut result = {
-            let mut one = [0u8; P224_SCALAR_SIZE];
-            one[P224_SCALAR_SIZE - 1] = 1;
-            // from_bytes_unchecked is fine here because 1 < n
-            Self::from_bytes_unchecked(one)
-        };
+        let mut result = { Self::one() };
         let base = self.clone();
 
-        for byte in exp {
+        for &byte in exp.iter() {
             for bit in (0..8).rev() {
                 // square
                 result = result.mul_mod_n(&result)?;
@@ -285,30 +273,25 @@ impl Scalar {
     /// Returns 0 when self is 0
     pub fn negate(&self) -> Self {
         // Compute n - self, then select zero for the zero input.
-        let n_limbs = Self::N_LIMBS;
-        let self_limbs = Self::to_le_limbs(&self.serialize());
-        let mut res = [0u32; 7];
+        let self_limbs = Self::to_le_limbs(self.0.as_ref());
+        let mut res = Zeroizing::new([0u32; 7]);
 
         // Subtract self from n
         let mut borrow = 0u64;
         for (i, result) in res.iter_mut().enumerate() {
-            let tmp = (n_limbs[i] as u64)
+            let tmp = (Self::N_LIMBS[i] as u64)
                 .wrapping_sub(self_limbs[i] as u64)
                 .wrapping_sub(borrow);
             *result = tmp as u32;
             borrow = (tmp >> 63) & 1;
         }
-        let negated = Self::from_bytes_unchecked(Self::limbs_to_be(&res));
-        Self::conditional_select(
-            &negated,
-            &Self::from_bytes_unchecked([0u8; P224_SCALAR_SIZE]),
-            Choice::from(self.is_zero() as u8),
-        )
+        let negated = Self::from_secret_buffer_unchecked(Self::limbs_to_secret_buffer(&res));
+        Self::conditional_select(&negated, &Self::zero(), Choice::from(self.is_zero() as u8))
     }
 
     // Private helper methods
 
-    fn validate_canonical_nonzero(bytes: &[u8; P224_SCALAR_SIZE]) -> Result<()> {
+    fn validate_canonical_nonzero(bytes: &[u8]) -> Result<()> {
         let mut any = 0u8;
         for &byte in bytes {
             any |= byte;
@@ -329,18 +312,15 @@ impl Scalar {
     }
 
     /// Reduce an arbitrary 224-bit integer modulo the group order.
-    fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P224_SCALAR_SIZE]) {
-        let original = *bytes;
-        let (candidate, borrow) = Self::subtract_order(&original);
+    fn reduce_scalar_bytes_allow_zero(bytes: &mut SecretBuffer<P224_SCALAR_SIZE>) {
+        let (candidate, borrow) = Self::subtract_order(bytes.as_ref());
         let reduce = Choice::from(borrow ^ 1);
-        for i in 0..P224_SCALAR_SIZE {
-            bytes[i] = u8::conditional_select(&original[i], &candidate[i], reduce);
-        }
+        *bytes = Self::select_secret_buffer(bytes, &candidate, reduce);
     }
 
     #[inline(always)]
-    fn subtract_order(bytes: &[u8; P224_SCALAR_SIZE]) -> ([u8; P224_SCALAR_SIZE], u8) {
-        let mut result = [0u8; P224_SCALAR_SIZE];
+    fn subtract_order(bytes: &[u8]) -> (SecretBuffer<P224_SCALAR_SIZE>, u8) {
+        let mut result = SecretBuffer::zeroed();
         let mut borrow = 0u8;
         for i in (0..P224_SCALAR_SIZE).rev() {
             let (difference, borrow_order) = bytes[i].overflowing_sub(NIST_P224.n[i]);
@@ -362,15 +342,32 @@ impl Scalar {
         0xFFFF_FFFF,
     ];
 
+    #[inline(never)]
+    fn select_secret_buffer(
+        a: &SecretBuffer<P224_SCALAR_SIZE>,
+        b: &SecretBuffer<P224_SCALAR_SIZE>,
+        choice: Choice,
+    ) -> SecretBuffer<P224_SCALAR_SIZE> {
+        let mut out = SecretBuffer::zeroed();
+        for i in 0..P224_SCALAR_SIZE {
+            out[i] = u8::conditional_select(&a[i], &b[i], choice);
+        }
+        out
+    }
+
     #[inline(always)]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let a_bytes = a.serialize();
-        let b_bytes = b.serialize();
-        let mut out = [0u8; P224_SCALAR_SIZE];
-        for i in 0..P224_SCALAR_SIZE {
-            out[i] = u8::conditional_select(&a_bytes[i], &b_bytes[i], choice);
-        }
-        Self::from_bytes_unchecked(out)
+        Self::from_secret_buffer_unchecked(Self::select_secret_buffer(&a.0, &b.0, choice))
+    }
+
+    fn zero() -> Self {
+        Self::from_secret_buffer_unchecked(SecretBuffer::zeroed())
+    }
+
+    fn one() -> Self {
+        let mut one = SecretBuffer::zeroed();
+        one[P224_SCALAR_SIZE - 1] = 1;
+        Self::from_secret_buffer_unchecked(one)
     }
 
     /// Subtract b from a in-place

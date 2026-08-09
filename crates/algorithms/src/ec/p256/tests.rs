@@ -303,7 +303,7 @@ fn test_intermediate_scalar_reduction_allows_zero_and_reduces_order() {
     let reduced = Scalar::from_bytes_reduced(order_plus_one);
     let mut one = [0u8; P256_SCALAR_SIZE];
     one[P256_SCALAR_SIZE - 1] = 1;
-    assert_eq!(reduced.serialize(), one);
+    assert_eq!(reduced.serialize().as_ref(), &one);
 }
 
 #[test]

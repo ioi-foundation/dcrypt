@@ -29,17 +29,15 @@ impl Scalar {
     /// The value must use the canonical big-endian encoding in `1..n`.
     /// Out-of-range inputs are rejected rather than reduced.
     pub fn new(data: [u8; K256_SCALAR_SIZE]) -> Result<Self> {
-        Self::validate_canonical_nonzero(&data)?;
-        Ok(Scalar(SecretBuffer::new(data)))
+        Self::from_secret_buffer(SecretBuffer::new(data))
     }
 
     /// Create a scalar from a `SecretBuffer`.
     ///
     /// The buffer contents must be a canonical non-zero scalar.
     pub fn from_secret_buffer(buffer: SecretBuffer<K256_SCALAR_SIZE>) -> Result<Self> {
-        let mut bytes = [0u8; K256_SCALAR_SIZE];
-        bytes.copy_from_slice(buffer.as_ref());
-        Self::new(bytes)
+        Self::validate_canonical_nonzero(buffer.as_ref())?;
+        Ok(Self(buffer))
     }
 
     /// Get a reference to the underlying `SecretBuffer`.
@@ -47,19 +45,17 @@ impl Scalar {
         &self.0
     }
 
-    /// Serialize this scalar to bytes.
-    pub fn serialize(&self) -> [u8; K256_SCALAR_SIZE] {
-        let mut result = [0u8; K256_SCALAR_SIZE];
-        result.copy_from_slice(self.0.as_ref());
-        result
+    /// Serialize this scalar to protected exact-size storage.
+    pub fn serialize(&self) -> SecretBuffer<K256_SCALAR_SIZE> {
+        self.0.clone()
     }
 
     /// Deserialize a canonical non-zero scalar.
     pub fn deserialize(bytes: &[u8]) -> Result<Self> {
         validate::length("K256 Scalar", bytes.len(), K256_SCALAR_SIZE)?;
-        let mut scalar = [0u8; K256_SCALAR_SIZE];
-        scalar.copy_from_slice(bytes);
-        Self::new(scalar)
+        let mut protected = SecretBuffer::zeroed();
+        protected.as_mut().copy_from_slice(bytes);
+        Self::from_secret_buffer(protected)
     }
 
     /// Check if this scalar is zero.
@@ -71,7 +67,7 @@ impl Scalar {
         any == 0
     }
 
-    fn validate_canonical_nonzero(bytes: &[u8; K256_SCALAR_SIZE]) -> Result<()> {
+    fn validate_canonical_nonzero(bytes: &[u8]) -> Result<()> {
         let mut any = 0u8;
         for &byte in bytes {
             any |= byte;

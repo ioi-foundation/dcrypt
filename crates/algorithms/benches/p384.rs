@@ -212,7 +212,7 @@ fn bench_scalar_arithmetic(c: &mut Criterion) {
 
     group.bench_function("deserialize", |bencher| {
         let bytes = a.serialize();
-        bencher.iter(|| black_box(Scalar::deserialize(&bytes).unwrap()));
+        bencher.iter(|| black_box(Scalar::deserialize(bytes.as_ref()).unwrap()));
     });
 
     group.finish();

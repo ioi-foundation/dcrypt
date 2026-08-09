@@ -63,7 +63,12 @@ fn intermediate_scalar_reduction_allows_zero_and_reduces_order() {
     }
     let mut one = [0u8; P384_SCALAR_SIZE];
     one[P384_SCALAR_SIZE - 1] = 1;
-    assert_eq!(Scalar::from_bytes_reduced(order_plus_one).serialize(), one);
+    assert_eq!(
+        Scalar::from_bytes_reduced(order_plus_one)
+            .serialize()
+            .as_ref(),
+        &one
+    );
 }
 
 #[test]
