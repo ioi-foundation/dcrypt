@@ -43,7 +43,7 @@ fn rfc6979_sha512_sample_signature_matches() {
     .unwrap();
     let secret = EcdsaP521SecretKey {
         raw: ec::Scalar::new(bytes).unwrap(),
-        bytes,
+        bytes: SecretBuffer::new(bytes),
     };
     let signature = EcdsaP521::sign(b"sample", &secret).unwrap();
     let components = SignatureComponents::from_der(signature.as_ref()).unwrap();
@@ -67,7 +67,10 @@ fn rfc6979_sha512_sample_signature_matches() {
     .try_into()
     .unwrap();
     let expected_rfc_s = ec::Scalar::new(expected_rfc_s).unwrap();
-    assert!(!is_high_s(&expected_rfc_s.serialize(), &NIST_P521.n));
+    assert!(!is_high_s(
+        expected_rfc_s.serialize().as_ref(),
+        &NIST_P521.n
+    ));
     assert_eq!(components.s, expected_rfc_s.serialize()[1..].to_vec());
 }
 
@@ -80,10 +83,10 @@ fn test_ecdsa_p521_signatures_are_low_s_and_high_s_is_rejected() {
     let mut s = [0u8; ec::P521_SCALAR_SIZE];
     s[ec::P521_SCALAR_SIZE - components.s.len()..].copy_from_slice(&components.s);
     let s = ec::Scalar::new(s).unwrap();
-    assert!(!is_high_s(&s.serialize(), &NIST_P521.n));
+    assert!(!is_high_s(s.serialize().as_ref(), &NIST_P521.n));
 
     let high_s = s.negate();
-    assert!(is_high_s(&high_s.serialize(), &NIST_P521.n));
+    assert!(is_high_s(high_s.serialize().as_ref(), &NIST_P521.n));
     let malleable = EcdsaP521Signature(
         SignatureComponents {
             r: components.r.clone(),
@@ -594,7 +597,11 @@ fn test_modular_inverse_comprehensive() {
     let product = two.mul_mod_n(&two_inv).unwrap();
     let mut expected_one = [0u8; 66];
     expected_one[65] = 1;
-    assert_eq!(product.serialize(), expected_one, "2 * 2_inv should be 1");
+    assert_eq!(
+        product.serialize().as_ref(),
+        expected_one.as_slice(),
+        "2 * 2_inv should be 1"
+    );
 
     for _ in 0..5 {
         // Reduced iterations for faster CI, increase for thorough local testing
@@ -602,8 +609,8 @@ fn test_modular_inverse_comprehensive() {
         let inv = scalar.inv_mod_n().unwrap();
         let product_rand = scalar.mul_mod_n(&inv).unwrap();
         assert_eq!(
-            product_rand.serialize(),
-            expected_one,
+            product_rand.serialize().as_ref(),
+            expected_one.as_slice(),
             "random_scalar * random_scalar_inv should be 1"
         );
     }

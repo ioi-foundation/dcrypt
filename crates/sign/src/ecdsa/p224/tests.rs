@@ -15,7 +15,7 @@ fn rfc6979_sha224_sample_signature_matches() {
             .unwrap();
     let secret = EcdsaP224SecretKey {
         raw: ec::Scalar::new(bytes).unwrap(),
-        bytes,
+        bytes: SecretBuffer::new(bytes),
     };
     let signature = EcdsaP224::sign(b"sample", &secret).unwrap();
     let components = SignatureComponents::from_der(signature.as_ref()).unwrap();
@@ -77,10 +77,10 @@ fn test_ecdsa_p224_signatures_are_low_s_and_high_s_is_rejected() {
     let mut s = [0u8; ec::P224_SCALAR_SIZE];
     s[ec::P224_SCALAR_SIZE - components.s.len()..].copy_from_slice(&components.s);
     let s = ec::Scalar::new(s).unwrap();
-    assert!(!is_high_s(&s.serialize(), &NIST_P224.n));
+    assert!(!is_high_s(s.serialize().as_ref(), &NIST_P224.n));
 
     let high_s = s.negate();
-    assert!(is_high_s(&high_s.serialize(), &NIST_P224.n));
+    assert!(is_high_s(high_s.serialize().as_ref(), &NIST_P224.n));
     let malleable = EcdsaP224Signature(
         crate::ecdsa::common::SignatureComponents {
             r: components.r.clone(),

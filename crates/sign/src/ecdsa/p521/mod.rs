@@ -12,9 +12,9 @@ use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{
     error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait, ZeroizingBytes,
 };
+use dcrypt_common::SecretBuffer;
 use dcrypt_internal::{
     constant_time::ct_eq, zeroizing_bytes_from_slice, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
-    Zeroizing,
 };
 use dcrypt_params::traditional::ecdsa::NIST_P521;
 
@@ -38,7 +38,7 @@ pub struct EcdsaP521PublicKey(pub(crate) [u8; ec::P521_POINT_UNCOMPRESSED_SIZE])
 #[derive(Clone)]
 pub struct EcdsaP521SecretKey {
     raw: ec::Scalar,
-    bytes: [u8; ec::P521_SCALAR_SIZE],
+    bytes: SecretBuffer<{ ec::P521_SCALAR_SIZE }>,
 }
 
 // Manual Zeroize implementation for EcdsaP521SecretKey
@@ -80,7 +80,7 @@ impl AsMut<[u8]> for EcdsaP521PublicKey {
 
 impl AsRef<[u8]> for EcdsaP521SecretKey {
     fn as_ref(&self) -> &[u8] {
-        &self.bytes
+        self.bytes.as_ref()
     }
 }
 
@@ -125,17 +125,16 @@ impl EcdsaP521SecretKey {
     /// Parse a canonical, nonzero P-521 secret scalar.
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         let raw = ec::Scalar::deserialize(bytes).map_err(ApiError::from)?;
-        let mut serialized = Zeroizing::new([0u8; ec::P521_SCALAR_SIZE]);
-        serialized.copy_from_slice(bytes);
+        let serialized = raw.serialize();
         Ok(Self {
             raw,
-            bytes: serialized.into_inner_array(),
+            bytes: serialized,
         })
     }
 
     /// Export the secret scalar in a zeroizing buffer.
     pub fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
-        zeroizing_bytes_from_slice(&self.bytes)
+        zeroizing_bytes_from_slice(self.bytes.as_ref())
     }
 }
 
@@ -173,7 +172,7 @@ impl SignatureTrait for EcdsaP521 {
         let (sk_scalar, pk_point) = ec::generate_keypair(rng).map_err(ApiError::from)?;
 
         // Serialize the private key scalar
-        let sk_bytes = Zeroizing::new(sk_scalar.serialize());
+        let sk_bytes = sk_scalar.serialize();
 
         // Verify the private key is non-zero (should never happen with proper generation)
         if sk_bytes.iter().all(|&b| b == 0) {
@@ -187,7 +186,7 @@ impl SignatureTrait for EcdsaP521 {
         // Create the secret key structure
         let secret_key = EcdsaP521SecretKey {
             raw: sk_scalar,
-            bytes: sk_bytes.into_inner_array(),
+            bytes: sk_bytes,
         };
 
         // Serialize public key in uncompressed format
@@ -236,7 +235,7 @@ impl SignatureTrait for EcdsaP521 {
         let d = secret_key.raw.clone();
         let mut d_bytes = d.serialize();
         let nonces_result =
-            Rfc6979::<Sha512>::new(&d_bytes, hash_output.as_ref(), &NIST_P521.n, 521);
+            Rfc6979::<Sha512>::new(d_bytes.as_ref(), hash_output.as_ref(), &NIST_P521.n, 521);
         d_bytes.zeroize();
         let mut nonces = nonces_result?;
 
@@ -279,7 +278,7 @@ impl SignatureTrait for EcdsaP521 {
             if s.is_zero() {
                 continue;
             }
-            if is_high_s(&s.serialize(), &NIST_P521.n) {
+            if is_high_s(s.serialize().as_ref(), &NIST_P521.n) {
                 s = s.negate();
             }
 
@@ -355,7 +354,7 @@ impl SignatureTrait for EcdsaP521 {
             #[cfg(feature = "std")]
             message: "Invalid s component".to_string(),
         })?;
-        if is_high_s(&s.serialize(), &NIST_P521.n) {
+        if is_high_s(s.serialize().as_ref(), &NIST_P521.n) {
             return Err(ApiError::InvalidSignature {
                 context: "ECDSA-P521 verify",
                 #[cfg(feature = "std")]

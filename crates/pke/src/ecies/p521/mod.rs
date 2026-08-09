@@ -6,6 +6,7 @@ use dcrypt_algorithms::ec::p521 as ec;
 use dcrypt_algorithms::types::{Nonce, SecretBytes as AlgoSecretBytes};
 use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::traits::Pke;
+use dcrypt_common::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
@@ -37,13 +38,13 @@ impl AsRef<[u8]> for EciesP521PublicKey {
 
 /// Secret key for ECIES P-521. Stores serialized scalar (66 bytes).
 #[derive(Clone)]
-pub struct EciesP521SecretKey([u8; ec::P521_SCALAR_SIZE]);
+pub struct EciesP521SecretKey(SecretBuffer<{ ec::P521_SCALAR_SIZE }>);
 
 impl_zeroize_on_drop_tuple!(EciesP521SecretKey);
 
 impl AsRef<[u8]> for EciesP521SecretKey {
     fn as_ref(&self) -> &[u8] {
-        &self.0
+        self.0.as_ref()
     }
 }
 
@@ -158,7 +159,7 @@ impl Pke for EciesP521 {
             return Err(invalid_ephemeral_public_key());
         }
 
-        let sk_recipient_scalar = ec::Scalar::deserialize(&sk_recipient.0)
+        let sk_recipient_scalar = ec::Scalar::deserialize(sk_recipient.0.as_ref())
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
         let pk_recipient_bytes = ec::scalar_mult_base_g(&sk_recipient_scalar)
             .map_err(|e| ApiError::from(PkeError::from(e)))?

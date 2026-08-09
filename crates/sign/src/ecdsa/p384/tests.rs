@@ -25,7 +25,7 @@ fn rfc6979_sha384_sample_signature_matches() {
     .unwrap();
     let secret = EcdsaP384SecretKey {
         raw: ec::Scalar::new(bytes).unwrap(),
-        bytes,
+        bytes: SecretBuffer::new(bytes),
     };
     let signature = EcdsaP384::sign(b"sample", &secret).unwrap();
     let components = SignatureComponents::from_der(signature.as_ref()).unwrap();
@@ -59,10 +59,10 @@ fn test_ecdsa_p384_signatures_are_low_s_and_high_s_is_rejected() {
     let mut s = [0u8; ec::P384_SCALAR_SIZE];
     s[ec::P384_SCALAR_SIZE - components.s.len()..].copy_from_slice(&components.s);
     let s = ec::Scalar::new(s).unwrap();
-    assert!(!is_high_s(&s.serialize(), &NIST_P384.n));
+    assert!(!is_high_s(s.serialize().as_ref(), &NIST_P384.n));
 
     let high_s = s.negate();
-    assert!(is_high_s(&high_s.serialize(), &NIST_P384.n));
+    assert!(is_high_s(high_s.serialize().as_ref(), &NIST_P384.n));
     let malleable = EcdsaP384Signature(
         SignatureComponents {
             r: components.r.clone(),
@@ -559,12 +559,12 @@ fn test_modular_inverse_comprehensive() {
     let product = two.mul_mod_n(&two_inv).unwrap();
     let mut expected_one = [0u8; 48];
     expected_one[47] = 1;
-    assert_eq!(product.serialize(), expected_one);
+    assert_eq!(product.serialize().as_ref(), expected_one.as_slice());
     for _ in 0..5 {
         let (scalar, _) = ec::generate_keypair(&mut rng).unwrap();
         let inv = scalar.inv_mod_n().unwrap();
         let product_rand = scalar.mul_mod_n(&inv).unwrap();
-        assert_eq!(product_rand.serialize(), expected_one);
+        assert_eq!(product_rand.serialize().as_ref(), expected_one.as_slice());
     }
     let n_minus_1 = [
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -575,9 +575,12 @@ fn test_modular_inverse_comprehensive() {
     let max_scalar = ec::Scalar::new(n_minus_1).unwrap();
     let max_inv = max_scalar.inv_mod_n().unwrap();
     let max_product = max_scalar.mul_mod_n(&max_inv).unwrap();
-    assert_eq!(max_product.serialize(), expected_one);
+    assert_eq!(max_product.serialize().as_ref(), expected_one.as_slice());
     let n_minus_1_squared = max_scalar.mul_mod_n(&max_scalar).unwrap();
-    assert_eq!(n_minus_1_squared.serialize(), expected_one);
+    assert_eq!(
+        n_minus_1_squared.serialize().as_ref(),
+        expected_one.as_slice()
+    );
     assert_eq!(max_inv.serialize(), max_scalar.serialize());
 }
 
@@ -590,14 +593,14 @@ fn test_scalar_endianness() {
         0x2e, 0x2f, 0x30,
     ];
     let scalar = ec::Scalar::new(test_bytes).unwrap();
-    assert_eq!(test_bytes, scalar.serialize());
+    assert_eq!(test_bytes.as_slice(), scalar.serialize().as_ref());
     let mut one_bytes = [0u8; 48];
     one_bytes[47] = 1;
     let one = ec::Scalar::new(one_bytes).unwrap();
     let scalar_plus_one = scalar.add_mod_n(&one).unwrap();
     let mut expected = test_bytes;
     expected[47] += 1;
-    assert_eq!(scalar_plus_one.serialize(), expected);
+    assert_eq!(scalar_plus_one.serialize().as_ref(), expected.as_slice());
     let mut two_bytes = [0u8; 48];
     two_bytes[47] = 2;
     let two = ec::Scalar::new(two_bytes).unwrap();
