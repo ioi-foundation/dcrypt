@@ -5,9 +5,9 @@
 //!
 //! For variable-length output, use the XOF implementations in the xof module.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 use crate::error::Result;
 use crate::hash::{HashAlgorithm, HashFunction};
@@ -85,7 +85,7 @@ impl HashAlgorithm for Shake256Algorithm {
 }
 
 /// SHAKE-128 hash function with fixed output size (32 bytes)
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Shake128 {
     state: [u64; KECCAK_STATE_SIZE],
     buffer: [u8; SHAKE128_RATE],
@@ -93,12 +93,35 @@ pub struct Shake128 {
 }
 
 /// SHAKE-256 hash function with fixed output size (64 bytes)
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Shake256 {
     state: [u64; KECCAK_STATE_SIZE],
     buffer: [u8; SHAKE256_RATE],
     buffer_idx: usize,
 }
+
+macro_rules! impl_shake_zeroize {
+    ($name:ident) => {
+        impl Zeroize for $name {
+            fn zeroize(&mut self) {
+                self.state.zeroize();
+                self.buffer.zeroize();
+                self.buffer_idx.zeroize();
+            }
+        }
+
+        impl Drop for $name {
+            fn drop(&mut self) {
+                self.zeroize();
+            }
+        }
+
+        impl ZeroizeOnDrop for $name {}
+    };
+}
+
+impl_shake_zeroize!(Shake128);
+impl_shake_zeroize!(Shake256);
 
 // Helper function for the Keccak-f[1600] permutation
 fn keccak_f1600(state: &mut [u64; KECCAK_STATE_SIZE]) {

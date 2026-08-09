@@ -1,7 +1,5 @@
 //! params.rs - Enhanced polynomial ring parameters with NTT support
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 /// Basic trait defining the modulus and degree for a polynomial ring
 pub trait Modulus {
     /// The primary modulus Q for coefficient arithmetic
@@ -317,11 +315,12 @@ pub fn is_prime(q: u32) -> bool {
         return false;
     }
 
-    let sqrt_q = (q as f64).sqrt() as u32;
-    for i in (3..=sqrt_q).step_by(2) {
+    let mut i = 3u32;
+    while i <= q / i {
         if q % i == 0 {
             return false;
         }
+        i += 2;
     }
     true
 }

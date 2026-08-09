@@ -6,7 +6,7 @@ use super::super::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
 #[cfg(feature = "alloc")]
 use super::super::pairings::{multi_miller_loop, G2Prepared};
 
-use rand_core::OsRng;
+use dcrypt_internal::random::ChaCha20Rng;
 
 // ============================================================================
 // Basic Pairing Tests
@@ -70,8 +70,9 @@ fn test_pairing_non_degeneracy() {
 
 #[test]
 fn test_pairing_with_identity() {
-    let p = G1Affine::from(G1Projective::random(&mut OsRng));
-    let q = G2Affine::from(G2Projective::random(&mut OsRng));
+    let mut rng = ChaCha20Rng::from_seed([0x53; 32]);
+    let p = G1Affine::from(G1Projective::random(&mut rng).unwrap());
+    let q = G2Affine::from(G2Projective::random(&mut rng).unwrap());
 
     // pairing(Identity, Q) = 1
     assert_eq!(pairing(&G1Affine::identity(), &q), Gt::identity());

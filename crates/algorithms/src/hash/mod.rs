@@ -3,12 +3,12 @@
 //! This module provides implementations of various cryptographic hash functions
 //! with improved type-level guarantees and method chaining for ergonomic usage.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
 
 use crate::error::Result;
 use crate::types::Digest;
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
 pub mod blake2;
 pub mod keccak; // Added module
@@ -120,9 +120,15 @@ pub trait HashFunction: Sized + Zeroize {
 }
 
 /// Implementation of enhanced Sha256 using the new trait structure
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct EnhancedSha256 {
     inner: sha2::Sha256,
+}
+
+impl Zeroize for EnhancedSha256 {
+    fn zeroize(&mut self) {
+        self.inner.zeroize();
+    }
 }
 
 /// Marker type for SHA-256 algorithm

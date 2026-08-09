@@ -9,7 +9,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 use super::super::{BlockCipher, CipherAlgorithm};
 use crate::error::{validate, Error, Result};
@@ -22,11 +22,26 @@ pub trait CbcCompatible: crate::types::sealed::Sealed {}
 impl<const N: usize> CbcCompatible for Nonce<N> {}
 
 /// CBC mode implementation
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Cbc<B: BlockCipher + Zeroize + ZeroizeOnDrop> {
     cipher: B,
     iv: Vec<u8>,
 }
+
+impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Zeroize for Cbc<B> {
+    fn zeroize(&mut self) {
+        self.cipher.zeroize();
+        self.iv.zeroize();
+    }
+}
+
+impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Drop for Cbc<B> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> ZeroizeOnDrop for Cbc<B> {}
 
 impl<B: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> Cbc<B> {
     /// Creates a new CBC mode instance with the given cipher and IV

@@ -12,7 +12,7 @@ use crate::error::{validate, Result};
 use crate::mac::MacAlgorithm;
 use crate::types::Tag;
 use dcrypt_common::security::SecretBuffer;
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Size of the Poly1305 key in bytes (32 B)
 pub const POLY1305_KEY_SIZE: usize = 32;
@@ -33,12 +33,27 @@ impl MacAlgorithm for Poly1305Algorithm {
 }
 
 /// Poly1305 MAC (branch-free limb arithmetic)
-#[derive(Zeroize, ZeroizeOnDrop)]
 pub struct Poly1305 {
     r: SecretBuffer<24>,      // 130-bit key r stored as 3 u64s (24 bytes)
     s: SecretBuffer<16>,      // 128-bit key s stored as 2 u64s (16 bytes)
     data: Zeroizing<Vec<u8>>, // buffered input
 }
+
+impl Zeroize for Poly1305 {
+    fn zeroize(&mut self) {
+        self.r.zeroize();
+        self.s.zeroize();
+        self.data.zeroize();
+    }
+}
+
+impl Drop for Poly1305 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Poly1305 {}
 
 impl Poly1305 {
     /* ------------------------------------------------------------------ */

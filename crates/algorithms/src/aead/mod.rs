@@ -7,11 +7,12 @@
 //!
 //! ```
 //! use dcrypt_algorithms::aead::{ChaCha20Poly1305Cipher, AeadCipher, AeadEncryptOperation, AeadDecryptOperation};
-//! use rand::rngs::OsRng;
+//! use dcrypt_internal::random::ChaCha20Rng;
 //!
 //! // Generate key and nonce
-//! let key = ChaCha20Poly1305Cipher::generate_key(&mut OsRng).unwrap();
-//! let nonce = ChaCha20Poly1305Cipher::generate_nonce(&mut OsRng).unwrap();
+//! let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
+//! let key = ChaCha20Poly1305Cipher::generate_key(&mut rng).unwrap();
+//! let nonce = ChaCha20Poly1305Cipher::generate_nonce(&mut rng).unwrap();
 //!
 //! // Create cipher instance
 //! let cipher = ChaCha20Poly1305Cipher::new(&key).unwrap();
@@ -30,8 +31,6 @@
 //!
 //! assert_eq!(plaintext, b"secret message");
 //! ```
-
-#![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
@@ -60,8 +59,8 @@ use crate::error::{Error, Result};
 use crate::types::{Nonce, SecretBytes};
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroize;
 
 /// Marker trait for AEAD algorithms
 pub trait AeadAlgorithm {
@@ -199,13 +198,13 @@ impl AeadCipher for ChaCha20Poly1305Cipher {
 
     fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
         let mut key = [0u8; 32];
-        rng.fill_bytes(&mut key);
+        rng.try_fill_bytes(&mut key)?;
         Ok(SecretBytes::new(key))
     }
 
     fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Nonce<12>> {
         let mut nonce = [0u8; 12];
-        rng.fill_bytes(&mut nonce);
+        rng.try_fill_bytes(&mut nonce)?;
         Ok(Nonce::<12>::new(nonce))
     }
 }

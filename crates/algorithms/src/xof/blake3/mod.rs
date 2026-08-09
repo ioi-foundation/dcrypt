@@ -70,7 +70,7 @@ use super::{Blake3Algorithm, DeriveKeyXof, ExtendableOutputFunction, KeyedXof};
 use crate::error::{validate, Error, Result};
 use crate::xof::XofAlgorithm;
 use dcrypt_common::security::{EphemeralSecret, SecretBuffer};
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -241,13 +241,23 @@ fn first_8_words(compression_output: &[u32; 16]) -> [u32; 8] {
 }
 
 // Output structure
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 struct Output {
     input_chaining_value: [u32; 8],
     block_words: [u32; 16],
     counter: u64,
     block_len: u32,
     flags: u32,
+}
+
+impl Zeroize for Output {
+    fn zeroize(&mut self) {
+        self.input_chaining_value.zeroize();
+        self.block_words.zeroize();
+        self.counter.zeroize();
+        self.block_len.zeroize();
+        self.flags.zeroize();
+    }
 }
 
 impl Output {
@@ -286,7 +296,7 @@ impl Output {
 }
 
 // Chunk state
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 struct ChunkState {
     chaining_value: [u32; 8],
     chunk_counter: u64,
@@ -294,6 +304,17 @@ struct ChunkState {
     block_len: u8,
     blocks_compressed: u8,
     flags: u32,
+}
+
+impl Zeroize for ChunkState {
+    fn zeroize(&mut self) {
+        self.chaining_value.zeroize();
+        self.chunk_counter.zeroize();
+        self.block.zeroize();
+        self.block_len.zeroize();
+        self.blocks_compressed.zeroize();
+        self.flags.zeroize();
+    }
 }
 
 impl ChunkState {
@@ -456,7 +477,7 @@ impl Drop for Blake3Xof {
     }
 }
 
-impl zeroize::ZeroizeOnDrop for Blake3Xof {}
+impl ZeroizeOnDrop for Blake3Xof {}
 
 // Manually implement Zeroize for Blake3Xof
 impl Zeroize for Blake3Xof {

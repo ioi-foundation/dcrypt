@@ -1,11 +1,15 @@
 //! BLS12-381 scalar field F_q where q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use crate::error::{Error, Result};
 use crate::hash::{sha2::Sha256, HashFunction};
 use crate::types::{ByteSerializable, ConstantTimeEq as DcryptConstantTimeEq, SecureZeroingType};
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::zeroing::Zeroize;
 
 // Arithmetic helpers
 /// Compute a + b + carry, returning (result, carry)
@@ -69,7 +73,7 @@ impl ConstantTimeEq for Scalar {
 impl PartialEq for Scalar {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        bool::from(subtle::ConstantTimeEq::ct_eq(self, other))
+        bool::from(ConstantTimeEq::ct_eq(self, other))
     }
 }
 
@@ -315,8 +319,11 @@ impl Default for Scalar {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for Scalar {}
+impl Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl ByteSerializable for Scalar {
     fn to_bytes(&self) -> Vec<u8> {
@@ -343,7 +350,7 @@ impl ByteSerializable for Scalar {
 
 impl DcryptConstantTimeEq for Scalar {
     fn ct_eq(&self, other: &Self) -> bool {
-        bool::from(subtle::ConstantTimeEq::ct_eq(self, other))
+        bool::from(ConstantTimeEq::ct_eq(self, other))
     }
 }
 
@@ -569,10 +576,10 @@ impl Scalar {
 
     /// Computes the square root of this scalar using Tonelli-Shanks.
     /// Returns `Some(s)` with `s^2 = self` if a square root exists, else `None`.
-    pub fn sqrt(&self) -> subtle::CtOption<Self> {
+    pub fn sqrt(&self) -> CtOption<Self> {
         // Trivial case: sqrt(0) = 0
         if bool::from(self.is_zero()) {
-            return subtle::CtOption::new(Scalar::zero(), subtle::Choice::from(1));
+            return CtOption::new(Scalar::zero(), Choice::from(1));
         }
 
         // Choose a fixed quadratic non-residue. For this field, 5 works.
@@ -585,8 +592,8 @@ impl Scalar {
         let mut m = S;
 
         // If t == 1, we guessed the root correctly.
-        if bool::from(subtle::ConstantTimeEq::ct_eq(&t, &Scalar::one())) {
-            return subtle::CtOption::new(x, subtle::ConstantTimeEq::ct_eq(&x.square(), self));
+        if bool::from(ConstantTimeEq::ct_eq(&t, &Scalar::one())) {
+            return CtOption::new(x, ConstantTimeEq::ct_eq(&x.square(), self));
         }
 
         // Main Tonelli-Shanks loop
@@ -594,14 +601,14 @@ impl Scalar {
             // Find smallest i in [1, m) with t^(2^i) == 1
             let mut i = 1u32;
             let mut t2i = t.square();
-            while i < m && !bool::from(subtle::ConstantTimeEq::ct_eq(&t2i, &Scalar::one())) {
+            while i < m && !bool::from(ConstantTimeEq::ct_eq(&t2i, &Scalar::one())) {
                 t2i = t2i.square();
                 i += 1;
             }
 
             // If i == m, then a is not a square root
             if i == m {
-                return subtle::CtOption::new(Scalar::zero(), subtle::Choice::from(0));
+                return CtOption::new(Scalar::zero(), Choice::from(0));
             }
 
             // b = c^{2^(m - i - 1)}
@@ -615,13 +622,13 @@ impl Scalar {
             m = i;
 
             // If t is now 1, we are done
-            if bool::from(subtle::ConstantTimeEq::ct_eq(&t, &Scalar::one())) {
+            if bool::from(ConstantTimeEq::ct_eq(&t, &Scalar::one())) {
                 break;
             }
         }
 
         // Final constant-time check to ensure correctness
-        subtle::CtOption::new(x, subtle::ConstantTimeEq::ct_eq(&x.square(), self))
+        CtOption::new(x, ConstantTimeEq::ct_eq(&x.square(), self))
     }
 
     /// Computes the multiplicative inverse of this scalar, if it is non-zero.
@@ -719,7 +726,7 @@ impl Scalar {
         square_assign_multi(&mut t0, 5);
         t0 *= &t1;
 
-        CtOption::new(t0, !subtle::ConstantTimeEq::ct_eq(self, &Self::zero()))
+        CtOption::new(t0, !ConstantTimeEq::ct_eq(self, &Self::zero()))
     }
 
     #[inline(always)]
@@ -1169,10 +1176,9 @@ fn test_scalar_hash_to_field() {
     assert_ne!(expanded1, expanded2);
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
     let mut a = Scalar::from_raw([
         0x1fff_3231_233f_fffd,
@@ -1181,9 +1187,7 @@ fn test_zeroize() {
         0x1824_b159_acc5_0562,
     ]);
     a.zeroize();
-    // Fixed: disambiguate ct_eq
-    assert!(bool::from(subtle::ConstantTimeEq::ct_eq(
-        &a,
-        &Scalar::zero()
-    )));
+    assert!(bool::from(
+        dcrypt_internal::constant_time::ConstantTimeEq::ct_eq(&a, &Scalar::zero())
+    ));
 }

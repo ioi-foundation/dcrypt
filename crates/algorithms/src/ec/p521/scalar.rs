@@ -4,15 +4,29 @@ use crate::ec::p521::constants::{p521_bytes_to_limbs, p521_limbs_to_bytes, P521_
 use crate::ec::p521::field::FieldElement;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 use dcrypt_params::traditional::ecdsa::NIST_P521;
-use subtle::{Choice, ConditionallySelectable};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// P-521 scalar value for use in elliptic curve operations.
 /// Represents integers modulo the curve order n. Used for private keys
 /// and scalar multiplication. Automatically zeroized on drop for security.
-#[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
+#[derive(Clone, Debug)]
 pub struct Scalar(SecretBuffer<P521_SCALAR_SIZE>);
+
+impl Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl Drop for Scalar {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
     /// Create a scalar from raw bytes with modular reduction.
@@ -22,6 +36,17 @@ impl Scalar {
     pub fn new(mut data: [u8; P521_SCALAR_SIZE]) -> Result<Self> {
         Self::reduce_scalar_bytes(&mut data)?;
         Ok(Scalar(SecretBuffer::new(data)))
+    }
+
+    /// Interpret a 528-bit encoding modulo the group order, including zero.
+    ///
+    /// P-521 scalars use a 66-byte encoding. This constructor is intended for
+    /// standards-defined mathematical intermediates such as ECDSA hash and
+    /// x-coordinate reduction. Use [`Self::new`] for private scalars, nonces,
+    /// and serialized signature components, where zero is invalid.
+    pub fn from_bytes_reduced(mut data: [u8; P521_SCALAR_SIZE]) -> Self {
+        Self::reduce_scalar_bytes_allow_zero(&mut data);
+        Self::from_bytes_unchecked(data)
     }
 
     /// Internal constructor that allows zero values.
@@ -235,12 +260,18 @@ impl Scalar {
     ///
     /// Constant-time "a ≥ b" test on 66-byte big-endian values
     fn reduce_scalar_bytes(bytes: &mut [u8; P521_SCALAR_SIZE]) -> Result<()> {
-        let order = &NIST_P521.n;
+        Self::reduce_scalar_bytes_allow_zero(bytes);
 
-        // reject zero
         if bytes.iter().all(|&b| b == 0) {
             return Err(Error::param("P-521 Scalar", "Scalar cannot be zero"));
         }
+
+        Ok(())
+    }
+
+    /// Reduce an arbitrary 528-bit encoding modulo the group order.
+    fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P521_SCALAR_SIZE]) {
+        let order = &NIST_P521.n;
 
         let mut reduced = *bytes;
         for _ in 0..128 {
@@ -264,7 +295,6 @@ impl Scalar {
         }
 
         *bytes = reduced;
-        Ok(())
     }
 
     /// n (group order) in 17 little-endian 32-bit limbs

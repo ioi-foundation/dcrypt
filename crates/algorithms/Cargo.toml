@@ -15,12 +15,7 @@ default = ["std", "xof", "ec"]
 # Standard library support - enables all features
 std = [
     "alloc",
-    "byteorder/std",
-    "subtle/std",
     "hex/std",
-    "rand/std",
-    "getrandom/std",
-    "serde_json",
     # Forward std to dependencies
     "dcrypt-api/std",
     "dcrypt-common/std",
@@ -33,6 +28,7 @@ std = [
 alloc = [
     "dcrypt-api/alloc",
     "dcrypt-common/alloc",
+    "dcrypt-internal/alloc",
 ]
 
 # Algorithm feature groups
@@ -43,17 +39,9 @@ block = []
 kdf = ["alloc"]
 mac = []
 stream = []
-ec = ["alloc", "groups", "pairings", "zeroize"]
+ec = ["alloc", "groups", "pairings"]
 groups = []
 pairings = ["groups"]
-experimental = []
-
-# Optional features
-serde_json = ["dep:serde_json", "dep:serde"]
-zeroize = ["dep:zeroize"]
-
-# Debug feature for pairing troubleshooting
-pairing-debug = []
 
 [dependencies]
 # Internal dependencies
@@ -62,35 +50,14 @@ dcrypt-common = { path = "../common", version = "=2.0.0", default-features = fal
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
 dcrypt-params = { path = "../params", version = "=2.0.0" }
 
-# Core cryptographic dependencies
-zeroize = { version = "1.5.7", features = ["zeroize_derive"], optional = true }
-subtle = { version = "2.6.1", default-features = false }
-byteorder = { version = "1.4.3", default-features = false }
-
 # Encoding/serialization
-hex = { version = "0.4.3", default-features = false }
-base64 = { version = "0.22.1", default-features = false, features = ["alloc"] }
-faster-hex = { version = "0.6.1", optional = true }
-serde = { version = "1.0.189", features = ["derive"], optional = true }
-serde_json = { version = "1.0.107", optional = true }
-
-# Random number generation
-rand = { version = "0.8.6", default-features = false }
-rand_core = { version = "0.6.4", default-features = false }
-getrandom = { version = "0.2.15", default-features = false, optional = true, features = ["custom"] }
-
-# Platform-specific dependencies
-portable-atomic = { version = "1.6", default-features = false }
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rand_chacha = { version = "0.3.1", default-features = false }
+hex = { version = "=0.4.3", default-features = false, features = ["alloc"] }
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-serde = { version = "1.0.189", features = ["derive"] }
-serde_json = "1.0.107"
-rand = { version = "0.8.6", features = ["std", "std_rng"] }
-rand_chacha = "0.3.1"
+criterion = { version = "=0.5.1", features = ["html_reports"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
 
 [[bench]]
 name = "aes"

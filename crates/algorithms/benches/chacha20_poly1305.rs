@@ -8,17 +8,16 @@ use dcrypt_algorithms::aead::chacha20poly1305::{
     ChaCha20Poly1305, CHACHA20POLY1305_KEY_SIZE, CHACHA20POLY1305_NONCE_SIZE,
 };
 use dcrypt_algorithms::types::Nonce;
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha8Rng;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 
 /// Benchmark ChaCha20-Poly1305 setup (key schedule initialization)
 fn bench_chacha20poly1305_setup(c: &mut Criterion) {
     let mut group = c.benchmark_group("chacha20poly1305_setup");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     group.bench_function("new", |b| {
         let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-        rng.fill(&mut key);
+        rng.fill_bytes(&mut key);
 
         b.iter(|| {
             let cipher = ChaCha20Poly1305::new(black_box(&key));
@@ -32,14 +31,14 @@ fn bench_chacha20poly1305_setup(c: &mut Criterion) {
 /// Benchmark ChaCha20-Poly1305 encryption with various message sizes
 fn bench_chacha20poly1305_encrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("chacha20poly1305_encrypt");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // Test different message sizes
     let sizes = [64, 256, 1024, 4096, 16384, 65536];
 
     // Setup key and cipher
     let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-    rng.fill(&mut key);
+    rng.fill_bytes(&mut key);
     let cipher = ChaCha20Poly1305::new(&key);
 
     for size in &sizes {
@@ -47,10 +46,10 @@ fn bench_chacha20poly1305_encrypt(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             let mut plaintext = vec![0u8; size];
-            rng.fill(&mut plaintext[..]);
+            rng.fill_bytes(&mut plaintext[..]);
 
             let mut nonce_bytes = [0u8; CHACHA20POLY1305_NONCE_SIZE];
-            rng.fill(&mut nonce_bytes);
+            rng.fill_bytes(&mut nonce_bytes);
             let nonce = Nonce::new(nonce_bytes);
 
             b.iter(|| {
@@ -68,14 +67,14 @@ fn bench_chacha20poly1305_encrypt(c: &mut Criterion) {
 /// Benchmark ChaCha20-Poly1305 decryption with various message sizes
 fn bench_chacha20poly1305_decrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("chacha20poly1305_decrypt");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // Test different message sizes
     let sizes = [64, 256, 1024, 4096, 16384, 65536];
 
     // Setup key and cipher
     let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-    rng.fill(&mut key);
+    rng.fill_bytes(&mut key);
     let cipher = ChaCha20Poly1305::new(&key);
 
     for size in &sizes {
@@ -83,10 +82,10 @@ fn bench_chacha20poly1305_decrypt(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             let mut plaintext = vec![0u8; size];
-            rng.fill(&mut plaintext[..]);
+            rng.fill_bytes(&mut plaintext[..]);
 
             let mut nonce_bytes = [0u8; CHACHA20POLY1305_NONCE_SIZE];
-            rng.fill(&mut nonce_bytes);
+            rng.fill_bytes(&mut nonce_bytes);
             let nonce = Nonce::new(nonce_bytes);
 
             // Pre-encrypt the data
@@ -107,7 +106,7 @@ fn bench_chacha20poly1305_decrypt(c: &mut Criterion) {
 /// Benchmark ChaCha20-Poly1305 with Additional Authenticated Data (AAD)
 fn bench_chacha20poly1305_with_aad(c: &mut Criterion) {
     let mut group = c.benchmark_group("chacha20poly1305_with_aad");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // Fixed message size, varying AAD size
     let message_size = 4096;
@@ -115,7 +114,7 @@ fn bench_chacha20poly1305_with_aad(c: &mut Criterion) {
 
     // Setup key and cipher
     let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-    rng.fill(&mut key);
+    rng.fill_bytes(&mut key);
     let cipher = ChaCha20Poly1305::new(&key);
 
     for aad_size in &aad_sizes {
@@ -127,12 +126,12 @@ fn bench_chacha20poly1305_with_aad(c: &mut Criterion) {
             aad_size,
             |b, &aad_size| {
                 let mut plaintext = vec![0u8; message_size];
-                rng.fill(&mut plaintext[..]);
+                rng.fill_bytes(&mut plaintext[..]);
                 let mut aad = vec![0u8; aad_size];
-                rng.fill(&mut aad[..]);
+                rng.fill_bytes(&mut aad[..]);
 
                 let mut nonce_bytes = [0u8; CHACHA20POLY1305_NONCE_SIZE];
-                rng.fill(&mut nonce_bytes);
+                rng.fill_bytes(&mut nonce_bytes);
                 let nonce = Nonce::new(nonce_bytes);
 
                 b.iter(|| {
@@ -155,14 +154,14 @@ fn bench_chacha20poly1305_with_aad(c: &mut Criterion) {
 /// Benchmark small message sizes (common in protocols)
 fn bench_chacha20poly1305_small_messages(c: &mut Criterion) {
     let mut group = c.benchmark_group("chacha20poly1305_small_messages");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // Small message sizes common in protocols
     let sizes = [16, 32, 64, 128, 256];
 
     // Setup key and cipher
     let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-    rng.fill(&mut key);
+    rng.fill_bytes(&mut key);
     let cipher = ChaCha20Poly1305::new(&key);
 
     for size in &sizes {
@@ -170,10 +169,10 @@ fn bench_chacha20poly1305_small_messages(c: &mut Criterion) {
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
             let mut plaintext = vec![0u8; size];
-            rng.fill(&mut plaintext[..]);
+            rng.fill_bytes(&mut plaintext[..]);
 
             let mut nonce_bytes = [0u8; CHACHA20POLY1305_NONCE_SIZE];
-            rng.fill(&mut nonce_bytes);
+            rng.fill_bytes(&mut nonce_bytes);
             let nonce = Nonce::new(nonce_bytes);
 
             b.iter(|| {
@@ -191,15 +190,15 @@ fn bench_chacha20poly1305_small_messages(c: &mut Criterion) {
 /// Benchmark nonce generation and usage patterns
 fn bench_chacha20poly1305_nonce_patterns(c: &mut Criterion) {
     let mut group = c.benchmark_group("chacha20poly1305_nonce_patterns");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     let message_size = 1024;
     let mut plaintext = vec![0u8; message_size];
-    rng.fill(&mut plaintext[..]);
+    rng.fill_bytes(&mut plaintext[..]);
 
     // Setup key and cipher
     let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-    rng.fill(&mut key);
+    rng.fill_bytes(&mut key);
     let cipher = ChaCha20Poly1305::new(&key);
 
     group.throughput(Throughput::Bytes(message_size as u64));
@@ -208,7 +207,7 @@ fn bench_chacha20poly1305_nonce_patterns(c: &mut Criterion) {
     group.bench_function("random_nonce", |b| {
         b.iter(|| {
             let mut nonce_bytes = [0u8; CHACHA20POLY1305_NONCE_SIZE];
-            rng.fill(&mut nonce_bytes);
+            rng.fill_bytes(&mut nonce_bytes);
             let nonce = Nonce::new(nonce_bytes);
 
             let ciphertext = cipher
@@ -241,7 +240,7 @@ fn bench_chacha20poly1305_nonce_patterns(c: &mut Criterion) {
 /// Benchmark parallel encryption (simulating concurrent operations)
 fn bench_chacha20poly1305_parallel(c: &mut Criterion) {
     let mut group = c.benchmark_group("chacha20poly1305_parallel");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // Process 8 messages in parallel
     let message_count = 8;
@@ -250,7 +249,7 @@ fn bench_chacha20poly1305_parallel(c: &mut Criterion) {
 
     // Setup key and cipher
     let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-    rng.fill(&mut key);
+    rng.fill_bytes(&mut key);
     let cipher = ChaCha20Poly1305::new(&key);
 
     group.bench_function("8_messages", |b| {
@@ -259,8 +258,8 @@ fn bench_chacha20poly1305_parallel(c: &mut Criterion) {
         let mut nonces = vec![[0u8; CHACHA20POLY1305_NONCE_SIZE]; message_count];
 
         for i in 0..message_count {
-            rng.fill(&mut messages[i]);
-            rng.fill(&mut nonces[i]);
+            rng.fill_bytes(&mut messages[i]);
+            rng.fill_bytes(&mut nonces[i]);
         }
 
         b.iter(|| {

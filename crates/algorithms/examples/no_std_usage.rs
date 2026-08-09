@@ -24,14 +24,13 @@ use dcrypt_algorithms::hash::HashFunction; // Import the trait for new, update, 
 use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_algorithms::types::{Digest, Nonce, SecretBytes};
 
-// Randomness (requires a no_std compatible RNG or specific target features)
-#[cfg(feature = "std")]
-use rand::rngs::OsRng;
-#[cfg(feature = "std")]
-use rand::RngCore;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 
 fn main() -> CoreResult<()> {
     println!("dcrypt no_std usage example (with alloc):");
+    // A real application supplies an unpredictable seed from its platform.
+    // The algorithms crate never obtains entropy implicitly.
+    let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
 
     // --- Hashing with SHA-256 ---
     println!("\n--- SHA-256 Hashing ---");
@@ -56,7 +55,7 @@ fn main() -> CoreResult<()> {
     {
         println!("\n--- HMAC-SHA256 MAC ---");
         let mut key_bytes = [0u8; 32];
-        OsRng.fill_bytes(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let mac_key = SecretBytes::<32>::new(key_bytes);
 
         let message_to_mac = b"Authenticated message";
@@ -77,12 +76,12 @@ fn main() -> CoreResult<()> {
     {
         println!("\n--- ChaCha20Poly1305 AEAD ---");
         let mut aead_key_bytes = [0u8; 32];
-        OsRng.fill_bytes(&mut aead_key_bytes);
+        rng.fill_bytes(&mut aead_key_bytes);
 
         let aead_cipher = ChaCha20Poly1305::new(&aead_key_bytes);
 
         let mut aead_nonce_bytes = [0u8; 12];
-        OsRng.fill_bytes(&mut aead_nonce_bytes);
+        rng.fill_bytes(&mut aead_nonce_bytes);
         let aead_nonce = Nonce::<12>::new(aead_nonce_bytes);
 
         let plaintext = b"Secret payload";

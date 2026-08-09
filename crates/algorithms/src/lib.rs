@@ -19,7 +19,17 @@
 #![deny(missing_docs)]
 
 #[cfg(feature = "alloc")]
+#[macro_use]
 extern crate alloc;
+
+#[cfg(feature = "alloc")]
+mod alloc_prelude {
+    pub(crate) use alloc::{
+        boxed::Box,
+        string::{String, ToString},
+        vec::Vec,
+    };
+}
 
 // Error module and re-exports
 pub mod error;
@@ -121,15 +131,6 @@ pub use poly::{
     params::{DilithiumParams, Kyber256Params, Modulus, NttModulus},
     polynomial::Polynomial,
     prelude,
-    sampling::{CbdSampler, DefaultSamplers, GaussianSampler, UniformSampler},
+    sampling::{CbdSampler, DefaultSamplers, UniformSampler},
     serialize::{CoefficientPacker, CoefficientUnpacker, DefaultCoefficientSerde},
 };
-
-#[cfg(feature = "alloc")]
-pub mod lattice; // Re-exports poly
-
-// Stubs for future PQC math engines
-#[cfg(feature = "alloc")]
-pub mod code;
-#[cfg(feature = "alloc")]
-pub mod mq;

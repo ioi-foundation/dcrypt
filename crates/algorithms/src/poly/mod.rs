@@ -4,8 +4,6 @@
 //! This module provides foundational elements for polynomial arithmetic over rings,
 //! designed to be reusable by various lattice-based cryptographic schemes.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
@@ -24,7 +22,7 @@ pub mod prelude {
     pub use super::ntt::{montgomery_reduce, InverseNttOperator, NttOperator};
     pub use super::params::{Modulus, NttModulus};
     pub use super::polynomial::{Polynomial, PolynomialNttExt};
-    pub use super::sampling::{CbdSampler, GaussianSampler, UniformSampler};
+    pub use super::sampling::{CbdSampler, UniformSampler};
     pub use super::serialize::{CoefficientPacker, CoefficientUnpacker};
 }
 

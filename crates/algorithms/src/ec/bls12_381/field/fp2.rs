@@ -6,8 +6,9 @@
 
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::random::{CryptoRng, Error as RandomError};
+use dcrypt_internal::zeroing::Zeroize;
 
 use super::fp::Fp;
 
@@ -40,8 +41,12 @@ impl Default for Fp2 {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for Fp2 {}
+impl Zeroize for Fp2 {
+    fn zeroize(&mut self) {
+        self.c0.zeroize();
+        self.c1.zeroize();
+    }
+}
 
 impl From<Fp> for Fp2 {
     fn from(f: Fp) -> Fp2 {
@@ -190,11 +195,11 @@ impl Fp2 {
     }
 
     /// Generate random element
-    pub(crate) fn random(mut rng: impl RngCore) -> Fp2 {
-        Fp2 {
-            c0: Fp::random(&mut rng),
-            c1: Fp::random(&mut rng),
-        }
+    pub(crate) fn random(mut rng: impl CryptoRng) -> Result<Fp2, RandomError> {
+        Ok(Fp2 {
+            c0: Fp::random(&mut rng)?,
+            c1: Fp::random(&mut rng)?,
+        })
     }
 
     /// Frobenius endomorphism (raising to power p)
@@ -332,21 +337,6 @@ impl Fp2 {
 
     /// Variable-time exponentiation
     pub fn pow_vartime(&self, by: &[u64; 6]) -> Self {
-        let mut res = Self::one();
-        for e in by.iter().rev() {
-            for i in (0..64).rev() {
-                res = res.square();
-                if ((*e >> i) & 1) == 1 {
-                    res *= self;
-                }
-            }
-        }
-        res
-    }
-
-    /// Extended variable-time exponentiation for testing
-    #[cfg(all(test, feature = "experimental"))]
-    pub(crate) fn pow_vartime_extended(&self, by: &[u64]) -> Self {
         let mut res = Self::one();
         for e in by.iter().rev() {
             for i in (0..64).rev() {
@@ -1090,10 +1080,9 @@ fn test_lexicographic_largest() {
     ));
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
     let mut a = Fp2::one();
     a.zeroize();

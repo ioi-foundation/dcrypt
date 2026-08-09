@@ -8,15 +8,15 @@
 //! - **BLAKE2b** – 64‑bit optimized, digest up to 64 bytes.
 //! - **BLAKE2s** – 32‑bit optimized, digest up to 32 bytes.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
 
 #[cfg(not(feature = "std"))]
 use core::{cmp::min, convert::TryInto};
 #[cfg(feature = "std")]
-use std::{cmp::min, convert::TryInto};
+use core::{cmp::min, convert::TryInto};
 
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{validate, Error, Result};
 use crate::hash::{HashAlgorithm, HashFunction};
@@ -74,7 +74,7 @@ impl HashAlgorithm for Blake2bAlgorithm {
 // State structure
 // ─────────────────────────────────────────────────────────────────────────────
 #[allow(missing_docs)]
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Blake2b {
     pub(crate) h: [u64; 8],
     pub(crate) t: [u64; 2],
@@ -84,6 +84,18 @@ pub struct Blake2b {
     pub(crate) out_len: usize,
     pub(crate) key: Option<SecretBuffer<BLAKE2B_KEY_SIZE>>, // present only in keyed mode
     pub(crate) is_keyed: bool,
+}
+impl Zeroize for Blake2b {
+    fn zeroize(&mut self) {
+        self.h.zeroize();
+        self.t.zeroize();
+        self.f.zeroize();
+        self.buf.zeroize();
+        self.buf_len.zeroize();
+        self.out_len.zeroize();
+        self.key.zeroize();
+        self.is_keyed.zeroize();
+    }
 }
 impl Drop for Blake2b {
     fn drop(&mut self) {
@@ -354,7 +366,7 @@ impl HashAlgorithm for Blake2sAlgorithm {
 }
 
 /// BLAKE2s state
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Blake2s {
     h: [u32; 8],
     t: [u32; 2],
@@ -364,6 +376,19 @@ pub struct Blake2s {
     out_len: usize,
     key: Option<SecretBuffer<BLAKE2S_KEY_SIZE>>, // Optional key for keyed mode
     is_keyed: bool,
+}
+
+impl Zeroize for Blake2s {
+    fn zeroize(&mut self) {
+        self.h.zeroize();
+        self.t.zeroize();
+        self.f.zeroize();
+        self.buf.zeroize();
+        self.buf_len.zeroize();
+        self.out_len.zeroize();
+        self.key.zeroize();
+        self.is_keyed.zeroize();
+    }
 }
 
 // Manually implement zeroize on drop for additional security

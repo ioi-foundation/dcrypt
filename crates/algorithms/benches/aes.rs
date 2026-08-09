@@ -7,18 +7,17 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use dcrypt_algorithms::block::{Aes128, Aes192, Aes256, BlockCipher};
 use dcrypt_algorithms::types::SecretBytes;
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha8Rng;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 
 /// Benchmark AES key expansion
 fn bench_key_expansion(c: &mut Criterion) {
     let mut group = c.benchmark_group("aes_key_expansion");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // AES-128 key expansion
     group.bench_function("aes128", |b| {
         let mut key_bytes = [0u8; 16];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
 
         b.iter(|| {
@@ -30,7 +29,7 @@ fn bench_key_expansion(c: &mut Criterion) {
     // AES-192 key expansion
     group.bench_function("aes192", |b| {
         let mut key_bytes = [0u8; 24];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
 
         b.iter(|| {
@@ -42,7 +41,7 @@ fn bench_key_expansion(c: &mut Criterion) {
     // AES-256 key expansion
     group.bench_function("aes256", |b| {
         let mut key_bytes = [0u8; 32];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
 
         b.iter(|| {
@@ -59,18 +58,18 @@ fn bench_block_encrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("aes_block_encrypt");
     group.throughput(Throughput::Bytes(16)); // AES block size
 
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // AES-128
     {
         let mut key_bytes = [0u8; 16];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes128::new(&key);
 
         group.bench_function("aes128", |b| {
             let mut block = [0u8; 16];
-            rng.fill(&mut block);
+            rng.fill_bytes(&mut block);
 
             b.iter(|| {
                 let mut data = block;
@@ -83,13 +82,13 @@ fn bench_block_encrypt(c: &mut Criterion) {
     // AES-192
     {
         let mut key_bytes = [0u8; 24];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes192::new(&key);
 
         group.bench_function("aes192", |b| {
             let mut block = [0u8; 16];
-            rng.fill(&mut block);
+            rng.fill_bytes(&mut block);
 
             b.iter(|| {
                 let mut data = block;
@@ -102,13 +101,13 @@ fn bench_block_encrypt(c: &mut Criterion) {
     // AES-256
     {
         let mut key_bytes = [0u8; 32];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes256::new(&key);
 
         group.bench_function("aes256", |b| {
             let mut block = [0u8; 16];
-            rng.fill(&mut block);
+            rng.fill_bytes(&mut block);
 
             b.iter(|| {
                 let mut data = block;
@@ -126,18 +125,18 @@ fn bench_block_decrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("aes_block_decrypt");
     group.throughput(Throughput::Bytes(16)); // AES block size
 
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // AES-128
     {
         let mut key_bytes = [0u8; 16];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes128::new(&key);
 
         group.bench_function("aes128", |b| {
             let mut block = [0u8; 16];
-            rng.fill(&mut block);
+            rng.fill_bytes(&mut block);
             cipher.encrypt_block(&mut block).unwrap(); // Pre-encrypt
 
             b.iter(|| {
@@ -151,13 +150,13 @@ fn bench_block_decrypt(c: &mut Criterion) {
     // AES-192
     {
         let mut key_bytes = [0u8; 24];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes192::new(&key);
 
         group.bench_function("aes192", |b| {
             let mut block = [0u8; 16];
-            rng.fill(&mut block);
+            rng.fill_bytes(&mut block);
             cipher.encrypt_block(&mut block).unwrap(); // Pre-encrypt
 
             b.iter(|| {
@@ -171,13 +170,13 @@ fn bench_block_decrypt(c: &mut Criterion) {
     // AES-256
     {
         let mut key_bytes = [0u8; 32];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes256::new(&key);
 
         group.bench_function("aes256", |b| {
             let mut block = [0u8; 16];
-            rng.fill(&mut block);
+            rng.fill_bytes(&mut block);
             cipher.encrypt_block(&mut block).unwrap(); // Pre-encrypt
 
             b.iter(|| {
@@ -194,7 +193,7 @@ fn bench_block_decrypt(c: &mut Criterion) {
 /// Benchmark multi-block encryption (ECB mode simulation)
 fn bench_multi_block_encrypt(c: &mut Criterion) {
     let mut group = c.benchmark_group("aes_multi_block_encrypt");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // Test different message sizes
     let sizes = [64, 256, 1024, 4096, 16384];
@@ -205,13 +204,13 @@ fn bench_multi_block_encrypt(c: &mut Criterion) {
         // AES-128
         {
             let mut key_bytes = [0u8; 16];
-            rng.fill(&mut key_bytes);
+            rng.fill_bytes(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes128::new(&key);
 
             group.bench_with_input(BenchmarkId::new("aes128", size), size, |b, &size| {
                 let mut data = vec![0u8; size];
-                rng.fill(&mut data[..]);
+                rng.fill_bytes(&mut data[..]);
 
                 b.iter(|| {
                     let mut work_data = data.clone();
@@ -226,13 +225,13 @@ fn bench_multi_block_encrypt(c: &mut Criterion) {
         // AES-256
         {
             let mut key_bytes = [0u8; 32];
-            rng.fill(&mut key_bytes);
+            rng.fill_bytes(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes256::new(&key);
 
             group.bench_with_input(BenchmarkId::new("aes256", size), size, |b, &size| {
                 let mut data = vec![0u8; size];
-                rng.fill(&mut data[..]);
+                rng.fill_bytes(&mut data[..]);
 
                 b.iter(|| {
                     let mut work_data = data.clone();
@@ -251,7 +250,7 @@ fn bench_multi_block_encrypt(c: &mut Criterion) {
 /// Benchmark parallel block operations (simulating parallel modes)
 fn bench_parallel_blocks(c: &mut Criterion) {
     let mut group = c.benchmark_group("aes_parallel_blocks");
-    let mut rng = ChaCha8Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
     // Process 8 blocks in parallel (common for AES-NI implementations)
     let block_count = 8;
@@ -260,14 +259,14 @@ fn bench_parallel_blocks(c: &mut Criterion) {
     // AES-128
     {
         let mut key_bytes = [0u8; 16];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes128::new(&key);
 
         group.bench_function("aes128_8_blocks", |b| {
             let mut blocks = [[0u8; 16]; 8];
             for block in &mut blocks {
-                rng.fill(block);
+                rng.fill_bytes(block);
             }
 
             b.iter(|| {
@@ -283,14 +282,14 @@ fn bench_parallel_blocks(c: &mut Criterion) {
     // AES-256
     {
         let mut key_bytes = [0u8; 32];
-        rng.fill(&mut key_bytes);
+        rng.fill_bytes(&mut key_bytes);
         let key = SecretBytes::new(key_bytes);
         let cipher = Aes256::new(&key);
 
         group.bench_function("aes256_8_blocks", |b| {
             let mut blocks = [[0u8; 16]; 8];
             for block in &mut blocks {
-                rng.fill(block);
+                rng.fill_bytes(block);
             }
 
             b.iter(|| {

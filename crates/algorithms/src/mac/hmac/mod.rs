@@ -4,16 +4,19 @@
 //! • Key-derived padding and hash state are zeroized on drop
 //! • Tag bytes are compared in constant time after an exact-length check
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use crate::error::{Error, Result};
 use crate::hash::HashFunction;
 use dcrypt_common::security::{SecretBuffer, SecureZeroingType};
-use subtle::ConstantTimeEq;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 const MAX_BLOCK: usize = 144; // SHA3-224 block size (largest among SHA-2 and SHA-3)
 
 /// HMAC implementation with constant-time tag-byte comparison.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Hmac<H: HashFunction + Clone + Zeroize> {
     // The inner hash has absorbed the key-derived ipad and is secret state.
     hash: H,
@@ -22,6 +25,24 @@ pub struct Hmac<H: HashFunction + Clone + Zeroize> {
     block_size: usize,
     is_finalized: bool,
 }
+
+impl<H: HashFunction + Clone + Zeroize> Zeroize for Hmac<H> {
+    fn zeroize(&mut self) {
+        self.hash.zeroize();
+        self.ipad.zeroize();
+        self.opad.zeroize();
+        self.block_size.zeroize();
+        self.is_finalized.zeroize();
+    }
+}
+
+impl<H: HashFunction + Clone + Zeroize> Drop for Hmac<H> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<H: HashFunction + Clone + Zeroize> ZeroizeOnDrop for Hmac<H> {}
 
 impl<H> Hmac<H>
 where

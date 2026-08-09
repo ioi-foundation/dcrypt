@@ -35,8 +35,8 @@ use crate::error::{Error, Result};
 use crate::hash::sha2::Sha256;
 use crate::kdf::hkdf::Hkdf;
 use crate::kdf::KeyDerivationFunction as KdfTrait;
+use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_params::traditional::ecdsa::NIST_P224;
-use rand::{CryptoRng, RngCore};
 
 /// Get the standard base point G of the P-224 curve
 ///
@@ -68,7 +68,7 @@ pub fn generate_keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Scalar, 
 
     // Use rejection sampling for uniform distribution
     loop {
-        rng.fill_bytes(&mut scalar_bytes);
+        rng.try_fill_bytes(&mut scalar_bytes)?;
 
         // Attempt to create a valid scalar (non-zero, < n)
         match Scalar::new(scalar_bytes) {

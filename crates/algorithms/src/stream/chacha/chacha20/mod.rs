@@ -5,9 +5,8 @@
 use crate::error::{Error, Result};
 use crate::types::nonce::ChaCha20Compatible;
 use crate::types::Nonce;
-use byteorder::{ByteOrder, LittleEndian};
 use dcrypt_common::security::{EphemeralSecret, SecretBuffer};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 /// Size of ChaCha20 key in bytes
 pub const CHACHA20_KEY_SIZE: usize = 32;
@@ -17,7 +16,7 @@ pub const CHACHA20_NONCE_SIZE: usize = 12;
 pub const CHACHA20_BLOCK_SIZE: usize = 64;
 
 /// ChaCha20 stream cipher
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct ChaCha20 {
     /// The key schedule
     state: [u32; 16],
@@ -30,6 +29,24 @@ pub struct ChaCha20 {
     /// Set after counter `u32::MAX` has been consumed.
     exhausted: bool,
 }
+
+impl Zeroize for ChaCha20 {
+    fn zeroize(&mut self) {
+        self.state.zeroize();
+        self.buffer.zeroize();
+        self.position.zeroize();
+        self.counter.zeroize();
+        self.exhausted.zeroize();
+    }
+}
+
+impl Drop for ChaCha20 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for ChaCha20 {}
 
 impl ChaCha20 {
     /// Creates a new ChaCha20 instance with the specified key and nonce
@@ -77,7 +94,8 @@ impl ChaCha20 {
         // Key (8 words) - use secure key access
         let key_bytes = key.as_ref();
         for i in 0..8 {
-            state[4 + i] = LittleEndian::read_u32(&key_bytes[i * 4..]);
+            state[4 + i] =
+                u32::from_le_bytes(key_bytes[i * 4..i * 4 + 4].try_into().expect("four bytes"));
         }
 
         // Counter (1 word)
@@ -85,9 +103,9 @@ impl ChaCha20 {
 
         // Nonce (3 words)
         let nonce_bytes = nonce.as_ref();
-        state[13] = LittleEndian::read_u32(&nonce_bytes[0..4]);
-        state[14] = LittleEndian::read_u32(&nonce_bytes[4..8]);
-        state[15] = LittleEndian::read_u32(&nonce_bytes[8..12]);
+        state[13] = u32::from_le_bytes(nonce_bytes[0..4].try_into().expect("four bytes"));
+        state[14] = u32::from_le_bytes(nonce_bytes[4..8].try_into().expect("four bytes"));
+        state[15] = u32::from_le_bytes(nonce_bytes[8..12].try_into().expect("four bytes"));
 
         let instance = Self {
             state,
@@ -160,7 +178,7 @@ impl ChaCha20 {
 
         // Convert to bytes (little-endian)
         for i in 0..16 {
-            LittleEndian::write_u32(&mut self.buffer[i * 4..], output_state[i]);
+            self.buffer[i * 4..i * 4 + 4].copy_from_slice(&output_state[i].to_le_bytes());
         }
         working_state.zeroize();
 
@@ -280,10 +298,10 @@ pub(crate) fn hchacha20(
     state[2] = 0x7962_2d32;
     state[3] = 0x6b20_6574;
     for i in 0..8 {
-        state[4 + i] = LittleEndian::read_u32(&key[i * 4..i * 4 + 4]);
+        state[4 + i] = u32::from_le_bytes(key[i * 4..i * 4 + 4].try_into().expect("four bytes"));
     }
     for i in 0..4 {
-        state[12 + i] = LittleEndian::read_u32(&nonce[i * 4..i * 4 + 4]);
+        state[12 + i] = u32::from_le_bytes(nonce[i * 4..i * 4 + 4].try_into().expect("four bytes"));
     }
 
     for _ in 0..10 {
@@ -302,7 +320,7 @@ pub(crate) fn hchacha20(
     ];
     let mut out = [0u8; CHACHA20_KEY_SIZE];
     for (chunk, word) in out.chunks_exact_mut(4).zip(words.iter().copied()) {
-        LittleEndian::write_u32(chunk, word);
+        chunk.copy_from_slice(&word.to_le_bytes());
     }
     words.zeroize();
     state.zeroize();

@@ -3,8 +3,6 @@
 //! This module contains implementations of Extendable Output Functions (XOFs)
 //! which can produce outputs of arbitrary length.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 

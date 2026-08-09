@@ -3,7 +3,6 @@ use crate::block::aes::{Aes128, Aes192, Aes256};
 use crate::block::CipherAlgorithm;
 use crate::types::Nonce;
 use crate::types::SecretBytes;
-use byteorder::BigEndian;
 use hex;
 use std::path::{Path, PathBuf};
 
@@ -581,9 +580,9 @@ fn test_aes_ctr() {
             }
 
             // Increment counter (big-endian, rightmost 4 bytes)
-            let mut ctr_value = BigEndian::read_u32(&counter[12..16]);
+            let mut ctr_value = u32::from_be_bytes(counter[12..16].try_into().unwrap());
             ctr_value = ctr_value.wrapping_add(1);
-            BigEndian::write_u32(&mut counter[12..16], ctr_value);
+            counter[12..16].copy_from_slice(&ctr_value.to_be_bytes());
 
             bytes_processed += to_process;
         }

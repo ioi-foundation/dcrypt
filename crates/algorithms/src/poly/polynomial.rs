@@ -1,7 +1,5 @@
 //! polynomial.rs - Enhanced implementation with arithmetic operations
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
@@ -12,7 +10,7 @@ use super::params::{Modulus, NttModulus}; // FIXED: Import NttModulus from param
 use crate::error::{Error, Result};
 use core::marker::PhantomData;
 use core::ops::{Add, Neg, Sub};
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
 /// Convert a value from standard domain to Montgomery domain
 #[inline(always)]

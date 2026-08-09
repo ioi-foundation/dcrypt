@@ -10,10 +10,10 @@ use super::fp2::*;
 
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::zeroing::Zeroize;
 
-#[cfg(feature = "pairings")]
-use rand_core::RngCore;
+use dcrypt_internal::random::{CryptoRng, Error as RandomError};
 
 // ============================================================================
 // Type Definition
@@ -72,8 +72,13 @@ impl Default for Fp6 {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for Fp6 {}
+impl Zeroize for Fp6 {
+    fn zeroize(&mut self) {
+        self.c0.zeroize();
+        self.c1.zeroize();
+        self.c2.zeroize();
+    }
+}
 
 impl fmt::Debug for Fp6 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -306,13 +311,12 @@ impl Fp6 {
     }
 
     /// Generate random element
-    #[cfg(feature = "pairings")]
-    pub(crate) fn random(mut rng: impl RngCore) -> Self {
-        Fp6 {
-            c0: Fp2::random(&mut rng),
-            c1: Fp2::random(&mut rng),
-            c2: Fp2::random(&mut rng),
-        }
+    pub(crate) fn random(mut rng: impl CryptoRng) -> Result<Self, RandomError> {
+        Ok(Fp6 {
+            c0: Fp2::random(&mut rng)?,
+            c1: Fp2::random(&mut rng)?,
+            c2: Fp2::random(&mut rng)?,
+        })
     }
 
     /// Check if zero
@@ -772,10 +776,9 @@ fn test_arithmetic() {
     assert_eq!(a.invert().unwrap() * a, Fp6::one());
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
     let mut a = Fp6::one();
     a.zeroize();

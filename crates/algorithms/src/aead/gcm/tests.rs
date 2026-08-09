@@ -2,10 +2,10 @@ use super::*;
 use crate::block::aes::{Aes128, Aes192, Aes256};
 use crate::types::Nonce;
 use crate::types::SecretBytes;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use dcrypt_api::traits::symmetric::{DecryptOperation, EncryptOperation};
 use dcrypt_api::traits::SymmetricCipher as ApiSymmetricCipher;

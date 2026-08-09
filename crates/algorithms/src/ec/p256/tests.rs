@@ -4,8 +4,8 @@
 use super::*;
 use crate::ec::p256::{self, FieldElement, Point, Scalar};
 use crate::error::Result;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 use dcrypt_params::traditional::ecdsa::NIST_P256;
-use rand::rngs::OsRng;
 
 #[test]
 fn test_compression_roundtrip() {
@@ -165,8 +165,9 @@ fn test_point_operations() -> Result<()> {
     let g = p256::base_point_g();
     let scalar = {
         let mut bytes = [0u8; 32];
-        OsRng.fill_bytes(&mut bytes);
-        bytes[31] &= 0x7F; // Ensure it's less than the curve order
+        let mut rng = ChaCha20Rng::from_seed([0x22; 32]);
+        rng.fill_bytes(&mut bytes);
+        bytes[0] &= 0x7F; // Ensure it's less than the curve order
         Scalar::new(bytes)?
     };
 
@@ -241,7 +242,7 @@ fn test_scalar_multiplication() -> Result<()> {
 #[test]
 fn test_keypair_generation() -> Result<()> {
     // Generate a keypair and verify that the public key is correctly derived
-    let mut rng = OsRng;
+    let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
     let (private_key, public_key) = p256::generate_keypair(&mut rng)?;
 
     // Verify that scalar_mult_base_g(private_key) gives the expected public key

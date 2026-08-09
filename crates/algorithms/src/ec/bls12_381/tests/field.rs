@@ -3,7 +3,7 @@
 use super::super::field::fp::Fp;
 use super::super::field::fp2::Fp2;
 
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 // ============================================================================
 // Fp Field Tests
@@ -391,20 +391,18 @@ fn test_fp2_arithmetic() {
     assert_eq!(a.square(), b);
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_fp_zeroize() {
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
     let mut a = Fp::one();
     a.zeroize();
     assert!(bool::from(a.is_zero()));
 }
 
-#[cfg(feature = "zeroize")]
 #[test]
 fn test_fp2_zeroize() {
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
     let mut a = Fp2::one();
     a.zeroize();

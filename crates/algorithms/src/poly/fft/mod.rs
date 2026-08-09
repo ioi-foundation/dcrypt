@@ -8,17 +8,15 @@
 //! This is the high-performance engine required for schemes like Verkle trees that
 //! rely on polynomial commitments over large prime fields.
 
-#![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::needless_range_loop)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
+use crate::alloc_prelude::*;
 
 use crate::ec::bls12_381::Bls12_381Scalar as Scalar;
 use crate::error::{Error, Result};
-use std::sync::OnceLock;
 
 const FFT_SIZE: usize = 256;
 
@@ -31,26 +29,14 @@ const FR_ODD_PART: [u64; 4] = [
     0x0000_0000_73ed_a753,
 ];
 
-// Statics
-static ROOT_OF_UNITY: OnceLock<Scalar> = OnceLock::new();
-static FFT_N_ROOT: OnceLock<Scalar> = OnceLock::new();
-static ROOTS_OF_UNITY: OnceLock<Vec<Scalar>> = OnceLock::new();
-static INVERSE_ROOTS_OF_UNITY: OnceLock<Vec<Scalar>> = OnceLock::new();
-static N_INV: OnceLock<Scalar> = OnceLock::new();
-static PRIMITIVE_2N_ROOT: OnceLock<Scalar> = OnceLock::new();
-static TWIST_FACTORS: OnceLock<Vec<Scalar>> = OnceLock::new();
-static INVERSE_TWIST_FACTORS: OnceLock<Vec<Scalar>> = OnceLock::new();
-
 // The original hardcoded constant (kept as a seed candidate).
-fn get_root_of_unity() -> &'static Scalar {
-    ROOT_OF_UNITY.get_or_init(|| {
-        Scalar::from_raw([
-            0x4253_d252_a210_b619,
-            0x81c3_5f15_01a0_2431,
-            0xb734_6a32_008b_0320,
-            0x0a16_14a8_64b3_09e1,
-        ])
-    })
+fn get_root_of_unity() -> Scalar {
+    Scalar::from_raw([
+        0x4253_d252_a210_b619,
+        0x81c3_5f15_01a0_2431,
+        0xb734_6a32_008b_0320,
+        0x0a16_14a8_64b3_09e1,
+    ])
 }
 
 // --- NEW: small helpers ---
@@ -92,7 +78,7 @@ fn two_adicity(mut r: Scalar) -> u32 {
 /// Deterministically pick a seed in μ_{2^S} whose 2-adic order k ≥ min_k.
 fn select_2power_seed(min_k: u32) -> (Scalar, u32) {
     let bases: [Scalar; 12] = [
-        *get_root_of_unity(),
+        get_root_of_unity(),
         Scalar::from(5u64),
         Scalar::from(7u64),
         Scalar::from(2u64),
@@ -121,102 +107,90 @@ fn select_2power_seed(min_k: u32) -> (Scalar, u32) {
 
 // --- Derived roots built from a consistent seed ---
 
-fn get_fft_n_root() -> &'static Scalar {
-    FFT_N_ROOT.get_or_init(|| {
-        let need = FFT_SIZE.trailing_zeros();
-        let (seed, k) = select_2power_seed(need);
+fn get_fft_n_root() -> Scalar {
+    let need = FFT_SIZE.trailing_zeros();
+    let (seed, k) = select_2power_seed(need);
 
-        let mut w_n = seed;
-        for _ in 0..(k - need) {
-            w_n = w_n.square();
-        }
+    let mut w_n = seed;
+    for _ in 0..(k - need) {
+        w_n = w_n.square();
+    }
 
-        #[cfg(debug_assertions)]
-        {
-            let mut t = w_n;
-            for _ in 0..need {
-                t = t.square();
-            }
-            debug_assert_eq!(t, Scalar::one(), "w_N^N must be 1");
-
-            let mut half = w_n;
-            for _ in 0..(need - 1) {
-                half = half.square();
-            }
-            debug_assert_eq!(half, -Scalar::one(), "w_N^(N/2) must be -1");
-        }
-        w_n
-    })
-}
-
-fn get_roots_of_unity() -> &'static Vec<Scalar> {
-    ROOTS_OF_UNITY.get_or_init(|| {
-        let w_n = *get_fft_n_root();
-        let mut roots = vec![Scalar::one(); FFT_SIZE];
-        for i in 1..FFT_SIZE {
-            roots[i] = roots[i - 1] * w_n;
-        }
-        roots
-    })
-}
-
-fn get_inverse_roots_of_unity() -> &'static Vec<Scalar> {
-    INVERSE_ROOTS_OF_UNITY.get_or_init(|| {
-        let inv_w_n = get_fft_n_root().invert().unwrap();
-        let mut roots = vec![Scalar::one(); FFT_SIZE];
-        for i in 1..FFT_SIZE {
-            roots[i] = roots[i - 1] * inv_w_n;
-        }
-        roots
-    })
-}
-
-fn get_n_inv() -> &'static Scalar {
-    N_INV.get_or_init(|| Scalar::from(FFT_SIZE as u64).invert().unwrap())
-}
-
-fn get_primitive_2n_root() -> &'static Scalar {
-    PRIMITIVE_2N_ROOT.get_or_init(|| {
-        let need = FFT_SIZE.trailing_zeros();
-        let (seed, k) = select_2power_seed(need + 1);
-
-        let mut g = seed;
-        for _ in 0..(k - (need + 1)) {
-            g = g.square();
-        }
-
-        debug_assert_eq!(g.square(), *get_fft_n_root(), "g^2 must equal w_N");
-
-        let mut gn = g;
+    #[cfg(debug_assertions)]
+    {
+        let mut t = w_n;
         for _ in 0..need {
-            gn = gn.square();
+            t = t.square();
         }
-        debug_assert_eq!(gn, -Scalar::one(), "g^N must be -1");
+        debug_assert_eq!(t, Scalar::one(), "w_N^N must be 1");
 
-        g
-    })
+        let mut half = w_n;
+        for _ in 0..(need - 1) {
+            half = half.square();
+        }
+        debug_assert_eq!(half, -Scalar::one(), "w_N^(N/2) must be -1");
+    }
+    w_n
 }
 
-fn get_twist_factors() -> &'static Vec<Scalar> {
-    TWIST_FACTORS.get_or_init(|| {
-        let g = *get_primitive_2n_root();
-        let mut factors = vec![Scalar::one(); FFT_SIZE];
-        for i in 1..FFT_SIZE {
-            factors[i] = factors[i - 1] * g;
-        }
-        factors
-    })
+fn get_roots_of_unity() -> Vec<Scalar> {
+    let w_n = get_fft_n_root();
+    let mut roots = vec![Scalar::one(); FFT_SIZE];
+    for i in 1..FFT_SIZE {
+        roots[i] = roots[i - 1] * w_n;
+    }
+    roots
 }
 
-fn get_inverse_twist_factors() -> &'static Vec<Scalar> {
-    INVERSE_TWIST_FACTORS.get_or_init(|| {
-        let inv_g = get_primitive_2n_root().invert().unwrap();
-        let mut factors = vec![Scalar::one(); FFT_SIZE];
-        for i in 1..FFT_SIZE {
-            factors[i] = factors[i - 1] * inv_g;
-        }
-        factors
-    })
+fn get_inverse_roots_of_unity() -> Vec<Scalar> {
+    let inv_w_n = get_fft_n_root().invert().unwrap();
+    let mut roots = vec![Scalar::one(); FFT_SIZE];
+    for i in 1..FFT_SIZE {
+        roots[i] = roots[i - 1] * inv_w_n;
+    }
+    roots
+}
+
+fn get_n_inv() -> Scalar {
+    Scalar::from(FFT_SIZE as u64).invert().unwrap()
+}
+
+fn get_primitive_2n_root() -> Scalar {
+    let need = FFT_SIZE.trailing_zeros();
+    let (seed, k) = select_2power_seed(need + 1);
+
+    let mut g = seed;
+    for _ in 0..(k - (need + 1)) {
+        g = g.square();
+    }
+
+    debug_assert_eq!(g.square(), get_fft_n_root(), "g^2 must equal w_N");
+
+    let mut gn = g;
+    for _ in 0..need {
+        gn = gn.square();
+    }
+    debug_assert_eq!(gn, -Scalar::one(), "g^N must be -1");
+
+    g
+}
+
+fn get_twist_factors() -> Vec<Scalar> {
+    let g = get_primitive_2n_root();
+    let mut factors = vec![Scalar::one(); FFT_SIZE];
+    for i in 1..FFT_SIZE {
+        factors[i] = factors[i - 1] * g;
+    }
+    factors
+}
+
+fn get_inverse_twist_factors() -> Vec<Scalar> {
+    let inv_g = get_primitive_2n_root().invert().unwrap();
+    let mut factors = vec![Scalar::one(); FFT_SIZE];
+    for i in 1..FFT_SIZE {
+        factors[i] = factors[i - 1] * inv_g;
+    }
+    factors
 }
 
 /// Performs a bit-reversal permutation on the input slice in-place.
@@ -267,7 +241,7 @@ pub fn fft(coeffs: &mut [Scalar]) -> Result<()> {
         });
     }
     bit_reverse_permutation(coeffs);
-    fft_cooley_tukey(coeffs, get_roots_of_unity());
+    fft_cooley_tukey(coeffs, &get_roots_of_unity());
     Ok(())
 }
 
@@ -280,11 +254,11 @@ pub fn ifft(evals: &mut [Scalar]) -> Result<()> {
         });
     }
     bit_reverse_permutation(evals);
-    fft_cooley_tukey(evals, get_inverse_roots_of_unity());
+    fft_cooley_tukey(evals, &get_inverse_roots_of_unity());
 
     let n_inv = get_n_inv();
     for c in evals.iter_mut() {
-        *c *= *n_inv;
+        *c *= n_inv;
     }
     Ok(())
 }

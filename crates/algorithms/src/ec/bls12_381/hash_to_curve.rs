@@ -6,13 +6,16 @@
 //! - BLS12381G1_XMD:SHA-256_SSWU_RO_
 //! - BLS12381G2_XMD:SHA-256_SSWU_RO_
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use super::field::fp::Fp;
 use super::field::fp2::Fp2;
 use super::{G1Projective, G2Projective};
 use crate::error::{Error, Result};
 use crate::hash::sha2::Sha256;
 use crate::hash::HashFunction;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 // =============================================================================
 // expand_message_xmd (SHA-256)
@@ -482,16 +485,15 @@ fn map_to_curve_simple_swu(u: &Fp2) -> G2Projective {
     // If not, y = sqrt(g(x1)) = sqrt(g(x0) * XI^3 * u^6)
     // We already computed sqrt(gx0) potentially.
 
-    let mut y = Fp2::zero();
-    if bool::from(is_square) {
-        y = sqrt_candidate.unwrap();
+    let y = if bool::from(is_square) {
+        sqrt_candidate.unwrap()
     } else {
         // g(x1) = g(x0) * XI^3 * u^6
         // g(x0) = gx0_div_den
         // XI^3 * u^6 = (XI * u^2)^3 = xi_usq^3
         let gx1 = gx0_div_den * xi_usq.square() * xi_usq;
-        y = gx1.sqrt().unwrap_or(Fp2::zero());
-    }
+        gx1.sqrt().unwrap_or(Fp2::zero())
+    };
 
     // ensure sign of y and sign of u agree
     let flip = !sgn0_fp2(u).ct_eq(&sgn0_fp2(&y));

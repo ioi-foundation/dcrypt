@@ -5,6 +5,9 @@
 //! uniform and produce output keying material (OKM) suitable for use in cryptographic
 //! contexts.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use crate::error::{validate, Error, Result};
 use crate::hash::HashFunction;
 use crate::kdf::{KdfAlgorithm, KdfOperation, KeyDerivationFunction, ParamProvider, SecurityLevel};
@@ -15,12 +18,12 @@ use crate::types::Salt;
 // Import security types from dcrypt-core
 use dcrypt_common::security::{EphemeralSecret, SecureZeroingType};
 
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 /// Type-level constants for HKDF algorithm
 pub enum HkdfAlgorithm<H: HashFunction> {
@@ -48,12 +51,19 @@ impl<H: HashFunction> KdfAlgorithm for HkdfAlgorithm<H> {
 }
 
 /// Parameters for HKDF
-#[derive(Clone, Debug, Zeroize)]
+#[derive(Clone, Debug)]
 pub struct HkdfParams<const S: usize = 16> {
     /// Optional default salt (can be overridden in derive_key)
     pub salt: Option<Salt<S>>,
     /// Optional default info (context, can be overridden in derive_key)
     pub info: Option<Zeroizing<Vec<u8>>>,
+}
+
+impl<const S: usize> Zeroize for HkdfParams<S> {
+    fn zeroize(&mut self) {
+        self.salt.zeroize();
+        self.info.zeroize();
+    }
 }
 
 impl<const S: usize> Default for HkdfParams<S> {
@@ -66,11 +76,25 @@ impl<const S: usize> Default for HkdfParams<S> {
 }
 
 /// HKDF implementation using any hash function
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Hkdf<H: HashFunction, const S: usize = 16> {
     _hash_type: PhantomData<H>,
     params: HkdfParams<S>,
 }
+
+impl<H: HashFunction, const S: usize> Zeroize for Hkdf<H, S> {
+    fn zeroize(&mut self) {
+        self.params.zeroize();
+    }
+}
+
+impl<H: HashFunction, const S: usize> Drop for Hkdf<H, S> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<H: HashFunction, const S: usize> ZeroizeOnDrop for Hkdf<H, S> {}
 
 /// Operation for HKDF operations
 pub struct HkdfOperation<'a, H: HashFunction, const S: usize = 16> {
@@ -253,7 +277,7 @@ where
 
     // FIXED: Elided lifetime
     fn builder(&self) -> impl KdfOperation<'_, Self::Algorithm> {
-        HkdfOperation {
+        HkdfOperation::<H, S> {
             kdf: self,
             ikm: None,
             salt: None,
@@ -262,8 +286,8 @@ where
         }
     }
 
-    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Salt {
-        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE).expect("Salt generation failed")
+    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Salt> {
+        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE)
     }
 
     // Changed from instance method to static method

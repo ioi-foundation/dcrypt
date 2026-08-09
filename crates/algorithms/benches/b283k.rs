@@ -5,7 +5,11 @@ use dcrypt_algorithms::ec::b283k::{
     base_point_g, generate_keypair, kdf_hkdf_sha384_for_ecdh_kem, scalar_mult, scalar_mult_base_g,
     FieldElement, Point, Scalar, B283K_FIELD_ELEMENT_SIZE, B283K_SCALAR_SIZE,
 };
-use rand::{rngs::OsRng, RngCore};
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
+
+fn bench_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x71; 32])
+}
 
 fn bench_field_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("b283k_field");
@@ -13,7 +17,7 @@ fn bench_field_operations(c: &mut Criterion) {
     // Generate test field elements
     let mut bytes_a = [0u8; B283K_FIELD_ELEMENT_SIZE];
     let mut bytes_b = [0u8; B283K_FIELD_ELEMENT_SIZE];
-    let mut rng = OsRng;
+    let mut rng = bench_rng();
     rng.fill_bytes(&mut bytes_a);
     rng.fill_bytes(&mut bytes_b);
     bytes_a[0] &= 0x07; // Ensure < 2^283
@@ -50,7 +54,7 @@ fn bench_point_operations(c: &mut Criterion) {
     for bits in scalar_sizes.iter() {
         let mut scalar_bytes = [0u8; B283K_SCALAR_SIZE];
         let bytes_to_fill = (bits + 7) / 8;
-        let mut rng = OsRng;
+        let mut rng = bench_rng();
         rng.fill_bytes(&mut scalar_bytes[B283K_SCALAR_SIZE - bytes_to_fill..]);
 
         // Ensure scalar is valid and < order
@@ -77,7 +81,7 @@ fn bench_scalar_mult_base(c: &mut Criterion) {
     let mut group = c.benchmark_group("b283k_base_point");
 
     let mut scalar_bytes = [0u8; B283K_SCALAR_SIZE];
-    let mut rng = OsRng;
+    let mut rng = bench_rng();
     rng.fill_bytes(&mut scalar_bytes);
     scalar_bytes[0] &= 0x01; // Ensure < 2^283
     scalar_bytes[B283K_SCALAR_SIZE - 1] |= 0x01; // Ensure non-zero
@@ -93,7 +97,7 @@ fn bench_scalar_mult_base(c: &mut Criterion) {
 fn bench_compression(c: &mut Criterion) {
     let mut group = c.benchmark_group("b283k_compression");
 
-    let (_, point) = generate_keypair(&mut OsRng).unwrap();
+    let (_, point) = generate_keypair(&mut bench_rng()).unwrap();
     let compressed = point.serialize_compressed();
 
     group.bench_function("compress", |bencher| {
@@ -109,7 +113,7 @@ fn bench_compression(c: &mut Criterion) {
 
 fn bench_keypair_generation(c: &mut Criterion) {
     c.bench_function("b283k_generate_keypair", |bencher| {
-        bencher.iter(|| generate_keypair(&mut OsRng).unwrap())
+        bencher.iter(|| generate_keypair(&mut bench_rng()).unwrap())
     });
 }
 
@@ -117,8 +121,8 @@ fn bench_ecdh(c: &mut Criterion) {
     let mut group = c.benchmark_group("b283k_ecdh");
 
     // Generate two keypairs for ECDH
-    let (sk1, pk1) = generate_keypair(&mut OsRng).unwrap();
-    let (sk2, pk2) = generate_keypair(&mut OsRng).unwrap();
+    let (sk1, pk1) = generate_keypair(&mut bench_rng()).unwrap();
+    let (sk2, pk2) = generate_keypair(&mut bench_rng()).unwrap();
 
     group.bench_function("shared_secret", |bencher| {
         bencher.iter(|| scalar_mult(&sk1, &pk2).unwrap())
@@ -141,7 +145,7 @@ fn bench_serialization(c: &mut Criterion) {
 
     // Generate test data
     let mut scalar_bytes = [0u8; B283K_SCALAR_SIZE];
-    let mut rng = OsRng;
+    let mut rng = bench_rng();
     rng.fill_bytes(&mut scalar_bytes);
     scalar_bytes[0] &= 0x01;
     scalar_bytes[B283K_SCALAR_SIZE - 1] |= 0x01;

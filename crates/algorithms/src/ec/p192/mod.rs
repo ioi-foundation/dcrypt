@@ -28,8 +28,8 @@ use crate::error::{Error, Result};
 use crate::hash::sha2::Sha256;
 use crate::kdf::hkdf::Hkdf;
 use crate::kdf::KeyDerivationFunction as KdfTrait;
+use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_params::traditional::ecdsa::NIST_P192;
-use rand::{CryptoRng, RngCore};
 
 /// Get the standard base point G of the P-192 curve
 pub fn base_point_g() -> Point {
@@ -47,7 +47,7 @@ pub fn scalar_mult_base_g(scalar: &Scalar) -> Result<Point> {
 pub fn generate_keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Scalar, Point)> {
     let mut scalar_bytes = [0u8; P192_SCALAR_SIZE];
     loop {
-        rng.fill_bytes(&mut scalar_bytes);
+        rng.try_fill_bytes(&mut scalar_bytes)?;
         match Scalar::new(scalar_bytes) {
             Ok(privk) => {
                 let pubk = scalar_mult_base_g(&privk)?;

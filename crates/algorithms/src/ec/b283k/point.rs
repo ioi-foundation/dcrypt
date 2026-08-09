@@ -6,7 +6,7 @@ use crate::ec::b283k::{
     scalar::Scalar,
 };
 use crate::error::{validate, Error, Result};
-use subtle::{Choice, ConditionallySelectable};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

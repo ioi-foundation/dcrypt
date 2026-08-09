@@ -14,13 +14,12 @@ mod ntt_benchmarks {
     use dcrypt_algorithms::poly::params::{DilithiumParams, Kyber256Params};
     use dcrypt_algorithms::poly::prelude::*;
     use dcrypt_algorithms::poly::sampling::{DefaultSamplers, UniformSampler};
-    use rand::SeedableRng;
-    use rand_chacha::ChaCha20Rng;
+    use dcrypt_internal::random::ChaCha20Rng;
 
     /// Benchmark forward NTT for Dilithium
     pub fn bench_dilithium_forward_ntt(c: &mut Criterion) {
         let mut group = c.benchmark_group("dilithium_ntt");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a random polynomial
         let poly = <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
@@ -43,7 +42,7 @@ mod ntt_benchmarks {
     /// Benchmark inverse NTT for Dilithium
     pub fn bench_dilithium_inverse_ntt(c: &mut Criterion) {
         let mut group = c.benchmark_group("dilithium_ntt");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a polynomial in NTT domain
         let mut poly =
@@ -68,7 +67,7 @@ mod ntt_benchmarks {
     /// Benchmark forward NTT for Kyber
     pub fn bench_kyber_forward_ntt(c: &mut Criterion) {
         let mut group = c.benchmark_group("kyber_ntt");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a random polynomial
         let poly = <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
@@ -91,7 +90,7 @@ mod ntt_benchmarks {
     /// Benchmark inverse NTT for Kyber
     pub fn bench_kyber_inverse_ntt(c: &mut Criterion) {
         let mut group = c.benchmark_group("kyber_ntt");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a polynomial in NTT domain
         let mut poly =
@@ -116,7 +115,7 @@ mod ntt_benchmarks {
     /// Benchmark NTT-based polynomial multiplication
     pub fn bench_ntt_multiplication(c: &mut Criterion) {
         let mut group = c.benchmark_group("ntt_multiplication");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Dilithium multiplication
         {
@@ -164,7 +163,7 @@ mod ntt_benchmarks {
     /// Benchmark full polynomial multiplication (NTT + multiply + inverse NTT)
     pub fn bench_full_polynomial_multiplication(c: &mut Criterion) {
         let mut group = c.benchmark_group("full_polynomial_multiplication");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Dilithium
         {
@@ -267,7 +266,7 @@ mod ntt_benchmarks {
     /// Benchmark different polynomial sizes (if we add support for them in the future)
     pub fn bench_ntt_scaling(c: &mut Criterion) {
         let mut group = c.benchmark_group("ntt_scaling");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // For now, we only have N=256, but this is structured to easily add more sizes
         let sizes = vec![("n256", 256)];
@@ -312,7 +311,7 @@ mod ntt_benchmarks {
     /// Benchmark roundtrip operations (forward + inverse NTT)
     pub fn bench_ntt_roundtrip(c: &mut Criterion) {
         let mut group = c.benchmark_group("ntt_roundtrip");
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Dilithium roundtrip
         let poly_dilithium =

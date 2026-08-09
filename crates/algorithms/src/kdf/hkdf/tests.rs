@@ -128,7 +128,7 @@ fn test_hkdf_sha512() {
 /// 2. Output length too large
 #[test]
 fn test_hkdf_invalid_parameters() {
-    use zeroize::Zeroizing;
+    use dcrypt_internal::zeroing::Zeroizing;
 
     // Test with PRK too short (should be at least HashLen)
     let short_prk = Zeroizing::new(vec![0; 16]); // Sha256::output_size is 32

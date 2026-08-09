@@ -3,16 +3,30 @@
 use crate::ec::p256::constants::P256_SCALAR_SIZE;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 use dcrypt_params::traditional::ecdsa::NIST_P256;
-use subtle::{Choice, ConditionallySelectable};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// P-256 scalar value for use in elliptic curve operations
 ///
 /// Represents integers modulo the curve order n. Used for private keys
 /// and scalar multiplication. Automatically zeroized on drop for security.
-#[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
+#[derive(Clone, Debug)]
 pub struct Scalar(SecretBuffer<P256_SCALAR_SIZE>);
+
+impl Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl Drop for Scalar {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
     /// Create a canonical non-zero scalar from raw bytes.

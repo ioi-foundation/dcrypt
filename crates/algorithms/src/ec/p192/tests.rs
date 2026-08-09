@@ -2,9 +2,8 @@
 
 use super::*;
 use crate::ec::p192::{FieldElement, Point, PointFormat, Scalar};
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 use dcrypt_params::traditional::ecdsa::NIST_P192;
-use rand::{RngCore, SeedableRng};
-use rand_chacha::ChaCha20Rng;
 
 /// Test vectors for P-192 field arithmetic
 mod field_tests {
@@ -131,6 +130,24 @@ mod field_tests {
         ];
         assert!(FieldElement::from_bytes(&p_minus_1_bytes).is_ok());
     }
+}
+
+#[test]
+fn intermediate_scalar_reduction_allows_zero_and_reduces_order() {
+    assert!(Scalar::from_bytes_reduced([0u8; P192_SCALAR_SIZE]).is_zero());
+    assert!(Scalar::from_bytes_reduced(NIST_P192.n).is_zero());
+
+    let mut order_plus_one = NIST_P192.n;
+    for byte in order_plus_one.iter_mut().rev() {
+        let (value, carry) = byte.overflowing_add(1);
+        *byte = value;
+        if !carry {
+            break;
+        }
+    }
+    let mut one = [0u8; P192_SCALAR_SIZE];
+    one[P192_SCALAR_SIZE - 1] = 1;
+    assert_eq!(Scalar::from_bytes_reduced(order_plus_one).serialize(), one);
 }
 
 /// Test vectors for P-192 point operations

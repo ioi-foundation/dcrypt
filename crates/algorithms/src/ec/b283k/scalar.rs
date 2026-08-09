@@ -3,11 +3,25 @@
 use crate::ec::b283k::constants::B283K_SCALAR_SIZE;
 use crate::error::{Error, Result};
 use dcrypt_common::security::SecretBuffer;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 /// sect283k1 scalar value for use in elliptic curve operations
-#[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
+#[derive(Clone, Debug)]
 pub struct Scalar(SecretBuffer<B283K_SCALAR_SIZE>);
+
+impl Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl Drop for Scalar {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
     /// Create a new scalar from raw bytes.

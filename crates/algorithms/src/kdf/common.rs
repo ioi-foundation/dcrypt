@@ -1,23 +1,14 @@
 //! Common utilities for key derivation functions
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-// Conditional imports for different platforms
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-#[cfg(feature = "std")]
-use std::vec::Vec;
+#[cfg(feature = "alloc")]
+use alloc::{vec, vec::Vec};
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-use alloc::vec::Vec;
-
-use subtle::ConstantTimeEq;
-use zeroize::Zeroizing;
-
-// Use appropriate RNG implementation based on platform
-#[cfg(feature = "std")]
-use rand::{rngs::OsRng, RngCore};
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::random::{CryptoRng, Error as RandomError};
+use dcrypt_internal::zeroing::Zeroizing;
 
 /// Security level for KDFs in bits
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -65,37 +56,16 @@ pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
     a.ct_eq(b).into()
 }
 
-/// Generate a random salt of the given length (standard library version)
-#[cfg(feature = "std")]
-pub fn generate_salt(len: usize) -> Zeroizing<Vec<u8>> {
-    let mut salt = vec![0u8; len];
-    OsRng.fill_bytes(&mut salt);
-    Zeroizing::new(salt)
-}
-
-/// Generate a random salt of the given length (embedded version)
+/// Generate a salt using a caller-owned cryptographic randomness source.
 ///
-/// Note: This requires a custom RNG implementation for embedded platforms
-#[cfg(all(feature = "alloc", not(feature = "std"), not(target_arch = "wasm32")))]
-pub fn generate_salt(len: usize) -> Zeroizing<Vec<u8>> {
-    // NOTE: In a real embedded implementation, you would need to provide
-    // a cryptographically secure RNG here. This is a placeholder.
+/// Randomness failures are returned to the caller; this function never falls
+/// back to operating-system entropy or deterministic bytes.
+#[cfg(feature = "alloc")]
+pub fn generate_salt<R: CryptoRng + ?Sized>(
+    rng: &mut R,
+    len: usize,
+) -> core::result::Result<Zeroizing<Vec<u8>>, RandomError> {
     let mut salt = vec![0u8; len];
-
-    // TODO: Replace with actual embedded RNG implementation
-    // For now, this just returns zeroed memory which is NOT secure
-    // Example: embedded_rng::fill_bytes(&mut salt);
-
-    Zeroizing::new(salt)
-}
-
-/// Generate a random salt of the given length (WASM version)
-#[cfg(all(feature = "alloc", target_arch = "wasm32", not(feature = "std")))]
-pub fn generate_salt(len: usize) -> Zeroizing<Vec<u8>> {
-    let mut salt = vec![0u8; len];
-
-    // For WASM, we can use getrandom which works in browser environments
-    getrandom::getrandom(&mut salt).expect("Failed to generate random bytes");
-
-    Zeroizing::new(salt)
+    rng.try_fill_bytes(&mut salt)?;
+    Ok(Zeroizing::new(salt))
 }

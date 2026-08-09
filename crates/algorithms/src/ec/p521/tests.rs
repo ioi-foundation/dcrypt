@@ -1,9 +1,36 @@
 //! P-521 elliptic curve tests
 
-use crate::ec::p521::{self, FieldElement, Point, Scalar};
+use crate::ec::p521::{self, FieldElement, Point, Scalar, P521_SCALAR_SIZE};
 use crate::error::Result;
+use dcrypt_internal::random::ChaCha20Rng;
 use dcrypt_params::traditional::ecdsa::NIST_P521;
-use rand::rngs::OsRng;
+
+#[test]
+fn intermediate_scalar_reduction_allows_zero_and_reduces_order() {
+    assert!(Scalar::from_bytes_reduced([0u8; P521_SCALAR_SIZE]).is_zero());
+    assert!(Scalar::from_bytes_reduced(NIST_P521.n).is_zero());
+
+    let mut order_plus_one = NIST_P521.n;
+    for byte in order_plus_one.iter_mut().rev() {
+        let (value, carry) = byte.overflowing_add(1);
+        *byte = value;
+        if !carry {
+            break;
+        }
+    }
+    let mut one = [0u8; P521_SCALAR_SIZE];
+    one[P521_SCALAR_SIZE - 1] = 1;
+    assert_eq!(Scalar::from_bytes_reduced(order_plus_one).serialize(), one);
+
+    let expected_max = hex::decode(
+        "000000000000000000000000000000000000000000000000000000000000000002d73cbc3e206834ca4019ff5b847b2d17e2251b23bb31dc28a2482470b763cdfb7f",
+    )
+    .unwrap();
+    assert_eq!(
+        Scalar::from_bytes_reduced([0xff; P521_SCALAR_SIZE]).serialize(),
+        expected_max.as_slice()
+    );
+}
 
 // ============================================================================
 // FIELD ARITHMETIC TESTS
@@ -369,7 +396,7 @@ fn test_curve_equation_base_point() -> Result<()> {
 #[test]
 fn test_keypair_generation() -> Result<()> {
     // Generate a keypair and verify the public key is correctly derived
-    let mut rng = OsRng;
+    let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
     let (private_key, public_key) = p521::generate_keypair(&mut rng)?;
 
     // Verify that scalar_mult_base_g(private_key) gives the expected public key

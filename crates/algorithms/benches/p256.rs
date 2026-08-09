@@ -5,13 +5,17 @@ use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion
 use dcrypt_algorithms::ec::p256::{
     self, FieldElement, Point, Scalar, P256_FIELD_ELEMENT_SIZE, P256_SCALAR_SIZE,
 };
-use rand::{rngs::OsRng, RngCore};
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
+
+fn bench_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x73; 32])
+}
 
 /// Generate a random field element for benchmarking
 fn random_field_element() -> FieldElement {
     let mut bytes = [0u8; P256_FIELD_ELEMENT_SIZE];
     loop {
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         // Ensure the value is less than the field modulus
         if let Ok(fe) = FieldElement::from_bytes(&bytes) {
             return fe;
@@ -23,7 +27,7 @@ fn random_field_element() -> FieldElement {
 fn random_scalar() -> Scalar {
     let mut bytes = [0u8; P256_SCALAR_SIZE];
     loop {
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         if let Ok(scalar) = Scalar::new(bytes) {
             return scalar;
         }
@@ -228,7 +232,7 @@ fn bench_scalar_operations(c: &mut Criterion) {
         b.iter_batched(
             || {
                 let mut bytes = [0u8; P256_SCALAR_SIZE];
-                OsRng.fill_bytes(&mut bytes);
+                bench_rng().fill_bytes(&mut bytes);
                 bytes
             },
             |bytes| black_box(Scalar::new(bytes)),
@@ -297,7 +301,7 @@ fn bench_crypto_operations(c: &mut Criterion) {
 
     // Key pair generation
     group.bench_function("generate_keypair", |b| {
-        let mut rng = OsRng;
+        let mut rng = bench_rng();
         b.iter(|| black_box(p256::generate_keypair(&mut rng).unwrap()))
     });
 
@@ -305,7 +309,7 @@ fn bench_crypto_operations(c: &mut Criterion) {
     group.bench_function("ecdh_raw", |b| {
         b.iter_batched(
             || {
-                let mut rng = OsRng;
+                let mut rng = bench_rng();
                 let (priv_a, pub_a) = p256::generate_keypair(&mut rng).unwrap();
                 let (priv_b, pub_b) = p256::generate_keypair(&mut rng).unwrap();
                 (priv_a, pub_b)
@@ -320,7 +324,7 @@ fn bench_crypto_operations(c: &mut Criterion) {
         b.iter_batched(
             || {
                 let mut ikm = [0u8; 32];
-                OsRng.fill_bytes(&mut ikm);
+                bench_rng().fill_bytes(&mut ikm);
                 ikm
             },
             |ikm| black_box(p256::kdf_hkdf_sha256_for_ecdh_kem(&ikm, Some(b"test info")).unwrap()),
@@ -339,7 +343,7 @@ fn bench_ecdh_workflow(c: &mut Criterion) {
     group.bench_function("complete", |b| {
         b.iter_batched(
             || {
-                let mut rng = OsRng;
+                let mut rng = bench_rng();
                 let (priv_a, _) = p256::generate_keypair(&mut rng).unwrap();
                 let (_, pub_b) = p256::generate_keypair(&mut rng).unwrap();
                 (priv_a, pub_b)

@@ -5,16 +5,14 @@ use core::borrow::Borrow;
 use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
-
-#[cfg(feature = "alloc")]
-use alloc::vec;
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::random::{CryptoRng, Error as RandomError};
+use dcrypt_internal::zeroing::Zeroize;
 
 use super::field::fp::Fp;
 use super::Scalar;
+#[cfg(feature = "alloc")]
+use alloc::vec;
 
 /// G₁ affine point representation.
 #[derive(Copy, Clone, Debug)]
@@ -30,8 +28,13 @@ impl Default for G1Affine {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for G1Affine {}
+impl Zeroize for G1Affine {
+    fn zeroize(&mut self) {
+        self.x.zeroize();
+        self.y.zeroize();
+        self.infinity = Choice::from(0);
+    }
+}
 
 impl fmt::Display for G1Affine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -482,8 +485,13 @@ impl Default for G1Projective {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for G1Projective {}
+impl Zeroize for G1Projective {
+    fn zeroize(&mut self) {
+        self.x.zeroize();
+        self.y.zeroize();
+        self.z.zeroize();
+    }
+}
 
 impl fmt::Display for G1Projective {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -812,10 +820,12 @@ impl G1Projective {
     }
 
     /// Random point generation.
-    pub fn random(mut rng: impl RngCore) -> Self {
+    pub fn random(mut rng: impl CryptoRng) -> core::result::Result<Self, RandomError> {
         loop {
-            let x = Fp::random(&mut rng);
-            let flip_sign = rng.next_u32() % 2 != 0;
+            let x = Fp::random(&mut rng)?;
+            let mut sign = [0u8; 1];
+            rng.try_fill_bytes(&mut sign)?;
+            let flip_sign = sign[0] & 1 != 0;
 
             let p = ((x.square() * x) + B).sqrt().map(|y| G1Affine {
                 x,
@@ -827,7 +837,7 @@ impl G1Projective {
                 let p_proj = G1Projective::from(p.unwrap());
                 let p_cleared = p_proj.clear_cofactor();
                 if !bool::from(p_cleared.is_identity()) {
-                    return p_cleared;
+                    return Ok(p_cleared);
                 }
             }
         }

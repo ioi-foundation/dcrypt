@@ -6,9 +6,9 @@
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-// External crate imports
-use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::random::{CryptoRng, Error as RandomError};
+use dcrypt_internal::zeroing::Zeroize;
 
 // ============================================================================
 // Arithmetic Helper Functions
@@ -256,7 +256,7 @@ impl Fp {
         self.ct_eq(&Fp::zero())
     }
 
-    /// Create without checking canonicity (unsafe)
+    /// Create without checking canonicity.
     pub const fn from_raw_unchecked(v: [u64; 6]) -> Fp {
         Fp(v)
     }
@@ -641,12 +641,12 @@ impl Fp {
     }
 
     /// Create random field element
-    pub(crate) fn random(mut rng: impl RngCore) -> Fp {
+    pub(crate) fn random(mut rng: impl CryptoRng) -> Result<Fp, RandomError> {
         let mut bytes = [0u8; 96];
-        rng.fill_bytes(&mut bytes);
+        rng.try_fill_bytes(&mut bytes)?;
 
         // Parse as big-endian to match Fp encoding
-        Fp::from_u768([
+        Ok(Fp::from_u768([
             u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap()),
             u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap()),
             u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap()),
@@ -659,7 +659,7 @@ impl Fp {
             u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[72..80]).unwrap()),
             u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[80..88]).unwrap()),
             u64::from_be_bytes(<[u8; 8]>::try_from(&bytes[88..96]).unwrap()),
-        ])
+        ]))
     }
 
     /// Reduce 768-bit number modulo p
@@ -698,8 +698,11 @@ impl From<u64> for Fp {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for Fp {}
+impl Zeroize for Fp {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl ConstantTimeEq for Fp {
     fn ct_eq(&self, other: &Self) -> Choice {

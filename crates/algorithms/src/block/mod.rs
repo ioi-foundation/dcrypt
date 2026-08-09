@@ -7,11 +7,12 @@
 //!
 //! ```
 //! use dcrypt_algorithms::block::{TypedAes128, TypedCbc, BlockCipher, BlockCipherMode, CipherAlgorithm};
-//! use rand::rngs::OsRng;
+//! use dcrypt_internal::random::ChaCha20Rng;
 //!
 //! // Generate a random key and nonce
-//! let key = TypedAes128::generate_key(&mut OsRng);
-//! let nonce = TypedCbc::<TypedAes128>::generate_nonce(&mut OsRng);
+//! let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
+//! let key = TypedAes128::generate_key(&mut rng).unwrap();
+//! let nonce = TypedCbc::<TypedAes128>::generate_nonce(&mut rng).unwrap();
 //!
 //! // Create cipher and mode instances
 //! let cipher = TypedAes128::new(&key);
@@ -25,18 +26,16 @@
 //! assert_eq!(plaintext, &decrypted[..]);
 //! ```
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 use crate::error::{validate, Error, Result};
 use crate::types::{Nonce, SecretBytes};
-use rand::{CryptoRng, RngCore};
+use dcrypt_internal::random::{CryptoRng, RngCore};
 
 pub mod aes;
 pub mod modes;
@@ -114,7 +113,7 @@ pub trait BlockCipher {
     }
 
     /// Generate a random key
-    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Key;
+    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key>;
 }
 
 /// Trait for block cipher modes with type parameters
@@ -137,7 +136,7 @@ pub trait BlockCipherMode<C: BlockCipher> {
     fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>>;
 
     /// Generate a random nonce
-    fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Nonce;
+    fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Nonce>;
 
     /// Returns the mode name
     fn mode_name() -> &'static str {
@@ -179,10 +178,24 @@ impl AesVariant for Aes128Algorithm {
 }
 
 /// Enhanced AES-128 implementation with type-level guarantees
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct TypedAes128 {
     inner: aes::Aes128,
 }
+
+impl Zeroize for TypedAes128 {
+    fn zeroize(&mut self) {
+        self.inner.zeroize();
+    }
+}
+
+impl Drop for TypedAes128 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for TypedAes128 {}
 
 // Add the missing CipherAlgorithm implementation for TypedAes128
 impl CipherAlgorithm for TypedAes128 {
@@ -214,10 +227,10 @@ impl BlockCipher for TypedAes128 {
         self.inner.decrypt_block(block)
     }
 
-    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Key {
+    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
         let mut key = [0u8; 16];
-        rng.fill_bytes(&mut key);
-        SecretBytes::new(key)
+        rng.try_fill_bytes(&mut key)?;
+        Ok(SecretBytes::new(key))
     }
 }
 
@@ -288,9 +301,9 @@ impl<C: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> BlockCipherMode
         self.inner.decrypt(ciphertext)
     }
 
-    fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Nonce {
+    fn generate_nonce<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Nonce> {
         let mut nonce = [0u8; 16];
-        rng.fill_bytes(&mut nonce);
-        Nonce::new(nonce)
+        rng.try_fill_bytes(&mut nonce)?;
+        Ok(Nonce::new(nonce))
     }
 }

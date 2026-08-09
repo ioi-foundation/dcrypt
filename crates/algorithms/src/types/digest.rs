@@ -3,19 +3,29 @@
 //! Provides the `Digest` type, representing the output of a
 //! cryptographic hash function with compile-time size guarantees.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use core::fmt;
 use core::ops::{Deref, DerefMut};
+use dcrypt_internal::zeroing::Zeroize;
 use hex;
-use zeroize::Zeroize;
 
 use crate::error::{Error, Result};
 use crate::types::{ByteSerializable, ConstantTimeEq, FixedSize, SecureZeroingType};
 
 /// A cryptographic digest with a fixed size
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Digest<const N: usize> {
     data: [u8; N],
     len: usize, // Actual length of valid data (for variable-length algorithms)
+}
+
+impl<const N: usize> Zeroize for Digest<N> {
+    fn zeroize(&mut self) {
+        self.data.zeroize();
+        self.len.zeroize();
+    }
 }
 
 impl<const N: usize> Digest<N> {

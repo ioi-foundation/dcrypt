@@ -4,6 +4,9 @@
 //! guarantees for cryptographic operations, designed to be ergonomic while
 //! preventing common mistakes.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 // Submodules
 pub mod algorithms;
 pub mod digest;
@@ -52,7 +55,7 @@ pub trait ValidSecretKeySize<A: key::AsymmetricAlgorithm, const N: usize>: seale
 pub trait ValidPublicKeySize<A: key::AsymmetricAlgorithm, const N: usize>: sealed::Sealed {}
 
 // Common cryptographic traits
-use rand::{CryptoRng, RngCore};
+use dcrypt_internal::random::{CryptoRng, RngCore};
 
 /// Trait for cryptographic types with constant-time equality
 pub trait ConstantTimeEq {

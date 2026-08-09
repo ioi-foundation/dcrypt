@@ -22,7 +22,7 @@ use crate::types::Nonce;
 use alloc::vec::Vec;
 use dcrypt_api::traits::AuthenticatedCipher;
 use dcrypt_common::security::{SecretBuffer, SecureZeroingType};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Size of the XChaCha20Poly1305 nonce in bytes
 pub const XCHACHA20POLY1305_NONCE_SIZE: usize = 24;
@@ -31,10 +31,24 @@ pub const XCHACHA20POLY1305_NONCE_SIZE: usize = 24;
 ///
 /// This type does not accept the nonstandard ciphertext format emitted by
 /// the affected legacy format (confirmed in dcrypt v1.2.3).
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct XChaCha20Poly1305 {
     key: SecretBuffer<CHACHA20POLY1305_KEY_SIZE>,
 }
+
+impl Zeroize for XChaCha20Poly1305 {
+    fn zeroize(&mut self) {
+        self.key.zeroize();
+    }
+}
+
+impl Drop for XChaCha20Poly1305 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for XChaCha20Poly1305 {}
 
 impl XChaCha20Poly1305 {
     /// Create a new XChaCha20Poly1305 instance

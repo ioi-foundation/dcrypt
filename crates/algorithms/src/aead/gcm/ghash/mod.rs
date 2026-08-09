@@ -29,19 +29,30 @@
 //! the public input lengths, as permitted by the GCM interface.
 
 use crate::error::{validate, Error, Result};
-use byteorder::{BigEndian, ByteOrder};
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
 const GCM_BLOCK_SIZE: usize = 16;
 
 /// `GHash` struct for computing the GHASH function in GCM mode.
-#[derive(Clone, Zeroize)]
-#[zeroize(drop)]
+#[derive(Clone)]
 pub struct GHash {
     /// The hash key H, a 16-byte array.
     h: [u8; GCM_BLOCK_SIZE],
     /// The current hash value Y, a 16-byte array.
     y: [u8; GCM_BLOCK_SIZE],
+}
+
+impl Zeroize for GHash {
+    fn zeroize(&mut self) {
+        self.h.zeroize();
+        self.y.zeroize();
+    }
+}
+
+impl Drop for GHash {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
 }
 
 impl GHash {
@@ -147,9 +158,9 @@ impl GHash {
             details: "ciphertext length exceeds the GCM bit-length field",
         })?;
         // AAD length in bits (big-endian)
-        BigEndian::write_u64(&mut length_block[0..8], aad_bits);
+        length_block[0..8].copy_from_slice(&aad_bits.to_be_bytes());
         // Ciphertext length in bits (big-endian)
-        BigEndian::write_u64(&mut length_block[8..16], cipher_bits);
+        length_block[8..16].copy_from_slice(&cipher_bits.to_be_bytes());
         self.update_block(&length_block, GCM_BLOCK_SIZE)
     }
 

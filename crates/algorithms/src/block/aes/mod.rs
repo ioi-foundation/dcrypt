@@ -18,16 +18,13 @@ use super::BlockCipher;
 use super::CipherAlgorithm;
 use crate::error::{validate, Result};
 use crate::types::SecretBytes;
+use core::sync::atomic::{compiler_fence, Ordering};
 use dcrypt_common::security::SecretBuffer;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 use dcrypt_params::utils::symmetric::{
     AES128_KEY_SIZE, AES192_KEY_SIZE, AES256_KEY_SIZE, AES_BLOCK_SIZE,
 };
-#[cfg(not(feature = "std"))]
-use portable_atomic::{compiler_fence, Ordering};
-use rand::{CryptoRng, RngCore};
-#[cfg(feature = "std")]
-use std::sync::atomic::{compiler_fence, Ordering};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Round constants for AES key expansion
 const RCON: [u32; 11] = [
@@ -172,22 +169,44 @@ impl CipherAlgorithm for Aes256Algorithm {
 }
 
 /// AES-128 block cipher
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Aes128 {
     round_keys: SecretBuffer<176>, // 11 rounds × 16 bytes
 }
 
 /// AES-192 block cipher
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Aes192 {
     round_keys: SecretBuffer<208>, // 13 rounds × 16 bytes
 }
 
 /// AES-256 block cipher
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Aes256 {
     round_keys: SecretBuffer<240>, // 15 rounds × 16 bytes
 }
+
+macro_rules! impl_aes_zeroize {
+    ($name:ident) => {
+        impl Zeroize for $name {
+            fn zeroize(&mut self) {
+                self.round_keys.zeroize();
+            }
+        }
+
+        impl Drop for $name {
+            fn drop(&mut self) {
+                self.zeroize();
+            }
+        }
+
+        impl ZeroizeOnDrop for $name {}
+    };
+}
+
+impl_aes_zeroize!(Aes128);
+impl_aes_zeroize!(Aes192);
+impl_aes_zeroize!(Aes256);
 
 // Add CipherAlgorithm implementations for AES structs
 impl CipherAlgorithm for Aes128 {
@@ -469,10 +488,10 @@ impl BlockCipher for Aes128 {
         Ok(())
     }
 
-    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Key {
+    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
         let mut key_data = [0u8; AES128_KEY_SIZE];
-        rng.fill_bytes(&mut key_data);
-        SecretBytes::new(key_data)
+        rng.try_fill_bytes(&mut key_data)?;
+        Ok(SecretBytes::new(key_data))
     }
 }
 
@@ -603,10 +622,10 @@ impl BlockCipher for Aes192 {
         Ok(())
     }
 
-    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Key {
+    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
         let mut key_data = [0u8; AES192_KEY_SIZE];
-        rng.fill_bytes(&mut key_data);
-        SecretBytes::new(key_data)
+        rng.try_fill_bytes(&mut key_data)?;
+        Ok(SecretBytes::new(key_data))
     }
 }
 
@@ -739,10 +758,10 @@ impl BlockCipher for Aes256 {
         Ok(())
     }
 
-    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Key {
+    fn generate_key<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Key> {
         let mut key_data = [0u8; AES256_KEY_SIZE];
-        rng.fill_bytes(&mut key_data);
-        SecretBytes::new(key_data)
+        rng.try_fill_bytes(&mut key_data)?;
+        Ok(SecretBytes::new(key_data))
     }
 }
 

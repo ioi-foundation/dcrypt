@@ -10,6 +10,9 @@
 //! * Authentication is decided with a branch-free constant-time mask; the same
 //!   byte-wise loop executes whatever the tag's validity.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use crate::error::{validate, Error, Result};
 use crate::mac::poly1305::{Poly1305, POLY1305_KEY_SIZE, POLY1305_TAG_SIZE};
 use crate::stream::chacha::chacha20::{ChaCha20, CHACHA20_KEY_SIZE, CHACHA20_NONCE_SIZE};
@@ -23,8 +26,9 @@ use dcrypt_api::traits::{AuthenticatedCipher, SymmetricCipher};
 use dcrypt_api::types::Ciphertext;
 // Import SecretBuffer for secure key storage
 use dcrypt_common::security::SecretBuffer;
-use subtle::ConstantTimeEq;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 /// Size constants
 pub const CHACHA20POLY1305_KEY_SIZE: usize = CHACHA20_KEY_SIZE;
@@ -32,6 +36,14 @@ pub const CHACHA20POLY1305_KEY_SIZE: usize = CHACHA20_KEY_SIZE;
 pub const CHACHA20POLY1305_NONCE_SIZE: usize = CHACHA20_NONCE_SIZE;
 /// Size of the authentication tag produced by ChaCha20Poly1305 in bytes
 pub const CHACHA20POLY1305_TAG_SIZE: usize = POLY1305_TAG_SIZE;
+
+fn core_random_error(_: dcrypt_internal::random::Error) -> CoreError {
+    CoreError::Other {
+        context: "randomness",
+        #[cfg(feature = "std")]
+        message: "caller-provided randomness source failed".to_string(),
+    }
+}
 const CHACHA20POLY1305_MAX_DATA_BYTES: u128 = (u32::MAX as u128) * 64;
 
 fn validate_data_length(data_len: usize) -> Result<()> {
@@ -43,10 +55,24 @@ fn validate_data_length(data_len: usize) -> Result<()> {
 }
 
 /// ChaCha20-Poly1305 AEAD
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct ChaCha20Poly1305 {
     key: SecretBuffer<CHACHA20POLY1305_KEY_SIZE>,
 }
+
+impl Zeroize for ChaCha20Poly1305 {
+    fn zeroize(&mut self) {
+        self.key.zeroize();
+    }
+}
+
+impl Drop for ChaCha20Poly1305 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for ChaCha20Poly1305 {}
 
 /// Operation for ChaCha20Poly1305 encryption operations
 pub struct ChaCha20Poly1305EncryptOperation<'a> {
@@ -190,7 +216,7 @@ impl ChaCha20Poly1305 {
         // -------- one-time key & expected tag ------------------------------
         let poly_key = self.poly1305_key(nonce);
         let expected = self.calculate_tag_ct(&poly_key, aad, encrypted)?;
-        let tag_ok = expected.as_ref().ct_eq(tag); // subtle::Choice
+        let tag_ok = expected.as_ref().ct_eq(tag);
 
         // -------- decrypt ---------------------------------------------------
         let mut m = Vec::with_capacity(encrypted.len());
@@ -339,23 +365,25 @@ impl SymmetricCipher for ChaCha20Poly1305 {
         }
     }
 
-    fn generate_key<R: rand::RngCore + rand::CryptoRng>(
+    fn generate_key<R: RngCore + CryptoRng>(
         rng: &mut R,
-    ) -> std::result::Result<Self::Key, CoreError> {
+    ) -> core::result::Result<Self::Key, CoreError> {
         let mut key_data = [0u8; CHACHA20POLY1305_KEY_SIZE];
-        rng.fill_bytes(&mut key_data);
+        rng.try_fill_bytes(&mut key_data)
+            .map_err(core_random_error)?;
         Ok(SecretBytes::new(key_data))
     }
 
-    fn generate_nonce<R: rand::RngCore + rand::CryptoRng>(
+    fn generate_nonce<R: RngCore + CryptoRng>(
         rng: &mut R,
-    ) -> std::result::Result<Self::Nonce, CoreError> {
+    ) -> core::result::Result<Self::Nonce, CoreError> {
         let mut nonce_data = [0u8; CHACHA20POLY1305_NONCE_SIZE];
-        rng.fill_bytes(&mut nonce_data);
+        rng.try_fill_bytes(&mut nonce_data)
+            .map_err(core_random_error)?;
         Ok(Nonce::new(nonce_data))
     }
 
-    fn derive_key_from_bytes(bytes: &[u8]) -> std::result::Result<Self::Key, CoreError> {
+    fn derive_key_from_bytes(bytes: &[u8]) -> core::result::Result<Self::Key, CoreError> {
         if bytes.len() < CHACHA20POLY1305_KEY_SIZE {
             return Err(CoreError::InvalidLength {
                 context: "ChaCha20Poly1305 key derivation",
@@ -372,7 +400,7 @@ impl SymmetricCipher for ChaCha20Poly1305 {
 
 // Implement Operation for ChaCha20Poly1305EncryptOperation
 impl Operation<Ciphertext> for ChaCha20Poly1305EncryptOperation<'_> {
-    fn execute(self) -> std::result::Result<Ciphertext, CoreError> {
+    fn execute(self) -> core::result::Result<Ciphertext, CoreError> {
         let nonce = self.nonce.ok_or_else(|| CoreError::InvalidParameter {
             context: "ChaCha20Poly1305 encryption",
             #[cfg(feature = "std")]
@@ -404,7 +432,7 @@ impl<'a> EncryptOperation<'a, ChaCha20Poly1305> for ChaCha20Poly1305EncryptOpera
         self
     }
 
-    fn encrypt(self, plaintext: &'a [u8]) -> std::result::Result<Ciphertext, CoreError> {
+    fn encrypt(self, plaintext: &'a [u8]) -> core::result::Result<Ciphertext, CoreError> {
         let nonce = self.nonce.ok_or_else(|| CoreError::InvalidParameter {
             context: "ChaCha20Poly1305 encryption",
             #[cfg(feature = "std")]
@@ -425,7 +453,7 @@ impl<'a> EncryptOperation<'a, ChaCha20Poly1305> for ChaCha20Poly1305EncryptOpera
 
 // Implement Operation for ChaCha20Poly1305DecryptOperation
 impl Operation<Vec<u8>> for ChaCha20Poly1305DecryptOperation<'_> {
-    fn execute(self) -> std::result::Result<Vec<u8>, CoreError> {
+    fn execute(self) -> core::result::Result<Vec<u8>, CoreError> {
         Err(CoreError::InvalidParameter {
             context: "ChaCha20Poly1305 decryption",
             #[cfg(feature = "std")]
@@ -448,7 +476,7 @@ impl<'a> DecryptOperation<'a, ChaCha20Poly1305> for ChaCha20Poly1305DecryptOpera
     fn decrypt(
         self,
         ciphertext: &'a <ChaCha20Poly1305 as SymmetricCipher>::Ciphertext,
-    ) -> std::result::Result<Vec<u8>, CoreError> {
+    ) -> core::result::Result<Vec<u8>, CoreError> {
         let nonce = self.nonce.ok_or_else(|| CoreError::InvalidParameter {
             context: "ChaCha20Poly1305 decryption",
             #[cfg(feature = "std")]

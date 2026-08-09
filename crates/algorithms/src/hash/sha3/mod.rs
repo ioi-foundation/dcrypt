@@ -2,9 +2,9 @@
 //!
 //! Constant-time & side-channel-hardened Keccak sponge (FIPS 202).
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-use zeroize::Zeroize;
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{validate, Result};
 use crate::hash::{Hash, HashAlgorithm, HashFunction};
@@ -123,32 +123,48 @@ impl HashAlgorithm for Sha3_512Algorithm {
 // ───────────────────── engine structs (state + pointer) ───────────────────
 
 /// Streaming **SHA3-224** engine.
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha3_224 {
     state: [u64; KECCAK_STATE_SIZE],
     pt: usize,
 }
 
 /// Streaming **SHA3-256** engine.
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha3_256 {
     state: [u64; KECCAK_STATE_SIZE],
     pt: usize,
 }
 
 /// Streaming **SHA3-384** engine.
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha3_384 {
     state: [u64; KECCAK_STATE_SIZE],
     pt: usize,
 }
 
 /// Streaming **SHA3-512** engine.
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha3_512 {
     state: [u64; KECCAK_STATE_SIZE],
     pt: usize,
 }
+
+macro_rules! impl_sha3_zeroize {
+    ($name:ident) => {
+        impl Zeroize for $name {
+            fn zeroize(&mut self) {
+                self.state.zeroize();
+                self.pt.zeroize();
+            }
+        }
+    };
+}
+
+impl_sha3_zeroize!(Sha3_224);
+impl_sha3_zeroize!(Sha3_256);
+impl_sha3_zeroize!(Sha3_384);
+impl_sha3_zeroize!(Sha3_512);
 
 // ─────────────────────── shared engine-helper macro ───────────────────────
 

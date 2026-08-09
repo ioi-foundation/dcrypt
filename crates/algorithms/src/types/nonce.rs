@@ -3,11 +3,14 @@
 //! This module provides a generic nonce type with compile-time size guarantees
 //! for various cryptographic algorithms, ensuring proper type safety and validation.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use rand::{CryptoRng, RngCore};
-use subtle::ConstantTimeEq;
-use zeroize::Zeroize;
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{validate, Result};
 use crate::types::sealed::Sealed;
@@ -17,9 +20,15 @@ use crate::types::{
 };
 
 /// Generic nonce type with compile-time size guarantee
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Nonce<const N: usize> {
     data: [u8; N],
+}
+
+impl<const N: usize> Zeroize for Nonce<N> {
+    fn zeroize(&mut self) {
+        self.data.zeroize();
+    }
 }
 
 // Mark Nonce types as sealed
@@ -48,10 +57,10 @@ impl<const N: usize> Nonce<N> {
     }
 
     /// Generate a random nonce
-    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
+    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
         let mut data = [0u8; N];
-        rng.fill_bytes(&mut data);
-        Self { data }
+        rng.try_fill_bytes(&mut data)?;
+        Ok(Self { data })
     }
 
     /// Get the size of this nonce in bytes
@@ -108,7 +117,7 @@ impl<const N: usize> LocalConstantEq for Nonce<N> {
 
 impl<const N: usize> RandomGeneration for Nonce<N> {
     fn random<R: RngCore + CryptoRng>(rng: &mut R) -> crate::error::Result<Self> {
-        Ok(Self::random(rng))
+        Self::random(rng)
     }
 }
 

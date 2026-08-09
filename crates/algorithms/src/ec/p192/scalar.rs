@@ -3,14 +3,28 @@
 use crate::ec::p192::constants::P192_SCALAR_SIZE;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 use dcrypt_params::traditional::ecdsa::NIST_P192;
-use subtle::{Choice, ConditionallySelectable};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// P-192 scalar: integers mod n, where
 /// n = 0xFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF (curve order).
-#[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
+#[derive(Clone, Debug)]
 pub struct Scalar(SecretBuffer<P192_SCALAR_SIZE>);
+
+impl Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl Drop for Scalar {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
     /// Create a scalar from raw bytes with reduction mod n.
@@ -18,6 +32,17 @@ impl Scalar {
     pub fn new(mut data: [u8; P192_SCALAR_SIZE]) -> Result<Self> {
         Self::reduce_scalar_bytes(&mut data)?;
         Ok(Scalar(SecretBuffer::new(data)))
+    }
+
+    /// Interpret a 192-bit integer modulo the group order, including zero.
+    ///
+    /// This constructor is intended for standards-defined mathematical
+    /// intermediates such as ECDSA hash and x-coordinate reduction. Use
+    /// [`Self::new`] for private scalars, nonces, and serialized signature
+    /// components, where zero is invalid.
+    pub fn from_bytes_reduced(mut data: [u8; P192_SCALAR_SIZE]) -> Self {
+        Self::reduce_scalar_bytes_allow_zero(&mut data);
+        Self::from_bytes_unchecked(data)
     }
 
     /// Internal constructor without checking zero
@@ -208,13 +233,21 @@ impl Scalar {
         Self::from_bytes_unchecked(Self::limbs_to_be(&r))
     }
 
-    /// Internal helper: reduce raw bytes mod n, ensure ≠ 0
+    /// Internal helper: reduce raw bytes mod n, ensure ≠ 0.
     fn reduce_scalar_bytes(bytes: &mut [u8; 24]) -> Result<()> {
-        let order = &NIST_P192.n;
-        // reject zero
+        Self::reduce_scalar_bytes_allow_zero(bytes);
+
         if bytes.iter().all(|&b| b == 0) {
             return Err(Error::param("P-192 Scalar", "Scalar cannot be zero"));
         }
+
+        Ok(())
+    }
+
+    /// Reduce an arbitrary 192-bit integer modulo the group order.
+    fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P192_SCALAR_SIZE]) {
+        let order = &NIST_P192.n;
+
         // compare bytes vs order big‐endian
         let mut gt = 0u8;
         let mut lt = 0u8;
@@ -238,11 +271,6 @@ impl Scalar {
                 }
             }
         }
-        // ensure not zero after reduction
-        if bytes.iter().all(|&b| b == 0) {
-            return Err(Error::param("P-192 Scalar", "Reduction resulted in zero"));
-        }
-        Ok(())
     }
 
     /// Compare two 6‐limb arrays: a ≥ b ?

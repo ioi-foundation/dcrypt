@@ -2,7 +2,7 @@
 
 use crate::ec::p224::constants::P224_FIELD_ELEMENT_SIZE;
 use crate::error::{Error, Result};
-use subtle::{Choice, ConditionallySelectable};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 
 /// P-224 field element representing values in F_p
 ///

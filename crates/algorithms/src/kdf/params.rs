@@ -1,6 +1,7 @@
 //! Common parameter structures and traits for key derivation functions
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
 
 // Conditional imports based on available features
 #[cfg(feature = "std")]
@@ -17,9 +18,10 @@ use alloc::string::String;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
 
+use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine as _};
 use core::fmt;
 use core::str::FromStr;
-use zeroize::{Zeroize, Zeroizing};
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 use crate::error::{Error, Result};
 
@@ -36,17 +38,6 @@ pub trait ParamProvider {
 
     /// Updates the parameters
     fn set_params(&mut self, params: Self::Params);
-}
-
-/// Trait for parameter types that can be serialized to a string
-pub trait StringEncodable {
-    /// Converts the parameters to a string representation
-    fn to_string(&self) -> String;
-
-    /// Converts from a string representation
-    fn from_string(s: &str) -> Result<Self>
-    where
-        Self: Sized;
 }
 
 /// A complete password hash with algorithm, parameters, salt, and hash
@@ -69,9 +60,12 @@ pub struct PasswordHash {
 impl Zeroize for PasswordHash {
     fn zeroize(&mut self) {
         self.algorithm.zeroize();
-        // BTreeMap doesn't implement Zeroize, so we can't zeroize it directly
-        // The sensitive data is in salt and hash which are Zeroizing<Vec<u8>>
-        // and will be zeroized automatically
+        for (mut key, mut value) in core::mem::take(&mut self.params) {
+            key.zeroize();
+            value.zeroize();
+        }
+        self.salt.zeroize();
+        self.hash.zeroize();
     }
 }
 
@@ -132,8 +126,8 @@ impl fmt::Display for PasswordHash {
         }
 
         // Encode salt and hash in base64
-        let salt_b64 = base64_encode(&self.salt);
-        let hash_b64 = base64_encode(&self.hash);
+        let salt_b64 = STANDARD_NO_PAD.encode(self.salt.as_slice());
+        let hash_b64 = STANDARD_NO_PAD.encode(self.hash.as_slice());
 
         write!(f, "${}${}", salt_b64, hash_b64)
     }
@@ -184,10 +178,12 @@ impl FromStr for PasswordHash {
         let salt_idx = if parts.len() > 3 { 2 } else { 1 };
         let hash_idx = if parts.len() > 3 { 3 } else { 2 };
 
-        let salt = base64_decode(parts[salt_idx])
+        let salt = STANDARD_NO_PAD
+            .decode(parts[salt_idx])
             .map_err(|_| Error::param("salt", "Invalid salt encoding - not valid base64"))?;
 
-        let hash = base64_decode(parts[hash_idx])
+        let hash = STANDARD_NO_PAD
+            .decode(parts[hash_idx])
             .map_err(|_| Error::param("hash", "Invalid hash encoding - not valid base64"))?;
 
         Ok(PasswordHash {
@@ -197,41 +193,4 @@ impl FromStr for PasswordHash {
             hash: Zeroizing::new(hash),
         })
     }
-}
-
-// Simple Base64 encoding/decoding functions
-// Note: In a real implementation, you'd use a proper base64 library
-
-fn base64_encode(data: &[u8]) -> String {
-    // This is a stub - in a real implementation, use a proper base64 library
-    let encoded = data
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect::<String>();
-    encoded
-}
-
-fn base64_decode(s: &str) -> Result<Vec<u8>> {
-    // This is a stub - in a real implementation, use a proper base64 library
-    let mut result = Vec::new();
-    let mut chars = s.chars().peekable();
-
-    while chars.peek().is_some() {
-        let high = chars.next().ok_or_else(|| {
-            Error::param(
-                "hex_string",
-                "Invalid hex encoding - unexpected end of string",
-            )
-        })?;
-        let low = chars
-            .next()
-            .ok_or_else(|| Error::param("hex_string", "Invalid hex encoding - odd length"))?;
-
-        let byte = u8::from_str_radix(&format!("{}{}", high, low), 16)
-            .map_err(|_| Error::param("hex_string", "Invalid hex encoding - non-hex character"))?;
-
-        result.push(byte);
-    }
-
-    Ok(result)
 }

@@ -4,6 +4,9 @@
 //! which is designed to be resilient against various attacks including
 //! time-memory trade-offs and side-channel attacks.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
@@ -16,12 +19,12 @@ use crate::hash::blake2::Blake2b;
 use crate::hash::HashFunction; // Applied Edit 3
 use crate::types::{Salt, SecretBytes};
 use crate::Argon2Compatible;
+use alloc::collections::BTreeMap;
 use base64::Engine;
 use core::convert::TryInto;
-use rand::{CryptoRng, RngCore};
-use std::collections::BTreeMap;
-use std::time::Duration;
-use zeroize::{Zeroize, Zeroizing};
+use core::time::Duration;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 // Argon2 specific constants
 const ARGON2_VERSION_1_3: u32 = 0x13;
@@ -195,7 +198,7 @@ fn argon2_g(
 }
 
 /// Argon2 variant types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Zeroize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Algorithm {
     /// Argon2d variant - uses data-dependent memory access, which offers
     /// the highest resistance against GPU cracking attacks but is vulnerable to side-channel attacks
@@ -208,11 +211,17 @@ pub enum Algorithm {
     Argon2id = 2,
 }
 
+impl Zeroize for Algorithm {
+    fn zeroize(&mut self) {
+        *self = Self::Argon2d;
+    }
+}
+
 /// Parameters for the Argon2 password hashing function
 ///
 /// Argon2 is configurable with several parameters that affect its memory and time cost.
 /// This struct encapsulates all the parameters needed to control the behavior of the algorithm.
-#[derive(Clone, Zeroize)] // MODIFIED: Removed Default from derive
+#[derive(Clone)]
 pub struct Params<const S: usize>
 where
     Salt<S>: Argon2Compatible,
@@ -236,6 +245,23 @@ where
     pub ad: Option<Zeroizing<Vec<u8>>>,
     /// Optional secret value that can be used as an additional input
     pub secret: Option<Zeroizing<Vec<u8>>>,
+}
+
+impl<const S: usize> Zeroize for Params<S>
+where
+    Salt<S>: Argon2Compatible,
+{
+    fn zeroize(&mut self) {
+        self.argon_type.zeroize();
+        self.version.zeroize();
+        self.memory_cost.zeroize();
+        self.time_cost.zeroize();
+        self.parallelism.zeroize();
+        self.output_len.zeroize();
+        self.salt.zeroize();
+        self.ad.zeroize();
+        self.secret.zeroize();
+    }
 }
 
 // Instead of relying on derive(Default), we'll implement it explicitly
@@ -894,10 +920,10 @@ where
         }
     }
 
-    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Salt {
-        let s = Salt::random_with_size(rng, S).expect("Salt generation failed");
+    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Salt> {
+        let s = Salt::random_with_size(rng, S)?;
         debug_assert_eq!(s.as_ref().len(), S, "Salt length mismatch");
-        s
+        Ok(s)
     }
 
     fn derive_key(
@@ -1071,7 +1097,7 @@ where
             // PHC spec §3: keyid/data fields are *unpadded* Base64.
             ph_params_map.insert(
                 "data".to_string(),
-                base64::engine::general_purpose::STANDARD_NO_PAD.encode(ad_val),
+                base64::engine::general_purpose::STANDARD_NO_PAD.encode(ad_val.as_slice()),
             );
         }
 

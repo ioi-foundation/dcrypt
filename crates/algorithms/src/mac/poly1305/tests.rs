@@ -1,7 +1,7 @@
 use super::*;
 use crate::types::Tag;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 use hex;
-use rand::{rngs::StdRng, RngCore, SeedableRng};
 
 fn rfc_key() -> [u8; 32] {
     hex::decode("85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b")
@@ -194,7 +194,7 @@ fn test_poly1305_rfc8439_vector11() {
 
 #[test]
 fn random_vs_chunked_update() {
-    let mut rng = StdRng::seed_from_u64(0x123456789ABCDEF0);
+    let mut rng = ChaCha20Rng::from_seed([0x12; 32]);
     for _ in 0..1_000 {
         let mut key = [0u8; 32];
         rng.fill_bytes(&mut key);
@@ -217,7 +217,7 @@ fn random_vs_chunked_update() {
 
 #[test]
 fn random_empty_update() {
-    let mut rng = StdRng::seed_from_u64(0x0FEDCBA987654321);
+    let mut rng = ChaCha20Rng::from_seed([0x0f; 32]);
     for _ in 0..100 {
         let mut key = [0u8; 32];
         rng.fill_bytes(&mut key);

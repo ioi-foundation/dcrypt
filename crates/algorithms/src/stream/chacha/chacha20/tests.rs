@@ -3,8 +3,8 @@ use crate::types::key::SymmetricKey;
 use crate::types::Nonce;
 use crate::types::RandomGeneration;
 use crate::ChaCha20Algorithm;
+use dcrypt_internal::random::ChaCha20Rng;
 use hex;
-use rand::rngs::OsRng;
 
 #[test]
 fn test_chacha20_rfc8439() {
@@ -104,8 +104,9 @@ fn test_chacha20_seek() {
 #[test]
 fn test_chacha20_with_secure_key() {
     // Create a secure key
-    let key = SymmetricKey::<ChaCha20Algorithm, 32>::random(&mut OsRng).unwrap();
-    let nonce = Nonce::<12>::random(&mut OsRng);
+    let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
+    let key = SymmetricKey::<ChaCha20Algorithm, 32>::random(&mut rng).unwrap();
+    let nonce = Nonce::<12>::random(&mut rng).unwrap();
 
     // Create cipher with secure key
     let mut cipher = ChaCha20::new(key.as_ref().try_into().unwrap(), &nonce);

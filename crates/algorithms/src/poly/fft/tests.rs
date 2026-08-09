@@ -3,13 +3,12 @@
 
 use super::*;
 use crate::ec::bls12_381::Bls12_381Scalar as Scalar;
-use rand::rngs::OsRng;
-use rand::RngCore;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 
 /// Tests the fundamental roundtrip property: IFFT(FFT(P)) = P.
 #[test]
 fn test_fft_ifft_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = ChaCha20Rng::from_seed([0x11; 32]);
     let mut poly = (0..FFT_SIZE)
         .map(|i| Scalar::from(rng.next_u64() + i as u64))
         .collect::<Vec<_>>();
@@ -24,7 +23,7 @@ fn test_fft_ifft_roundtrip() {
 /// Tests the linearity property: FFT(a) + FFT(b) = FFT(a + b).
 #[test]
 fn test_fft_linearity() {
-    let mut rng = OsRng;
+    let mut rng = ChaCha20Rng::from_seed([0x22; 32]);
     let poly_a = (0..FFT_SIZE)
         .map(|i| Scalar::from(rng.next_u64() + i as u64))
         .collect::<Vec<_>>();
@@ -95,8 +94,8 @@ fn test_bit_reversal() {
 
 #[test]
 fn check_roots_consistency() {
-    let w_n = *super::get_fft_n_root();
-    let g = *super::get_primitive_2n_root();
+    let w_n = super::get_fft_n_root();
+    let g = super::get_primitive_2n_root();
 
     assert_eq!(
         g.square(),
@@ -125,7 +124,7 @@ fn check_roots_consistency() {
 
 #[test]
 fn negacyclic_roundtrip_random() {
-    let mut rng = OsRng;
+    let mut rng = ChaCha20Rng::from_seed([0x33; 32]);
     let mut a = (0..FFT_SIZE)
         .map(|_| Scalar::from(rng.next_u64()))
         .collect::<Vec<_>>();

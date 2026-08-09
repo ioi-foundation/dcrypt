@@ -1,7 +1,7 @@
 //! sect283k1 unit tests
 
 use super::*;
-use rand::rngs::OsRng;
+use dcrypt_internal::random::ChaCha20Rng;
 
 #[test]
 fn test_field_arithmetic() {
@@ -63,7 +63,8 @@ fn test_scalar_multiplication() {
 
 #[test]
 fn test_keypair_generation() {
-    let (sk, pk) = generate_keypair(&mut OsRng).unwrap();
+    let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
+    let (sk, pk) = generate_keypair(&mut rng).unwrap();
     let pk_recomputed = scalar_mult_base_g(&sk).unwrap();
     assert_eq!(pk, pk_recomputed);
 }
@@ -105,8 +106,9 @@ fn test_base_point_on_curve() {
 #[test]
 fn test_ecdh_key_exchange() {
     // Generate two keypairs
-    let (sk1, pk1) = generate_keypair(&mut OsRng).unwrap();
-    let (sk2, pk2) = generate_keypair(&mut OsRng).unwrap();
+    let mut rng = ChaCha20Rng::from_seed([0x43; 32]);
+    let (sk1, pk1) = generate_keypair(&mut rng).unwrap();
+    let (sk2, pk2) = generate_keypair(&mut rng).unwrap();
 
     // Compute shared secrets
     let shared1 = scalar_mult(&sk1, &pk2).unwrap();

@@ -25,7 +25,7 @@ use crate::error::{Error, Result};
 use crate::hash::sha2::Sha256;
 use crate::kdf::hkdf::Hkdf;
 use crate::kdf::KeyDerivationFunction as KdfTrait;
-use rand::{CryptoRng, RngCore};
+use dcrypt_internal::random::{CryptoRng, RngCore};
 
 /// SECP256K1 curve parameters (base point G)
 struct Secp256k1Params {
@@ -62,7 +62,7 @@ pub fn scalar_mult_base_g(scalar: &Scalar) -> Result<Point> {
 pub fn generate_keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Scalar, Point)> {
     let mut scalar_bytes = [0u8; K256_SCALAR_SIZE];
     loop {
-        rng.fill_bytes(&mut scalar_bytes);
+        rng.try_fill_bytes(&mut scalar_bytes)?;
         match Scalar::new(scalar_bytes) {
             Ok(private_key) => {
                 let public_key = scalar_mult_base_g(&private_key)?;

@@ -1,7 +1,5 @@
 //! serialize.rs - Polynomial coefficient packing and unpacking
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
@@ -212,8 +210,7 @@ impl DefaultCoefficientSerde {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 
     #[derive(Clone)]
     struct TestModulus;
@@ -224,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_pack_unpack_roundtrip() {
-        let mut rng = StdRng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Test various bit widths
         for bits in [10, 12, 13, 23] {
@@ -233,7 +230,7 @@ mod tests {
             // Create random polynomial with coefficients fitting in `bits` bits
             let mut poly = Polynomial::<TestModulus>::zero();
             for i in 0..TestModulus::N {
-                poly.coeffs[i] = rng.gen::<u32>() & mask;
+                poly.coeffs[i] = rng.next_u32() & mask;
             }
 
             // Pack and unpack
@@ -265,12 +262,12 @@ mod tests {
 
     #[test]
     fn test_optimized_10bit() {
-        let mut rng = StdRng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create random polynomial with 10-bit coefficients
         let mut poly = Polynomial::<TestModulus>::zero();
         for i in 0..TestModulus::N {
-            poly.coeffs[i] = rng.gen::<u32>() & 0x3FF;
+            poly.coeffs[i] = rng.next_u32() & 0x3FF;
         }
 
         // Test optimized packing

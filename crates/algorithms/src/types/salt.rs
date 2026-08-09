@@ -3,10 +3,13 @@
 //! Provides the `Salt` type, representing a cryptographic
 //! salt with appropriate validation and randomization capabilities.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{validate, Result};
 use crate::types::sealed::Sealed;
@@ -15,9 +18,15 @@ use crate::types::{
 };
 
 /// A cryptographic salt with compile-time size guarantee
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Salt<const N: usize> {
     data: [u8; N],
+}
+
+impl<const N: usize> Zeroize for Salt<N> {
+    fn zeroize(&mut self) {
+        self.data.zeroize();
+    }
 }
 
 // Mark Salt types as sealed
@@ -45,16 +54,16 @@ impl<const N: usize> Salt<N> {
     }
 
     /// Generate a random salt
-    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Self {
+    pub fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
         let mut data = [0u8; N];
-        rng.fill_bytes(&mut data);
-        Self { data }
+        rng.try_fill_bytes(&mut data)?;
+        Ok(Self { data })
     }
 
     /// Generate a random salt with a specific size
     pub fn random_with_size<R: RngCore + CryptoRng>(rng: &mut R, size: usize) -> Result<Self> {
         validate::length("Salt::random_with_size", size, N)?;
-        Ok(Self::random(rng))
+        Self::random(rng)
     }
 
     /// Get the size of this salt in bytes
@@ -121,7 +130,7 @@ impl<const N: usize> ConstantTimeEq for Salt<N> {
 
 impl<const N: usize> RandomGeneration for Salt<N> {
     fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
-        Ok(Self::random(rng))
+        Self::random(rng)
     }
 }
 

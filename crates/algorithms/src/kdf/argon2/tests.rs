@@ -1,7 +1,7 @@
 use super::*; // Imports items from the parent module (argon2/mod.rs)
 use dcrypt_common::security::SecretVec;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 use hex; // For decoding expected hex strings in RFC vectors
-use rand::RngCore; // For fill_bytes
 use std::ops::Deref; // For deref() method on Zeroizing
 
 // RFC-9106 constant inputs --------------------------------------------------
@@ -43,7 +43,7 @@ fn argon2d_rfc_vector_a1() -> Result<()> {
     let argon2 = Argon2::new_with_params(rfc_params(Algorithm::Argon2d));
     let hash = argon2.hash_password(password.as_ref())?;
 
-    println!(">>> argon2d hash = {}", hex::encode(&hash));
+    println!(">>> argon2d hash = {}", hex::encode(hash.as_slice()));
 
     let expected_hex = "512b391b6f1162975371d30919734294f868e3be3984f3c1a13a4db9fabe4acb";
     let expected_bytes = hex::decode(expected_hex).expect("Invalid expected hex");
@@ -63,7 +63,7 @@ fn argon2i_rfc_vector_a3() -> Result<()> {
     let argon2 = Argon2::new_with_params(rfc_params(Algorithm::Argon2i));
     let hash = argon2.hash_password(password.as_ref())?;
 
-    println!(">>> argon2i hash = {}", hex::encode(&hash));
+    println!(">>> argon2i hash = {}", hex::encode(hash.as_slice()));
 
     let expected_hex = "c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8";
     let expected_bytes = hex::decode(expected_hex).expect("Invalid expected hex");
@@ -83,7 +83,7 @@ fn argon2id_rfc_vector_a5() -> Result<()> {
     let argon2 = Argon2::new_with_params(rfc_params(Algorithm::Argon2id));
     let hash = argon2.hash_password(password.as_ref())?;
 
-    println!(">>> argon2id hash = {}", hex::encode(&hash));
+    println!(">>> argon2id hash = {}", hex::encode(hash.as_slice()));
 
     let expected_hex = "0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659";
     let expected_bytes = hex::decode(expected_hex).expect("Invalid expected hex");
@@ -120,7 +120,7 @@ fn argon2id_reference_implementation_vector() -> Result<()> {
 
     println!(
         ">>> argon2id reference implementation hash = {}",
-        hex::encode(&hash)
+        hex::encode(hash.as_slice())
     );
 
     let expected_hex = "d74d7db154b312931625cde5a51f76bc52113b4b0515aa94952203b3cc45b800";
@@ -144,7 +144,7 @@ fn argon2id_phc_string_hash_verify() -> Result<()> {
     const SALT_LEN: usize = 16;
 
     let mut salt_data_arr = [0u8; SALT_LEN];
-    rand::thread_rng().fill_bytes(&mut salt_data_arr);
+    ChaCha20Rng::from_seed([0x61; 32]).fill_bytes(&mut salt_data_arr);
     let salt_struct = Salt::<SALT_LEN>::new(salt_data_arr);
 
     let ad_data_vec = b"user@example.com".to_vec();
@@ -300,13 +300,13 @@ fn argon2_builder_overrides_work() -> Result<()> {
 fn generate_salt_correct_size() {
     const TEST_SALT_SIZE: usize = 24;
     // Removed DEFAULT_ARGON2_SALT_SIZE as it's not directly relevant here for checking Argon2<S>::generate_salt
-    let salt = Argon2::<TEST_SALT_SIZE>::generate_salt(&mut rand::rngs::OsRng);
+    let mut rng = ChaCha20Rng::from_seed([0x62; 32]);
+    let salt = Argon2::<TEST_SALT_SIZE>::generate_salt(&mut rng).unwrap();
     // MODIFIED: Expected size is TEST_SALT_SIZE (which is S in Argon2<S>)
     assert_eq!(salt.as_ref().len(), TEST_SALT_SIZE);
 
     // This part of the test checks Salt::random_with_size directly, which is good.
-    let specific_salt =
-        Salt::<TEST_SALT_SIZE>::random_with_size(&mut rand::rngs::OsRng, TEST_SALT_SIZE).unwrap();
+    let specific_salt = Salt::<TEST_SALT_SIZE>::random_with_size(&mut rng, TEST_SALT_SIZE).unwrap();
     assert_eq!(specific_salt.as_ref().len(), TEST_SALT_SIZE);
 }
 

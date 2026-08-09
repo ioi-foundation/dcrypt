@@ -3,8 +3,8 @@
 use super::*;
 use crate::ec::p224::{self, FieldElement, Point, Scalar};
 use crate::error::Result;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 use dcrypt_params::traditional::ecdsa::NIST_P224;
-use rand::rngs::OsRng;
 
 // ============================================================================
 // FIELD ARITHMETIC TESTS
@@ -41,13 +41,32 @@ fn test_field_element_operations() -> Result<()> {
 }
 
 #[test]
+fn intermediate_scalar_reduction_allows_zero_and_reduces_order() {
+    assert!(Scalar::from_bytes_reduced([0u8; P224_SCALAR_SIZE]).is_zero());
+    assert!(Scalar::from_bytes_reduced(NIST_P224.n).is_zero());
+
+    let mut order_plus_one = NIST_P224.n;
+    for byte in order_plus_one.iter_mut().rev() {
+        let (value, carry) = byte.overflowing_add(1);
+        *byte = value;
+        if !carry {
+            break;
+        }
+    }
+    let mut one = [0u8; P224_SCALAR_SIZE];
+    one[P224_SCALAR_SIZE - 1] = 1;
+    assert_eq!(Scalar::from_bytes_reduced(order_plus_one).serialize(), one);
+}
+
+#[test]
 fn test_point_operations() -> Result<()> {
     // Generate a random point by scalar multiplication of the base point
     let g = p224::base_point_g();
     let scalar = {
         let mut bytes = [0u8; 28];
-        OsRng.fill_bytes(&mut bytes);
-        bytes[27] &= 0x7F; // Ensure it's less than the curve order
+        let mut rng = ChaCha20Rng::from_seed([0x21; 32]);
+        rng.fill_bytes(&mut bytes);
+        bytes[0] &= 0x7F; // Ensure it's less than the curve order
         Scalar::new(bytes)?
     };
 
@@ -134,7 +153,7 @@ fn test_compression_roundtrip() -> Result<()> {
 #[test]
 fn test_keypair_generation() -> Result<()> {
     // Generate a keypair and verify that the public key is correctly derived
-    let mut rng = OsRng;
+    let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
     let (private_key, public_key) = p224::generate_keypair(&mut rng)?;
 
     // Verify that scalar_mult_base_g(private_key) gives the expected public key
@@ -289,9 +308,6 @@ mod scalar_multiplication_vectors {
         let result1 = p224::scalar_mult_base_g(&k1)?;
         let g = p224::base_point_g();
         assert_eq!(result1, g);
-
-        // Additional test vectors would go here once we have NIST CAVP vectors
-        // TODO: Add NIST CAVP test vectors when available
 
         Ok(())
     }

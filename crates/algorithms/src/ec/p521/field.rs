@@ -13,8 +13,8 @@ use crate::ec::p521::constants::{
     p521_bytes_to_limbs, p521_limbs_to_bytes, P521_FIELD_ELEMENT_SIZE, P521_LIMBS,
 };
 use crate::error::{Error, Result};
-use subtle::{Choice, ConditionallySelectable};
-use zeroize::Zeroize;
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::zeroing::Zeroize;
 
 /// P-521 field element representing values in Fₚ (p = 2^521 − 1).
 /// Internally stored as 17 little-endian 32-bit limbs; only the low 9 bits

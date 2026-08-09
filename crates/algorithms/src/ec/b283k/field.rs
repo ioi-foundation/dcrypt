@@ -3,7 +3,7 @@
 
 use crate::ec::b283k::constants::B283K_FIELD_ELEMENT_SIZE;
 use crate::error::{Error, Result};
-use subtle::{Choice, ConditionallySelectable};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 
 /// A field element in GF(2^283) represented by 5 u64 limbs (320 bits).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

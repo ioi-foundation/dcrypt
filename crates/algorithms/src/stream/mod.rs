@@ -14,8 +14,6 @@
 //! same key. Reusing a nonce with the same key completely breaks the security
 //! of the cipher.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 /// ChaCha family of stream cipher implementations
 pub mod chacha;
 

@@ -2,8 +2,8 @@
 
 use super::super::{G1Affine, G1Projective, G2Affine, G2Projective, Scalar};
 
-use rand_core::OsRng;
-use subtle::{Choice, ConditionallySelectable};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::random::ChaCha20Rng;
 
 // ============================================================================
 // G1 Group Tests
@@ -145,8 +145,9 @@ fn test_g1_batch_normalize_with_identity() {
 
 #[test]
 fn test_g1_conditional_select() {
-    let p = G1Projective::random(&mut OsRng);
-    let q = G1Projective::random(&mut OsRng);
+    let mut rng = ChaCha20Rng::from_seed([0x51; 32]);
+    let p = G1Projective::random(&mut rng).unwrap();
+    let q = G1Projective::random(&mut rng).unwrap();
 
     // Test with Choice::from(0)
     let selected =
@@ -270,8 +271,9 @@ fn test_g2_batch_normalize() {
 
 #[test]
 fn test_g2_conditional_select() {
-    let p = G2Projective::random(&mut OsRng);
-    let q = G2Projective::random(&mut OsRng);
+    let mut rng = ChaCha20Rng::from_seed([0x52; 32]);
+    let p = G2Projective::random(&mut rng).unwrap();
+    let q = G2Projective::random(&mut rng).unwrap();
 
     // Test with Choice::from(0)
     let selected =

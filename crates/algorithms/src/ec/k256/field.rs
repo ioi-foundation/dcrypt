@@ -3,7 +3,7 @@
 
 use crate::ec::k256::constants::K256_FIELD_ELEMENT_SIZE;
 use crate::error::{Error, Result};
-use subtle::{Choice, ConditionallySelectable};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 
 /// secp256k1 field element representing values in F_p
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

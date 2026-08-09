@@ -25,7 +25,7 @@ use crate::error::{Error, Result};
 use crate::hash::sha2::Sha384;
 use crate::kdf::hkdf::Hkdf;
 use crate::kdf::KeyDerivationFunction as KdfTrait;
-use rand::{CryptoRng, RngCore};
+use dcrypt_internal::random::{CryptoRng, RngCore};
 
 /// SECT283K1 curve parameters (base point G)
 struct Sect283k1Params {
@@ -64,7 +64,7 @@ pub fn scalar_mult_base_g(scalar: &Scalar) -> Result<Point> {
 pub fn generate_keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Scalar, Point)> {
     let mut scalar_bytes = [0u8; B283K_SCALAR_SIZE];
     loop {
-        rng.fill_bytes(&mut scalar_bytes);
+        rng.try_fill_bytes(&mut scalar_bytes)?;
         match Scalar::new(scalar_bytes) {
             Ok(private_key) => {
                 let public_key = scalar_mult_base_g(&private_key)?;

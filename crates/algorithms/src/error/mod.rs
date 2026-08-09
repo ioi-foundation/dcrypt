@@ -1,9 +1,10 @@
 //! Error handling for cryptographic primitives
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "alloc")]
 extern crate alloc;
+
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
 
 #[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
@@ -43,6 +44,9 @@ pub enum Error {
         algorithm: &'static str,
     },
 
+    /// A caller-provided cryptographic randomness source failed.
+    Randomness,
+
     /// Feature not implemented
     NotImplemented {
         /// Name of the unimplemented feature
@@ -75,6 +79,7 @@ pub enum Error {
     },
 
     #[cfg(not(feature = "std"))]
+    /// External error context without heap-allocated details.
     External {
         /// Source of the external error
         source: &'static str,
@@ -130,6 +135,7 @@ impl fmt::Display for Error {
             Error::Authentication { algorithm } => {
                 write!(f, "Authentication failed for {}", algorithm)
             }
+            Error::Randomness => f.write_str("Caller-provided randomness source failed"),
             Error::NotImplemented { feature } => {
                 write!(f, "Feature not implemented: {}", feature)
             }
@@ -182,6 +188,11 @@ impl From<Error> for CoreError {
                 #[cfg(feature = "std")]
                 message: "authentication failed".to_string(),
             },
+            Error::Randomness => CoreError::Other {
+                context: "randomness",
+                #[cfg(feature = "std")]
+                message: "caller-provided randomness source failed".to_string(),
+            },
             Error::NotImplemented { feature } => CoreError::NotImplemented { feature },
             Error::Processing { operation, details } => CoreError::Other {
                 context: operation,
@@ -210,6 +221,12 @@ impl From<Error> for CoreError {
                 message: msg.to_string(),
             },
         }
+    }
+}
+
+impl From<dcrypt_internal::random::Error> for Error {
+    fn from(_: dcrypt_internal::random::Error) -> Self {
+        Self::Randomness
     }
 }
 

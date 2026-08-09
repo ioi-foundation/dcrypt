@@ -3,6 +3,9 @@
 //! This module defines concrete algorithm types that can be used
 //! with the type-safe wrappers in this crate.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use crate::types::key::{AsymmetricAlgorithm, SymmetricAlgorithm};
 
 // =============================================================================

@@ -2,8 +2,12 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use dcrypt_algorithms::ec::p521::{self, FieldElement, Point, Scalar};
+use dcrypt_internal::random::ChaCha20Rng;
 use dcrypt_params::traditional::ecdsa::NIST_P521;
-use rand::rngs::OsRng;
+
+fn bench_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x75; 32])
+}
 
 /// Benchmark field arithmetic operations
 fn bench_field_operations(c: &mut Criterion) {
@@ -42,7 +46,7 @@ fn bench_scalar_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("p521/scalar");
 
     // Generate two random scalars for testing
-    let mut rng = OsRng;
+    let mut rng = bench_rng();
     let (scalar1, _) = p521::generate_keypair(&mut rng).unwrap();
     let (scalar2, _) = p521::generate_keypair(&mut rng).unwrap();
 
@@ -95,7 +99,7 @@ fn bench_point_operations(c: &mut Criterion) {
     });
 
     // Scalar multiplication with random full-size scalar
-    let mut rng = OsRng;
+    let mut rng = bench_rng();
     let (full_scalar, _) = p521::generate_keypair(&mut rng).unwrap();
 
     group.bench_function("scalar_mul_full", |b| {
@@ -146,7 +150,7 @@ fn bench_key_generation(c: &mut Criterion) {
     let mut group = c.benchmark_group("p521/keygen");
 
     group.bench_function("generate_keypair", |b| {
-        let mut rng = OsRng;
+        let mut rng = bench_rng();
         b.iter(|| black_box(p521::generate_keypair(&mut rng).unwrap()))
     });
 
@@ -157,7 +161,7 @@ fn bench_key_generation(c: &mut Criterion) {
 fn bench_ecdh_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("p521/ecdh");
 
-    let mut rng = OsRng;
+    let mut rng = bench_rng();
 
     // Generate two keypairs for ECDH
     let (private_a, public_a) = p521::generate_keypair(&mut rng).unwrap();

@@ -3,21 +3,17 @@
 //! This module implements the SHA-2 family of hash functions as specified in
 //! FIPS PUB 180-4 with additional security measures for memory handling.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
 
 use crate::error::{validate, Result};
 use crate::hash::{Hash, HashAlgorithm, HashFunction};
 use crate::types::Digest;
-use byteorder::{BigEndian, ByteOrder};
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
 // Import security types from dcrypt-core
+use core::sync::atomic::{compiler_fence, Ordering};
 use dcrypt_common::security::{EphemeralSecret, SecureZeroingType, ZeroizeGuard};
-#[cfg(not(feature = "std"))]
-use portable_atomic::{compiler_fence, Ordering};
-#[cfg(feature = "std")]
-use std::sync::atomic::{compiler_fence, Ordering};
 
 use dcrypt_params::utils::hash::{
     SHA224_OUTPUT_SIZE, SHA256_BLOCK_SIZE, SHA256_OUTPUT_SIZE, SHA384_OUTPUT_SIZE,
@@ -176,7 +172,7 @@ impl HashAlgorithm for Sha512_256Algorithm {
 }
 
 /// SHA-224 hash function state with enhanced memory safety
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha224 {
     state: [u32; 8],
     buffer: [u8; SHA256_BLOCK_SIZE],
@@ -191,7 +187,7 @@ impl Drop for Sha224 {
 }
 
 /// SHA-256 hash function state with enhanced memory safety
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha256 {
     state: [u32; 8],
     buffer: [u8; SHA256_BLOCK_SIZE],
@@ -206,7 +202,7 @@ impl Drop for Sha256 {
 }
 
 /// SHA-384 hash function state with enhanced memory safety
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha384 {
     state: [u64; 8],
     buffer: [u8; SHA512_BLOCK_SIZE],
@@ -221,7 +217,7 @@ impl Drop for Sha384 {
 }
 
 /// SHA-512 hash function state with enhanced memory safety
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha512 {
     state: [u64; 8],
     buffer: [u8; SHA512_BLOCK_SIZE],
@@ -236,7 +232,7 @@ impl Drop for Sha512 {
 }
 
 /// SHA-512/224 hash function state with enhanced memory safety
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha512_224 {
     state: [u64; 8],
     buffer: [u8; SHA512_BLOCK_SIZE],
@@ -251,13 +247,33 @@ impl Drop for Sha512_224 {
 }
 
 /// SHA-512/256 hash function state with enhanced memory safety
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha512_256 {
     state: [u64; 8],
     buffer: [u8; SHA512_BLOCK_SIZE],
     buffer_idx: usize,
     total_bytes: u128,
 }
+
+macro_rules! impl_sha2_zeroize {
+    ($name:ident) => {
+        impl Zeroize for $name {
+            fn zeroize(&mut self) {
+                self.state.zeroize();
+                self.buffer.zeroize();
+                self.buffer_idx.zeroize();
+                self.total_bytes.zeroize();
+            }
+        }
+    };
+}
+
+impl_sha2_zeroize!(Sha224);
+impl_sha2_zeroize!(Sha256);
+impl_sha2_zeroize!(Sha384);
+impl_sha2_zeroize!(Sha512);
+impl_sha2_zeroize!(Sha512_224);
+impl_sha2_zeroize!(Sha512_256);
 
 impl Drop for Sha512_256 {
     fn drop(&mut self) {
@@ -293,7 +309,7 @@ impl Sha256 {
         for i in 0..16 {
             let start = i * 4;
             validate::max_length("SHA-256 block read", start + 4, SHA256_BLOCK_SIZE)?;
-            w[i] = BigEndian::read_u32(&block[start..]);
+            w[i] = u32::from_be_bytes(block[start..start + 4].try_into().expect("four bytes"));
         }
 
         for i in 16..64 {
@@ -409,7 +425,7 @@ impl Sha256 {
             }
         }
 
-        BigEndian::write_u64(&mut self.buffer[56..], bit_len);
+        self.buffer[56..].copy_from_slice(&bit_len.to_be_bytes());
         let mut block = [0u8; SHA256_BLOCK_SIZE];
         block.copy_from_slice(&self.buffer);
         Self::compress(&mut self.state, &block)?;
@@ -476,7 +492,7 @@ impl Sha512 {
         for i in 0..16 {
             let start = i * 8;
             validate::max_length("SHA-512 block read", start + 8, SHA512_BLOCK_SIZE)?;
-            w[i] = BigEndian::read_u64(&block[start..]);
+            w[i] = u64::from_be_bytes(block[start..start + 8].try_into().expect("eight bytes"));
         }
 
         for i in 16..80 {
@@ -591,11 +607,9 @@ impl Sha512 {
             }
         }
 
-        BigEndian::write_u64(
-            &mut self.buffer[SHA512_BLOCK_SIZE - 16..SHA512_BLOCK_SIZE - 8],
-            0,
-        );
-        BigEndian::write_u64(&mut self.buffer[SHA512_BLOCK_SIZE - 8..], bit_len as u64);
+        self.buffer[SHA512_BLOCK_SIZE - 16..SHA512_BLOCK_SIZE - 8]
+            .copy_from_slice(&((bit_len >> 64) as u64).to_be_bytes());
+        self.buffer[SHA512_BLOCK_SIZE - 8..].copy_from_slice(&(bit_len as u64).to_be_bytes());
         let mut block = [0u8; SHA512_BLOCK_SIZE];
         block.copy_from_slice(&self.buffer);
         Self::compress(&mut self.state, &block)?;

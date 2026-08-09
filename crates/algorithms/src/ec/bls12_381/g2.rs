@@ -5,17 +5,15 @@ use core::borrow::Borrow;
 use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
-
-#[cfg(feature = "alloc")]
-use alloc::vec;
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
+use dcrypt_internal::random::{CryptoRng, Error as RandomError};
+use dcrypt_internal::zeroing::Zeroize;
 
 use super::field::fp::Fp;
 use super::field::fp2::Fp2;
 use super::Scalar;
+#[cfg(feature = "alloc")]
+use alloc::vec;
 
 /// G₂ affine point representation.
 #[derive(Copy, Clone, Debug)]
@@ -31,8 +29,13 @@ impl Default for G2Affine {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for G2Affine {}
+impl Zeroize for G2Affine {
+    fn zeroize(&mut self) {
+        self.x.zeroize();
+        self.y.zeroize();
+        self.infinity = Choice::from(0);
+    }
+}
 
 impl fmt::Display for G2Affine {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -518,8 +521,13 @@ impl Default for G2Projective {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for G2Projective {}
+impl Zeroize for G2Projective {
+    fn zeroize(&mut self) {
+        self.x.zeroize();
+        self.y.zeroize();
+        self.z.zeroize();
+    }
+}
 
 impl fmt::Display for G2Projective {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -841,10 +849,12 @@ impl G2Projective {
     }
 
     /// Random non-identity element.
-    pub fn random(mut rng: impl RngCore) -> Self {
+    pub fn random(mut rng: impl CryptoRng) -> core::result::Result<Self, RandomError> {
         loop {
-            let x = Fp2::random(&mut rng);
-            let flip_sign = rng.next_u32() % 2 != 0;
+            let x = Fp2::random(&mut rng)?;
+            let mut sign = [0u8; 1];
+            rng.try_fill_bytes(&mut sign)?;
+            let flip_sign = sign[0] & 1 != 0;
 
             let p = ((x.square() * x) + B).sqrt().map(|y| G2Affine {
                 x,
@@ -856,7 +866,7 @@ impl G2Projective {
                 let p_proj = G2Projective::from(p.unwrap());
                 let p_cleared = p_proj.clear_cofactor();
                 if !bool::from(p_cleared.is_identity()) {
-                    return p_cleared;
+                    return Ok(p_cleared);
                 }
             }
         }

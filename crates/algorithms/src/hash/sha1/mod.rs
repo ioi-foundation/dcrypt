@@ -7,11 +7,10 @@
 use crate::error::{Error, Result};
 use crate::hash::{Hash, HashAlgorithm, HashFunction};
 use crate::types::Digest;
-use byteorder::{BigEndian, ByteOrder};
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
 
 const SHA1_BLOCK_SIZE: usize = 64;
 const SHA1_OUTPUT_SIZE: usize = 20;
@@ -29,7 +28,7 @@ impl HashAlgorithm for Sha1Algorithm {
 }
 
 /// SHA-1 hash function
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Sha1 {
     /// Current hash state
     h: [u32; 5],
@@ -39,6 +38,15 @@ pub struct Sha1 {
     buffer_len: usize,
     /// Total message length in bits
     total_len: u64,
+}
+
+impl Zeroize for Sha1 {
+    fn zeroize(&mut self) {
+        self.h.zeroize();
+        self.buffer.zeroize();
+        self.buffer_len.zeroize();
+        self.total_len.zeroize();
+    }
 }
 
 impl Sha1 {
@@ -57,7 +65,7 @@ impl Sha1 {
         let mut w = [0u32; 80];
         // Prepare the message schedule
         for i in 0..16 {
-            w[i] = BigEndian::read_u32(&block[i * 4..]);
+            w[i] = u32::from_be_bytes(block[i * 4..i * 4 + 4].try_into().expect("four bytes"));
         }
         for i in 16..80 {
             w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);
@@ -166,7 +174,7 @@ impl Sha1 {
             *byte = 0;
         }
 
-        BigEndian::write_u64(&mut buffer[SHA1_BLOCK_SIZE - 8..], self.total_len);
+        buffer[SHA1_BLOCK_SIZE - 8..].copy_from_slice(&self.total_len.to_be_bytes());
         self.process_block(&buffer);
 
         let mut result = Vec::with_capacity(SHA1_OUTPUT_SIZE);

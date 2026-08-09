@@ -12,12 +12,10 @@
 //!
 //! ## Timing behavior
 //!
-//! Authentication tag bytes are compared with `subtle::ConstantTimeEq` after
+//! Authentication tag bytes are compared with dcrypt's owned constant-time trait after
 //! checking the public length. Input lengths, state errors, and authentication
 //! results use ordinary branching. No blanket side-channel guarantee is made
 //! for every backend, compiler, or target.
-
-#![cfg_attr(not(feature = "std"), no_std)]
 
 // Conditionally import Vec based on available features
 #[cfg(not(feature = "std"))]
@@ -27,9 +25,9 @@ use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::vec::Vec;
 
-use byteorder::{BigEndian, ByteOrder};
-use subtle::ConstantTimeEq;
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 // Import security types from dcrypt-core - FIXED PATH
 use dcrypt_common::security::SecretBuffer;
@@ -56,12 +54,28 @@ const GCM_BLOCK_SIZE: usize = 16;
 const GCM_TAG_SIZE: usize = 16;
 
 /// GCM mode implementation
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Gcm<B: BlockCipher + Zeroize + ZeroizeOnDrop> {
     cipher: B,
     h: SecretBuffer<GCM_BLOCK_SIZE>, // GHASH key (encrypted all-zero block) - now secured
     tag_len: usize,                  // desired tag length in bytes
 }
+
+impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Zeroize for Gcm<B> {
+    fn zeroize(&mut self) {
+        self.cipher.zeroize();
+        self.h.zeroize();
+        self.tag_len.zeroize();
+    }
+}
+
+impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Drop for Gcm<B> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> ZeroizeOnDrop for Gcm<B> {}
 
 /// Key construction needed by the generic [`SymmetricCipher`] adapter.
 pub trait GcmKey: AsRef<[u8]> + AsMut<[u8]> + Clone + Zeroize {
@@ -179,15 +193,16 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
         let mut keystream = Zeroizing::new(Vec::with_capacity(num_blocks * GCM_BLOCK_SIZE));
 
         let mut counter = *j0;
-        let mut ctr_val = BigEndian::read_u32(&counter[12..16]).wrapping_add(1);
-        BigEndian::write_u32(&mut counter[12..16], ctr_val);
+        let mut ctr_val =
+            u32::from_be_bytes(counter[12..16].try_into().expect("four bytes")).wrapping_add(1);
+        counter[12..16].copy_from_slice(&ctr_val.to_be_bytes());
 
         for _ in 0..num_blocks {
             let mut block = Zeroizing::new(counter);
             self.cipher.encrypt_block(block.as_mut())?;
             keystream.extend_from_slice(block.as_ref());
             ctr_val = ctr_val.wrapping_add(1);
-            BigEndian::write_u32(&mut counter[12..16], ctr_val);
+            counter[12..16].copy_from_slice(&ctr_val.to_be_bytes());
         }
 
         Ok(keystream)
@@ -346,23 +361,28 @@ where
         }
     }
 
-    fn generate_key<R: rand::RngCore + rand::CryptoRng>(
+    fn generate_key<R: RngCore + CryptoRng>(
         rng: &mut R,
-    ) -> std::result::Result<<Self as SymmetricCipher>::Key, CoreError> {
-        Ok(B::generate_key(rng))
+    ) -> core::result::Result<<Self as SymmetricCipher>::Key, CoreError> {
+        B::generate_key(rng).map_err(CoreError::from)
     }
 
-    fn generate_nonce<R: rand::RngCore + rand::CryptoRng>(
+    fn generate_nonce<R: RngCore + CryptoRng>(
         rng: &mut R,
-    ) -> std::result::Result<<Self as SymmetricCipher>::Nonce, CoreError> {
+    ) -> core::result::Result<<Self as SymmetricCipher>::Nonce, CoreError> {
         let mut nonce_data = [0u8; 12];
-        rng.fill_bytes(&mut nonce_data);
+        rng.try_fill_bytes(&mut nonce_data)
+            .map_err(|_| CoreError::Other {
+                context: "randomness",
+                #[cfg(feature = "std")]
+                message: "caller-provided randomness source failed".to_string(),
+            })?;
         Ok(Nonce::<12>::new(nonce_data)) // Using generic Nonce::<12> instead of Nonce12
     }
 
     fn derive_key_from_bytes(
         bytes: &[u8],
-    ) -> std::result::Result<<Self as SymmetricCipher>::Key, CoreError> {
+    ) -> core::result::Result<<Self as SymmetricCipher>::Key, CoreError> {
         if bytes.len() != B::key_size() {
             return Err(CoreError::InvalidLength {
                 context: "GCM key derivation",
@@ -380,7 +400,7 @@ where
     B: BlockCipher + Zeroize + ZeroizeOnDrop,
     B::Key: GcmKey,
 {
-    fn execute(self) -> std::result::Result<Ciphertext, CoreError> {
+    fn execute(self) -> core::result::Result<Ciphertext, CoreError> {
         let nonce = self.nonce.ok_or_else(|| CoreError::InvalidParameter {
             context: "GCM encryption",
             #[cfg(feature = "std")]
@@ -413,7 +433,7 @@ where
         self
     }
 
-    fn encrypt(self, plaintext: &'a [u8]) -> std::result::Result<Ciphertext, CoreError> {
+    fn encrypt(self, plaintext: &'a [u8]) -> core::result::Result<Ciphertext, CoreError> {
         let nonce = self.nonce.ok_or_else(|| CoreError::InvalidParameter {
             context: "GCM encryption",
             #[cfg(feature = "std")]
@@ -435,7 +455,7 @@ where
     B: BlockCipher + Zeroize + ZeroizeOnDrop,
     B::Key: GcmKey,
 {
-    fn execute(self) -> std::result::Result<Vec<u8>, CoreError> {
+    fn execute(self) -> core::result::Result<Vec<u8>, CoreError> {
         Err(CoreError::InvalidParameter {
             context: "GCM decryption",
             #[cfg(feature = "std")]
@@ -463,7 +483,7 @@ where
     fn decrypt(
         self,
         ciphertext: &'a <Gcm<B> as SymmetricCipher>::Ciphertext,
-    ) -> std::result::Result<Vec<u8>, CoreError> {
+    ) -> core::result::Result<Vec<u8>, CoreError> {
         let nonce = self.nonce.ok_or_else(|| CoreError::InvalidParameter {
             context: "GCM decryption",
             #[cfg(feature = "std")]

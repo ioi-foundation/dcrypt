@@ -1,8 +1,11 @@
 //! secp256k1 unit tests
 
 use super::*;
-use rand::rngs::OsRng;
-use rand::Rng;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
+
+fn test_rng(seed: u8) -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([seed; 32])
+}
 
 #[test]
 fn test_field_arithmetic() {
@@ -74,7 +77,7 @@ fn test_scalar_multiplication() {
 
 #[test]
 fn test_keypair_generation() {
-    let (sk, pk) = generate_keypair(&mut OsRng).unwrap();
+    let (sk, pk) = generate_keypair(&mut test_rng(0x42)).unwrap();
     let pk_recomputed = scalar_mult_base_g(&sk).unwrap();
     assert_eq!(pk, pk_recomputed);
 }
@@ -150,10 +153,10 @@ fn test_point_validity() {
     assert!(identity.is_valid(), "Identity should be valid");
 
     // Test with random valid points
-    let mut rng = OsRng;
+    let mut rng = test_rng(0x43);
     for _ in 0..10 {
         let mut scalar_bytes = [0u8; 32];
-        rng.fill(&mut scalar_bytes);
+        rng.fill_bytes(&mut scalar_bytes);
         if let Ok(scalar) = Scalar::new(scalar_bytes) {
             let point = g.mul(&scalar).unwrap();
             assert!(
@@ -181,12 +184,12 @@ fn test_field_parity() {
 
 #[test]
 fn test_point_compression_property() {
-    let mut rng = OsRng;
+    let mut rng = test_rng(0x44);
 
     // Test with random scalars
     for _ in 0..100 {
         let mut scalar_bytes = [0u8; 32];
-        rng.fill(&mut scalar_bytes);
+        rng.fill_bytes(&mut scalar_bytes);
 
         // Skip if scalar is zero or >= order
         if let Ok(scalar) = Scalar::new(scalar_bytes) {
@@ -203,12 +206,12 @@ fn test_point_compression_property() {
 
 #[test]
 fn test_point_uncompressed_property() {
-    let mut rng = OsRng;
+    let mut rng = test_rng(0x45);
 
     // Test with random scalars
     for _ in 0..50 {
         let mut scalar_bytes = [0u8; 32];
-        rng.fill(&mut scalar_bytes);
+        rng.fill_bytes(&mut scalar_bytes);
 
         if let Ok(scalar) = Scalar::new(scalar_bytes) {
             let point = base_point_g().mul(&scalar).unwrap();
@@ -229,12 +232,12 @@ fn test_point_uncompressed_property() {
 
 #[test]
 fn test_field_sqrt_consistency() {
-    let mut rng = OsRng;
+    let mut rng = test_rng(0x46);
 
     // Test that sqrt(x^2) = x or -x for random field elements
     for _ in 0..50 {
         let mut bytes = [0u8; 32];
-        rng.fill(&mut bytes);
+        rng.fill_bytes(&mut bytes);
 
         if let Ok(x) = FieldElement::from_bytes(&bytes) {
             let x_squared = x.square();
@@ -259,15 +262,15 @@ fn test_field_sqrt_consistency() {
 
 #[test]
 fn test_field_arithmetic_properties() {
-    let mut rng = OsRng;
+    let mut rng = test_rng(0x47);
 
     for _ in 0..20 {
         let mut a_bytes = [0u8; 32];
         let mut b_bytes = [0u8; 32];
         let mut c_bytes = [0u8; 32];
-        rng.fill(&mut a_bytes);
-        rng.fill(&mut b_bytes);
-        rng.fill(&mut c_bytes);
+        rng.fill_bytes(&mut a_bytes);
+        rng.fill_bytes(&mut b_bytes);
+        rng.fill_bytes(&mut c_bytes);
 
         if let (Ok(a), Ok(b), Ok(c)) = (
             FieldElement::from_bytes(&a_bytes),
@@ -329,7 +332,7 @@ fn test_field_arithmetic_properties() {
 
 #[test]
 fn test_point_group_properties() {
-    let mut rng = OsRng;
+    let mut rng = test_rng(0x48);
     let g = base_point_g();
 
     // Test associativity: (P + Q) + R = P + (Q + R)
@@ -337,9 +340,9 @@ fn test_point_group_properties() {
         let mut s1_bytes = [0u8; 32];
         let mut s2_bytes = [0u8; 32];
         let mut s3_bytes = [0u8; 32];
-        rng.fill(&mut s1_bytes);
-        rng.fill(&mut s2_bytes);
-        rng.fill(&mut s3_bytes);
+        rng.fill_bytes(&mut s1_bytes);
+        rng.fill_bytes(&mut s2_bytes);
+        rng.fill_bytes(&mut s3_bytes);
 
         if let (Ok(s1), Ok(s2), Ok(s3)) = (
             Scalar::new(s1_bytes),

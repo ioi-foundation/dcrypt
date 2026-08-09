@@ -5,7 +5,8 @@
 //! along with a salt value and repeats the process many times to produce a
 //! derived key, which can then be used as a cryptographic key in subsequent operations.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
 
 use crate::error::{validate, Error, Result};
 use crate::hash::HashFunction;
@@ -39,9 +40,9 @@ use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use core::time::Duration;
 
-use rand::{CryptoRng, RngCore};
-use std::marker::PhantomData;
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use core::marker::PhantomData;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Type-level constants for PBKDF2 algorithm
 pub enum Pbkdf2Algorithm<H: HashFunction> {
@@ -70,7 +71,7 @@ impl<H: HashFunction> KdfAlgorithm for Pbkdf2Algorithm<H> {
 }
 
 /// Parameters for PBKDF2
-#[derive(Clone, Debug, Zeroize)]
+#[derive(Clone, Debug)]
 pub struct Pbkdf2Params<const S: usize = 16> {
     /// Salt value
     pub salt: Salt<S>,
@@ -80,6 +81,14 @@ pub struct Pbkdf2Params<const S: usize = 16> {
 
     /// Length of derived key in bytes
     pub key_length: usize,
+}
+
+impl<const S: usize> Zeroize for Pbkdf2Params<S> {
+    fn zeroize(&mut self) {
+        self.salt.zeroize();
+        self.iterations.zeroize();
+        self.key_length.zeroize();
+    }
 }
 
 impl<const S: usize> Default for Pbkdf2Params<S>
@@ -99,7 +108,7 @@ where
 ///
 /// PBKDF2 can be used with any pseudorandom function, but this implementation
 /// uses HMAC with a configurable hash function.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Pbkdf2<H: HashFunction + Clone, const S: usize = 16> {
     /// The hash function type
     _hash_type: PhantomData<H>,
@@ -107,6 +116,20 @@ pub struct Pbkdf2<H: HashFunction + Clone, const S: usize = 16> {
     /// PBKDF2 parameters
     params: Pbkdf2Params<S>,
 }
+
+impl<H: HashFunction + Clone, const S: usize> Zeroize for Pbkdf2<H, S> {
+    fn zeroize(&mut self) {
+        self.params.zeroize();
+    }
+}
+
+impl<H: HashFunction + Clone, const S: usize> Drop for Pbkdf2<H, S> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<H: HashFunction + Clone, const S: usize> ZeroizeOnDrop for Pbkdf2<H, S> {}
 
 /// PBKDF2 builder implementation
 pub struct Pbkdf2Builder<'a, H: HashFunction + Clone, const S: usize = 16> {
@@ -385,7 +408,7 @@ where
 
     // FIXED: Elided lifetime
     fn builder(&self) -> impl KdfOperation<'_, Self::Algorithm> {
-        Pbkdf2Builder {
+        Pbkdf2Builder::<H, S> {
             kdf: self,
             ikm: None,
             salt: None,
@@ -394,8 +417,8 @@ where
         }
     }
 
-    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Salt {
-        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE).expect("Salt generation failed")
+    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Salt> {
+        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE)
     }
 
     fn security_level() -> SecurityLevel {

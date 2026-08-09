@@ -5,19 +5,22 @@ use dcrypt_algorithms::ec::k256::{
     base_point_g, generate_keypair, scalar_mult, scalar_mult_base_g, FieldElement, Point, Scalar,
     K256_FIELD_ELEMENT_SIZE, K256_SCALAR_SIZE,
 };
-use rand::rngs::OsRng;
-use rand::RngCore;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
+
+fn bench_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x72; 32])
+}
 
 /// Generate a random field element for benchmarking
 fn random_field_element() -> FieldElement {
     let mut bytes = [0u8; K256_FIELD_ELEMENT_SIZE];
-    OsRng.fill_bytes(&mut bytes);
+    bench_rng().fill_bytes(&mut bytes);
     // Retry if we happen to get a value >= p (very unlikely)
     loop {
         if let Ok(fe) = FieldElement::from_bytes(&bytes) {
             return fe;
         }
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
     }
 }
 
@@ -25,7 +28,7 @@ fn random_field_element() -> FieldElement {
 fn random_scalar() -> Scalar {
     let mut bytes = [0u8; K256_SCALAR_SIZE];
     loop {
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         if let Ok(scalar) = Scalar::new(bytes) {
             return scalar;
         }
@@ -177,12 +180,14 @@ fn bench_key_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("k256_keys");
 
     group.bench_function("generate_keypair", |bench| {
-        bench.iter(|| generate_keypair(&mut OsRng).expect("keypair generation should succeed"));
+        bench.iter(|| {
+            generate_keypair(&mut bench_rng()).expect("keypair generation should succeed")
+        });
     });
 
     group.bench_function("scalar_creation", |bench| {
         let mut bytes = [0u8; K256_SCALAR_SIZE];
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         bench.iter(|| Scalar::new(black_box(bytes)));
     });
 
@@ -225,8 +230,8 @@ fn bench_point_validation(c: &mut Criterion) {
     // Create an invalid point (not on curve)
     let mut invalid_x = [0u8; K256_FIELD_ELEMENT_SIZE];
     let mut invalid_y = [0u8; K256_FIELD_ELEMENT_SIZE];
-    OsRng.fill_bytes(&mut invalid_x);
-    OsRng.fill_bytes(&mut invalid_y);
+    bench_rng().fill_bytes(&mut invalid_x);
+    bench_rng().fill_bytes(&mut invalid_y);
 
     group.bench_function("new_uncompressed_valid", |bench| {
         bench.iter(|| Point::new_uncompressed(black_box(&valid_x), black_box(&valid_y)));
@@ -244,8 +249,8 @@ fn bench_ecdh_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("k256_ecdh");
 
     // Generate two keypairs for ECDH
-    let (sk1, pk1) = generate_keypair(&mut OsRng).expect("keypair generation should succeed");
-    let (sk2, pk2) = generate_keypair(&mut OsRng).expect("keypair generation should succeed");
+    let (sk1, pk1) = generate_keypair(&mut bench_rng()).expect("keypair generation should succeed");
+    let (sk2, pk2) = generate_keypair(&mut bench_rng()).expect("keypair generation should succeed");
 
     group.bench_function("shared_secret_computation", |bench| {
         bench.iter(|| {

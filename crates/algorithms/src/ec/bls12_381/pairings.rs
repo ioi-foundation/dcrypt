@@ -8,8 +8,9 @@ use core::borrow::Borrow;
 use core::fmt;
 use core::iter::Sum;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-use rand_core::RngCore;
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::random::{CryptoRng, Error as RandomError};
+use dcrypt_internal::zeroing::Zeroize;
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
@@ -24,8 +25,11 @@ impl Default for MillerLoopResult {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for MillerLoopResult {}
+impl Zeroize for MillerLoopResult {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl ConditionallySelectable for MillerLoopResult {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
@@ -204,8 +208,11 @@ impl Default for Gt {
     }
 }
 
-#[cfg(feature = "zeroize")]
-impl zeroize::DefaultIsZeroes for Gt {}
+impl Zeroize for Gt {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl fmt::Display for Gt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -368,11 +375,11 @@ impl Gt {
     }
 
     /// Creates a random GT element.
-    pub fn random(mut rng: impl RngCore) -> Self {
+    pub fn random(mut rng: impl CryptoRng) -> Result<Self, RandomError> {
         loop {
-            let inner = Fp12::random(&mut rng);
+            let inner = Fp12::random(&mut rng)?;
             if !bool::from(inner.is_zero()) {
-                return MillerLoopResult(inner).final_exponentiation();
+                return Ok(MillerLoopResult(inner).final_exponentiation());
             }
         }
     }

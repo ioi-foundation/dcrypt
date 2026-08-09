@@ -3,16 +3,30 @@
 use crate::ec::p224::constants::P224_SCALAR_SIZE;
 use crate::error::{validate, Error, Result};
 use dcrypt_common::security::SecretBuffer;
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 use dcrypt_params::traditional::ecdsa::NIST_P224;
-use subtle::{Choice, ConditionallySelectable};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// P-224 scalar value for use in elliptic curve operations
 ///
 /// Represents integers modulo the curve order n. Used for private keys
 /// and scalar multiplication. Automatically zeroized on drop for security.
-#[derive(Clone, Zeroize, ZeroizeOnDrop, Debug)]
+#[derive(Clone, Debug)]
 pub struct Scalar(SecretBuffer<P224_SCALAR_SIZE>);
+
+impl Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl Drop for Scalar {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
     /// Create a scalar from raw bytes with modular reduction
@@ -23,6 +37,17 @@ impl Scalar {
     pub fn new(mut data: [u8; P224_SCALAR_SIZE]) -> Result<Self> {
         Self::reduce_scalar_bytes(&mut data)?;
         Ok(Scalar(SecretBuffer::new(data)))
+    }
+
+    /// Interpret a 224-bit integer modulo the group order, including zero.
+    ///
+    /// This constructor is intended for standards-defined mathematical
+    /// intermediates such as ECDSA hash and x-coordinate reduction. Use
+    /// [`Self::new`] for private scalars, nonces, and serialized signature
+    /// components, where zero is invalid.
+    pub fn from_bytes_reduced(mut data: [u8; P224_SCALAR_SIZE]) -> Self {
+        Self::reduce_scalar_bytes_allow_zero(&mut data);
+        Self::from_bytes_unchecked(data)
     }
 
     /// Internal constructor that allows zero values
@@ -299,12 +324,18 @@ impl Scalar {
     /// 3. Conditionally subtract n if input >= n
     /// 4. Verify result is still non-zero
     fn reduce_scalar_bytes(bytes: &mut [u8; P224_SCALAR_SIZE]) -> Result<()> {
-        let order = &NIST_P224.n;
+        Self::reduce_scalar_bytes_allow_zero(bytes);
 
-        // Reject zero scalars immediately
         if bytes.iter().all(|&b| b == 0) {
             return Err(Error::param("P-224 Scalar", "Scalar cannot be zero"));
         }
+
+        Ok(())
+    }
+
+    /// Reduce an arbitrary 224-bit integer modulo the group order.
+    fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P224_SCALAR_SIZE]) {
+        let order = &NIST_P224.n;
 
         // Constant-time comparison with curve order
         // We want to check: is bytes >= order?
@@ -337,16 +368,6 @@ impl Scalar {
 
             *bytes = temp_bytes;
         }
-
-        // Check for zero after reduction
-        if bytes.iter().all(|&b| b == 0) {
-            return Err(Error::param(
-                "P-224 Scalar",
-                "Reduction resulted in zero scalar",
-            ));
-        }
-
-        Ok(())
     }
 
     // Helper constants - stored in little-endian limb order

@@ -9,7 +9,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 use super::ExtendableOutputFunction;
 use crate::error::{validate, Error, Result};
@@ -64,9 +64,15 @@ const PI: [usize; 24] = [
 ];
 
 // Helper struct for secure Keccak state operations
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 struct SecureKeccakState {
     state: SecretBuffer<200>, // 25 * 8 bytes
+}
+
+impl Zeroize for SecureKeccakState {
+    fn zeroize(&mut self) {
+        self.state.zeroize();
+    }
 }
 
 impl SecureKeccakState {
@@ -126,7 +132,7 @@ impl SecureZeroingType for SecureKeccakState {
 }
 
 /// SHAKE-128 extendable output function with secure memory handling
-#[derive(Clone, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct ShakeXof128 {
     state: SecureKeccakState,
     buffer: SecretBuffer<SHAKE128_RATE>,
@@ -145,8 +151,16 @@ impl Zeroize for ShakeXof128 {
     }
 }
 
+impl Drop for ShakeXof128 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for ShakeXof128 {}
+
 /// SHAKE-256 extendable output function with secure memory handling
-#[derive(Clone, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct ShakeXof256 {
     state: SecureKeccakState,
     buffer: SecretBuffer<SHAKE256_RATE>,
@@ -164,6 +178,14 @@ impl Zeroize for ShakeXof256 {
         self.squeezing = false;
     }
 }
+
+impl Drop for ShakeXof256 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for ShakeXof256 {}
 
 // Helper functions for Keccak permutation
 

@@ -8,8 +8,8 @@ use crate::ec::p521::{
     scalar::Scalar,
 };
 use crate::error::{validate, Error, Result};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 use dcrypt_params::traditional::ecdsa::NIST_P521;
-use subtle::{Choice, ConditionallySelectable};
 
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

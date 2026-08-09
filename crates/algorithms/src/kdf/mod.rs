@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 //! Key Derivation Functions with operation pattern and type-level guarantees
 //!
 //! This module provides implementations of key derivation functions (KDFs)
@@ -8,7 +6,7 @@
 /// ## Example usage
 ///
 /// ```
-/// # use rand::rngs::OsRng;
+/// # use dcrypt_internal::random::ChaCha20Rng;
 /// use dcrypt_algorithms::kdf::{TypedHkdf, KeyDerivationFunction, KdfOperation};
 /// use dcrypt_algorithms::hash::Sha256;
 ///
@@ -16,7 +14,8 @@
 /// let kdf = TypedHkdf::<Sha256>::new();
 ///
 /// // Generate a random salt
-/// let salt = TypedHkdf::<Sha256>::generate_salt(&mut OsRng);
+/// let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
+/// let salt = TypedHkdf::<Sha256>::generate_salt(&mut rng).unwrap();
 ///
 /// // Traditional API
 /// let key1 = kdf.derive_key(
@@ -48,6 +47,9 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 #[cfg(not(feature = "std"))]
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
@@ -62,13 +64,13 @@ use std::time::Duration;
 use core::time::Duration;
 
 use ::core::marker::PhantomData;
-use rand::{CryptoRng, RngCore};
+use dcrypt_internal::random::{CryptoRng, RngCore};
 
 // Import the new error types
 use crate::error::{Error, Result};
 use crate::hash::HashFunction;
 use crate::types::Salt;
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
 pub mod common;
 pub mod params;
@@ -177,7 +179,7 @@ pub trait KeyDerivationFunction {
     }
 
     /// Generate a random salt with appropriate size
-    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Salt;
+    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Salt>;
 }
 
 /// Type-level constants for HKDF algorithm
@@ -219,7 +221,7 @@ impl<H: HashFunction + Clone> KeyDerivationFunction for TypedHkdf<H> {
 
     fn new() -> Self {
         Self {
-            inner: hkdf::Hkdf::new(),
+            inner: hkdf::Hkdf::<H, 16>::new(),
             _phantom: PhantomData,
         }
     }
@@ -247,8 +249,8 @@ impl<H: HashFunction + Clone> KeyDerivationFunction for TypedHkdf<H> {
     }
 
     // FIXED: Removed unnecessary let binding
-    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Salt {
-        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE).expect("Salt generation failed")
+    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Salt> {
+        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE)
     }
 }
 
@@ -351,7 +353,7 @@ impl<H: HashFunction + Clone> KeyDerivationFunction for TypedPbkdf2<H> {
 
     fn new() -> Self {
         Self {
-            inner: pbkdf2::Pbkdf2::new(),
+            inner: pbkdf2::Pbkdf2::<H, 16>::new(),
             _phantom: PhantomData,
         }
     }
@@ -379,8 +381,8 @@ impl<H: HashFunction + Clone> KeyDerivationFunction for TypedPbkdf2<H> {
     }
 
     // FIXED: Removed unnecessary let binding
-    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Self::Salt {
-        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE).expect("Salt generation failed")
+    fn generate_salt<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self::Salt> {
+        Salt::random_with_size(rng, Self::Algorithm::MIN_SALT_SIZE)
     }
 }
 

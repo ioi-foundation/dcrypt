@@ -28,9 +28,7 @@ use dcrypt_algorithms::types::{
     SymmetricKey,
 };
 
-// Randomness (requires 'std' or a no_std RNG)
-#[cfg(feature = "std")]
-use rand::rngs::OsRng;
+use dcrypt_internal::random::ChaCha20Rng;
 
 fn main() -> CoreResult<()> {
     println!("dcrypt Type System Example:");
@@ -80,10 +78,9 @@ fn main() -> CoreResult<()> {
     println!("Created SecretBytes<4>: {:?}", secret_bytes);
     assert_eq!(secret_bytes.as_ref(), &[0x01, 0x02, 0x03, 0x04]);
 
-    // --- Random Generation (if std is enabled) ---
-    #[cfg(feature = "std")]
+    // --- Caller-seeded deterministic generation ---
     {
-        let mut rng = OsRng;
+        let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
         // Use RandomGeneration::random explicitly for types that implement it
         let random_key: SymmetricKey<ChaCha20Poly1305, 32> =
             RandomGeneration::random(&mut rng).map_err(CoreError::from)?;

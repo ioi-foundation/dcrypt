@@ -1,7 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use dcrypt_algorithms::ec::p384::{self, FieldElement, Point, Scalar};
-use rand::rngs::OsRng;
-use rand::RngCore;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
+
+fn bench_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x74; 32])
+}
 
 /// Benchmark P384 field element operations
 fn bench_field_operations(c: &mut Criterion) {
@@ -10,8 +13,8 @@ fn bench_field_operations(c: &mut Criterion) {
     // Prepare test data
     let mut bytes_a = [0u8; 48];
     let mut bytes_b = [0u8; 48];
-    OsRng.fill_bytes(&mut bytes_a);
-    OsRng.fill_bytes(&mut bytes_b);
+    bench_rng().fill_bytes(&mut bytes_a);
+    bench_rng().fill_bytes(&mut bytes_b);
     // Ensure they're valid field elements by reducing modulo p
     bytes_a[0] &= 0x7F; // Clear high bits to ensure < p
     bytes_b[0] &= 0x7F;
@@ -58,7 +61,7 @@ fn bench_point_operations(c: &mut Criterion) {
     // Generate a random point
     let scalar = {
         let mut bytes = [0u8; 48];
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         bytes[0] &= 0x7F; // Ensure valid scalar
         Scalar::new(bytes).unwrap()
     };
@@ -104,7 +107,7 @@ fn bench_scalar_multiplication(c: &mut Criterion) {
         bencher.iter_batched(
             || {
                 let mut bytes = [0u8; 48];
-                OsRng.fill_bytes(&mut bytes);
+                bench_rng().fill_bytes(&mut bytes);
                 bytes[0] &= 0x7F; // Ensure valid scalar
                 Scalar::new(bytes).unwrap()
             },
@@ -116,7 +119,7 @@ fn bench_scalar_multiplication(c: &mut Criterion) {
     // Benchmark scalar multiplication with arbitrary point
     let point = {
         let mut bytes = [0u8; 48];
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         bytes[0] &= 0x7F;
         let s = Scalar::new(bytes).unwrap();
         g.mul(&s).unwrap()
@@ -126,7 +129,7 @@ fn bench_scalar_multiplication(c: &mut Criterion) {
         bencher.iter_batched(
             || {
                 let mut bytes = [0u8; 48];
-                OsRng.fill_bytes(&mut bytes);
+                bench_rng().fill_bytes(&mut bytes);
                 bytes[0] &= 0x7F;
                 Scalar::new(bytes).unwrap()
             },
@@ -144,7 +147,7 @@ fn bench_scalar_multiplication(c: &mut Criterion) {
                     // Generate random bytes for the specified bit length
                     let byte_len = bits / 8;
                     let byte_offset = 48 - byte_len;
-                    OsRng.fill_bytes(&mut bytes[byte_offset..]);
+                    bench_rng().fill_bytes(&mut bytes[byte_offset..]);
                     // Clear unused high-order bytes
                     for i in 0..byte_offset {
                         bytes[i] = 0;
@@ -171,14 +174,14 @@ fn bench_scalar_arithmetic(c: &mut Criterion) {
     // Generate test scalars
     let a = {
         let mut bytes = [0u8; 48];
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         bytes[0] &= 0x7F;
         Scalar::new(bytes).unwrap()
     };
 
     let b = {
         let mut bytes = [0u8; 48];
-        OsRng.fill_bytes(&mut bytes);
+        bench_rng().fill_bytes(&mut bytes);
         bytes[0] &= 0x7F;
         Scalar::new(bytes).unwrap()
     };
@@ -220,7 +223,7 @@ fn bench_key_generation(c: &mut Criterion) {
     let mut group = c.benchmark_group("p384_keygen");
 
     group.bench_function("generate_keypair", |bencher| {
-        let mut rng = OsRng;
+        let mut rng = bench_rng();
         bencher.iter(|| black_box(p384::generate_keypair(&mut rng).unwrap()));
     });
 
@@ -232,7 +235,7 @@ fn bench_ecdh_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("p384_ecdh");
 
     // Generate two keypairs for ECDH
-    let mut rng = OsRng;
+    let mut rng = bench_rng();
     let (sk_a, pk_a) = p384::generate_keypair(&mut rng).unwrap();
     let (sk_b, pk_b) = p384::generate_keypair(&mut rng).unwrap();
 
@@ -257,7 +260,7 @@ fn bench_complete_ecdh(c: &mut Criterion) {
     let mut group = c.benchmark_group("p384_ecdh_complete");
 
     group.bench_function("full_exchange", |bencher| {
-        let mut rng = OsRng;
+        let mut rng = bench_rng();
 
         bencher.iter(|| {
             // Alice generates keypair
@@ -293,7 +296,7 @@ fn bench_batch_operations(c: &mut Criterion) {
     let points: Vec<Point> = (0..10)
         .map(|_| {
             let mut bytes = [0u8; 48];
-            OsRng.fill_bytes(&mut bytes);
+            bench_rng().fill_bytes(&mut bytes);
             bytes[0] &= 0x7F;
             let scalar = Scalar::new(bytes).unwrap();
             p384::base_point_g().mul(&scalar).unwrap()
@@ -314,7 +317,7 @@ fn bench_batch_operations(c: &mut Criterion) {
     let scalars: Vec<Scalar> = (0..10)
         .map(|_| {
             let mut bytes = [0u8; 48];
-            OsRng.fill_bytes(&mut bytes);
+            bench_rng().fill_bytes(&mut bytes);
             bytes[0] &= 0x7F;
             Scalar::new(bytes).unwrap()
         })

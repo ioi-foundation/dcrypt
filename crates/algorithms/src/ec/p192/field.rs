@@ -2,7 +2,7 @@
 
 use crate::ec::p192::constants::P192_FIELD_ELEMENT_SIZE;
 use crate::error::{Error, Result};
-use subtle::{Choice, ConditionallySelectable};
+use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 
 /// Number of 32‐bit limbs for a P-192 field element (6 × 32 = 192 bits)
 const NLIMBS: usize = 6;

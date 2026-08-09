@@ -6,9 +6,9 @@
 //! - **SHA3-256**: `0x06` domain separator.
 //! - **Keccak-256**: `0x01` domain separator.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-use zeroize::Zeroize;
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{validate, Result};
 use crate::hash::{Hash, HashAlgorithm, HashFunction};
@@ -95,10 +95,17 @@ impl HashAlgorithm for Keccak256Algorithm {
 // ───────────────────── engine structs (state + pointer) ───────────────────
 
 /// Streaming **Keccak-256** engine.
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Keccak256 {
     state: [u64; KECCAK_STATE_SIZE],
     pt: usize,
+}
+
+impl Zeroize for Keccak256 {
+    fn zeroize(&mut self) {
+        self.state.zeroize();
+        self.pt.zeroize();
+    }
 }
 
 impl Keccak256 {

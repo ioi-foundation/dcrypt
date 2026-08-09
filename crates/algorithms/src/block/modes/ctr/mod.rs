@@ -8,8 +8,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use byteorder::{BigEndian, ByteOrder};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::super::BlockCipher;
 use crate::error::{validate, Result};
@@ -36,7 +35,7 @@ pub enum CounterPosition {
 }
 
 /// Counter mode implementation with secure memory handling
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct Ctr<B: BlockCipher + Zeroize> {
     cipher: B,
     counter_block: Zeroizing<Vec<u8>>,
@@ -45,6 +44,25 @@ pub struct Ctr<B: BlockCipher + Zeroize> {
     keystream: Zeroizing<Vec<u8>>,
     keystream_pos: usize,
 }
+
+impl<B: BlockCipher + Zeroize> Zeroize for Ctr<B> {
+    fn zeroize(&mut self) {
+        self.cipher.zeroize();
+        self.counter_block.zeroize();
+        self.counter_position.zeroize();
+        self.counter_size.zeroize();
+        self.keystream.zeroize();
+        self.keystream_pos.zeroize();
+    }
+}
+
+impl<B: BlockCipher + Zeroize> Drop for Ctr<B> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<B: BlockCipher + Zeroize> ZeroizeOnDrop for Ctr<B> {}
 
 impl<B: BlockCipher + Zeroize> Ctr<B> {
     /// Creates a new CTR mode instance with the default configuration
@@ -171,8 +189,8 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
                 counter.copy_from_slice(
                     &self.counter_block[self.counter_position..self.counter_position + 8],
                 );
-                let value = BigEndian::read_u64(&counter);
-                BigEndian::write_u64(&mut counter, value.wrapping_add(1));
+                let value = u64::from_be_bytes(counter);
+                counter.copy_from_slice(&value.wrapping_add(1).to_be_bytes());
                 self.counter_block[self.counter_position..self.counter_position + 8]
                     .copy_from_slice(&counter);
 
@@ -184,8 +202,8 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
                 counter.copy_from_slice(
                     &self.counter_block[self.counter_position..self.counter_position + 4],
                 );
-                let value = BigEndian::read_u32(&counter);
-                BigEndian::write_u32(&mut counter, value.wrapping_add(1));
+                let value = u32::from_be_bytes(counter);
+                counter.copy_from_slice(&value.wrapping_add(1).to_be_bytes());
                 self.counter_block[self.counter_position..self.counter_position + 4]
                     .copy_from_slice(&counter);
 
@@ -284,7 +302,7 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
     pub fn seek(&mut self, block_offset: u32) {
         // Calculate the counter value based on the offset
         let mut counter_value = [0u8; 8];
-        BigEndian::write_u32(&mut counter_value[4..], block_offset.wrapping_add(1));
+        counter_value[4..].copy_from_slice(&block_offset.wrapping_add(1).to_be_bytes());
 
         // Update counter in the counter block
         for i in 0..self.counter_size {

@@ -15,8 +15,6 @@
 //! - Full Montgomery domain processing
 //! - Pointwise multiplication: Montgomery domain multiplication
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use super::params::{Modulus, NttModulus, PostInvNtt};
 use super::polynomial::Polynomial;
 use crate::error::{Error, Result};

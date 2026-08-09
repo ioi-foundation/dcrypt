@@ -4,8 +4,8 @@
 //! used throughout the dcrypt library, with improved type safety and ergonomic APIs.
 
 use crate::error::Result;
-use subtle::ConstantTimeEq;
-use zeroize::Zeroize;
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::zeroing::Zeroize;
 
 pub mod hmac;
 pub mod poly1305;

@@ -3,12 +3,15 @@
 //! Provides key types with compile-time guarantees about their
 //! usage and appropriate security properties.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use core::fmt;
 use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
-use rand::{CryptoRng, RngCore};
-use subtle::ConstantTimeEq;
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 use crate::error::{validate, Result};
 use crate::types::sealed::Sealed;
@@ -61,11 +64,25 @@ pub trait AsymmetricAlgorithm {
 }
 
 /// A key for a specific symmetric algorithm with fixed size
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct SymmetricKey<A: SymmetricAlgorithm, const N: usize> {
     data: SecretBuffer<N>,
     _algorithm: PhantomData<A>,
 }
+
+impl<A: SymmetricAlgorithm, const N: usize> Zeroize for SymmetricKey<A, N> {
+    fn zeroize(&mut self) {
+        self.data.zeroize();
+    }
+}
+
+impl<A: SymmetricAlgorithm, const N: usize> Drop for SymmetricKey<A, N> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<A: SymmetricAlgorithm, const N: usize> ZeroizeOnDrop for SymmetricKey<A, N> {}
 
 // Mark types as sealed to prevent external implementations
 impl<A: SymmetricAlgorithm, const N: usize> Sealed for SymmetricKey<A, N> {}
@@ -171,7 +188,7 @@ impl<A: SymmetricAlgorithm, const N: usize> LocalConstantEq for SymmetricKey<A, 
 impl<A: SymmetricAlgorithm, const N: usize> RandomGeneration for SymmetricKey<A, N> {
     fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
         let mut data = [0u8; N];
-        rng.fill_bytes(&mut data);
+        rng.try_fill_bytes(&mut data)?;
         Ok(Self {
             data: SecretBuffer::new(data),
             _algorithm: PhantomData,
@@ -243,11 +260,25 @@ impl ByteSerializable for SymmetricKey<ChaCha20Poly1305, 32> {
 }
 
 /// A secret key for a specific asymmetric algorithm
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct AsymmetricSecretKey<A: AsymmetricAlgorithm, const N: usize> {
     data: SecretBuffer<N>,
     _algorithm: PhantomData<A>,
 }
+
+impl<A: AsymmetricAlgorithm, const N: usize> Zeroize for AsymmetricSecretKey<A, N> {
+    fn zeroize(&mut self) {
+        self.data.zeroize();
+    }
+}
+
+impl<A: AsymmetricAlgorithm, const N: usize> Drop for AsymmetricSecretKey<A, N> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<A: AsymmetricAlgorithm, const N: usize> ZeroizeOnDrop for AsymmetricSecretKey<A, N> {}
 
 // Mark types as sealed to prevent external implementations
 impl<A: AsymmetricAlgorithm, const N: usize> Sealed for AsymmetricSecretKey<A, N> {}

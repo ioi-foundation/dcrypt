@@ -3,10 +3,13 @@
 //! Provides the `Tag` type, representing a cryptographic authentication tag
 //! with compile-time size guarantees.
 
+#[cfg(feature = "alloc")]
+use crate::alloc_prelude::*;
+
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{validate, Result};
 use crate::types::sealed::Sealed;
@@ -15,9 +18,15 @@ use crate::types::{
 };
 
 /// A cryptographic authentication tag with fixed size
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Tag<const N: usize> {
     data: [u8; N],
+}
+
+impl<const N: usize> Zeroize for Tag<N> {
+    fn zeroize(&mut self) {
+        self.data.zeroize();
+    }
 }
 
 // Mark Tag types as sealed
@@ -128,7 +137,7 @@ impl<const N: usize> ConstantTimeEq for Tag<N> {
 impl<const N: usize> RandomGeneration for Tag<N> {
     fn random<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
         let mut data = [0u8; N];
-        rng.fill_bytes(&mut data);
+        rng.try_fill_bytes(&mut data)?;
         Ok(Self { data })
     }
 }

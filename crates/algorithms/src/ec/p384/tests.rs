@@ -4,8 +4,8 @@
 use super::*;
 use crate::ec::p384::{self, FieldElement, Point, Scalar};
 use crate::error::Result;
+use dcrypt_internal::random::{ChaCha20Rng, RngCore};
 use dcrypt_params::traditional::ecdsa::NIST_P384;
-use rand::rngs::OsRng;
 
 // ============================================================================
 // P-384 FIELD CONSTANTS
@@ -46,6 +46,24 @@ fn sbb12_regression_wrap_borrow() {
     // 0 - (p-1) + 1 ≡ 2 (mod p)
     let expected = FieldElement::one().add(&FieldElement::one());
     assert_eq!(result, expected);
+}
+
+#[test]
+fn intermediate_scalar_reduction_allows_zero_and_reduces_order() {
+    assert!(Scalar::from_bytes_reduced([0u8; P384_SCALAR_SIZE]).is_zero());
+    assert!(Scalar::from_bytes_reduced(NIST_P384.n).is_zero());
+
+    let mut order_plus_one = NIST_P384.n;
+    for byte in order_plus_one.iter_mut().rev() {
+        let (value, carry) = byte.overflowing_add(1);
+        *byte = value;
+        if !carry {
+            break;
+        }
+    }
+    let mut one = [0u8; P384_SCALAR_SIZE];
+    one[P384_SCALAR_SIZE - 1] = 1;
+    assert_eq!(Scalar::from_bytes_reduced(order_plus_one).serialize(), one);
 }
 
 #[test]
@@ -189,8 +207,9 @@ fn test_point_operations() -> Result<()> {
     let g = p384::base_point_g();
     let scalar = {
         let mut bytes = [0u8; 48];
-        OsRng.fill_bytes(&mut bytes);
-        bytes[47] &= 0x7F; // Ensure it's less than the curve order
+        let mut rng = ChaCha20Rng::from_seed([0x23; 32]);
+        rng.fill_bytes(&mut bytes);
+        bytes[0] &= 0x7F; // Ensure it's less than the curve order
         Scalar::new(bytes)?
     };
 
@@ -266,7 +285,7 @@ fn test_scalar_multiplication() -> Result<()> {
 #[test]
 fn test_keypair_generation() -> Result<()> {
     // Generate a keypair and verify that the public key is correctly derived
-    let mut rng = OsRng;
+    let mut rng = ChaCha20Rng::from_seed([0x42; 32]);
     let (private_key, public_key) = p384::generate_keypair(&mut rng)?;
 
     // Verify that scalar_mult_base_g(private_key) gives the expected public key
@@ -1023,35 +1042,6 @@ fn step_5_p384_reference_doubling() -> Result<()> {
 
     assert_eq!(x_prime.to_bytes(), your_2g.x_coordinate_bytes());
     assert_eq!(y_prime.to_bytes(), your_2g.y_coordinate_bytes());
-
-    Ok(())
-}
-
-#[test]
-fn test_p384_kem_ephemeral_scalar() -> Result<()> {
-    // Scalar taken from a hypothetical P-384 KEM test-vector set
-    let ephemeral_scalar_hex =
-        "c81dd27a476a34502e0454b1f28640eeb772d5859018c1110f7dc80fef694d00c81dd27a476a34502e0454b1f28640ee";
-
-    // Expected coordinates for scalar * G (would need to be computed with a reference implementation)
-    // These are placeholder values - replace with actual test vectors
-    let _expected_x_hex =
-        "f4a13945d898c2964fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5f4a13945d898c296";
-    let _expected_y_hex =
-        "6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c2964fe342e2fe1a7f9b8ee7eb4a7c0f9e16";
-
-    // --- Prepare scalar ----------------------------------------------------
-    let scalar_bytes = hex::decode(ephemeral_scalar_hex).unwrap();
-    let mut scalar_array = [0u8; 48];
-    scalar_array.copy_from_slice(&scalar_bytes);
-    let scalar = Scalar::new(scalar_array)?;
-
-    // --- Perform scalar multiplication -------------------------------------
-    let result = p384::scalar_mult_base_g(&scalar)?;
-
-    // This test would need actual test vectors to be meaningful
-    // For now, just verify the operation completes successfully
-    assert!(!result.is_identity());
 
     Ok(())
 }
