@@ -1,6 +1,6 @@
 //! G₂ group implementation for BLS12-381.
 
-use crate::error::{Error, Result};
+use crate::error::{validate, Error, Result};
 use core::borrow::Borrow;
 use core::fmt;
 use core::iter::Sum;
@@ -395,8 +395,8 @@ impl G2Affine {
             .and_then(|p| CtOption::new(p, p.is_on_curve() & p.is_torsion_free()))
     }
 
-    /// Deserialize from uncompressed bytes without validation.
-    pub fn from_uncompressed_unchecked(bytes: &[u8; 192]) -> CtOption<Self> {
+    /// Internal decoder that omits curve and subgroup validation.
+    pub(crate) fn from_uncompressed_unchecked(bytes: &[u8; 192]) -> CtOption<Self> {
         let compression_flag_set = Choice::from((bytes[0] >> 7) & 1);
         let infinity_flag_set = Choice::from((bytes[0] >> 6) & 1);
         let sort_flag_set = Choice::from((bytes[0] >> 5) & 1);
@@ -445,8 +445,8 @@ impl G2Affine {
         Self::from_compressed_unchecked(bytes).and_then(|p| CtOption::new(p, p.is_torsion_free()))
     }
 
-    /// Deserialize from compressed bytes without validation.
-    pub fn from_compressed_unchecked(bytes: &[u8; 96]) -> CtOption<Self> {
+    /// Internal decoder that omits subgroup validation.
+    pub(crate) fn from_compressed_unchecked(bytes: &[u8; 96]) -> CtOption<Self> {
         let compression_flag_set = Choice::from((bytes[0] >> 7) & 1);
         let infinity_flag_set = Choice::from((bytes[0] >> 6) & 1);
         let sort_flag_set = Choice::from((bytes[0] >> 5) & 1);
@@ -1252,14 +1252,31 @@ impl G2Projective {
             | self.z.is_zero()
     }
 
-    /// Deserialize from compressed bytes.
+    /// Deserialize a standard compressed group element and enforce subgroup
+    /// membership. The canonical identity encoding is accepted; protocols such
+    /// as BLS that prohibit identity inputs should use
+    /// [`Self::from_bytes_validated`].
     pub fn from_bytes(bytes: &[u8; 96]) -> CtOption<Self> {
         G2Affine::from_compressed(bytes).map(G2Projective::from)
     }
 
-    /// Deserialize without validation.
-    pub fn from_bytes_unchecked(bytes: &[u8; 96]) -> CtOption<Self> {
-        G2Affine::from_compressed_unchecked(bytes).map(G2Projective::from)
+    /// Deserialize a nonidentity standard compressed point from a byte slice,
+    /// enforcing canonical field encodings, flag rules, curve membership, and
+    /// subgroup membership.
+    pub fn from_bytes_validated(bytes: &[u8]) -> Result<Self> {
+        validate::length("G2Projective::from_bytes", bytes.len(), 96)?;
+        let mut encoded = [0u8; 96];
+        encoded.copy_from_slice(bytes);
+        let point = Self::from_bytes(&encoded)
+            .into_option()
+            .ok_or_else(|| Error::Processing {
+                operation: "G2 deserialization",
+                details: "invalid encoding or point outside the prime-order subgroup",
+            })?;
+        if bool::from(point.is_identity()) {
+            return Err(Error::param("point", "identity is not a valid BLS input"));
+        }
+        Ok(point)
     }
 
     /// Serialize to compressed bytes.
@@ -1271,6 +1288,60 @@ impl G2Projective {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checked_decoders_reject_on_curve_non_subgroup_point() {
+        // A point on E'(Fp2) whose order is not in the prime-order G2 subgroup.
+        let point = G2Affine {
+            x: Fp2 {
+                c0: Fp::from_raw_unchecked([
+                    0x89f5_50c8_13db_6431,
+                    0xa50b_e8c4_56cd_8a1a,
+                    0xa45b_3741_14ca_e851,
+                    0xbb61_90f5_bf7f_ff63,
+                    0x970c_a02c_3ba8_0bc7,
+                    0x02b8_5d24_e840_fbac,
+                ]),
+                c1: Fp::from_raw_unchecked([
+                    0x6888_bc53_d707_16dc,
+                    0x3dea_6b41_1768_2d70,
+                    0xd8f5_f930_500c_a354,
+                    0x6b5e_cb65_56f5_c155,
+                    0xc96b_ef04_3477_8ab0,
+                    0x0508_1505_5150_06ad,
+                ]),
+            },
+            y: Fp2 {
+                c0: Fp::from_raw_unchecked([
+                    0x3cf1_ea0d_434b_0f40,
+                    0x1a0d_c610_e603_e333,
+                    0x7f89_9561_60c7_2fa0,
+                    0x25ee_03de_cf64_31c5,
+                    0xeee8_e206_ec0f_e137,
+                    0x0975_92b2_26df_ef28,
+                ]),
+                c1: Fp::from_raw_unchecked([
+                    0x71e8_bb5f_2924_7367,
+                    0xa5fe_049e_2118_31ce,
+                    0x0ce6_b354_502a_3896,
+                    0x93b0_1200_0997_314e,
+                    0x6759_f3b6_aa5b_42ac,
+                    0x1569_44c4_dfe9_2bbb,
+                ]),
+            },
+            infinity: Choice::from(0u8),
+        };
+        assert!(bool::from(point.is_on_curve()));
+        assert!(!bool::from(point.is_torsion_free()));
+
+        let encoded = point.to_compressed();
+        assert!(bool::from(
+            G2Affine::from_compressed_unchecked(&encoded).is_some()
+        ));
+        assert!(bool::from(G2Projective::from_bytes(&encoded).is_none()));
+        assert!(G2Projective::from_bytes_validated(&encoded).is_err());
+        assert!(bool::from(G2Affine::from_compressed(&encoded).is_none()));
+    }
 
     #[test]
     fn test_g2_msm() {

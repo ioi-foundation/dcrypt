@@ -12,6 +12,7 @@ publish = false
 unsafe_code = "forbid"
 
 [dev-dependencies]
+bls12_381 = { version = "=0.8.0", default-features = false, features = ["alloc", "experimental", "groups", "pairings"] }
 dcrypt-algorithms = { path = "../crates/algorithms" }
 dcrypt-api = { path = "../crates/api" }
 dcrypt-internal = { path = "../crates/internal" }
@@ -20,3 +21,6 @@ chacha20poly1305 = { version = "=0.10.1", default-features = false, features = [
 fips204 = { version = "=0.4.6", default-features = false, features = ["ml-dsa-44", "ml-dsa-65", "ml-dsa-87"] }
 libcrux-ml-dsa = { version = "=0.0.10", default-features = false, features = ["acvp", "mldsa44", "mldsa65", "mldsa87"] }
 ml-dsa = { version = "=0.1.1", default-features = false }
+rand = { version = "=0.8.6", default-features = false }
+rand_chacha = "=0.3.1"
+sha2 = "=0.9.9"

@@ -59,6 +59,25 @@ fn test_pairing_scalar_multiplication() {
 }
 
 #[test]
+fn test_min_pk_bls_equation_and_negative_cases() {
+    const DST: &[u8] = b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
+    let secret = Scalar::from(42u64);
+    let public_key = G1Affine::from(G1Projective::generator() * secret);
+    let message_point = G2Projective::hash_to_curve(b"message", DST).unwrap();
+    let signature = G2Affine::from(message_point * secret);
+    let message_point = G2Affine::from(message_point);
+
+    let expected = pairing(&G1Affine::generator(), &signature);
+    assert_eq!(pairing(&public_key, &message_point), expected);
+
+    let wrong_message = G2Affine::from(G2Projective::hash_to_curve(b"other message", DST).unwrap());
+    assert_ne!(pairing(&public_key, &wrong_message), expected);
+
+    let wrong_public_key = G1Affine::from(G1Projective::generator() * Scalar::from(43u64));
+    assert_ne!(pairing(&wrong_public_key, &message_point), expected);
+}
+
+#[test]
 fn test_pairing_non_degeneracy() {
     // e(g1, g2) should not equal 1
     let g1 = G1Affine::generator();

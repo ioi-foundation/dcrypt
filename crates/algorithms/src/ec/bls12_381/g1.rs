@@ -383,8 +383,8 @@ impl G1Affine {
             .and_then(|p| CtOption::new(p, p.is_on_curve() & p.is_torsion_free()))
     }
 
-    /// Deserialize without validation.
-    pub fn from_uncompressed_unchecked(bytes: &[u8; 96]) -> CtOption<Self> {
+    /// Internal decoder that omits curve and subgroup validation.
+    pub(crate) fn from_uncompressed_unchecked(bytes: &[u8; 96]) -> CtOption<Self> {
         let compression_flag_set = Choice::from((bytes[0] >> 7) & 1);
         let infinity_flag_set = Choice::from((bytes[0] >> 6) & 1);
         let sort_flag_set = Choice::from((bytes[0] >> 5) & 1);
@@ -1162,17 +1162,18 @@ impl G1Projective {
             | self.z.is_zero()
     }
 
-    /// Deserialize from compressed bytes.
+    /// Deserialize a standard compressed group element and enforce subgroup
+    /// membership. The canonical identity encoding is accepted; protocols such
+    /// as BLS that prohibit identity inputs should use
+    /// [`Self::from_bytes_validated`].
     pub fn from_bytes(bytes: &[u8; 48]) -> CtOption<Self> {
-        G1Affine::from_compressed_unchecked(bytes).map(G1Projective::from)
+        G1Affine::from_compressed_unchecked(bytes)
+            .and_then(|point| CtOption::new(point, point.is_torsion_free()))
+            .map(G1Projective::from)
     }
 
-    /// Deserialize without validation.
-    pub fn from_bytes_unchecked(bytes: &[u8; 48]) -> CtOption<Self> {
-        G1Affine::from_compressed_unchecked(bytes).map(G1Projective::from)
-    }
-
-    /// Deserialize from compressed bytes with dcrypt error handling and validation.
+    /// Deserialize a nonidentity standard compressed point with strict BLS input
+    /// validation: canonical encoding, curve membership, and subgroup membership.
     pub fn from_bytes_validated(bytes: &[u8]) -> Result<Self> {
         // Use dcrypt validation
         validate::length("G1Projective::from_bytes", bytes.len(), 48)?;
@@ -1180,16 +1181,16 @@ impl G1Projective {
         let mut array = [0u8; 48];
         array.copy_from_slice(bytes);
 
-        Self::from_bytes_unchecked(&array)
-            .into_option() // Convert CtOption to Option
+        let point = Self::from_bytes(&array)
+            .into_option()
             .ok_or_else(|| Error::Processing {
                 operation: "G1 deserialization",
-                details: "invalid point encoding",
-            })
-            .and_then(|p| {
-                validate::parameter(bool::from(p.is_on_curve()), "point", "not on curve")?;
-                Ok(p)
-            })
+                details: "invalid encoding or point outside the prime-order subgroup",
+            })?;
+        if bool::from(point.is_identity()) {
+            return Err(Error::param("point", "identity is not a valid BLS input"));
+        }
+        Ok(point)
     }
 
     /// Serialize to compressed bytes.
@@ -1201,6 +1202,57 @@ impl G1Projective {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checked_decoders_reject_on_curve_non_subgroup_point() {
+        // A point on E(Fp) whose order is not in the prime-order G1 subgroup.
+        let point = G1Affine {
+            x: Fp::from_raw_unchecked([
+                0x0aba_f895_b97e_43c8,
+                0xba4c_6432_eb9b_61b0,
+                0x1250_6f52_adfe_307f,
+                0x7502_8c34_3933_6b72,
+                0x8474_4f05_b8e9_bd71,
+                0x113d_554f_b095_54f7,
+            ]),
+            y: Fp::from_raw_unchecked([
+                0x73e9_0e88_f5cf_01c0,
+                0x3700_7b65_dd31_97e2,
+                0x5cf9_a199_2f0d_7c78,
+                0x4f83_c10b_9eb3_330d,
+                0xf6a6_3f6f_07f6_0961,
+                0x0c53_b5b9_7e63_4df3,
+            ]),
+            infinity: Choice::from(0u8),
+        };
+        assert!(bool::from(point.is_on_curve()));
+        assert!(!bool::from(point.is_torsion_free()));
+
+        let encoded = point.to_compressed();
+        assert!(bool::from(
+            G1Affine::from_compressed_unchecked(&encoded).is_some()
+        ));
+        assert!(bool::from(G1Projective::from_bytes(&encoded).is_none()));
+        assert!(G1Projective::from_bytes_validated(&encoded).is_err());
+        assert!(G1Affine::from_compressed(&encoded).is_err());
+
+        // Identity public keys and signatures satisfy the min-pk pairing
+        // equation for every message. Group-element decoding intentionally
+        // accepts the canonical identity, while the strict BLS input decoder
+        // rejects it; protocol code must use the latter for attacker inputs.
+        use crate::ec::bls12_381::{pairing, G2Affine, G2Projective};
+        let message_point = G2Affine::from(
+            G2Projective::hash_to_curve(
+                b"arbitrary message",
+                b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_",
+            )
+            .unwrap(),
+        );
+        assert_eq!(
+            pairing(&G1Affine::identity(), &message_point),
+            pairing(&G1Affine::generator(), &G2Affine::identity())
+        );
+    }
 
     #[test]
     fn test_g1_msm() {

@@ -97,6 +97,40 @@ fn test_g1_invalid_compressed_rejection() {
 }
 
 #[test]
+fn test_g1_infinity_encoding_flags_are_canonical() {
+    let mut compressed = [0u8; 48];
+    compressed[0] = 0xc0;
+    assert!(bool::from(
+        G1Projective::from_bytes(&compressed).unwrap().is_identity()
+    ));
+    assert!(G1Projective::from_bytes_validated(&compressed).is_err());
+
+    let mut invalid_sort = compressed;
+    invalid_sort[0] |= 0x20;
+    assert!(bool::from(
+        G1Projective::from_bytes(&invalid_sort).is_none()
+    ));
+
+    let mut invalid_payload = compressed;
+    invalid_payload[47] = 1;
+    assert!(bool::from(
+        G1Projective::from_bytes(&invalid_payload).is_none()
+    ));
+
+    let mut uncompressed = [0u8; 96];
+    uncompressed[0] = 0x40;
+    assert!(bool::from(
+        G1Affine::from_uncompressed(&uncompressed)
+            .unwrap()
+            .is_identity()
+    ));
+    uncompressed[0] |= 0x20;
+    assert!(bool::from(
+        G1Affine::from_uncompressed(&uncompressed).is_none()
+    ));
+}
+
+#[test]
 fn test_g1_invalid_uncompressed_rejection() {
     // Test 1: Non-canonical field elements
     let bytes = [0xff; 96];
@@ -177,6 +211,40 @@ fn test_g2_invalid_compressed_rejection() {
     bytes[95] = 0x01; // Random x coordinate
     let result = G2Affine::from_compressed(&bytes);
     assert!(bool::from(result.is_none()) || !bool::from(result.unwrap().is_on_curve()));
+}
+
+#[test]
+fn test_g2_infinity_encoding_flags_are_canonical() {
+    let mut compressed = [0u8; 96];
+    compressed[0] = 0xc0;
+    assert!(bool::from(
+        G2Projective::from_bytes(&compressed).unwrap().is_identity()
+    ));
+    assert!(G2Projective::from_bytes_validated(&compressed).is_err());
+
+    let mut invalid_sort = compressed;
+    invalid_sort[0] |= 0x20;
+    assert!(bool::from(
+        G2Projective::from_bytes(&invalid_sort).is_none()
+    ));
+
+    let mut invalid_payload = compressed;
+    invalid_payload[95] = 1;
+    assert!(bool::from(
+        G2Projective::from_bytes(&invalid_payload).is_none()
+    ));
+
+    let mut uncompressed = [0u8; 192];
+    uncompressed[0] = 0x40;
+    assert!(bool::from(
+        G2Affine::from_uncompressed(&uncompressed)
+            .unwrap()
+            .is_identity()
+    ));
+    uncompressed[0] |= 0x20;
+    assert!(bool::from(
+        G2Affine::from_uncompressed(&uncompressed).is_none()
+    ));
 }
 
 #[test]

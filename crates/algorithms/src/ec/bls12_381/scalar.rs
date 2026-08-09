@@ -4,7 +4,6 @@
 use crate::alloc_prelude::*;
 
 use crate::error::{Error, Result};
-use crate::hash::{sha2::Sha256, HashFunction};
 use crate::types::{ByteSerializable, ConstantTimeEq as DcryptConstantTimeEq, SecureZeroingType};
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
@@ -422,6 +421,24 @@ impl Scalar {
         res
     }
 
+    /// Create a scalar from a canonical 32-byte big-endian integer.
+    ///
+    /// This is the byte order used by the `OS2IP`/`I2OSP` notation in BLS
+    /// ciphersuite specifications. Zero is a canonical field element; callers
+    /// constructing a secret key must reject it.
+    pub fn from_be_bytes(bytes: &[u8; 32]) -> CtOption<Scalar> {
+        let mut little_endian = *bytes;
+        little_endian.reverse();
+        Self::from_bytes(&little_endian)
+    }
+
+    /// Convert this scalar to its canonical 32-byte big-endian integer.
+    pub fn to_be_bytes(&self) -> [u8; 32] {
+        let mut bytes = self.to_bytes();
+        bytes.reverse();
+        bytes
+    }
+
     /// Create from 512-bit little-endian integer mod q
     pub fn from_bytes_wide(bytes: &[u8; 64]) -> Scalar {
         Scalar::from_u512([
@@ -436,62 +453,36 @@ impl Scalar {
         ])
     }
 
-    fn expand_message_xmd(msg: &[u8], dst: &[u8], len_in_bytes: usize) -> Result<Vec<u8>> {
-        const MAX_DST_LENGTH: usize = 255;
-        const HASH_OUTPUT_SIZE: usize = 32;
-
-        if dst.len() > MAX_DST_LENGTH {
-            return Err(Error::param("dst", "domain separation tag too long"));
+    /// Reduce a big-endian integer of at most 64 bytes modulo the scalar-field
+    /// order.
+    ///
+    /// This is suitable for the 48-byte `OS2IP(OKM) mod r` step used by BLS
+    /// key generation. It is intentionally distinct from canonical decoding:
+    /// reduction accepts values greater than or equal to the modulus and may
+    /// return zero, which a secret-key generation procedure must reject.
+    pub fn from_be_bytes_mod_order(bytes: &[u8]) -> Result<Scalar> {
+        if bytes.len() > 64 {
+            return Err(Error::param(
+                "scalar_bytes",
+                "big-endian reduction input exceeds 64 bytes",
+            ));
         }
 
-        let ell = (len_in_bytes + HASH_OUTPUT_SIZE - 1) / HASH_OUTPUT_SIZE;
-
-        if ell > 255 {
-            return Err(Error::param("len_in_bytes", "requested output too long"));
+        let mut wide = [0u8; 64];
+        for (destination, source) in wide.iter_mut().zip(bytes.iter().rev()) {
+            *destination = *source;
         }
-
-        let dst_prime_len = dst.len() as u8;
-
-        let mut hasher = Sha256::new();
-        hasher.update(&[0u8; HASH_OUTPUT_SIZE])?;
-        hasher.update(msg)?;
-        hasher.update(&((len_in_bytes as u16).to_be_bytes()))?;
-        hasher.update(&[0u8])?;
-        hasher.update(dst)?;
-        hasher.update(&[dst_prime_len])?;
-
-        let b_0 = hasher.finalize()?;
-
-        let mut uniform_bytes = Vec::with_capacity(len_in_bytes);
-        let mut b_i = vec![0u8; HASH_OUTPUT_SIZE];
-
-        for i in 1..=ell {
-            let mut hasher = Sha256::new();
-            if i == 1 {
-                hasher.update(&[0u8; HASH_OUTPUT_SIZE])?;
-            } else {
-                let mut xored = [0u8; HASH_OUTPUT_SIZE];
-                for j in 0..HASH_OUTPUT_SIZE {
-                    xored[j] = b_0.as_ref()[j] ^ b_i[j];
-                }
-                hasher.update(&xored)?;
-            }
-            hasher.update(&[i as u8])?;
-            hasher.update(dst)?;
-            hasher.update(&[dst_prime_len])?;
-            let digest = hasher.finalize()?;
-            b_i.copy_from_slice(digest.as_ref());
-            uniform_bytes.extend_from_slice(&b_i);
-        }
-
-        uniform_bytes.truncate(len_in_bytes);
-        Ok(uniform_bytes)
+        Ok(Self::from_bytes_wide(&wide))
     }
 
     /// Hashes arbitrary data to a scalar field element using SHA-256.
     ///
-    /// This function implements a standards-compliant hash-to-field method following
-    /// the IETF hash-to-curve specification using expand_message_xmd with SHA-256.
+    /// This function implements one invocation of RFC 9380 `hash_to_field` for the
+    /// BLS12-381 scalar field, using `expand_message_xmd` with SHA-256 and a
+    /// 48-byte field element input (`L = 48`).
+    ///
+    /// The output may be zero. Protocols deriving a secret key must apply their
+    /// own ciphersuite's rejection or key-generation procedure.
     ///
     /// # Arguments
     /// * `data`: The input data to hash.
@@ -500,10 +491,8 @@ impl Scalar {
     /// # Returns
     /// A `Result` containing the `Scalar` or an error.
     pub fn hash_to_field(data: &[u8], dst: &[u8]) -> Result<Self> {
-        let expanded = Self::expand_message_xmd(data, dst, 64)?;
-        let mut expanded_array = [0u8; 64];
-        expanded_array.copy_from_slice(&expanded);
-        Ok(Self::from_bytes_wide(&expanded_array))
+        let expanded = super::hash_to_curve::expand_message_xmd(data, dst, 48)?;
+        Self::from_be_bytes_mod_order(&expanded)
     }
 
     fn from_u512(limbs: [u64; 8]) -> Scalar {
@@ -974,6 +963,40 @@ fn test_from_bytes() {
     }
 }
 
+#[test]
+fn test_from_bytes_enforces_canonical_scalar_encoding() {
+    let mut modulus =
+        hex::decode("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001").unwrap();
+    modulus.reverse();
+    let modulus: [u8; 32] = modulus.try_into().unwrap();
+    assert!(bool::from(Scalar::from_bytes(&modulus).is_none()));
+    assert!(<Scalar as ByteSerializable>::from_bytes(&modulus).is_err());
+
+    let mut largest =
+        hex::decode("73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000000").unwrap();
+    largest.reverse();
+    let largest: [u8; 32] = largest.try_into().unwrap();
+    assert!(bool::from(Scalar::from_bytes(&largest).is_some()));
+
+    assert!(bool::from(Scalar::from_bytes(&[0u8; 32]).is_some()));
+    assert!(bool::from(Scalar::from_bytes(&[0xff; 32]).is_none()));
+
+    let mut modulus_be = modulus;
+    modulus_be.reverse();
+    assert!(bool::from(Scalar::from_be_bytes(&modulus_be).is_none()));
+    assert!(bool::from(
+        Scalar::from_be_bytes_mod_order(&modulus_be)
+            .unwrap()
+            .is_zero()
+    ));
+    assert!(Scalar::from_be_bytes_mod_order(&[0u8; 65]).is_err());
+    let forty_two = Scalar::from(42u64);
+    assert_eq!(
+        Scalar::from_be_bytes(&forty_two.to_be_bytes()).unwrap(),
+        forty_two
+    );
+}
+
 #[cfg(test)]
 const LARGEST: Scalar = Scalar([
     0xffff_ffff_0000_0000,
@@ -1113,8 +1136,8 @@ fn test_scalar_hash_to_field() {
         assert_eq!(scalar, scalar2, "Output should be a valid reduced scalar");
     }
 
-    // 5. Test that the expansion reduces bias appropriately
-    // With 64 bytes (512 bits) being reduced to ~255 bits, bias should be negligible
+    // 5. Test that the expansion reduces bias appropriately. RFC 9380 uses a
+    // 48-byte input for this field, providing the required security margin.
     let mut scalars = Vec::new();
     for i in 0u32..100 {
         let data = i.to_le_bytes();
@@ -1164,16 +1187,6 @@ fn test_scalar_hash_to_field() {
         has_odd && has_even,
         "Hash output should have both odd and even values"
     );
-
-    // 9. Test expand_message_xmd internal function with basic test vectors
-    // These help ensure our implementation follows the standard
-    let expanded = Scalar::expand_message_xmd(b"", b"QUUX-V01-CS02-with-SHA256", 32).unwrap();
-    assert_eq!(expanded.len(), 32);
-
-    // Basic sanity check: different messages produce different expansions
-    let expanded1 = Scalar::expand_message_xmd(b"msg1", b"dst", 64).unwrap();
-    let expanded2 = Scalar::expand_message_xmd(b"msg2", b"dst", 64).unwrap();
-    assert_ne!(expanded1, expanded2);
 }
 
 #[test]

@@ -1,6 +1,54 @@
 //! BLS12-381 pairing-friendly elliptic curve implementation.
 //!
-//! **Warning:** Unaudited implementation. Use at your own risk.
+//! This module exposes low-level group, scalar, RFC 9380 hash-to-curve, and
+//! pairing primitives. It does not implement a complete BLS signature
+//! ciphersuite (including key generation, proof of possession, aggregation,
+//! or protocol-specific input validation).
+//!
+//! The following demonstrates the core equation used by an Eth2-style
+//! minimum-public-key-size construction. Production code must derive a
+//! nonzero secret scalar with the selected ciphersuite's key-generation
+//! procedure, keep its encoded form in zeroizing storage, and enforce that
+//! ciphersuite's validation rules. `Bls12_381Scalar` is a generic `Copy` field
+//! element, not a protected long-lived secret-key container; explicitly clear
+//! an arithmetic scalar after use.
+//! External public keys and signatures should be decoded with
+//! `G1Projective::from_bytes_validated` or
+//! `G2Projective::from_bytes_validated`, which also reject the identity.
+//!
+//! ```
+//! use dcrypt_algorithms::ec::bls12_381::{
+//!     pairing, Bls12_381Scalar, G1Affine, G1Projective, G2Affine, G2Projective,
+//! };
+//! use dcrypt_api::types::SecretBytes;
+//! use dcrypt_internal::zeroing::Zeroize;
+//!
+//! // Demonstration only: KeyGen normally derives 48 pseudorandom OKM bytes
+//! // using HKDF. SecretBytes zeroizes this exact-size OKM owner.
+//! let mut okm = [0u8; 48];
+//! okm[47] = 42; // OS2IP-style big-endian integer.
+//! let secret_bytes = SecretBytes::new(okm);
+//! let mut secret_scalar = Bls12_381Scalar::from_be_bytes_mod_order(secret_bytes.as_ref())?;
+//! if bool::from(secret_scalar.is_zero()) {
+//!     return Err(dcrypt_algorithms::Error::param("secret_key", "zero scalar"));
+//! }
+//!
+//! let public_key = G1Affine::from(G1Projective::generator() * secret_scalar);
+//! let message_point = G2Projective::hash_to_curve(
+//!     b"message",
+//!     b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_",
+//! )?;
+//! let signature = G2Affine::from(message_point * secret_scalar);
+//! let message_point = G2Affine::from(message_point);
+//!
+//! assert_eq!(
+//!     pairing(&public_key, &message_point),
+//!     pairing(&G1Affine::generator(), &signature),
+//! );
+//! secret_scalar.zeroize();
+//! drop(secret_bytes);
+//! # Ok::<(), dcrypt_algorithms::Error>(())
+//! ```
 
 // External crates
 #[cfg(feature = "alloc")]
@@ -11,6 +59,8 @@ mod field;
 mod g1;
 mod g2;
 mod hash_to_curve;
+mod hash_to_curve_g1;
+mod hash_to_curve_g2;
 mod pairings;
 mod scalar;
 
