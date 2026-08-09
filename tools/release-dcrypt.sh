@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 STATE_FILE="$PROJECT_ROOT/.release-state.json"
 USER_AGENT="dcrypt-release-tool/3.0 (+https://github.com/ioi-foundation/dcrypt)"
+RELEASE_BRANCH="master"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -23,6 +24,7 @@ RESUME_FROM=""
 REGISTRY_WAIT_SECONDS=300
 ACTIVE_LOG=""
 CLASSIFIED_WORKSPACE_RECORDS=""
+SELF_TEST=false
 
 cleanup() {
     if [[ -n "$ACTIVE_LOG" ]]; then
@@ -74,6 +76,7 @@ Options:
                        trust crates.io as the source of truth.
   --registry-wait SEC  Maximum registry propagation wait per crate (default 300).
   --reset-state        Remove only .release-state.json and exit.
+  --self-test          Run mock-only release-tool regression tests and exit.
   -h, --help           Show this help.
 
 Safe workflow:
@@ -518,13 +521,19 @@ prepare_release() {
         info "Created local annotated tag $tag"
     fi
 
-    local branch
-    branch=$(current_branch)
-    [[ -n "$branch" ]] || die "cannot prepare a release from detached HEAD"
+    [[ -n "$(current_branch)" ]] \
+        || die "cannot prepare a release from detached HEAD"
 
-    local head_commit candidate_branch
+    local head_commit
     head_commit=$(git rev-parse HEAD)
-    candidate_branch="release-candidate/$tag"
+
+    print_release_handoff "$tag" "$head_commit"
+}
+
+print_release_handoff() {
+    local tag=$1
+    local head_commit=$2
+    local candidate_branch="release-candidate/$tag"
 
     printf "\n${GREEN}Release preparation complete; nothing was published.${NC}\n"
     printf '1. Push only a candidate branch; do not push the tag yet:\n'
@@ -533,17 +542,40 @@ prepare_release() {
     printf '2. Require every trusted check to pass for exact SHA %s.\n' "$head_commit"
     printf '3. Fast-forward the release branch and push it with the annotated tag atomically:\n'
     printf '  git push --atomic origin %q %q\n' \
-        "$head_commit:refs/heads/$branch" \
+        "$head_commit:refs/heads/$RELEASE_BRANCH" \
         "refs/tags/$tag:refs/tags/$tag"
     printf '4. Verify origin/%s and the peeled origin tag both resolve to %s:\n' \
-        "$branch" "$head_commit"
+        "$RELEASE_BRANCH" "$head_commit"
     printf '  git ls-remote origin %q %q %q\n' \
-        "refs/heads/$branch" "refs/tags/$tag" "refs/tags/$tag^{}"
+        "refs/heads/$RELEASE_BRANCH" "refs/tags/$tag" "refs/tags/$tag^{}"
     printf '5. Create and review a GitHub draft from reviewed RELEASE_NOTES.md:\n'
     printf '  gh release create %q --draft --verify-tag --title %q --notes-file RELEASE_NOTES.md\n' \
         "$tag" "dcrypt $tag"
     printf '6. Only after that draft exists, run:\n'
     printf '  tools/release-dcrypt.sh --version %q --execute\n' "$VERSION"
+}
+
+release_self_test() {
+    local fixture_head="0123456789abcdef0123456789abcdef01234567"
+    local fixture_tag="v9.8.7"
+    local handoff
+
+    handoff=$(print_release_handoff "$fixture_tag" "$fixture_head")
+    [[ "$RELEASE_BRANCH" == "master" ]] \
+        || die "self-test: release branch must remain master"
+    grep -Fq \
+        "$fixture_head:refs/heads/master" <<<"$handoff" \
+        || die "self-test: handoff omitted the exact master refspec"
+    grep -Fq \
+        "$fixture_head:refs/heads/release-candidate/$fixture_tag" <<<"$handoff" \
+        || die "self-test: handoff omitted the exact candidate refspec"
+    if grep -Fq 'refs/heads/agent/' <<<"$handoff"; then
+        die "self-test: handoff used a feature branch as the release branch"
+    fi
+    grep -Fq 'RELEASE_BRANCH = "master"' \
+        "$SCRIPT_DIR/verify-remote-release-ready.py" \
+        || die "self-test: shell and remote gate release branches differ"
+    info "release-dcrypt self-test passed"
 }
 
 run_remote_release_gate() {
@@ -841,6 +873,10 @@ while (($# > 0)); do
             info "Removed $STATE_FILE"
             exit 0
             ;;
+        --self-test)
+            SELF_TEST=true
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -850,6 +886,15 @@ while (($# > 0)); do
             ;;
     esac
 done
+
+if [[ "$SELF_TEST" == true ]]; then
+    [[ -z "$VERSION" && "$MODE" == "dry-run" && \
+       "$SKIP_TESTS" == false && "$SKIP_CHECKS" == false && \
+       "$UPDATE_BENCHMARKS" == false && -z "$RESUME_FROM" ]] \
+        || die "--self-test cannot be combined with release options"
+    release_self_test
+    exit 0
+fi
 
 [[ -n "$VERSION" ]] || { usage >&2; die "--version is required"; }
 is_valid_semver "$VERSION" || die "invalid semantic version: $VERSION"
