@@ -4,9 +4,6 @@
 extern crate alloc;
 
 #[cfg(feature = "alloc")]
-use crate::alloc_prelude::*;
-
-#[cfg(feature = "alloc")]
 use alloc::borrow::Cow;
 
 #[cfg(feature = "std")]
@@ -166,14 +163,24 @@ impl std::error::Error for Error {}
 impl From<Error> for CoreError {
     fn from(err: Error) -> Self {
         match err {
-            Error::Parameter { name, reason } => CoreError::InvalidParameter {
-                context: match name {
-                    Cow::Borrowed(s) => s,
-                    Cow::Owned(s) => Box::leak(s.into_boxed_str()),
-                },
-                #[cfg(feature = "std")]
-                message: reason.into_owned(),
-            },
+            Error::Parameter { name, reason } => {
+                // Preserve static parameter names, but never leak an owned name
+                // merely to satisfy the public error type's static context.
+                let context = match &name {
+                    Cow::Borrowed(name) => *name,
+                    Cow::Owned(_) => "algorithm parameter",
+                };
+                #[cfg(not(feature = "std"))]
+                let _ = reason;
+                CoreError::InvalidParameter {
+                    context,
+                    #[cfg(feature = "std")]
+                    message: match name {
+                        Cow::Borrowed(_) => reason.into_owned(),
+                        Cow::Owned(name) => format!("{name}: {reason}"),
+                    },
+                }
+            }
             Error::Length {
                 context,
                 expected,
@@ -188,22 +195,30 @@ impl From<Error> for CoreError {
                 #[cfg(feature = "std")]
                 message: "authentication failed".to_string(),
             },
-            Error::Randomness => CoreError::Other {
-                context: "randomness",
+            Error::Randomness => CoreError::RandomGenerationError {
+                context: "caller-provided RNG",
                 #[cfg(feature = "std")]
                 message: "caller-provided randomness source failed".to_string(),
             },
             Error::NotImplemented { feature } => CoreError::NotImplemented { feature },
-            Error::Processing { operation, details } => CoreError::Other {
-                context: operation,
-                #[cfg(feature = "std")]
-                message: details.to_string(),
-            },
-            Error::MacError { algorithm, details } => CoreError::Other {
-                context: algorithm,
-                #[cfg(feature = "std")]
-                message: details.to_string(),
-            },
+            Error::Processing { operation, details } => {
+                #[cfg(not(feature = "std"))]
+                let _ = details;
+                CoreError::Other {
+                    context: operation,
+                    #[cfg(feature = "std")]
+                    message: details.to_string(),
+                }
+            }
+            Error::MacError { algorithm, details } => {
+                #[cfg(not(feature = "std"))]
+                let _ = details;
+                CoreError::Other {
+                    context: algorithm,
+                    #[cfg(feature = "std")]
+                    message: details.to_string(),
+                }
+            }
             #[cfg(feature = "std")]
             Error::External { source, details } => CoreError::Other {
                 context: source,
@@ -215,11 +230,15 @@ impl From<Error> for CoreError {
                 #[cfg(feature = "std")]
                 message: "external error".to_string(),
             },
-            Error::Other(msg) => CoreError::Other {
-                context: "primitives",
-                #[cfg(feature = "std")]
-                message: msg.to_string(),
-            },
+            Error::Other(msg) => {
+                #[cfg(not(feature = "std"))]
+                let _ = msg;
+                CoreError::Other {
+                    context: "primitives",
+                    #[cfg(feature = "std")]
+                    message: msg.to_string(),
+                }
+            }
         }
     }
 }
@@ -245,3 +264,35 @@ pub use dcrypt_api::error::{ResultExt, SecureErrorHandling};
 
 // Include the validation submodule
 pub mod validate;
+
+#[cfg(test)]
+mod conversion_tests {
+    use super::*;
+
+    #[test]
+    fn randomness_preserves_its_public_error_category() {
+        let error = CoreError::from(Error::Randomness);
+        assert!(matches!(
+            error,
+            CoreError::RandomGenerationError {
+                context: "caller-provided RNG",
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn owned_parameter_names_do_not_become_static_allocations() {
+        let error = CoreError::from(Error::param(
+            String::from("attacker-controlled name"),
+            "invalid value",
+        ));
+        assert!(matches!(
+            error,
+            CoreError::InvalidParameter {
+                context: "algorithm parameter",
+                ..
+            }
+        ));
+    }
+}

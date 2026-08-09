@@ -25,7 +25,6 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 mod alloc_prelude {
     pub(crate) use alloc::{
-        boxed::Box,
         string::{String, ToString},
         vec::Vec,
     };
