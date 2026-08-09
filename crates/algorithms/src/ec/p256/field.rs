@@ -2,7 +2,10 @@
 
 use crate::ec::p256::constants::P256_FIELD_ELEMENT_SIZE;
 use crate::error::{Error, Result};
-use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::{
+    constant_time::{Choice, ConditionallySelectable},
+    Zeroize, Zeroizing,
+};
 
 /// P-256 field element representing values in F_p
 ///
@@ -11,13 +14,29 @@ use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldElement(pub(crate) [u32; 8]);
 
+// `ConditionallySelectable` currently requires `Copy`. Safe Rust therefore
+// cannot promise erasure of compiler- or register-created copies. Every
+// explicit source-owned arithmetic buffer below is nevertheless held by a
+// `Zeroizing` owner and cleared on all normal and error paths.
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl Zeroize for FieldElement {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
 impl ConditionallySelectable for FieldElement {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let mut out = [0u32; 8];
+        let mut out = Zeroizing::new([0u32; 8]);
         for i in 0..8 {
             out[i] = u32::conditional_select(&a.0[i], &b.0[i], choice);
         }
-        FieldElement(out)
+        FieldElement(out.into_inner())
     }
 }
 
@@ -67,7 +86,7 @@ impl FieldElement {
     /// Validates that the input represents a value less than the field modulus p.
     /// Returns an error if the value is >= p.
     pub fn from_bytes(bytes: &[u8; P256_FIELD_ELEMENT_SIZE]) -> Result<Self> {
-        let mut limbs = [0u32; 8];
+        let mut limbs = Zeroizing::new([0u32; 8]);
 
         // Convert from big-endian bytes to little-endian limbs
         // limbs[0] = least-significant 4 bytes (bytes[28..32])
@@ -84,7 +103,7 @@ impl FieldElement {
         }
 
         // Validate that the value is in the field (< p)
-        let fe = FieldElement(limbs);
+        let fe = Zeroizing::new(FieldElement(limbs.into_inner()));
         if !fe.is_valid() {
             return Err(Error::param(
                 "FieldElement",
@@ -92,20 +111,20 @@ impl FieldElement {
             ));
         }
 
-        Ok(fe)
+        Ok(fe.into_inner())
     }
 
     /// Convert field element to big-endian byte representation
     pub fn to_bytes(&self) -> [u8; P256_FIELD_ELEMENT_SIZE] {
-        let mut bytes = [0u8; P256_FIELD_ELEMENT_SIZE];
+        let mut bytes = Zeroizing::new([0u8; P256_FIELD_ELEMENT_SIZE]);
 
         // Convert from little-endian limbs to big-endian bytes
         for i in 0..8 {
-            let limb_bytes = self.0[i].to_be_bytes();
+            let limb_bytes = Zeroizing::new(self.0[i].to_be_bytes());
             let offset = (7 - i) * 4; // Byte offset: 28, 24, 20, ..., 0
-            bytes[offset..offset + 4].copy_from_slice(&limb_bytes);
+            bytes[offset..offset + 4].copy_from_slice(&limb_bytes[..]);
         }
-        bytes
+        bytes.into_inner()
     }
 
     /// Constant-time validation that the field element is in canonical form (< p)
@@ -116,7 +135,7 @@ impl FieldElement {
     pub fn is_valid(&self) -> bool {
         // Attempt to subtract p from self
         // If subtraction requires a borrow, then self < p (valid)
-        let (_, borrow) = Self::sbb8(self.0, Self::MOD_LIMBS);
+        let (_difference, borrow) = Self::sbb8(&self.0, &Self::MOD_LIMBS);
         borrow == 1
     }
 
@@ -129,19 +148,24 @@ impl FieldElement {
     #[inline(always)]
     pub fn add(&self, other: &Self) -> Self {
         // Step 1: Full 256-bit addition
-        let (sum, carry) = Self::adc8(self.0, other.0);
+        let (sum, carry) = Self::adc8(&self.0, &other.0);
 
         // Step 2: Attempt conditional reduction by subtracting p
-        let (sum_minus_p, borrow) = Self::sbb8(sum, Self::MOD_LIMBS);
+        let (sum_minus_p, borrow) = Self::sbb8(&sum, &Self::MOD_LIMBS);
 
         // Step 3: Choose reduced value if:
         //   - Addition overflowed (carry == 1), OR
         //   - Subtraction didn't borrow (borrow == 0), meaning sum >= p
         let need_reduce = (carry | (borrow ^ 1)) & 1;
-        let reduced = Self::conditional_select(&sum, &sum_minus_p, Choice::from(need_reduce as u8));
+        let reduced = Zeroizing::new(Self::conditional_select(
+            &sum,
+            &sum_minus_p,
+            Choice::from(need_reduce as u8),
+        ));
 
         // Step 4: Final canonical reduction
-        reduced.conditional_sub_p()
+        let result = Zeroizing::new(reduced.conditional_sub_p());
+        result.into_inner()
     }
 
     /// Constant-time field subtraction: (self - other) mod p
@@ -151,13 +175,18 @@ impl FieldElement {
     /// 2. If subtraction borrows, add p to get the correct positive result
     pub fn sub(&self, other: &Self) -> Self {
         // Step 1: Raw subtraction
-        let (diff, borrow) = Self::sbb8(self.0, other.0);
+        let (diff, borrow) = Self::sbb8(&self.0, &other.0);
 
         // Step 2: If we borrowed, add p to get the correct positive result
-        let (candidate, _) = Self::adc8(diff, Self::MOD_LIMBS);
+        let (candidate, _carry) = Self::adc8(&diff, &Self::MOD_LIMBS);
 
         // Step 3: Constant-time select based on borrow flag
-        Self::conditional_select(&diff, &candidate, Choice::from(borrow as u8))
+        let result = Zeroizing::new(Self::conditional_select(
+            &diff,
+            &candidate,
+            Choice::from(borrow as u8),
+        ));
+        result.into_inner()
     }
 
     /// Field multiplication: (self * other) mod p
@@ -172,7 +201,7 @@ impl FieldElement {
     pub fn mul(&self, other: &Self) -> Self {
         // Phase 1: Accumulate partial products in 128-bit temporaries
         // This prevents overflow during the schoolbook multiplication
-        let mut t = [0u128; 16];
+        let mut t = Zeroizing::new([0u128; 16]);
         for i in 0..8 {
             for j in 0..8 {
                 t[i + j] += (self.0[i] as u128) * (other.0[j] as u128);
@@ -180,7 +209,7 @@ impl FieldElement {
         }
 
         // Phase 2: Carry propagation to convert to 32-bit limb representation
-        let mut prod = [0u32; 16];
+        let mut prod = Zeroizing::new([0u32; 16]);
         let mut carry: u128 = 0;
         for i in 0..16 {
             let v = t[i] + carry;
@@ -224,20 +253,24 @@ impl FieldElement {
         ];
 
         // Binary exponentiation: compute self^(p-2) mod p
-        let mut result = FieldElement::one();
-        let mut base = self.clone();
+        let mut result = Zeroizing::new(FieldElement::one());
+        let mut base = Zeroizing::new(*self);
 
         // Process each bit of the exponent from least to most significant
         for &byte in P_MINUS_2.iter().rev() {
             for bit in 0..8 {
                 if (byte >> bit) & 1 == 1 {
-                    result = result.mul(&base);
+                    let product = Zeroizing::new(result.mul(&base));
+                    result.zeroize();
+                    *result = product.into_inner();
                 }
-                base = base.square();
+                let squared = Zeroizing::new(base.square());
+                base.zeroize();
+                *base = squared.into_inner();
             }
         }
 
-        Ok(result)
+        Ok(result.into_inner())
     }
 
     /// Check if the field element represents zero
@@ -245,11 +278,11 @@ impl FieldElement {
     /// Constant-time check across all limbs to determine if the
     /// field element is the additive identity.
     pub fn is_zero(&self) -> bool {
-        let mut any = 0u32;
+        let mut any = Zeroizing::new(0u32);
         for &limb in &self.0 {
-            any |= limb;
+            *any |= limb;
         }
-        any == 0
+        *any == 0
     }
 
     /// Return `true` if the field element is odd (least-significant bit set)
@@ -288,22 +321,27 @@ impl FieldElement {
             0x00, 0x00, 0x00, 0x00,
         ];
 
-        let mut result = FieldElement::one();
-        let mut base = self.clone();
+        let mut result = Zeroizing::new(FieldElement::one());
+        let mut base = Zeroizing::new(*self);
 
         // Binary exponentiation from LSB to MSB
         for &byte in EXP.iter().rev() {
             for bit in 0..8 {
                 if ((byte >> bit) & 1) == 1 {
-                    result = result.mul(&base);
+                    let product = Zeroizing::new(result.mul(&base));
+                    result.zeroize();
+                    *result = product.into_inner();
                 }
-                base = base.square();
+                let squared = Zeroizing::new(base.square());
+                base.zeroize();
+                *base = squared.into_inner();
             }
         }
 
         // Verify that result^2 = self (constant-time check)
-        if result.square() == *self {
-            Some(result)
+        let squared = Zeroizing::new(result.square());
+        if *squared == *self {
+            Some(result.into_inner())
         } else {
             None
         }
@@ -316,11 +354,11 @@ impl FieldElement {
     /// Returns a if flag == 0, returns b if flag == 1
     /// Used for branchless operations to maintain constant-time guarantees.
     fn conditional_select(a: &[u32; 8], b: &[u32; 8], flag: Choice) -> Self {
-        let mut out = [0u32; 8];
+        let mut out = Zeroizing::new([0u32; 8]);
         for i in 0..8 {
             out[i] = u32::conditional_select(&a[i], &b[i], flag);
         }
-        FieldElement(out)
+        FieldElement(out.into_inner())
     }
 
     /// 8-limb addition with carry propagation
@@ -328,8 +366,8 @@ impl FieldElement {
     /// Performs full-width addition across all limbs, returning both
     /// the sum and the final carry bit for overflow detection.
     #[inline(always)]
-    fn adc8(a: [u32; 8], b: [u32; 8]) -> ([u32; 8], u32) {
-        let mut r = [0u32; 8];
+    fn adc8(a: &[u32; 8], b: &[u32; 8]) -> (Zeroizing<[u32; 8]>, u32) {
+        let mut r = Zeroizing::new([0u32; 8]);
         let mut carry = 0;
 
         #[allow(clippy::needless_range_loop)] // Index used for multiple arrays
@@ -350,8 +388,8 @@ impl FieldElement {
     /// Performs full-width subtraction across all limbs, returning both
     /// the difference and the final borrow bit for underflow detection.
     #[inline(always)]
-    fn sbb8(a: [u32; 8], b: [u32; 8]) -> ([u32; 8], u32) {
-        let mut r = [0u32; 8];
+    fn sbb8(a: &[u32; 8], b: &[u32; 8]) -> (Zeroizing<[u32; 8]>, u32) {
+        let mut r = Zeroizing::new([0u32; 8]);
         let mut borrow = 0;
 
         #[allow(clippy::needless_range_loop)] // Index used for multiple arrays
@@ -372,30 +410,30 @@ impl FieldElement {
     /// Used as a final step in arithmetic operations.
     fn conditional_sub_p(&self) -> Self {
         let needs_sub = Choice::from((!self.is_valid() as u8) & 1);
-        Self::conditional_sub(self.0, needs_sub)
+        Self::conditional_sub(&self.0, needs_sub)
     }
 
     /// Conditionally subtract the field modulus p based on a boolean condition
     ///
     /// Uses constant-time selection to avoid branching while maintaining
     /// the option to perform the subtraction.
-    fn conditional_sub(limbs: [u32; 8], condition: Choice) -> Self {
-        let mut result = [0u32; 8];
-        let (diff, _) = Self::sbb8(limbs, Self::MOD_LIMBS);
+    fn conditional_sub(limbs: &[u32; 8], condition: Choice) -> Self {
+        let mut result = Zeroizing::new([0u32; 8]);
+        let (diff, _borrow) = Self::sbb8(limbs, &Self::MOD_LIMBS);
 
         // Constant-time select between original limbs and difference
         for i in 0..8 {
             result[i] = u32::conditional_select(&limbs[i], &diff[i], condition);
         }
 
-        Self(result)
+        Self(result.into_inner())
     }
 
     /// NIST P-256 specific reduction for 512-bit values using Solinas method
     /// Fully constant-time Solinas reduction with two carry-folds.
-    pub(crate) fn reduce_wide(t: [u32; 16]) -> FieldElement {
+    pub(crate) fn reduce_wide(t: Zeroizing<[u32; 16]>) -> FieldElement {
         // 1) load into signed 128-bit
-        let mut s = [0i128; 16];
+        let mut s = Zeroizing::new([0i128; 16]);
         for (i, &val) in t.iter().enumerate() {
             s[i] = val as i128;
         }
@@ -442,7 +480,7 @@ impl FieldElement {
         s[7] = s[7].wrapping_add(c2);
 
         // 7) final signed carry-propagate into 32-bit limbs
-        let mut out = [0u32; 8];
+        let mut out = Zeroizing::new([0u32; 8]);
         let mut carry3: i128 = 0;
         for (i, val) in s.iter().take(8).enumerate() {
             let tmp = *val + carry3;
@@ -451,9 +489,10 @@ impl FieldElement {
         }
 
         // 8) one last constant-time subtract if ≥ p
-        let (subbed, borrow) = Self::sbb8(out, Self::MOD_LIMBS);
+        let (subbed, borrow) = Self::sbb8(&out, &Self::MOD_LIMBS);
         let need_sub = Choice::from((borrow ^ 1) as u8); // borrow==0 ⇒ out>=p
-        Self::conditional_select(&out, &subbed, need_sub)
+        let result = Zeroizing::new(Self::conditional_select(&out, &subbed, need_sub));
+        result.into_inner()
     }
 
     /// Get the field modulus p as a FieldElement
@@ -492,5 +531,18 @@ mod field_constants_tests {
             mod_bytes, expected_bytes,
             "MOD_LIMBS does not encode the correct NIST P-256 prime"
         );
+    }
+
+    #[test]
+    fn zeroize_is_owner_local_under_required_copy_semantics() {
+        // `ConditionallySelectable` requires `Copy`: this tests the precise
+        // owner-local guarantee and documents that an earlier copy remains.
+        let original = FieldElement::one();
+        let mut owned_copy = original;
+
+        owned_copy.zeroize();
+
+        assert!(owned_copy.is_zero());
+        assert!(!original.is_zero());
     }
 }

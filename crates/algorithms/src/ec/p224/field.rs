@@ -2,7 +2,10 @@
 
 use crate::ec::p224::constants::P224_FIELD_ELEMENT_SIZE;
 use crate::error::{Error, Result};
-use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::{
+    constant_time::{Choice, ConditionallySelectable},
+    Zeroize, Zeroizing,
+};
 
 /// P-224 field element representing values in F_p
 ///
@@ -10,6 +13,21 @@ use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
 /// All operations maintain the invariant that values are reduced modulo p.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FieldElement(pub(crate) [u32; 7]);
+
+// P-224 does not need the `ConditionallySelectable: Copy` compromise: its
+// field element remains non-`Copy`. Explicit arithmetic buffers still use
+// `Zeroizing` so every initialized owner is cleared on every exit path.
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl Zeroize for FieldElement {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 // put this right after `#[derive(...)]` in field.rs –
 //  it's only needed for ad-hoc tests, not for production code:
@@ -63,7 +81,7 @@ impl FieldElement {
     /// Validates that the input represents a value less than the field modulus p.
     /// Returns an error if the value is >= p.
     pub fn from_bytes(bytes: &[u8; P224_FIELD_ELEMENT_SIZE]) -> Result<Self> {
-        let mut limbs = [0u32; 7];
+        let mut limbs = Zeroizing::new([0u32; 7]);
 
         // Convert from big-endian bytes to little-endian limbs
         // limbs[0] = least-significant 4 bytes (bytes[24..28])
@@ -79,7 +97,7 @@ impl FieldElement {
         }
 
         // Validate that the value is in the field (< p)
-        let fe = FieldElement(limbs);
+        let fe = Zeroizing::new(FieldElement(limbs.into_inner()));
         if !fe.is_valid() {
             return Err(Error::param(
                 "FieldElement",
@@ -87,20 +105,20 @@ impl FieldElement {
             ));
         }
 
-        Ok(fe)
+        Ok(fe.into_inner())
     }
 
     /// Convert field element to big-endian byte representation
     pub fn to_bytes(&self) -> [u8; P224_FIELD_ELEMENT_SIZE] {
-        let mut bytes = [0u8; P224_FIELD_ELEMENT_SIZE];
+        let mut bytes = Zeroizing::new([0u8; P224_FIELD_ELEMENT_SIZE]);
 
         // Convert from little-endian limbs to big-endian bytes
         for i in 0..7 {
-            let limb_bytes = self.0[i].to_be_bytes();
+            let limb_bytes = Zeroizing::new(self.0[i].to_be_bytes());
             let offset = (6 - i) * 4; // Byte offset: 24, 20, 16, ..., 0
-            bytes[offset..offset + 4].copy_from_slice(&limb_bytes);
+            bytes[offset..offset + 4].copy_from_slice(&limb_bytes[..]);
         }
-        bytes
+        bytes.into_inner()
     }
 
     /// Constant-time validation that the field element is in canonical form (< p)
@@ -111,7 +129,7 @@ impl FieldElement {
     pub fn is_valid(&self) -> bool {
         // Attempt to subtract p from self
         // If subtraction requires a borrow, then self < p (valid)
-        let (_, borrow) = Self::sbb7(self.0, Self::MOD_LIMBS);
+        let (_difference, borrow) = Self::sbb7(&self.0, &Self::MOD_LIMBS);
         borrow == 1
     }
 
@@ -124,19 +142,24 @@ impl FieldElement {
     #[inline(always)]
     pub fn add(&self, other: &Self) -> Self {
         // Step 1: Full 224-bit addition
-        let (sum, carry) = Self::adc7(self.0, other.0);
+        let (sum, carry) = Self::adc7(&self.0, &other.0);
 
         // Step 2: Attempt conditional reduction by subtracting p
-        let (sum_minus_p, borrow) = Self::sbb7(sum, Self::MOD_LIMBS);
+        let (sum_minus_p, borrow) = Self::sbb7(&sum, &Self::MOD_LIMBS);
 
         // Step 3: Choose reduced value if:
         //   - Addition overflowed (carry == 1), OR
         //   - Subtraction didn't borrow (borrow == 0), meaning sum >= p
         let need_reduce = (carry | (borrow ^ 1)) & 1;
-        let reduced = Self::conditional_select(&sum, &sum_minus_p, Choice::from(need_reduce as u8));
+        let reduced = Zeroizing::new(Self::conditional_select(
+            &sum,
+            &sum_minus_p,
+            Choice::from(need_reduce as u8),
+        ));
 
         // Step 4: Final canonical reduction
-        reduced.conditional_sub_p()
+        let result = Zeroizing::new(reduced.conditional_sub_p());
+        result.into_inner()
     }
 
     /// Constant-time field subtraction: (self - other) mod p
@@ -146,13 +169,18 @@ impl FieldElement {
     /// 2. If subtraction borrows, add p to get the correct positive result
     pub fn sub(&self, other: &Self) -> Self {
         // Step 1: Raw subtraction
-        let (diff, borrow) = Self::sbb7(self.0, other.0);
+        let (diff, borrow) = Self::sbb7(&self.0, &other.0);
 
         // Step 2: If we borrowed, add p to get the correct positive result
-        let (candidate, _) = Self::adc7(diff, Self::MOD_LIMBS);
+        let (candidate, _carry) = Self::adc7(&diff, &Self::MOD_LIMBS);
 
         // Step 3: Constant-time select based on borrow flag
-        Self::conditional_select(&diff, &candidate, Choice::from(borrow as u8))
+        let result = Zeroizing::new(Self::conditional_select(
+            &diff,
+            &candidate,
+            Choice::from(borrow as u8),
+        ));
+        result.into_inner()
     }
 
     /// Field multiplication: (self * other) mod p
@@ -164,7 +192,7 @@ impl FieldElement {
     pub fn mul(&self, other: &Self) -> Self {
         // Phase 1: Accumulate partial products in 128-bit temporaries
         // This prevents overflow during the schoolbook multiplication
-        let mut t = [0u128; 14];
+        let mut t = Zeroizing::new([0u128; 14]);
         for i in 0..7 {
             for j in 0..7 {
                 t[i + j] += (self.0[i] as u128) * (other.0[j] as u128);
@@ -172,7 +200,7 @@ impl FieldElement {
         }
 
         // Phase 2: Carry propagation to convert to 32-bit limb representation
-        let mut prod = [0u32; 14];
+        let mut prod = Zeroizing::new([0u32; 14]);
         let mut carry: u128 = 0;
         for i in 0..14 {
             let v = t[i] + carry;
@@ -215,20 +243,24 @@ impl FieldElement {
         ];
 
         // Binary exponentiation: compute self^(p-2) mod p
-        let mut result = FieldElement::one();
-        let mut base = self.clone();
+        let mut result = Zeroizing::new(FieldElement::one());
+        let mut base = Zeroizing::new(self.clone());
 
         // Process each bit of the exponent from least to most significant
         for &byte in P_MINUS_2.iter().rev() {
             for bit in 0..8 {
                 if (byte >> bit) & 1 == 1 {
-                    result = result.mul(&base);
+                    let product = Zeroizing::new(result.mul(&base));
+                    result.zeroize();
+                    *result = product.into_inner();
                 }
-                base = base.square();
+                let squared = Zeroizing::new(base.square());
+                base.zeroize();
+                *base = squared.into_inner();
             }
         }
 
-        Ok(result)
+        Ok(result.into_inner())
     }
 
     /// Check if the field element represents zero
@@ -236,11 +268,11 @@ impl FieldElement {
     /// Constant-time check across all limbs to determine if the
     /// field element is the additive identity.
     pub fn is_zero(&self) -> bool {
-        let mut any = 0u32;
+        let mut any = Zeroizing::new(0u32);
         for &limb in &self.0 {
-            any |= limb;
+            *any |= limb;
         }
-        any == 0
+        *any == 0
     }
 
     /// Return `true` if the field element is odd (least-significant bit set)
@@ -266,7 +298,7 @@ impl FieldElement {
         if self.is_zero() {
             return Some(Self::zero());
         }
-        if *self == Self::one() {
+        if self == &Self::one() {
             return Some(Self::one());
         }
 
@@ -280,7 +312,8 @@ impl FieldElement {
             0xFF, 0xFF, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
 
-        if self.pow(&LEGENDRE_EXP) != Self::one() {
+        let legendre = Zeroizing::new(self.pow(&LEGENDRE_EXP));
+        if &*legendre != &Self::one() {
             return None; // not a quadratic residue
         }
 
@@ -303,32 +336,37 @@ impl FieldElement {
 
         /* r = self^{(q+1)/2};      t = self^q;      c = z^q */
         // We still need a non‑residue z.  Trial small integers 2,3,4…
-        let mut z = Self::one().add(&Self::one()); // 2
+        let mut z = Zeroizing::new(Self::one().add(&Self::one())); // 2
         loop {
             // Use the same corrected LEGENDRE_EXP for consistency
-            if z.pow(&LEGENDRE_EXP) != Self::one() {
+            let z_legendre = Zeroizing::new(z.pow(&LEGENDRE_EXP));
+            if &*z_legendre != &Self::one() {
                 break;
             }
-            z = z.add(&Self::one()); // next integer
+            let next = Zeroizing::new(z.add(&Self::one()));
+            z.zeroize();
+            *z = next.into_inner(); // next integer
         }
 
-        let mut c = z.pow(&Q);
-        let mut t = self.pow(&Q);
-        let mut r = self.pow(&QPLUS1_OVER2);
+        let mut c = Zeroizing::new(z.pow(&Q));
+        let mut t = Zeroizing::new(self.pow(&Q));
+        let mut r = Zeroizing::new(self.pow(&QPLUS1_OVER2));
         let mut m = S;
 
         /* ------------------------------------------------------------------
          * 3.  Main Tonelli‑Shanks loop
          * ------------------------------------------------------------------ */
-        while t != Self::one() {
+        while &*t != &Self::one() {
             // Find least i (0 < i < m) s.t. t^{2^i} = 1.
             let mut i = 1usize;
-            let mut t2i = t.square();
+            let mut t2i = Zeroizing::new(t.square());
             while i < m {
-                if t2i == Self::one() {
+                if &*t2i == &Self::one() {
                     break;
                 }
-                t2i = t2i.square();
+                let squared = Zeroizing::new(t2i.square());
+                t2i.zeroize();
+                *t2i = squared.into_inner();
                 i += 1;
             }
 
@@ -338,20 +376,27 @@ impl FieldElement {
             }
 
             // b = c^{2^{m‑i‑1}}
-            let mut b = c.clone();
+            let mut b = Zeroizing::new((*c).clone());
             for _ in 0..(m - i - 1) {
-                b = b.square();
+                let squared = Zeroizing::new(b.square());
+                b.zeroize();
+                *b = squared.into_inner();
             }
 
             // Updates
-            r = r.mul(&b);
-            let b2 = b.square();
-            t = t.mul(&b2);
-            c = b2;
+            let updated_r = Zeroizing::new(r.mul(&b));
+            r.zeroize();
+            *r = updated_r.into_inner();
+            let b2 = Zeroizing::new(b.square());
+            let updated_t = Zeroizing::new(t.mul(&b2));
+            t.zeroize();
+            *t = updated_t.into_inner();
+            c.zeroize();
+            *c = b2.into_inner();
             m = i;
         }
 
-        Some(r)
+        Some(r.into_inner())
     }
 
     /* ----------------------------------------------------------------------
@@ -359,22 +404,26 @@ impl FieldElement {
      * big‑endian byte slice.
      * ------------------------------------------------------------------ */
     fn pow(&self, exp_be: &[u8]) -> Self {
-        let mut result = Self::one();
-        let mut base = self.clone();
+        let mut result = Zeroizing::new(Self::one());
+        let mut base = Zeroizing::new(self.clone());
 
         // Iterate bits from LSB → MSB  (rev bytes, then 0..7)
         for &byte in exp_be.iter().rev() {
             let mut b = byte;
             for _ in 0..8 {
                 if (b & 1) == 1 {
-                    result = result.mul(&base);
+                    let product = Zeroizing::new(result.mul(&base));
+                    result.zeroize();
+                    *result = product.into_inner();
                 }
-                base = base.square();
+                let squared = Zeroizing::new(base.square());
+                base.zeroize();
+                *base = squared.into_inner();
                 b >>= 1;
             }
         }
 
-        result
+        result.into_inner()
     }
 
     // Private helper methods
@@ -384,11 +433,11 @@ impl FieldElement {
     /// Returns a if flag == 0, returns b if flag == 1
     /// Used for branchless operations to maintain constant-time guarantees.
     fn conditional_select(a: &[u32; 7], b: &[u32; 7], flag: Choice) -> Self {
-        let mut out = [0u32; 7];
+        let mut out = Zeroizing::new([0u32; 7]);
         for (i, out_elem) in out.iter_mut().enumerate() {
             *out_elem = u32::conditional_select(&a[i], &b[i], flag);
         }
-        FieldElement(out)
+        FieldElement(out.into_inner())
     }
 
     /// 7-limb addition with carry propagation
@@ -396,8 +445,8 @@ impl FieldElement {
     /// Performs full-width addition across all limbs, returning both
     /// the sum and the final carry bit for overflow detection.
     #[inline(always)]
-    fn adc7(a: [u32; 7], b: [u32; 7]) -> ([u32; 7], u32) {
-        let mut r = [0u32; 7];
+    fn adc7(a: &[u32; 7], b: &[u32; 7]) -> (Zeroizing<[u32; 7]>, u32) {
+        let mut r = Zeroizing::new([0u32; 7]);
         let mut carry = 0;
 
         for (i, r_elem) in r.iter_mut().enumerate() {
@@ -417,8 +466,8 @@ impl FieldElement {
     /// Performs full-width subtraction across all limbs, returning both
     /// the difference and the final borrow bit for underflow detection.
     #[inline(always)]
-    fn sbb7(a: [u32; 7], b: [u32; 7]) -> ([u32; 7], u32) {
-        let mut r = [0u32; 7];
+    fn sbb7(a: &[u32; 7], b: &[u32; 7]) -> (Zeroizing<[u32; 7]>, u32) {
+        let mut r = Zeroizing::new([0u32; 7]);
         let mut borrow = 0;
 
         for (i, r_elem) in r.iter_mut().enumerate() {
@@ -438,23 +487,23 @@ impl FieldElement {
     /// Used as a final step in arithmetic operations.
     fn conditional_sub_p(&self) -> Self {
         let needs_sub = Choice::from((!self.is_valid() as u8) & 1);
-        Self::conditional_sub(self.0, needs_sub)
+        Self::conditional_sub(&self.0, needs_sub)
     }
 
     /// Conditionally subtract the field modulus p based on a boolean condition
     ///
     /// Uses constant-time selection to avoid branching while maintaining
     /// the option to perform the subtraction.
-    fn conditional_sub(limbs: [u32; 7], condition: Choice) -> Self {
-        let mut result = [0u32; 7];
-        let (diff, _) = Self::sbb7(limbs, Self::MOD_LIMBS);
+    fn conditional_sub(limbs: &[u32; 7], condition: Choice) -> Self {
+        let mut result = Zeroizing::new([0u32; 7]);
+        let (diff, _borrow) = Self::sbb7(limbs, &Self::MOD_LIMBS);
 
         // Constant-time select between original limbs and difference
         for (i, result_elem) in result.iter_mut().enumerate() {
             *result_elem = u32::conditional_select(&limbs[i], &diff[i], condition);
         }
 
-        Self(result)
+        Self(result.into_inner())
     }
 
     /// Reduce a 448-bit value (14 little-endian `u32` limbs) modulo  
@@ -472,9 +521,9 @@ impl FieldElement {
     /// 4.  A second carry sweep + one more tiny fold guarantee canonical limbs.
     /// 5.  Final constant-time subtract of p if the value is ≥ p.
     #[inline(always)]
-    pub(crate) fn reduce_wide(t: [u32; 14]) -> FieldElement {
+    pub(crate) fn reduce_wide(t: Zeroizing<[u32; 14]>) -> FieldElement {
         /* ── 1. load into signed 128-bit ─────────────────────────────────── */
-        let mut s = [0i128; 14];
+        let mut s = Zeroizing::new([0i128; 14]);
         for (i, s_elem) in s.iter_mut().enumerate().take(14) {
             *s_elem = t[i] as i128;
         }
@@ -512,7 +561,7 @@ impl FieldElement {
         s[0] = s[0].wrapping_sub(carry);
 
         /* ── 7. final carry sweep into ordinary u32 limbs ────────────────── */
-        let mut out = [0u32; 7];
+        let mut out = Zeroizing::new([0u32; 7]);
         carry = 0;
         for (i, out_elem) in out.iter_mut().enumerate() {
             let tmp = s[i] + carry;
@@ -522,9 +571,10 @@ impl FieldElement {
         let _ = carry;
 
         /* ── 8. last conditional subtract if ≥ p ─────────────────────────── */
-        let (sub, borrow) = Self::sbb7(out, Self::MOD_LIMBS);
+        let (sub, borrow) = Self::sbb7(&out, &Self::MOD_LIMBS);
         let need_sub = Choice::from((borrow ^ 1) as u8); // borrow==0 ⇒ out≥p
-        Self::conditional_select(&out, &sub, need_sub)
+        let result = Zeroizing::new(Self::conditional_select(&out, &sub, need_sub));
+        result.into_inner()
     }
 
     /// Get the field modulus p as a FieldElement
@@ -532,5 +582,21 @@ impl FieldElement {
     /// Returns the NIST P-224 prime modulus for use in reduction operations.
     pub(crate) fn get_modulus() -> Self {
         FieldElement(Self::MOD_LIMBS)
+    }
+}
+
+#[cfg(test)]
+mod lifecycle_tests {
+    use super::*;
+
+    #[test]
+    fn zeroize_clears_owned_non_copy_field_element() {
+        let original = FieldElement::one();
+        let mut owned_clone = original.clone();
+
+        owned_clone.zeroize();
+
+        assert!(owned_clone.is_zero());
+        assert!(!original.is_zero());
     }
 }
