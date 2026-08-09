@@ -14,6 +14,8 @@ use alloc::{format, vec, vec::Vec};
 use dcrypt_algorithms::poly::serialize::{
     CoefficientPacker, CoefficientUnpacker, DefaultCoefficientSerde,
 };
+use dcrypt_api::SecretVec;
+use dcrypt_internal::{boxed_bytes_zeroed, Zeroizing};
 use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N, ML_DSA_Q};
 
 #[inline]
@@ -186,8 +188,8 @@ pub fn pack_secret_key<P: MlDsaSchemeParams>(
     s1_vec: &PolyVecL<P>,
     s2_vec: &PolyVecK<P>,
     t0_vec: &PolyVecK<P>,
-) -> Result<Vec<u8>, SignError> {
-    let mut sk_bytes = Vec::with_capacity(P::SECRET_KEY_BYTES);
+) -> Result<SecretVec, SignError> {
+    let mut sk_bytes = SecretVec::empty();
 
     // Pack ρ, K, tr
     sk_bytes.extend_from_slice(rho_seed);
@@ -196,6 +198,8 @@ pub fn pack_secret_key<P: MlDsaSchemeParams>(
 
     // Calculate bits needed for s1, s2 encoding
     let eta_bits = if P::ETA_S1S2 == 2 { 3 } else { 4 }; // η=2 needs 3 bits, η=4 needs 4 bits
+    let bytes_per_s_poly = ML_DSA_N * eta_bits / 8;
+    let bytes_per_t0_poly = ML_DSA_N * P::D_PARAM as usize / 8;
 
     // Pack s1 (coefficients in [-η, η])
     for i in 0..P::L_DIM {
@@ -209,7 +213,8 @@ pub fn pack_secret_key<P: MlDsaSchemeParams>(
             }
             *c = (P::ETA_S1S2 as i32 - centered) as u32;
         }
-        let packed = DefaultCoefficientSerde::pack_coeffs(&temp_poly, eta_bits)
+        let mut packed = Zeroizing::new(boxed_bytes_zeroed(bytes_per_s_poly));
+        DefaultCoefficientSerde::pack_coeffs_into(&temp_poly, eta_bits, &mut packed)
             .map_err(SignError::from_algo)?;
         sk_bytes.extend_from_slice(&packed);
     }
@@ -226,7 +231,8 @@ pub fn pack_secret_key<P: MlDsaSchemeParams>(
             }
             *c = (P::ETA_S1S2 as i32 - centered) as u32;
         }
-        let packed = DefaultCoefficientSerde::pack_coeffs(&temp_poly, eta_bits)
+        let mut packed = Zeroizing::new(boxed_bytes_zeroed(bytes_per_s_poly));
+        DefaultCoefficientSerde::pack_coeffs_into(&temp_poly, eta_bits, &mut packed)
             .map_err(SignError::from_algo)?;
         sk_bytes.extend_from_slice(&packed);
     }
@@ -244,7 +250,8 @@ pub fn pack_secret_key<P: MlDsaSchemeParams>(
             }
             *c = (t0_offset - centered) as u32;
         }
-        let packed = DefaultCoefficientSerde::pack_coeffs(&temp_poly, P::D_PARAM as usize)
+        let mut packed = Zeroizing::new(boxed_bytes_zeroed(bytes_per_t0_poly));
+        DefaultCoefficientSerde::pack_coeffs_into(&temp_poly, P::D_PARAM as usize, &mut packed)
             .map_err(SignError::from_algo)?;
         sk_bytes.extend_from_slice(&packed);
     }
@@ -257,14 +264,15 @@ pub fn pack_secret_key<P: MlDsaSchemeParams>(
         )));
     }
 
+    debug_assert_eq!(sk_bytes.len(), P::SECRET_KEY_BYTES);
     Ok(sk_bytes)
 }
 
 /// Type alias for the complex return type of unpack_secret_key
 pub type UnpackedSecretKey<P> = (
-    [u8; 32], // rho
-    [u8; 32], // k
-    [u8; 64], // tr
+    [u8; 32],            // rho
+    Zeroizing<[u8; 32]>, // k
+    Zeroizing<[u8; 64]>, // tr
     PolyVecL<P>,
     PolyVecK<P>,
     PolyVecK<P>,
@@ -290,11 +298,11 @@ pub fn unpack_secret_key<P: MlDsaSchemeParams>(
     rho_seed.copy_from_slice(&sk_bytes[offset..offset + 32]);
     offset += 32;
 
-    let mut k_seed = [0u8; 32];
+    let mut k_seed = Zeroizing::new([0u8; 32]);
     k_seed.copy_from_slice(&sk_bytes[offset..offset + 32]);
     offset += 32;
 
-    let mut tr_hash = [0u8; 64];
+    let mut tr_hash = Zeroizing::new([0u8; 64]);
     tr_hash.copy_from_slice(&sk_bytes[offset..offset + 64]);
     offset += 64;
 

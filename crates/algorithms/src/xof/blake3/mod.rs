@@ -70,10 +70,12 @@ use super::{Blake3Algorithm, DeriveKeyXof, ExtendableOutputFunction, KeyedXof};
 use crate::error::{validate, Error, Result};
 use crate::xof::XofAlgorithm;
 use dcrypt_common::security::{EphemeralSecret, SecretBuffer};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
+};
 
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec};
 
 // BLAKE3 constants
 const OUT_LEN: usize = 32; // Standard output length (256 bits)
@@ -466,7 +468,7 @@ fn parent_cv(
 pub struct Blake3Xof {
     chunk_state: ChunkState,
     key_words: SecretBuffer<32>, // Secure storage for key words (8 u32s = 32 bytes)
-    cv_stack: Vec<[u32; 8]>,
+    cv_stack: Zeroizing<Box<[[u32; 8]]>>,
     flags: u32,
 }
 
@@ -484,10 +486,7 @@ impl Zeroize for Blake3Xof {
     fn zeroize(&mut self) {
         self.chunk_state.zeroize();
         self.key_words.zeroize();
-        for cv in self.cv_stack.iter_mut() {
-            cv.zeroize();
-        }
-        self.cv_stack.clear();
+        self.cv_stack.zeroize();
         self.flags = 0;
     }
 }
@@ -501,15 +500,28 @@ impl Blake3Xof {
         words
     }
 
-    fn push_stack(&mut self, cv: [u32; 8]) {
-        self.cv_stack.push(cv);
+    fn push_stack(&mut self, mut cv: [u32; 8]) {
+        let current_len = self.cv_stack.len();
+        let mut replacement = Zeroizing::new(vec![[0u32; 8]; current_len + 1].into_boxed_slice());
+        replacement[..current_len].copy_from_slice(&self.cv_stack);
+        replacement[current_len] = cv;
+        cv.zeroize();
+        self.cv_stack = replacement;
     }
 
     fn pop_stack(&mut self) -> Result<[u32; 8]> {
-        self.cv_stack.pop().ok_or(Error::Processing {
-            operation: "BLAKE3",
-            details: "Stack underflow",
-        })
+        let current_len = self.cv_stack.len();
+        if current_len == 0 {
+            return Err(Error::Processing {
+                operation: "BLAKE3",
+                details: "Stack underflow",
+            });
+        }
+        let value = self.cv_stack[current_len - 1];
+        let mut replacement = Zeroizing::new(vec![[0u32; 8]; current_len - 1].into_boxed_slice());
+        replacement.copy_from_slice(&self.cv_stack[..current_len - 1]);
+        self.cv_stack = replacement;
+        Ok(value)
     }
 
     fn add_chunk_chaining_value(
@@ -563,12 +575,12 @@ impl Blake3Xof {
     /// let hash = Blake3Xof::generate(b"hello world", 32)?;
     /// assert_eq!(hash.len(), 32);
     /// ```
-    pub fn generate(data: &[u8], len: usize) -> Result<Vec<u8>> {
+    pub fn generate(data: &[u8], len: usize) -> Result<ZeroizingBytes> {
         Blake3Algorithm::validate_output_length(len)?;
 
         let mut xof = Self::new();
         xof.update(data)?;
-        let mut result = vec![0u8; len];
+        let mut result = Zeroizing::new(boxed_bytes_zeroed(len));
         xof.squeeze(&mut result)?;
         Ok(result)
     }
@@ -587,7 +599,7 @@ impl ExtendableOutputFunction for Blake3Xof {
         Self {
             chunk_state: ChunkState::new(IV, 0, 0),
             key_words: SecretBuffer::new(key_bytes),
-            cv_stack: Vec::new(),
+            cv_stack: Zeroizing::new(Box::default()),
             flags: 0,
         }
     }
@@ -619,9 +631,9 @@ impl ExtendableOutputFunction for Blake3Xof {
         self.finalize(output)
     }
 
-    fn squeeze_into_vec(&mut self, len: usize) -> Result<Vec<u8>> {
+    fn squeeze_into_vec(&mut self, len: usize) -> Result<ZeroizingBytes> {
         Blake3Algorithm::validate_output_length(len)?;
-        let mut result = vec![0u8; len];
+        let mut result = Zeroizing::new(boxed_bytes_zeroed(len));
         self.squeeze(&mut result)?;
         Ok(result)
     }
@@ -666,7 +678,7 @@ impl KeyedXof for Blake3Xof {
         let instance = Self {
             chunk_state: ChunkState::new(key_words, 0, KEYED_HASH),
             key_words: key_buf,
-            cv_stack: Vec::new(),
+            cv_stack: Zeroizing::new(Box::default()),
             flags: KEYED_HASH,
         };
 
@@ -715,7 +727,7 @@ impl DeriveKeyXof for Blake3Xof {
         let instance = Self {
             chunk_state: ChunkState::new(key_words, 0, DERIVE_KEY_MATERIAL),
             key_words: key_buf,
-            cv_stack: Vec::new(),
+            cv_stack: Zeroizing::new(Box::default()),
             flags: DERIVE_KEY_MATERIAL,
         };
 

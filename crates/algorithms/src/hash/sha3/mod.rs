@@ -4,10 +4,10 @@
 
 #[cfg(feature = "alloc")]
 use crate::alloc_prelude::*;
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::error::{validate, Result};
-use crate::hash::{Hash, HashAlgorithm, HashFunction};
+use crate::hash::{HashAlgorithm, HashFunction};
 use crate::types::Digest;
 
 use core::sync::atomic::{compiler_fence, Ordering};
@@ -158,6 +158,14 @@ macro_rules! impl_sha3_zeroize {
                 self.pt.zeroize();
             }
         }
+
+        impl Drop for $name {
+            fn drop(&mut self) {
+                self.zeroize();
+            }
+        }
+
+        impl ZeroizeOnDrop for $name {}
     };
 }
 
@@ -201,19 +209,18 @@ macro_rules! impl_sha3_variant {
                 Ok(())
             }
 
-            fn finalize_internal(&mut self) -> Result<Hash> {
+            fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; $out]>> {
                 let r = Self::rate();
                 xor_byte_in_state(&mut self.state, self.pt, 0x06);
                 xor_byte_in_state(&mut self.state, r - 1, 0x80);
                 keccak_f1600(&mut self.state);
 
-                let mut out = vec![0u8; $out];
+                let mut out = Zeroizing::new([0u8; $out]);
                 for i in 0..$out {
                     out[i] = get_byte_from_state(&self.state, i);
                 }
 
-                self.state = [0u64; KECCAK_STATE_SIZE];
-                self.pt = 0;
+                self.zeroize();
                 Ok(out)
             }
         }
@@ -233,9 +240,9 @@ macro_rules! impl_sha3_variant {
 
             fn finalize(&mut self) -> Result<Self::Output> {
                 let h = self.finalize_internal()?;
-                let mut d = [0u8; $out];
-                d.copy_from_slice(&h);
-                Ok(Digest::new(d))
+                let mut digest = Digest::<$out>::zeroed();
+                digest.as_mut().copy_from_slice(&h[..]);
+                Ok(digest)
             }
 
             #[inline(always)]
@@ -284,15 +291,16 @@ impl_sha3_variant!(
 fn keccak_f1600(state: &mut [u64; KECCAK_STATE_SIZE]) {
     for &rc in RC.iter().take(KECCAK_ROUNDS) {
         // θ
-        let mut c = [0u64; 5];
+        let mut c = Zeroizing::new([0u64; 5]);
         for x in 0..5 {
             c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
         }
         for x in 0..5 {
-            let d = c[(x + 4) % 5] ^ c[(x + 1) % 5].rotate_left(1);
+            let mut d = c[(x + 4) % 5] ^ c[(x + 1) % 5].rotate_left(1);
             for y in 0..5 {
                 state[x + 5 * y] ^= d;
             }
+            d.zeroize();
         }
         // ρ + π
         let mut t = state[1];
@@ -302,9 +310,10 @@ fn keccak_f1600(state: &mut [u64; KECCAK_STATE_SIZE]) {
             state[j] = t.rotate_left(RHO[i]);
             t = tmp;
         }
+        t.zeroize();
         // χ
         for y in 0..5 {
-            let mut row = [0u64; 5];
+            let mut row = Zeroizing::new([0u64; 5]);
             for x in 0..5 {
                 row[x] = state[x + 5 * y];
             }

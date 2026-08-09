@@ -11,9 +11,11 @@ use alloc::vec::Vec;
 use dcrypt_algorithms::ec::p224 as ec;
 use dcrypt_algorithms::hash::sha2::Sha224;
 use dcrypt_algorithms::hash::HashFunction;
-use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
+use dcrypt_api::{
+    error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait, ZeroizingBytes,
+};
 use dcrypt_internal::{
-    constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing,
+    constant_time::ct_eq, zeroizing_bytes_from_slice, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
 };
 use dcrypt_params::traditional::ecdsa::NIST_P224;
 
@@ -112,8 +114,8 @@ impl EcdsaP224SecretKey {
     }
 
     /// Export the secret scalar in a zeroizing buffer.
-    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(self.bytes.to_vec())
+    pub fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(&self.bytes)
     }
 }
 
@@ -175,8 +177,7 @@ impl SignatureTrait for EcdsaP224 {
 
         let z_octets = bits2octets(hash_output.as_ref(), &NIST_P224.n, 224)?;
         let z_bytes: [u8; ec::P224_SCALAR_SIZE] =
-            z_octets
-                .as_slice()
+            (&z_octets[..])
                 .try_into()
                 .map_err(|_| ApiError::InvalidLength {
                     context: "ECDSA-P224 hash conversion",
@@ -195,8 +196,7 @@ impl SignatureTrait for EcdsaP224 {
         loop {
             let mut nonce = nonces.next_nonce()?;
             let mut nonce_bytes: [u8; ec::P224_SCALAR_SIZE] =
-                nonce
-                    .as_slice()
+                (&nonce[..])
                     .try_into()
                     .map_err(|_| ApiError::InvalidLength {
                         context: "ECDSA-P224 nonce",
@@ -296,8 +296,7 @@ impl SignatureTrait for EcdsaP224 {
 
         let z_octets = bits2octets(hash_output.as_ref(), &NIST_P224.n, 224)?;
         let z_bytes: [u8; ec::P224_SCALAR_SIZE] =
-            z_octets
-                .as_slice()
+            (&z_octets[..])
                 .try_into()
                 .map_err(|_| ApiError::InvalidLength {
                     context: "ECDSA-P224 hash conversion",

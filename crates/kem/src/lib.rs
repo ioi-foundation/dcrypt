@@ -65,4 +65,11 @@ pub mod ml_kem;
 #[cfg(feature = "traditional")]
 pub use ecdh::{EcdhK256, EcdhP224, EcdhP256, EcdhP384, EcdhP521};
 #[cfg(feature = "post-quantum")]
-pub use ml_kem::{MlKem1024, MlKem512, MlKem768};
+pub use ml_kem::{
+    MlKem, MlKem1024, MlKem1024Ciphertext, MlKem1024DecapsulationKey, MlKem1024EncapsulationKey,
+    MlKem1024KeyPair, MlKem1024Params, MlKem512, MlKem512Ciphertext, MlKem512DecapsulationKey,
+    MlKem512EncapsulationKey, MlKem512KeyPair, MlKem512Params, MlKem768, MlKem768Ciphertext,
+    MlKem768DecapsulationKey, MlKem768EncapsulationKey, MlKem768KeyPair, MlKem768Params,
+    MlKemCiphertext, MlKemDecapsulationKey, MlKemEncapsulationKey, MlKemKeyPair, MlKemParameterSet,
+    MlKemSharedSecret, ML_KEM_SHARED_SECRET_BYTES,
+};

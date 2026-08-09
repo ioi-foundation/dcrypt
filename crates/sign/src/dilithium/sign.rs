@@ -35,12 +35,14 @@ use super::sampling::{
 
 use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
-use alloc::{format, string::ToString, vec, vec::Vec};
+use alloc::{boxed::Box, format, string::ToString, vec, vec::Vec};
 use dcrypt_algorithms::poly::params::{MlDsaParams, Modulus};
 use dcrypt_algorithms::xof::shake::ShakeXof256;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
+use dcrypt_api::SecretVec;
 use dcrypt_internal::{
-    Choice, ConditionallySelectable, ConstantTimeEq, CryptoRng, RngCore, Zeroize, Zeroizing,
+    boxed_bytes_zeroed, Choice, ConditionallySelectable, ConstantTimeEq, CryptoRng, RngCore,
+    Zeroize, Zeroizing,
 };
 use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N};
 
@@ -52,9 +54,9 @@ struct SigningAttempt<P: MlDsaSchemeParams> {
 }
 
 type SigningInputs<P> = (
-    [u8; 64],
+    Zeroizing<[u8; 64]>,
     Vec<PolyVecL<P>>,
-    Vec<u8>,
+    Zeroizing<Box<[u8]>>,
     PolyVecL<P>,
     PolyVecK<P>,
     PolyVecK<P>,
@@ -92,25 +94,25 @@ where
 
     let matrix_a_hat = expand_matrix_a::<P>(&rho_seed)?;
 
-    let mut mu = vec![0u8; 64];
+    let mut mu = Zeroizing::new(boxed_bytes_zeroed(64));
     if let Some(external_mu) = supplied_mu {
         mu.copy_from_slice(external_mu);
     } else {
         let mut xof_mu = ShakeXof256::new();
-        xof_mu.update(&tr_hash).map_err(SignError::from_algo)?;
+        xof_mu.update(&*tr_hash).map_err(SignError::from_algo)?;
         xof_mu
             .update(formatted_message)
             .map_err(SignError::from_algo)?;
         xof_mu.squeeze(&mut mu).map_err(SignError::from_algo)?;
     }
 
-    let mut rho_double_prime = [0u8; 64];
+    let mut rho_double_prime = Zeroizing::new([0u8; 64]);
     let mut xof_rho = ShakeXof256::new();
-    xof_rho.update(&k_seed).map_err(SignError::from_algo)?;
+    xof_rho.update(&*k_seed).map_err(SignError::from_algo)?;
     xof_rho.update(randomizer).map_err(SignError::from_algo)?;
     xof_rho.update(&mu).map_err(SignError::from_algo)?;
     xof_rho
-        .squeeze(&mut rho_double_prime)
+        .squeeze(&mut *rho_double_prime)
         .map_err(SignError::from_algo)?;
 
     let mut s1_hat_vec = s1_vec;
@@ -229,7 +231,7 @@ where
 }
 
 /// FIPS 204 Algorithm 1, with caller-supplied randomness.
-pub(crate) fn keypair_internal<P, R>(rng: &mut R) -> Result<(Vec<u8>, Vec<u8>), SignError>
+pub(crate) fn keypair_internal<P, R>(rng: &mut R) -> Result<(Vec<u8>, SecretVec), SignError>
 where
     P: MlDsaSchemeParams,
     R: RngCore + CryptoRng,
@@ -243,18 +245,18 @@ where
 /// FIPS 204 Algorithm 6, exposed within the crate for exact ACVP replay.
 pub(crate) fn keypair_from_seed_internal<P: MlDsaSchemeParams>(
     xi: &[u8; 32],
-) -> Result<(Vec<u8>, Vec<u8>), SignError> {
+) -> Result<(Vec<u8>, SecretVec), SignError> {
     let mut xof = ShakeXof256::new();
     xof.update(xi).map_err(SignError::from_algo)?;
     xof.update(&[P::K_DIM as u8, P::L_DIM as u8])
         .map_err(SignError::from_algo)?;
 
     let mut rho_seed = [0u8; 32];
-    let mut rho_prime = [0u8; 64];
-    let mut k_seed = [0u8; 32];
+    let mut rho_prime = Zeroizing::new([0u8; 64]);
+    let mut k_seed = Zeroizing::new([0u8; 32]);
     xof.squeeze(&mut rho_seed).map_err(SignError::from_algo)?;
-    xof.squeeze(&mut rho_prime).map_err(SignError::from_algo)?;
-    xof.squeeze(&mut k_seed).map_err(SignError::from_algo)?;
+    xof.squeeze(&mut *rho_prime).map_err(SignError::from_algo)?;
+    xof.squeeze(&mut *k_seed).map_err(SignError::from_algo)?;
 
     let matrix_a_hat = expand_matrix_a::<P>(&rho_seed)?;
 
@@ -272,10 +274,10 @@ pub(crate) fn keypair_from_seed_internal<P: MlDsaSchemeParams>(
 
     let pk_bytes = pack_public_key::<P>(&rho_seed, &t1_vec)?;
 
-    let mut tr = [0u8; 64];
+    let mut tr = Zeroizing::new([0u8; 64]);
     let mut tr_xof = ShakeXof256::new();
     tr_xof.update(&pk_bytes).map_err(SignError::from_algo)?;
-    tr_xof.squeeze(&mut tr).map_err(SignError::from_algo)?;
+    tr_xof.squeeze(&mut *tr).map_err(SignError::from_algo)?;
 
     let sk_bytes = pack_secret_key::<P>(&rho_seed, &k_seed, &tr, &s1_vec, &s2_vec, &t0_vec)?;
 
@@ -311,11 +313,11 @@ pub(crate) fn validate_secret_key_internal<P: MlDsaSchemeParams>(
     let (mut expected_t0, t1) = power2round_polyvec(&t, P::D_PARAM);
     let public_key = pack_public_key::<P>(&rho, &t1)?;
 
-    let mut expected_tr = [0u8; 64];
+    let mut expected_tr = Zeroizing::new([0u8; 64]);
     let mut tr_xof = ShakeXof256::new();
     tr_xof.update(&public_key).map_err(SignError::from_algo)?;
     tr_xof
-        .squeeze(&mut expected_tr)
+        .squeeze(&mut *expected_tr)
         .map_err(SignError::from_algo)?;
 
     let mut canonical = pack_secret_key::<P>(&rho, &k_seed, &expected_tr, &s1, &s2, &expected_t0)?;
@@ -442,17 +444,17 @@ where
     // ExpandA returns the matrix directly in NTT representation.
     let matrix_a_hat = expand_matrix_a::<P>(&rho_seed)?;
 
-    let mut tr = [0u8; 64];
+    let mut tr = Zeroizing::new([0u8; 64]);
     let mut tr_xof = ShakeXof256::new();
     tr_xof.update(pk_bytes).map_err(SignError::from_algo)?;
-    tr_xof.squeeze(&mut tr).map_err(SignError::from_algo)?;
+    tr_xof.squeeze(&mut *tr).map_err(SignError::from_algo)?;
 
-    let mut mu = vec![0u8; 64];
+    let mut mu = Zeroizing::new(boxed_bytes_zeroed(64));
     if let Some(external_mu) = supplied_mu {
         mu.copy_from_slice(external_mu);
     } else {
         let mut xof_mu = ShakeXof256::new();
-        xof_mu.update(&tr).map_err(SignError::from_algo)?;
+        xof_mu.update(&*tr).map_err(SignError::from_algo)?;
         xof_mu
             .update(formatted_message)
             .map_err(SignError::from_algo)?;

@@ -5,8 +5,6 @@
 //! preventing common mistakes.
 
 #[cfg(feature = "alloc")]
-use crate::alloc_prelude::*;
-
 // Submodules
 pub mod algorithms;
 pub mod digest;
@@ -77,8 +75,12 @@ pub trait FixedSize {
 
 /// Trait for types that can be serialized to a byte representation
 pub trait ByteSerializable: Sized {
+    /// Owned serialized representation. Public types use `Vec<u8>`; secret
+    /// types use exact-size zeroizing storage.
+    type Bytes: AsRef<[u8]>;
+
     /// Convert to a byte vector
-    fn to_bytes(&self) -> Vec<u8>;
+    fn to_bytes(&self) -> Self::Bytes;
 
     /// Try to create from a byte slice
     fn from_bytes(bytes: &[u8]) -> crate::error::Result<Self>;

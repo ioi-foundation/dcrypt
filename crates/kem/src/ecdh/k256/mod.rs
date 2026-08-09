@@ -13,13 +13,14 @@
 //! HKDF-SHA256. Protocols needing HPKE or implicit rejection must use a vetted
 //! implementation of that construction instead.
 
+use super::concat_kdf_ikm;
 use crate::error::Error as KemError;
 use alloc::vec::Vec;
 use dcrypt_algorithms::ec::k256 as ec_k256;
 use dcrypt_api::{
     error::Error as ApiError,
     traits::serialize::{Serialize, SerializeSecret},
-    Kem, Key as ApiKey, Result as ApiResult,
+    Kem, Key as ApiKey, Result as ApiResult, ZeroizingBytes,
 };
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
@@ -143,8 +144,8 @@ impl EcdhK256SecretKey {
         drop(scalar);
         Ok(Self(buffer))
     }
-    pub fn to_bytes(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(self.0.as_ref().to_vec())
+    pub fn to_bytes(&self) -> ZeroizingBytes {
+        self.0.to_bytes_zeroizing_boxed()
     }
 }
 
@@ -152,17 +153,17 @@ impl SerializeSecret for EcdhK256SecretKey {
     fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         Self::from_bytes(bytes)
     }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         self.to_bytes()
     }
 }
 
 // --- Shared secret methods ---
 impl EcdhK256SharedSecret {
-    pub fn to_bytes(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(self.0.as_ref().to_vec())
+    pub fn to_bytes(&self) -> ZeroizingBytes {
+        self.0.to_bytes_zeroizing_boxed()
     }
-    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+    pub fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         self.to_bytes()
     }
 }
@@ -178,7 +179,7 @@ impl SerializeSecret for EcdhK256SharedSecret {
         }
         Ok(Self(ApiKey::new(bytes)))
     }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         self.to_bytes_zeroizing()
     }
 }
@@ -273,12 +274,11 @@ impl Kem for EcdhK256 {
             });
         }
         let x_coord_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
-        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
-            ec_k256::K256_FIELD_ELEMENT_SIZE + 2 * ec_k256::K256_POINT_COMPRESSED_SIZE,
-        ));
-        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
-        kdf_ikm.extend_from_slice(&ephemeral_point.serialize_compressed());
-        kdf_ikm.extend_from_slice(&public_key_recipient.0);
+        let kdf_ikm = concat_kdf_ikm(
+            x_coord_bytes.as_ref(),
+            &ephemeral_point.serialize_compressed(),
+            &public_key_recipient.0,
+        );
         let ss_bytes = Zeroizing::new(
             ec_k256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,
@@ -315,12 +315,11 @@ impl Kem for EcdhK256 {
         let x_coord_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
         let q_r_point = ec_k256::scalar_mult_base_g(&sk_r_scalar)
             .map_err(|e| ApiError::from(KemError::from(e)))?;
-        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
-            ec_k256::K256_FIELD_ELEMENT_SIZE + 2 * ec_k256::K256_POINT_COMPRESSED_SIZE,
-        ));
-        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
-        kdf_ikm.extend_from_slice(&ciphertext_ephemeral_pk.0);
-        kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
+        let kdf_ikm = concat_kdf_ikm(
+            x_coord_bytes.as_ref(),
+            &ciphertext_ephemeral_pk.0,
+            &q_r_point.serialize_compressed(),
+        );
         let ss_bytes = Zeroizing::new(
             ec_k256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,

@@ -16,12 +16,12 @@ use core::{cmp::min, convert::TryInto};
 #[cfg(feature = "std")]
 use core::{cmp::min, convert::TryInto};
 
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 use crate::error::{validate, Error, Result};
 use crate::hash::{HashAlgorithm, HashFunction};
 use crate::types::Digest;
-use dcrypt_common::security::{EphemeralSecret, SecretBuffer, SecureZeroingType};
+use dcrypt_common::security::{SecretBuffer, SecureZeroingType};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -193,9 +193,9 @@ impl Blake2b {
         };
 
         // If keyed, process the key block first.
-        let mut key_block_padded = [0u8; BLAKE2B_BLOCK_SIZE];
+        let mut key_block_padded = Zeroizing::new([0u8; BLAKE2B_BLOCK_SIZE]);
         key_block_padded[..key.len()].copy_from_slice(key);
-        blake2b.update_internal(&key_block_padded)?;
+        blake2b.update_internal(&*key_block_padded)?;
 
         Ok(blake2b)
     }
@@ -217,7 +217,7 @@ impl Blake2b {
     }
 
     fn compress(&mut self, last: bool) -> Result<()> {
-        let mut v = [0u64; 16];
+        let mut v = Zeroizing::new([0u64; 16]);
         v[..8].copy_from_slice(&self.h);
         v[8..].copy_from_slice(&BLAKE2B_IV);
         v[12] ^= self.t[0];
@@ -226,7 +226,7 @@ impl Blake2b {
             v[14] ^= 0xFFFF_FFFF_FFFF_FFFF;
         } // RFC 7693 §3.2, step 3
 
-        let mut m = [0u64; 16];
+        let mut m = Zeroizing::new([0u64; 16]);
         for (i, elem) in m.iter_mut().enumerate().take(16) {
             let idx = i * 8;
             validate::max_length("BLAKE2b buffer slice", idx + 8, self.buf.len())?;
@@ -237,16 +237,15 @@ impl Blake2b {
                 }
             })?);
         }
-        let m_ephemeral = EphemeralSecret::new(m);
         for s in BLAKE2B_SIGMA.iter().take(BLAKE2B_ROUNDS) {
-            Self::blake2b_g(&mut v, 0, 4, 8, 12, m_ephemeral[s[0]], m_ephemeral[s[1]]);
-            Self::blake2b_g(&mut v, 1, 5, 9, 13, m_ephemeral[s[2]], m_ephemeral[s[3]]);
-            Self::blake2b_g(&mut v, 2, 6, 10, 14, m_ephemeral[s[4]], m_ephemeral[s[5]]);
-            Self::blake2b_g(&mut v, 3, 7, 11, 15, m_ephemeral[s[6]], m_ephemeral[s[7]]);
-            Self::blake2b_g(&mut v, 0, 5, 10, 15, m_ephemeral[s[8]], m_ephemeral[s[9]]);
-            Self::blake2b_g(&mut v, 1, 6, 11, 12, m_ephemeral[s[10]], m_ephemeral[s[11]]);
-            Self::blake2b_g(&mut v, 2, 7, 8, 13, m_ephemeral[s[12]], m_ephemeral[s[13]]);
-            Self::blake2b_g(&mut v, 3, 4, 9, 14, m_ephemeral[s[14]], m_ephemeral[s[15]]);
+            Self::blake2b_g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
+            Self::blake2b_g(&mut v, 1, 5, 9, 13, m[s[2]], m[s[3]]);
+            Self::blake2b_g(&mut v, 2, 6, 10, 14, m[s[4]], m[s[5]]);
+            Self::blake2b_g(&mut v, 3, 7, 11, 15, m[s[6]], m[s[7]]);
+            Self::blake2b_g(&mut v, 0, 5, 10, 15, m[s[8]], m[s[9]]);
+            Self::blake2b_g(&mut v, 1, 6, 11, 12, m[s[10]], m[s[11]]);
+            Self::blake2b_g(&mut v, 2, 7, 8, 13, m[s[12]], m[s[13]]);
+            Self::blake2b_g(&mut v, 3, 4, 9, 14, m[s[14]], m[s[15]]);
         }
         for i in 0..8 {
             self.h[i] ^= v[i] ^ v[i + 8];
@@ -273,13 +272,14 @@ impl Blake2b {
                     self.t[1] = self.t[1].wrapping_add(1);
                 }
                 self.compress(false)?;
+                self.buf.zeroize();
                 self.buf_len = 0;
             }
         }
         Ok(())
     }
 
-    fn finalize_internal(&mut self) -> Result<Vec<u8>> {
+    fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; BLAKE2B_MAX_OUTPUT_SIZE]>> {
         // At this point, buffer always contains data (either partial or full block)
         let inc = self.buf_len as u64;
         self.t[0] = self.t[0].wrapping_add(inc);
@@ -294,11 +294,16 @@ impl Blake2b {
         self.compress(true)?;
 
         // Produce the digest
-        let mut out = Vec::with_capacity(self.out_len);
-        for &w in &self.h {
-            out.extend_from_slice(&w.to_le_bytes());
+        let mut out = Zeroizing::new([0u8; BLAKE2B_MAX_OUTPUT_SIZE]);
+        for (word_index, &word) in self.h.iter().enumerate() {
+            for byte in 0..8 {
+                let output_index = word_index * 8 + byte;
+                if output_index < self.out_len {
+                    out[output_index] = (word >> (byte * 8)) as u8;
+                }
+            }
         }
-        out.truncate(self.out_len);
+        self.zeroize();
         Ok(out)
     }
 }
@@ -317,10 +322,11 @@ impl HashFunction for Blake2b {
     }
 
     fn finalize(&mut self) -> Result<Self::Output> {
+        let out_len = self.out_len;
         let hash = self.finalize_internal()?;
-        let mut digest = [0u8; BLAKE2B_MAX_OUTPUT_SIZE];
-        digest[..hash.len()].copy_from_slice(&hash);
-        Ok(Digest::with_len(digest, self.out_len))
+        let mut digest = Digest::<BLAKE2B_MAX_OUTPUT_SIZE>::zeroed_with_len(out_len);
+        digest.as_mut().copy_from_slice(&hash[..out_len]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {
@@ -467,10 +473,10 @@ impl Blake2s {
 
         // If keyed, process the key block first.
         // The key K is padded with zero bytes to fill a full block (64 bytes for Blake2s).
-        let mut key_block_padded = [0u8; BLAKE2S_BLOCK_SIZE];
+        let mut key_block_padded = Zeroizing::new([0u8; BLAKE2S_BLOCK_SIZE]);
         key_block_padded[..key.len()].copy_from_slice(key);
 
-        blake2s.update_internal(&key_block_padded)?;
+        blake2s.update_internal(&*key_block_padded)?;
 
         Ok(blake2s)
     }
@@ -487,7 +493,7 @@ impl Blake2s {
     }
 
     fn compress(&mut self, last: bool) -> Result<()> {
-        let mut v = [0u32; 16];
+        let mut v = Zeroizing::new([0u32; 16]);
         v[..8].copy_from_slice(&self.h);
         v[8..].copy_from_slice(&BLAKE2S_IV);
         v[12] ^= self.t[0];
@@ -496,7 +502,7 @@ impl Blake2s {
             v[14] = !v[14];
         }
 
-        let mut m = [0u32; 16];
+        let mut m = Zeroizing::new([0u32; 16]);
         for (i, elem) in m.iter_mut().enumerate().take(16) {
             let idx = i * 4;
             // Validate buffer bounds
@@ -512,17 +518,15 @@ impl Blake2s {
         }
 
         // Use EphemeralSecret to ensure intermediate values are zeroized
-        let m_ephemeral = EphemeralSecret::new(m);
-
         for s in BLAKE2S_SIGMA.iter().take(BLAKE2S_ROUNDS) {
-            Self::g(&mut v, 0, 4, 8, 12, m_ephemeral[s[0]], m_ephemeral[s[1]]);
-            Self::g(&mut v, 1, 5, 9, 13, m_ephemeral[s[2]], m_ephemeral[s[3]]);
-            Self::g(&mut v, 2, 6, 10, 14, m_ephemeral[s[4]], m_ephemeral[s[5]]);
-            Self::g(&mut v, 3, 7, 11, 15, m_ephemeral[s[6]], m_ephemeral[s[7]]);
-            Self::g(&mut v, 0, 5, 10, 15, m_ephemeral[s[8]], m_ephemeral[s[9]]);
-            Self::g(&mut v, 1, 6, 11, 12, m_ephemeral[s[10]], m_ephemeral[s[11]]);
-            Self::g(&mut v, 2, 7, 8, 13, m_ephemeral[s[12]], m_ephemeral[s[13]]);
-            Self::g(&mut v, 3, 4, 9, 14, m_ephemeral[s[14]], m_ephemeral[s[15]]);
+            Self::g(&mut v, 0, 4, 8, 12, m[s[0]], m[s[1]]);
+            Self::g(&mut v, 1, 5, 9, 13, m[s[2]], m[s[3]]);
+            Self::g(&mut v, 2, 6, 10, 14, m[s[4]], m[s[5]]);
+            Self::g(&mut v, 3, 7, 11, 15, m[s[6]], m[s[7]]);
+            Self::g(&mut v, 0, 5, 10, 15, m[s[8]], m[s[9]]);
+            Self::g(&mut v, 1, 6, 11, 12, m[s[10]], m[s[11]]);
+            Self::g(&mut v, 2, 7, 8, 13, m[s[12]], m[s[13]]);
+            Self::g(&mut v, 3, 4, 9, 14, m[s[14]], m[s[15]]);
         }
 
         for i in 0..8 {
@@ -551,13 +555,14 @@ impl Blake2s {
                     self.t[1] = self.t[1].wrapping_add(1);
                 }
                 self.compress(false)?;
+                self.buf.zeroize();
                 self.buf_len = 0;
             }
         }
         Ok(())
     }
 
-    fn finalize_internal(&mut self) -> Result<Vec<u8>> {
+    fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; BLAKE2S_MAX_OUTPUT_SIZE]>> {
         // At this point, buffer always contains data (either partial or full block)
         let inc = self.buf_len as u32;
         self.t[0] = self.t[0].wrapping_add(inc);
@@ -572,11 +577,16 @@ impl Blake2s {
         self.compress(true)?;
 
         // Produce the digest
-        let mut out = Vec::with_capacity(self.out_len);
-        for &w in &self.h {
-            out.extend_from_slice(&w.to_le_bytes());
+        let mut out = Zeroizing::new([0u8; BLAKE2S_MAX_OUTPUT_SIZE]);
+        for (word_index, &word) in self.h.iter().enumerate() {
+            for byte in 0..4 {
+                let output_index = word_index * 4 + byte;
+                if output_index < self.out_len {
+                    out[output_index] = (word >> (byte * 8)) as u8;
+                }
+            }
         }
-        out.truncate(self.out_len);
+        self.zeroize();
         Ok(out)
     }
 }
@@ -595,11 +605,11 @@ impl HashFunction for Blake2s {
     }
 
     fn finalize(&mut self) -> Result<Self::Output> {
+        let out_len = self.out_len;
         let hash = self.finalize_internal()?;
-        let mut digest = [0u8; BLAKE2S_MAX_OUTPUT_SIZE];
-        digest[..hash.len()].copy_from_slice(&hash);
-        // Create digest with the actual output length
-        Ok(Digest::with_len(digest, self.out_len))
+        let mut digest = Digest::<BLAKE2S_MAX_OUTPUT_SIZE>::zeroed_with_len(out_len);
+        digest.as_mut().copy_from_slice(&hash[..out_len]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {

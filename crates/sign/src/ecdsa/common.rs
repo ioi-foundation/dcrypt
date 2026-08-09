@@ -4,8 +4,8 @@ use alloc::{vec, vec::Vec};
 use core::marker::PhantomData;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_algorithms::mac::hmac::Hmac;
-use dcrypt_api::{error::Error as ApiError, Result as ApiResult};
-use dcrypt_internal::{Choice, Zeroize, Zeroizing};
+use dcrypt_api::{error::Error as ApiError, Result as ApiResult, ZeroizingBytes};
+use dcrypt_internal::{boxed_bytes_zeroed, Choice, Zeroize, Zeroizing};
 
 fn nonce_error(_message: &'static str) -> ApiError {
     ApiError::InvalidParameter {
@@ -15,7 +15,7 @@ fn nonce_error(_message: &'static str) -> ApiError {
     }
 }
 
-fn hmac_parts<H: HashFunction + Clone>(key: &[u8], parts: &[&[u8]]) -> ApiResult<Vec<u8>> {
+fn hmac_parts<H: HashFunction + Clone>(key: &[u8], parts: &[&[u8]]) -> ApiResult<ZeroizingBytes> {
     let mut mac = Hmac::<H>::new(key).map_err(ApiError::from)?;
     for part in parts {
         mac.update(part).map_err(ApiError::from)?;
@@ -23,9 +23,8 @@ fn hmac_parts<H: HashFunction + Clone>(key: &[u8], parts: &[&[u8]]) -> ApiResult
     mac.finalize().map_err(ApiError::from)
 }
 
-fn replace_zeroized(destination: &mut Vec<u8>, replacement: Vec<u8>) {
-    let mut previous = core::mem::replace(destination, replacement);
-    previous.zeroize();
+fn replace_zeroized(destination: &mut ZeroizingBytes, replacement: ZeroizingBytes) {
+    *destination = replacement;
 }
 
 fn subtract_be(value: &mut [u8], modulus: &[u8]) {
@@ -56,12 +55,12 @@ fn shift_right_be(value: &mut [u8], shift: usize) {
 }
 
 /// RFC 6979 `bits2int`, returned as exactly `rolen = ceil(qlen / 8)` bytes.
-fn bits2int(input: &[u8], qlen: usize, rolen: usize) -> ApiResult<Vec<u8>> {
+fn bits2int(input: &[u8], qlen: usize, rolen: usize) -> ApiResult<ZeroizingBytes> {
     if qlen == 0 || rolen == 0 || qlen > rolen * 8 || qlen <= (rolen - 1) * 8 {
         return Err(nonce_error("invalid subgroup-order bit length"));
     }
 
-    let mut output = vec![0u8; rolen];
+    let mut output = Zeroizing::new(boxed_bytes_zeroed(rolen));
     if input.len() >= rolen {
         output.copy_from_slice(&input[..rolen]);
         shift_right_be(&mut output, rolen * 8 - qlen);
@@ -72,10 +71,10 @@ fn bits2int(input: &[u8], qlen: usize, rolen: usize) -> ApiResult<Vec<u8>> {
 }
 
 /// RFC 6979 `bits2octets`: reduce the leftmost `qlen` digest bits modulo q.
-pub(crate) fn bits2octets(hash: &[u8], order: &[u8], qlen: usize) -> ApiResult<Vec<u8>> {
+pub(crate) fn bits2octets(hash: &[u8], order: &[u8], qlen: usize) -> ApiResult<ZeroizingBytes> {
     let rolen = order.len();
     let mut output = bits2int(hash, qlen, rolen)?;
-    if output.as_slice() >= order {
+    if &output[..] >= order {
         subtract_be(&mut output, order);
     }
     Ok(output)
@@ -108,8 +107,8 @@ fn ct_valid_nonce(candidate: &[u8], order: &[u8]) -> Choice {
 /// retry case (`r = 0` or `s = 0`): the next nonce follows step H rather than
 /// repeating the same deterministic candidate forever.
 pub(crate) struct Rfc6979<H> {
-    k: Vec<u8>,
-    v: Vec<u8>,
+    k: ZeroizingBytes,
+    v: ZeroizingBytes,
     order: Vec<u8>,
     qlen: usize,
     candidate_was_returned: bool,
@@ -132,8 +131,9 @@ impl<H: HashFunction + Clone> Rfc6979<H> {
             return Err(nonce_error("hash output is empty"));
         }
 
-        let mut k = vec![0u8; output_len];
-        let mut v = vec![1u8; output_len];
+        let mut k = Zeroizing::new(boxed_bytes_zeroed(output_len));
+        let mut v = Zeroizing::new(boxed_bytes_zeroed(output_len));
+        v.fill(1);
         let initialization = (|| -> ApiResult<()> {
             let next_k = hmac_parts::<H>(&k, &[&v, &[0], secret_scalar, &h1])?;
             replace_zeroized(&mut k, next_k);
@@ -169,19 +169,22 @@ impl<H: HashFunction + Clone> Rfc6979<H> {
         Ok(())
     }
 
-    pub(crate) fn next_nonce(&mut self) -> ApiResult<Vec<u8>> {
+    pub(crate) fn next_nonce(&mut self) -> ApiResult<ZeroizingBytes> {
         if self.candidate_was_returned {
             self.retry_step()?;
             self.candidate_was_returned = false;
         }
 
         loop {
-            let mut t = Zeroizing::new(Vec::with_capacity(self.order.len()));
-            while t.len() < self.order.len() {
+            let mut t = Zeroizing::new(boxed_bytes_zeroed(self.order.len()));
+            let mut written = 0;
+            while written < self.order.len() {
                 let next_v = hmac_parts::<H>(&self.k, &[&self.v])?;
                 replace_zeroized(&mut self.v, next_v);
-                let needed = self.order.len() - t.len();
-                t.extend_from_slice(&self.v[..core::cmp::min(needed, self.v.len())]);
+                let needed = self.order.len() - written;
+                let take = core::cmp::min(needed, self.v.len());
+                t[written..written + take].copy_from_slice(&self.v[..take]);
+                written += take;
             }
 
             let mut candidate = bits2int(&t, self.qlen, self.order.len())?;
@@ -516,10 +519,9 @@ mod tests {
         let order = hex::decode(order_hex).unwrap();
         let digest = H::digest(b"sample").unwrap();
         let mut generator = Rfc6979::<H>::new(&secret, digest.as_ref(), &order, qlen).unwrap();
-        assert_eq!(
-            generator.next_nonce().unwrap(),
-            hex::decode(expected_nonce_hex).unwrap()
-        );
+        let nonce = generator.next_nonce().unwrap();
+        let expected = hex::decode(expected_nonce_hex).unwrap();
+        assert_eq!(nonce.as_slice(), expected.as_slice());
     }
 
     #[test]

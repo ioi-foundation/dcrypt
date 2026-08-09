@@ -7,9 +7,9 @@
 //! which provide fixed-output hash function interfaces. This module provides
 //! the proper XOF interface for variable-length output generation.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
+};
 
 use super::ExtendableOutputFunction;
 use crate::error::{validate, Error, Result};
@@ -75,6 +75,14 @@ impl Zeroize for SecureKeccakState {
     }
 }
 
+impl Drop for SecureKeccakState {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for SecureKeccakState {}
+
 impl SecureKeccakState {
     fn new() -> Self {
         Self {
@@ -82,32 +90,24 @@ impl SecureKeccakState {
         }
     }
 
-    fn from_u64_array(array: [u64; KECCAK_STATE_SIZE]) -> Self {
-        let mut bytes = [0u8; 200];
-        for (i, &word) in array.iter().enumerate() {
-            let word_bytes = word.to_le_bytes();
-            bytes[i * 8..(i + 1) * 8].copy_from_slice(&word_bytes);
+    fn from_u64_array(array: &[u64; KECCAK_STATE_SIZE]) -> Self {
+        let mut state = SecretBuffer::<200>::zeroed();
+        for (i, word) in array.iter().enumerate() {
+            for byte in 0..8 {
+                state.as_mut()[i * 8 + byte] = (word >> (byte * 8)) as u8;
+            }
         }
-        Self {
-            state: SecretBuffer::new(bytes),
-        }
+        Self { state }
     }
 
-    fn to_u64_array(&self) -> [u64; KECCAK_STATE_SIZE] {
-        let mut array = [0u64; KECCAK_STATE_SIZE];
+    fn to_u64_array(&self) -> Zeroizing<[u64; KECCAK_STATE_SIZE]> {
+        let mut array = Zeroizing::new([0u64; KECCAK_STATE_SIZE]);
         let bytes = self.state.as_ref();
         for (i, word) in array.iter_mut().enumerate() {
             let start = i * 8;
-            *word = u64::from_le_bytes([
-                bytes[start],
-                bytes[start + 1],
-                bytes[start + 2],
-                bytes[start + 3],
-                bytes[start + 4],
-                bytes[start + 5],
-                bytes[start + 6],
-                bytes[start + 7],
-            ]);
+            for byte in 0..8 {
+                *word |= (bytes[start + byte] as u64) << (byte * 8);
+            }
         }
         array
     }
@@ -115,7 +115,7 @@ impl SecureKeccakState {
     fn apply_permutation(&mut self) {
         let mut state_array = self.to_u64_array();
         keccak_f1600(&mut state_array);
-        *self = Self::from_u64_array(state_array);
+        *self = Self::from_u64_array(&state_array);
     }
 }
 
@@ -258,7 +258,7 @@ fn keccak_absorb(state: &mut SecureKeccakState, data: &[u8], rate: usize) {
     }
 
     // Update secure state
-    *state = SecureKeccakState::from_u64_array(state_array);
+    *state = SecureKeccakState::from_u64_array(&state_array);
 }
 
 impl ShakeXof128 {
@@ -297,6 +297,7 @@ impl ExtendableOutputFunction for ShakeXof128 {
 
             if self.buffer_idx == SHAKE128_RATE {
                 keccak_absorb(&mut self.state, self.buffer.as_ref(), SHAKE128_RATE);
+                self.buffer.zeroize();
                 self.buffer_idx = 0;
             }
         }
@@ -333,6 +334,8 @@ impl ExtendableOutputFunction for ShakeXof128 {
         pad_block.as_mut()[self.buffer_idx] ^= 0x1F;
         pad_block.as_mut()[SHAKE128_RATE - 1] ^= 0x80;
 
+        self.buffer.zeroize();
+
         keccak_absorb(&mut self.state, pad_block.as_ref(), SHAKE128_RATE);
 
         self.is_finalized = true;
@@ -367,12 +370,13 @@ impl ExtendableOutputFunction for ShakeXof128 {
                 let buffer_mut = self.buffer.as_mut();
 
                 for i in 0..(rate / 8) {
-                    let lane = state_array[i];
+                    let mut lane = state_array[i];
                     for j in 0..8 {
                         if i * 8 + j < rate {
                             buffer_mut[i * 8 + j] = ((lane >> (8 * j)) & 0xFF) as u8;
                         }
                     }
+                    lane.zeroize();
                 }
             }
 
@@ -392,14 +396,14 @@ impl ExtendableOutputFunction for ShakeXof128 {
         Ok(())
     }
 
-    fn squeeze_into_vec(&mut self, len: usize) -> Result<Vec<u8>> {
+    fn squeeze_into_vec(&mut self, len: usize) -> Result<ZeroizingBytes> {
         validate::parameter(
             len > 0,
             "output_length",
             "Output length must be greater than 0",
         )?;
 
-        let mut v = vec![0u8; len];
+        let mut v = Zeroizing::new(boxed_bytes_zeroed(len));
         self.squeeze(&mut v)?;
         Ok(v)
     }
@@ -450,6 +454,7 @@ impl ExtendableOutputFunction for ShakeXof256 {
 
             if self.buffer_idx == SHAKE256_RATE {
                 keccak_absorb(&mut self.state, self.buffer.as_ref(), SHAKE256_RATE);
+                self.buffer.zeroize();
                 self.buffer_idx = 0;
             }
         }
@@ -486,6 +491,8 @@ impl ExtendableOutputFunction for ShakeXof256 {
         pad_block.as_mut()[self.buffer_idx] ^= 0x1F;
         pad_block.as_mut()[SHAKE256_RATE - 1] ^= 0x80;
 
+        self.buffer.zeroize();
+
         keccak_absorb(&mut self.state, pad_block.as_ref(), SHAKE256_RATE);
 
         self.is_finalized = true;
@@ -520,12 +527,13 @@ impl ExtendableOutputFunction for ShakeXof256 {
                 let buffer_mut = self.buffer.as_mut();
 
                 for i in 0..(rate / 8) {
-                    let lane = state_array[i];
+                    let mut lane = state_array[i];
                     for j in 0..8 {
                         if i * 8 + j < rate {
                             buffer_mut[i * 8 + j] = ((lane >> (8 * j)) & 0xFF) as u8;
                         }
                     }
+                    lane.zeroize();
                 }
             }
 
@@ -545,14 +553,14 @@ impl ExtendableOutputFunction for ShakeXof256 {
         Ok(())
     }
 
-    fn squeeze_into_vec(&mut self, len: usize) -> Result<Vec<u8>> {
+    fn squeeze_into_vec(&mut self, len: usize) -> Result<ZeroizingBytes> {
         validate::parameter(
             len > 0,
             "output_length",
             "Output length must be greater than 0",
         )?;
 
-        let mut v = vec![0u8; len];
+        let mut v = Zeroizing::new(boxed_bytes_zeroed(len));
         self.squeeze(&mut v)?;
         Ok(v)
     }

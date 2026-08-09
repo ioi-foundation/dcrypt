@@ -8,7 +8,7 @@ use crate::alloc_prelude::*;
 
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 use hex;
 
 use crate::error::{Error, Result};
@@ -28,7 +28,32 @@ impl<const N: usize> Zeroize for Digest<N> {
     }
 }
 
+impl<const N: usize> Drop for Digest<N> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<const N: usize> ZeroizeOnDrop for Digest<N> {}
+
 impl<const N: usize> Digest<N> {
+    /// Construct a full-width digest whose storage is initialized in place.
+    pub fn zeroed() -> Self {
+        Self {
+            data: [0u8; N],
+            len: N,
+        }
+    }
+
+    /// Construct a zero-initialized digest with a validated logical length.
+    pub fn zeroed_with_len(len: usize) -> Self {
+        assert!(len <= N, "logical digest length exceeds storage");
+        Self {
+            data: [0u8; N],
+            len,
+        }
+    }
+
     /// Create a new digest from an existing array
     pub fn new(data: [u8; N]) -> Self {
         Self { data, len: N }
@@ -54,13 +79,12 @@ impl<const N: usize> Digest<N> {
             });
         }
 
-        let mut data = [0u8; N];
-        data[..slice.len()].copy_from_slice(slice);
-
-        Ok(Self {
-            data,
+        let mut digest = Self {
+            data: [0u8; N],
             len: slice.len(),
-        })
+        };
+        digest.data[..slice.len()].copy_from_slice(slice);
+        Ok(digest)
     }
 
     /// Get the length of the digest
@@ -144,10 +168,7 @@ impl<const N: usize> ConstantTimeEq for Digest<N> {
 
 impl<const N: usize> SecureZeroingType for Digest<N> {
     fn zeroed() -> Self {
-        Self {
-            data: [0u8; N],
-            len: N,
-        }
+        Self::zeroed()
     }
 }
 
@@ -158,6 +179,8 @@ impl<const N: usize> FixedSize for Digest<N> {
 }
 
 impl<const N: usize> ByteSerializable for Digest<N> {
+    type Bytes = Vec<u8>;
+
     fn to_bytes(&self) -> Vec<u8> {
         self.data[..self.len].to_vec()
     }

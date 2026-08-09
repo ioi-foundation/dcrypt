@@ -1,6 +1,7 @@
 use super::*; // Imports items from the parent module (argon2/mod.rs)
 use dcrypt_common::security::SecretVec;
 use dcrypt_internal::random::{ChaCha20Rng, RngCore};
+use dcrypt_internal::{boxed_bytes_zeroed, zeroizing_bytes_from_slice};
 use hex; // For decoding expected hex strings in RFC vectors
 use std::ops::Deref; // For deref() method on Zeroizing
 
@@ -19,8 +20,8 @@ fn rfc_params(argon_type: Algorithm) -> Params<SALT_LEN> {
         time_cost: 3,    // 3 passes
         parallelism: 4,  // 4 lanes
         salt: Salt::new(SALT),
-        ad: Some(Zeroizing::new(AD.to_vec())),
-        secret: Some(Zeroizing::new(SECRET.to_vec())),
+        ad: Some(AD.to_vec()),
+        secret: Some(zeroizing_bytes_from_slice(&SECRET)),
         output_len: 32, // 32-byte tag
         version: ARGON2_VERSION_1_3,
     }
@@ -155,7 +156,7 @@ fn argon2id_phc_string_hash_verify() -> Result<()> {
         time_cost: 2,
         parallelism: 4,
         salt: salt_struct.clone(),
-        ad: Some(Zeroizing::new(ad_data_vec.clone())),
+        ad: Some(ad_data_vec.clone()),
         secret: None,
         output_len: 32,
         version: ARGON2_VERSION_1_3,
@@ -209,7 +210,7 @@ fn argon2id_phc_string_hash_verify() -> Result<()> {
     let mut tampered_salt_hash_obj = phc_hash_obj.clone();
     let mut salt_vec = tampered_salt_hash_obj.salt.to_vec();
     salt_vec[0] ^= 0xff;
-    tampered_salt_hash_obj.salt = Zeroizing::new(salt_vec);
+    tampered_salt_hash_obj.salt = salt_vec;
     let verify_tampered_salt_result = argon2_verifier.verify(&password, &tampered_salt_hash_obj)?;
     assert!(
         !verify_tampered_salt_result,
@@ -219,7 +220,7 @@ fn argon2id_phc_string_hash_verify() -> Result<()> {
     let mut tampered_hash_val_obj = phc_hash_obj.clone();
     let mut mutable_hash = tampered_hash_val_obj.hash.to_vec();
     mutable_hash[0] ^= 0xff;
-    tampered_hash_val_obj.hash = Zeroizing::new(mutable_hash);
+    tampered_hash_val_obj.hash = mutable_hash;
     let verify_tampered_hash_result = argon2_verifier.verify(&password, &tampered_hash_val_obj)?;
     assert!(
         !verify_tampered_hash_result,
@@ -241,8 +242,8 @@ fn argon2_builder_overrides_work() -> Result<()> {
         time_cost: 3,
         parallelism: 2,
         salt: base_salt.clone(),
-        ad: Some(Zeroizing::new(b"base_ad".to_vec())),
-        secret: Some(Zeroizing::new(b"base_secret".to_vec())),
+        ad: Some(b"base_ad".to_vec()),
+        secret: Some(zeroizing_bytes_from_slice(b"base_secret")),
         output_len: 32,
         version: ARGON2_VERSION_1_3,
     };
@@ -280,13 +281,13 @@ fn argon2_builder_overrides_work() -> Result<()> {
         time_cost: base_kdf.params.time_cost,
         parallelism: base_kdf.params.parallelism,
         salt: Salt::<SALT_LEN>::new(manual_salt_data), // Use the overridden salt
-        ad: Some(Zeroizing::new(builder_info.to_vec())), // Use the overridden AD
+        ad: Some(builder_info.to_vec()),               // Use the overridden AD
         secret: base_kdf.params.secret.clone(),        // Secret is not overridden by builder.info()
         output_len: output_len_override,               // Use the overridden length
         version: base_kdf.params.version,
     };
     let manual_kdf = Argon2::new_with_params(manual_params_for_comparison);
-    let manual_derived_key_vec = manual_kdf.hash_password(ikm)?.to_vec(); // hash_password uses ikm as password
+    let manual_derived_key_vec = manual_kdf.hash_password(ikm)?; // hash_password uses ikm as password
 
     assert_eq!(
         derived_key_via_builder, manual_derived_key_vec,
@@ -317,30 +318,30 @@ fn h_prime_1024_matches_rfc_a1_block0() -> Result<()> {
     // secret=8×0x03, ad=12×0x04, 32 byte tag
 
     // Construct the pre-hashing buffer for H0 as per RFC 9106
-    let mut h0_buffer_vec = Vec::with_capacity(ARGON2_PREHASH_SEED_LENGTH);
-    h0_buffer_vec.extend_from_slice(&4u32.to_le_bytes()); // p = 4
-    h0_buffer_vec.extend_from_slice(&32u32.to_le_bytes()); // T = 32 (output_len)
-    h0_buffer_vec.extend_from_slice(&32u32.to_le_bytes()); // m = 32
-    h0_buffer_vec.extend_from_slice(&3u32.to_le_bytes()); // t = 3
-    h0_buffer_vec.extend_from_slice(&0x13u32.to_le_bytes()); // v = 0x13
-    h0_buffer_vec.extend_from_slice(&0u32.to_le_bytes()); // y = 0 (argon2d)
-    h0_buffer_vec.extend_from_slice(&32u32.to_le_bytes()); // |pwd| = 32
-    h0_buffer_vec.extend_from_slice(&PASSWORD); // pwd
-    h0_buffer_vec.extend_from_slice(&16u32.to_le_bytes()); // |salt| = 16
-    h0_buffer_vec.extend_from_slice(&SALT); // salt
-    h0_buffer_vec.extend_from_slice(&8u32.to_le_bytes()); // |secret| = 8
-    h0_buffer_vec.extend_from_slice(&SECRET); // secret
-    h0_buffer_vec.extend_from_slice(&12u32.to_le_bytes()); // |ad| = 12
-    h0_buffer_vec.extend_from_slice(&AD); // ad
-    let h0_buffer = Zeroizing::new(h0_buffer_vec);
+    let mut h0_buffer = SecretVec::empty();
+    h0_buffer.extend_from_slice(&4u32.to_le_bytes()); // p = 4
+    h0_buffer.extend_from_slice(&32u32.to_le_bytes()); // T = 32 (output_len)
+    h0_buffer.extend_from_slice(&32u32.to_le_bytes()); // m = 32
+    h0_buffer.extend_from_slice(&3u32.to_le_bytes()); // t = 3
+    h0_buffer.extend_from_slice(&0x13u32.to_le_bytes()); // v = 0x13
+    h0_buffer.extend_from_slice(&0u32.to_le_bytes()); // y = 0 (argon2d)
+    h0_buffer.extend_from_slice(&32u32.to_le_bytes()); // |pwd| = 32
+    h0_buffer.extend_from_slice(&PASSWORD); // pwd
+    h0_buffer.extend_from_slice(&16u32.to_le_bytes()); // |salt| = 16
+    h0_buffer.extend_from_slice(&SALT); // salt
+    h0_buffer.extend_from_slice(&8u32.to_le_bytes()); // |secret| = 8
+    h0_buffer.extend_from_slice(&SECRET); // secret
+    h0_buffer.extend_from_slice(&12u32.to_le_bytes()); // |ad| = 12
+    h0_buffer.extend_from_slice(&AD); // ad
 
     // Calculate true H0 using standard Blake2b-512 (as per RFC 9106 for H0 itself)
     use crate::hash::blake2::Blake2b; // Make sure Blake2b is in scope
                                       // H0 output size is 64 bytes as per RFC 9106
     let mut h0_hasher = Blake2b::with_output_size(64);
     h0_hasher.update(&h0_buffer)?;
-    let h0_digest = h0_hasher.finalize()?;
-    let computed_h0 = Zeroizing::new(h0_digest.as_ref().to_vec());
+    let mut h0_digest = h0_hasher.finalize()?;
+    let computed_h0 = zeroizing_bytes_from_slice(h0_digest.as_ref());
+    h0_digest.zeroize();
 
     // This is the correct H0 for the RFC parameters (to be verified against implementation)
     let expected_rfc_h0 = hex::decode(
@@ -357,14 +358,12 @@ fn h_prime_1024_matches_rfc_a1_block0() -> Result<()> {
     // B[i][0] = H'(H_0 || ser(0) || ser(i)) for the first pass (i=lane index)
     // B[i][1] = H'(H_0 || ser(1) || ser(i)) for the first pass
     // Here we test B[0][0] (lane 0, block index 0 for initial blocks).
-    let mut block0_seed = Vec::with_capacity(computed_h0.len() + 8);
+    let mut block0_seed = SecretVec::empty();
     block0_seed.extend_from_slice(&computed_h0);
     block0_seed.extend_from_slice(&0u32.to_le_bytes()); // First block index = 0
     block0_seed.extend_from_slice(&0u32.to_le_bytes()); // Lane 0
-    let block0_seed_zeroizing = Zeroizing::new(block0_seed);
-
-    // Generate B[0][0] using the h_prime_variable_output
-    let block0 = h_prime_variable_output(&block0_seed_zeroizing, ARGON2_BLOCK_SIZE)?;
+                                                        // Generate B[0][0] using the h_prime_variable_output
+    let block0 = h_prime_variable_output(&block0_seed, ARGON2_BLOCK_SIZE)?;
 
     // This expected value may need to be updated based on the reference implementation
     // or RFC 9106 if specific example B0 blocks are provided
@@ -408,7 +407,7 @@ fn h_prime_final_32_matches_rfc_a1_tag() -> Result<()> {
     // This test will verify the final H' compression for the RFC vector
 
     // Create a sample 1KB block
-    let mut final_block_xor = vec![0u8; ARGON2_BLOCK_SIZE];
+    let mut final_block_xor = Zeroizing::new(boxed_bytes_zeroed(ARGON2_BLOCK_SIZE));
     // Fill with a pattern
     for (i, byte) in final_block_xor.iter_mut().enumerate() {
         *byte = (i % 256) as u8;

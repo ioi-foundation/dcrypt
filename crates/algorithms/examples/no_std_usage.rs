@@ -5,7 +5,7 @@
 
 // Standard library features (if available)
 #[cfg(feature = "std")]
-use std::{println, vec::Vec};
+use std::println;
 
 // No-std + alloc features
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
@@ -62,7 +62,7 @@ fn main() -> CoreResult<()> {
         let mut hmac = Hmac::<Sha256>::new(mac_key.as_ref()).map_err(CoreError::from)?;
         hmac.update(message_to_mac).map_err(CoreError::from)?;
         let tag_result = hmac.finalize().map_err(CoreError::from)?;
-        let tag_bytes: Vec<u8> = tag_result;
+        let tag_bytes = tag_result;
 
         println!(
             "Message: {:?}",

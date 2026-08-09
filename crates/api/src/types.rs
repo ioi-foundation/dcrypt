@@ -133,8 +133,8 @@ impl<const N: usize> SerializeSecret for SecretBytes<N> {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
         Self::from_slice(bytes)
     }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(Vec::from(boxed_bytes_from_slice(&self.data)))
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        self.to_bytes_zeroizing_boxed()
     }
 }
 
@@ -350,8 +350,8 @@ impl SerializeSecret for SecretVec {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
         Ok(Self::from_slice(bytes))
     }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(Vec::from(boxed_bytes_from_slice(&self.data)))
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        self.to_bytes_zeroizing_boxed()
     }
 }
 
@@ -403,14 +403,14 @@ mod secret_vec_tests {
         let fixed = SecretBytes::<4>::new([1, 2, 3, 4]);
         let fixed_bytes = fixed.to_bytes_zeroizing_boxed();
         assert_eq!(&**fixed_bytes, &[1, 2, 3, 4]);
-        let legacy_fixed_bytes = fixed.to_bytes_zeroizing();
-        assert_eq!(legacy_fixed_bytes.capacity(), legacy_fixed_bytes.len());
+        let trait_fixed_bytes = fixed.to_bytes_zeroizing();
+        assert_eq!(&**trait_fixed_bytes, &[1, 2, 3, 4]);
 
         let secret = SecretVec::from_slice(&[5, 6, 7]);
         let copied = secret.to_bytes_zeroizing_boxed();
         assert_eq!(&**copied, &[5, 6, 7]);
-        let legacy_copied = secret.to_bytes_zeroizing();
-        assert_eq!(legacy_copied.capacity(), legacy_copied.len());
+        let trait_copied = secret.to_bytes_zeroizing();
+        assert_eq!(&**trait_copied, &[5, 6, 7]);
 
         let transferred = secret.into_bytes_zeroizing_boxed();
         assert_eq!(&**transferred, &[5, 6, 7]);
@@ -418,8 +418,8 @@ mod secret_vec_tests {
         let key = Key::from_slice(&[8, 9]);
         let key_bytes = key.to_bytes_zeroizing_boxed();
         assert_eq!(&**key_bytes, &[8, 9]);
-        let legacy_key_bytes = key.to_bytes_zeroizing();
-        assert_eq!(legacy_key_bytes.capacity(), legacy_key_bytes.len());
+        let trait_key_bytes = key.to_bytes_zeroizing();
+        assert_eq!(&**trait_key_bytes, &[8, 9]);
     }
 
     struct PartiallyFailingRng;
@@ -520,8 +520,8 @@ impl SerializeSecret for Key {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
         Ok(Self::from_slice(bytes))
     }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(Vec::from(boxed_bytes_from_slice(&self.data)))
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        self.to_bytes_zeroizing_boxed()
     }
 }
 

@@ -11,7 +11,9 @@ use core::marker::PhantomData;
 use core::ops::{Deref, DerefMut};
 use dcrypt_internal::constant_time::ConstantTimeEq;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{
+    zeroizing_bytes_from_slice, Zeroize, ZeroizeOnDrop, ZeroizingBytes,
+};
 
 use crate::error::{validate, Result};
 use crate::types::sealed::Sealed;
@@ -220,8 +222,10 @@ impl<A: SymmetricAlgorithm, const N: usize> FixedSize for SymmetricKey<A, N> {
 
 // Implement ByteSerializable only for specific valid combinations
 impl ByteSerializable for SymmetricKey<Aes128, 16> {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    type Bytes = ZeroizingBytes;
+
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -230,8 +234,10 @@ impl ByteSerializable for SymmetricKey<Aes128, 16> {
 }
 
 impl ByteSerializable for SymmetricKey<Aes256, 32> {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    type Bytes = ZeroizingBytes;
+
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -240,8 +246,10 @@ impl ByteSerializable for SymmetricKey<Aes256, 32> {
 }
 
 impl ByteSerializable for SymmetricKey<ChaCha20, 32> {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    type Bytes = ZeroizingBytes;
+
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -250,8 +258,10 @@ impl ByteSerializable for SymmetricKey<ChaCha20, 32> {
 }
 
 impl ByteSerializable for SymmetricKey<ChaCha20Poly1305, 32> {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    type Bytes = ZeroizingBytes;
+
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -401,8 +411,10 @@ impl<A: AsymmetricAlgorithm, const N: usize> FixedSize for AsymmetricSecretKey<A
 
 // Implement ByteSerializable only for specific valid combinations
 impl ByteSerializable for AsymmetricSecretKey<Ed25519, 32> {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    type Bytes = ZeroizingBytes;
+
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -411,8 +423,10 @@ impl ByteSerializable for AsymmetricSecretKey<Ed25519, 32> {
 }
 
 impl ByteSerializable for AsymmetricSecretKey<X25519, 32> {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    type Bytes = ZeroizingBytes;
+
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -421,9 +435,11 @@ impl ByteSerializable for AsymmetricSecretKey<X25519, 32> {
 }
 
 impl ByteSerializable for AsymmetricSecretKey<P256, 32> {
+    type Bytes = ZeroizingBytes;
+
     // Added for P-256
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -432,9 +448,11 @@ impl ByteSerializable for AsymmetricSecretKey<P256, 32> {
 }
 
 impl ByteSerializable for AsymmetricSecretKey<P384, 48> {
+    type Bytes = ZeroizingBytes;
+
     // Added for P-384
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -443,9 +461,11 @@ impl ByteSerializable for AsymmetricSecretKey<P384, 48> {
 }
 
 impl ByteSerializable for AsymmetricSecretKey<P521, 66> {
+    type Bytes = ZeroizingBytes;
+
     // P-521
-    fn to_bytes(&self) -> Vec<u8> {
-        self.data.as_ref().to_vec()
+    fn to_bytes(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(self.data.as_ref())
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -550,6 +570,8 @@ impl<A: AsymmetricAlgorithm, const N: usize> FixedSize for AsymmetricPublicKey<A
 
 // Implement ByteSerializable only for specific valid combinations
 impl ByteSerializable for AsymmetricPublicKey<Ed25519, 32> {
+    type Bytes = Vec<u8>;
+
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
     }
@@ -560,6 +582,8 @@ impl ByteSerializable for AsymmetricPublicKey<Ed25519, 32> {
 }
 
 impl ByteSerializable for AsymmetricPublicKey<X25519, 32> {
+    type Bytes = Vec<u8>;
+
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
     }
@@ -570,6 +594,8 @@ impl ByteSerializable for AsymmetricPublicKey<X25519, 32> {
 }
 
 impl ByteSerializable for AsymmetricPublicKey<P256, 65> {
+    type Bytes = Vec<u8>;
+
     // Added for P-256 uncompressed
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
@@ -581,6 +607,8 @@ impl ByteSerializable for AsymmetricPublicKey<P256, 65> {
 }
 
 impl ByteSerializable for AsymmetricPublicKey<P256, 33> {
+    type Bytes = Vec<u8>;
+
     // Added for P-256 compressed
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
@@ -592,6 +620,8 @@ impl ByteSerializable for AsymmetricPublicKey<P256, 33> {
 }
 
 impl ByteSerializable for AsymmetricPublicKey<P384, 97> {
+    type Bytes = Vec<u8>;
+
     // Added for P-384 uncompressed
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
@@ -603,6 +633,8 @@ impl ByteSerializable for AsymmetricPublicKey<P384, 97> {
 }
 
 impl ByteSerializable for AsymmetricPublicKey<P384, 49> {
+    type Bytes = Vec<u8>;
+
     // Added for P-384 compressed
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
@@ -614,6 +646,8 @@ impl ByteSerializable for AsymmetricPublicKey<P384, 49> {
 }
 
 impl ByteSerializable for AsymmetricPublicKey<P521, 133> {
+    type Bytes = Vec<u8>;
+
     // P-521 uncompressed
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
@@ -625,6 +659,8 @@ impl ByteSerializable for AsymmetricPublicKey<P521, 133> {
 }
 
 impl ByteSerializable for AsymmetricPublicKey<P521, 67> {
+    type Bytes = Vec<u8>;
+
     // Added for P-521 compressed
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()

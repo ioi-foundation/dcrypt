@@ -3,14 +3,14 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 #[cfg(feature = "alloc")]
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec};
 
 use super::ntt::montgomery_reduce;
 use super::params::{Modulus, NttModulus}; // FIXED: Import NttModulus from params
 use crate::error::{Error, Result};
 use core::marker::PhantomData;
 use core::ops::{Add, Neg, Sub};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Convert a value from standard domain to Montgomery domain
 #[inline(always)]
@@ -23,7 +23,7 @@ fn to_montgomery<M: NttModulus>(val: u32) -> u32 {
 pub struct Polynomial<M: Modulus> {
     /// Coefficients of the polynomial, stored in standard representation
     #[cfg(feature = "alloc")]
-    pub coeffs: Vec<u32>,
+    pub coeffs: Box<[u32]>,
     /// Coefficients of the polynomial, stored in standard representation
     #[cfg(not(feature = "alloc"))]
     pub coeffs: [u32; 256], // Will need const generics for proper support
@@ -36,9 +36,7 @@ impl<M: Modulus> Zeroize for Polynomial<M> {
         // Zero all coefficients without changing the length
         #[cfg(feature = "alloc")]
         {
-            for coeff in self.coeffs.iter_mut() {
-                coeff.zeroize();
-            }
+            self.coeffs.as_mut().zeroize();
         }
         #[cfg(not(feature = "alloc"))]
         {
@@ -47,11 +45,22 @@ impl<M: Modulus> Zeroize for Polynomial<M> {
     }
 }
 
+impl<M: Modulus> Drop for Polynomial<M> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<M: Modulus> ZeroizeOnDrop for Polynomial<M> {}
+
 impl<M: Modulus> Polynomial<M> {
     /// Creates a new polynomial with all coefficients set to zero
     pub fn zero() -> Self {
         Self {
-            coeffs: vec![0; M::N], // length = 256, every coeff = 0
+            #[cfg(feature = "alloc")]
+            coeffs: vec![0; M::N].into_boxed_slice(),
+            #[cfg(not(feature = "alloc"))]
+            coeffs: [0; 256],
             _marker: PhantomData,
         }
     }
@@ -66,7 +75,7 @@ impl<M: Modulus> Polynomial<M> {
         }
 
         #[cfg(feature = "alloc")]
-        let coeffs = coeffs_slice.to_vec();
+        let coeffs = Box::from(coeffs_slice);
 
         #[cfg(not(feature = "alloc"))]
         let mut coeffs = [0u32; 256];
@@ -167,7 +176,7 @@ impl<M: Modulus> Polynomial<M> {
 
         // Use a temporary array to accumulate products without modular reduction
         // This prevents overflow: max value is n * (q-1)^2 < 2^64 for ML-DSA
-        let mut tmp = vec![0u64; 2 * n];
+        let mut tmp = Zeroizing::new(vec![0u64; 2 * n].into_boxed_slice());
 
         // Step 1: Compute full convolution without modular reduction
         // FIXED: Use iterator instead of indexing

@@ -11,7 +11,7 @@ use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_algorithms::xof::shake::ShakeXof256;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use dcrypt_api::traits::serialize::{Serialize, SerializeSecret};
-use dcrypt_api::{Error, Kem, Result};
+use dcrypt_api::{Error, Kem, Result, ZeroizingBytes};
 use dcrypt_internal::constant_time::{ConditionallySelectable, ConstantTimeEq};
 use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
@@ -213,7 +213,7 @@ impl<P: MlKemParameterSet> MlKemDecapsulationKey<P> {
     }
 
     /// Serialize into an exact-size boxed buffer that clears itself on drop.
-    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Box<[u8]>> {
+    pub fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         Zeroizing::new(Box::from(&self.bytes[..]))
     }
 
@@ -251,11 +251,8 @@ impl<P: MlKemParameterSet> SerializeSecret for MlKemDecapsulationKey<P> {
         Self::from_bytes(bytes)
     }
 
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
-        // `SerializeSecret` currently fixes `Vec<u8>` as its return type. The
-        // inherent method above is the v3 exact-size export; this conversion is
-        // retained only for trait compatibility until that shared trait changes.
-        Zeroizing::new(self.bytes.to_vec())
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        self.to_bytes_zeroizing()
     }
 }
 
@@ -350,7 +347,7 @@ impl MlKemSharedSecret {
     }
 
     /// Serialize into an exact-size boxed buffer that clears itself on drop.
-    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Box<[u8]>> {
+    pub fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         Zeroizing::new(Box::from(&self.0[..]))
     }
 }
@@ -392,10 +389,8 @@ impl SerializeSecret for MlKemSharedSecret {
         Ok(Self(value))
     }
 
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
-        // Kept only for compatibility with the workspace-wide trait's fixed
-        // `Vec<u8>` return type. Prefer the inherent exact-size export.
-        Zeroizing::new(self.0.to_vec())
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        self.to_bytes_zeroizing()
     }
 }
 

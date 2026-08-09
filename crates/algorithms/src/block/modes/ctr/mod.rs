@@ -8,7 +8,9 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
+};
 
 use super::super::BlockCipher;
 use crate::error::{validate, Result};
@@ -38,10 +40,10 @@ pub enum CounterPosition {
 #[derive(Clone)]
 pub struct Ctr<B: BlockCipher + Zeroize> {
     cipher: B,
-    counter_block: Zeroizing<Vec<u8>>,
+    counter_block: ZeroizingBytes,
     counter_position: usize,
     counter_size: usize,
-    keystream: Zeroizing<Vec<u8>>,
+    keystream: ZeroizingBytes,
     keystream_pos: usize,
 }
 
@@ -122,7 +124,7 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
         };
 
         // Create and initialize the counter block with Zeroizing
-        let mut counter_block = Zeroizing::new(vec![0u8; block_size]);
+        let mut counter_block = Zeroizing::new(boxed_bytes_zeroed(block_size));
 
         // Handle nonce according to its size
         let max_nonce_size = block_size - counter_size;
@@ -149,7 +151,7 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
             counter_block,
             counter_position: position,
             counter_size,
-            keystream: Zeroizing::new(Vec::new()),
+            keystream: Zeroizing::new(boxed_bytes_zeroed(0)),
             keystream_pos: 0,
         })
     }
@@ -159,7 +161,7 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
         let block_size = B::block_size();
 
         // Create a new zeroizing keystream buffer
-        self.keystream = Zeroizing::new(vec![0u8; block_size]);
+        self.keystream = Zeroizing::new(boxed_bytes_zeroed(block_size));
 
         // Use memory barrier to prevent optimization
         barrier::compiler_fence_seq_cst();
@@ -233,24 +235,24 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
 
     /// Encrypts a message using CTR mode
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<Vec<u8>> {
-        let mut ciphertext = Vec::with_capacity(plaintext.len());
+        let mut ciphertext = Zeroizing::new(boxed_bytes_zeroed(plaintext.len()));
 
         // Use memory barrier before sensitive operations
         barrier::compiler_fence_seq_cst();
 
-        for &byte in plaintext {
+        for (output, &byte) in ciphertext.iter_mut().zip(plaintext) {
             if self.keystream_pos >= self.keystream.len() {
                 self.generate_keystream()?;
             }
 
-            ciphertext.push(byte ^ self.keystream[self.keystream_pos]);
+            *output = byte ^ self.keystream[self.keystream_pos];
             self.keystream_pos += 1;
         }
 
         // Use memory barrier after sensitive operations
         barrier::compiler_fence_seq_cst();
 
-        Ok(ciphertext)
+        Ok(ciphertext.into_inner().into_vec())
     }
 
     /// Decrypts a message using CTR mode
@@ -314,7 +316,7 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
         self.keystream_pos = self.keystream.len();
 
         // Clear any old keystream with Zeroizing
-        self.keystream = Zeroizing::new(Vec::new());
+        self.keystream = Zeroizing::new(boxed_bytes_zeroed(0));
 
         // Zeroize the temporary counter value
         counter_value.zeroize();
@@ -393,7 +395,7 @@ impl<B: BlockCipher + Zeroize> Ctr<B> {
         self.set_counter(counter);
 
         // Clear keystream
-        self.keystream = Zeroizing::new(Vec::new());
+        self.keystream = Zeroizing::new(boxed_bytes_zeroed(0));
         self.keystream_pos = 0;
 
         // Use memory barrier after sensitive operations

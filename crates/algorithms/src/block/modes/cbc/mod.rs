@@ -9,7 +9,7 @@
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::super::{BlockCipher, CipherAlgorithm};
 use crate::error::{validate, Error, Result};
@@ -116,8 +116,9 @@ impl<B: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> Cbc<B> {
             });
         }
 
-        let mut plaintext = Vec::with_capacity(ciphertext.len());
+        let mut plaintext = Zeroizing::new(boxed_bytes_zeroed(ciphertext.len()));
         let mut prev_block = self.iv.clone();
+        let mut plaintext_offset = 0usize;
 
         // Process the ciphertext in blocks
         for chunk in ciphertext.chunks(block_size) {
@@ -136,11 +137,14 @@ impl<B: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> Cbc<B> {
             }
 
             // Append to plaintext and update previous block
-            plaintext.extend_from_slice(&block);
+            plaintext[plaintext_offset..plaintext_offset + block_size]
+                .copy_from_slice(&block[..block_size]);
+            plaintext_offset += block_size;
             prev_block = current_block.to_vec();
+            block.zeroize();
         }
 
-        Ok(plaintext)
+        Ok(plaintext.into_inner().into_vec())
     }
 }
 

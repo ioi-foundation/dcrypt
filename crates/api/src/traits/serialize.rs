@@ -2,8 +2,7 @@
 
 //! Traits for byte serialization of cryptographic types.
 
-use crate::Result;
-use dcrypt_internal::zeroing::Zeroizing;
+use crate::{Result, ZeroizingBytes};
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -22,6 +21,6 @@ pub trait Serialize: Sized {
 pub trait SerializeSecret: Sized {
     /// Creates an object from a byte slice. Input should be zeroized after use.
     fn from_bytes(bytes: &[u8]) -> Result<Self>;
-    /// Converts the object to a byte vector that is zeroized on drop.
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>>;
+    /// Converts the object to exact-size bytes that are zeroized on drop.
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes;
 }

@@ -16,10 +16,12 @@ use crate::types::salt::HkdfCompatible;
 use crate::types::Salt;
 
 // Import security types from dcrypt-core
-use dcrypt_common::security::{EphemeralSecret, SecureZeroingType};
+use dcrypt_common::security::SecureZeroingType;
 
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
+};
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -56,7 +58,7 @@ pub struct HkdfParams<const S: usize = 16> {
     /// Optional default salt (can be overridden in derive_key)
     pub salt: Option<Salt<S>>,
     /// Optional default info (context, can be overridden in derive_key)
-    pub info: Option<Zeroizing<Vec<u8>>>,
+    pub info: Option<Vec<u8>>,
 }
 
 impl<const S: usize> Zeroize for HkdfParams<S> {
@@ -131,7 +133,7 @@ where
         self
     }
 
-    fn derive(self) -> Result<Vec<u8>> {
+    fn derive(self) -> Result<ZeroizingBytes> {
         let ikm = self
             .ikm
             .ok_or_else(|| Error::param("ikm", "Input keying material is required"))?;
@@ -139,18 +141,17 @@ where
         let salt_bytes = self.salt;
         let info_bytes = self.info;
 
-        // Fix: Convert Zeroizing<Vec<u8>> to Vec<u8>
-        Hkdf::<H, S>::derive(salt_bytes, ikm, info_bytes, self.length).map(|result| result.to_vec())
+        Hkdf::<H, S>::derive(salt_bytes, ikm, info_bytes, self.length)
     }
 
-    fn derive_array<const N: usize>(self) -> Result<[u8; N]> {
+    fn derive_array<const N: usize>(self) -> Result<Zeroizing<[u8; N]>> {
         // Ensure the requested size matches
         validate::length("HKDF output", self.length, N)?;
 
         let vec = self.derive()?;
 
         // Convert to fixed-size array
-        let mut array = [0u8; N];
+        let mut array = Zeroizing::new([0u8; N]);
         array.copy_from_slice(&vec);
         Ok(array)
     }
@@ -161,18 +162,12 @@ where
     Salt<S>: HkdfCompatible,
 {
     /// HKDF-Extract
-    pub fn extract(salt: Option<&[u8]>, ikm: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
-        // Convert salt to owned Vec to wrap in EphemeralSecret
-        let salt_vec = salt.unwrap_or(&[]).to_vec();
-        let secure_salt = EphemeralSecret::new(salt_vec);
-
-        // Use HMAC with secure salt
-        let result = Hmac::<H>::mac(&secure_salt, ikm)?;
-        Ok(Zeroizing::new(result))
+    pub fn extract(salt: Option<&[u8]>, ikm: &[u8]) -> Result<ZeroizingBytes> {
+        Hmac::<H>::mac(salt.unwrap_or(&[]), ikm)
     }
 
     /// HKDF-Expand
-    pub fn expand(prk: &[u8], info: Option<&[u8]>, length: usize) -> Result<Zeroizing<Vec<u8>>> {
+    pub fn expand(prk: &[u8], info: Option<&[u8]>, length: usize) -> Result<ZeroizingBytes> {
         let hash_len = H::output_size();
         let max_len = 255 * hash_len;
 
@@ -186,16 +181,12 @@ where
         let n = length.div_ceil(hash_len);
 
         // Pre-allocate OKM buffer and temporary block buffer
-        let mut okm = Zeroizing::new(vec![0u8; n * hash_len]);
-        let mut t_buf = Zeroizing::new(vec![0u8; hash_len]);
+        let mut okm = Zeroizing::new(boxed_bytes_zeroed(length));
+        let mut t_buf = Zeroizing::new(boxed_bytes_zeroed(hash_len));
         let info_bytes = info.unwrap_or(&[]);
 
-        // Convert PRK to owned Vec to wrap in EphemeralSecret
-        let prk_vec = prk.to_vec();
-        let secure_prk = EphemeralSecret::new(prk_vec);
-
         for i in 1..=n {
-            let mut hmac = Hmac::<H>::new(&secure_prk)?;
+            let mut hmac = Hmac::<H>::new(prk)?;
             if i > 1 {
                 // feed previous block for iterations > 1
                 hmac.update(&t_buf)?;
@@ -205,10 +196,10 @@ where
             let block = hmac.finalize()?;
             t_buf.copy_from_slice(&block);
             let start = (i - 1) * hash_len;
-            okm[start..start + hash_len].copy_from_slice(&t_buf);
+            let end = core::cmp::min(start + hash_len, length);
+            okm[start..end].copy_from_slice(&t_buf[..end - start]);
         }
 
-        okm.truncate(length);
         Ok(okm)
     }
 
@@ -218,7 +209,7 @@ where
         ikm: &[u8],
         info: Option<&[u8]>,
         length: usize,
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<ZeroizingBytes> {
         let _ = Hmac::<H>::new(&[])?; // warm-up
 
         // Extract phase - produces PRK
@@ -268,11 +259,10 @@ where
         salt: Option<&[u8]>,
         info: Option<&[u8]>,
         length: usize,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<ZeroizingBytes> {
         let effective_salt = salt.or_else(|| self.params.salt.as_ref().map(|s| s.as_ref()));
-        let effective_info = info.or_else(|| self.params.info.as_ref().map(|i| i.as_slice()));
-        let result = Self::derive(effective_salt, input, effective_info, length)?;
-        Ok(result.to_vec())
+        let effective_info = info.or_else(|| self.params.info.as_deref());
+        Self::derive(effective_salt, input, effective_info, length)
     }
 
     // FIXED: Elided lifetime

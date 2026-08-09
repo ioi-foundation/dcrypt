@@ -5,13 +5,10 @@
 //! Branch-free source is not a blanket side-channel proof for every compiler
 //! and target.
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-
 use crate::error::{validate, Result};
 use crate::mac::MacAlgorithm;
 use crate::types::Tag;
-use dcrypt_common::security::SecretBuffer;
+use dcrypt_common::security::{SecretBuffer, SecretVec};
 use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Size of the Poly1305 key in bytes (32 B)
@@ -34,9 +31,9 @@ impl MacAlgorithm for Poly1305Algorithm {
 
 /// Poly1305 MAC (branch-free limb arithmetic)
 pub struct Poly1305 {
-    r: SecretBuffer<24>,      // 130-bit key r stored as 3 u64s (24 bytes)
-    s: SecretBuffer<16>,      // 128-bit key s stored as 2 u64s (16 bytes)
-    data: Zeroizing<Vec<u8>>, // buffered input
+    r: SecretBuffer<24>, // 130-bit key r stored as 3 u64s (24 bytes)
+    s: SecretBuffer<16>, // 128-bit key s stored as 2 u64s (16 bytes)
+    data: SecretVec,     // exact-size buffered input
 }
 
 impl Zeroize for Poly1305 {
@@ -89,7 +86,7 @@ impl Poly1305 {
         Ok(Self {
             r,
             s,
-            data: Zeroizing::new(Vec::new()),
+            data: SecretVec::empty(),
         })
     }
 

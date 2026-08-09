@@ -154,10 +154,11 @@ fn test_shake_xof_incremental_output() {
     let all_128 = xof128_all.squeeze_into_vec(100).unwrap();
 
     // Compare
-    let mut combined_128 = part1_128.clone();
+    let mut combined_128 = part1_128.to_vec();
     combined_128.extend_from_slice(&part2_128);
     assert_eq!(
-        combined_128, all_128,
+        combined_128.as_slice(),
+        all_128.as_slice(),
         "SHAKE-128 incremental output doesn't match combined output"
     );
 
@@ -176,10 +177,11 @@ fn test_shake_xof_incremental_output() {
     let all_256 = xof256_all.squeeze_into_vec(100).unwrap();
 
     // Compare
-    let mut combined_256 = part1_256.clone();
+    let mut combined_256 = part1_256.to_vec();
     combined_256.extend_from_slice(&part2_256);
     assert_eq!(
-        combined_256, all_256,
+        combined_256.as_slice(),
+        all_256.as_slice(),
         "SHAKE-256 incremental output doesn't match combined output"
     );
 }

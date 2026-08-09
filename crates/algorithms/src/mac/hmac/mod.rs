@@ -4,14 +4,13 @@
 //! • Key-derived padding and hash state are zeroized on drop
 //! • Tag bytes are compared in constant time after an exact-length check
 
-#[cfg(feature = "alloc")]
-use crate::alloc_prelude::*;
-
 use crate::error::{Error, Result};
 use crate::hash::HashFunction;
 use dcrypt_common::security::{SecretBuffer, SecureZeroingType};
 use dcrypt_internal::constant_time::ConstantTimeEq;
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{
+    zeroizing_bytes_from_slice, Zeroize, ZeroizeOnDrop, ZeroizingBytes,
+};
 
 const MAX_BLOCK: usize = 144; // SHA3-224 block size (largest among SHA-2 and SHA-3)
 
@@ -135,7 +134,7 @@ where
     }
 
     /// Finalise and return the tag.
-    pub fn finalize(&mut self) -> Result<Vec<u8>> {
+    pub fn finalize(&mut self) -> Result<ZeroizingBytes> {
         if self.is_finalized {
             return Err(Error::param("hmac_state", "HMAC already finalized"));
         }
@@ -174,7 +173,7 @@ where
             }
         };
         outer.zeroize();
-        let tag = output.as_ref().to_vec();
+        let tag = zeroizing_bytes_from_slice(output.as_ref());
         output.zeroize();
         Ok(tag)
     }
@@ -184,7 +183,7 @@ where
     /* ------------------------------------------------------------------ */
 
     /// One-shot MAC helper.
-    pub fn mac(key: &[u8], data: &[u8]) -> Result<Vec<u8>> {
+    pub fn mac(key: &[u8], data: &[u8]) -> Result<ZeroizingBytes> {
         let mut h = Self::new(key)?;
         h.update(data)?;
         h.finalize()

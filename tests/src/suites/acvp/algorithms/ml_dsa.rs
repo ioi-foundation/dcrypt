@@ -353,8 +353,9 @@ fn pre_hash(message: &[u8], algorithm: &str) -> Result<([u8; 11], Vec<u8>)> {
         "SHA3-256" => (0x08, fixed_hash::<Sha3_256>(message)?),
         "SHA3-384" => (0x09, fixed_hash::<Sha3_384>(message)?),
         "SHA3-512" => (0x0A, fixed_hash::<Sha3_512>(message)?),
-        "SHAKE-128" => (0x0B, ShakeXof128::generate(message, 32)?),
-        "SHAKE-256" => (0x0C, ShakeXof256::generate(message, 64)?),
+        // ACVP response assembly is a public test-only serialization boundary.
+        "SHAKE-128" => (0x0B, ShakeXof128::generate(message, 32)?.to_vec()),
+        "SHAKE-256" => (0x0C, ShakeXof256::generate(message, 64)?.to_vec()),
         other => {
             return Err(EngineError::InvalidData(format!(
                 "unsupported HashML-DSA pre-hash algorithm: {other}"

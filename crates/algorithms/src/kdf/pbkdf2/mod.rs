@@ -28,17 +28,15 @@ use std::collections::BTreeMap;
 use std::string::String;
 #[cfg(feature = "std")]
 use std::time::{Duration, Instant};
-#[cfg(feature = "std")]
-use std::vec::Vec;
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-use alloc::vec::Vec;
 
 use core::marker::PhantomData;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
+};
 
 /// Type-level constants for PBKDF2 algorithm
 pub enum Pbkdf2Algorithm<H: HashFunction> {
@@ -170,7 +168,7 @@ where
         self
     }
 
-    fn derive(self) -> Result<Vec<u8>> {
+    fn derive(self) -> Result<ZeroizingBytes> {
         let ikm = self.ikm.ok_or_else(|| {
             Error::param("input_keying_material", "Input keying material is required")
         })?;
@@ -184,14 +182,14 @@ where
         Pbkdf2::<H, S>::pbkdf2_secure(ikm, salt, self.iterations, self.length)
     }
 
-    fn derive_array<const N: usize>(self) -> Result<[u8; N]> {
+    fn derive_array<const N: usize>(self) -> Result<Zeroizing<[u8; N]>> {
         // Ensure the requested size matches
         validate::length("PBKDF2 output", self.length, N)?;
 
         let vec = self.derive()?;
 
         // Convert to fixed-size array
-        let mut array = [0u8; N];
+        let mut array = Zeroizing::new([0u8; N]);
         array.copy_from_slice(&vec);
         Ok(array)
     }
@@ -216,21 +214,20 @@ impl<H: HashFunction + Clone, const S: usize> Pbkdf2<H, S> {
         salt: &[u8],
         iterations: u32,
         key_length: usize,
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<ZeroizingBytes> {
         // Wrap password in secure buffer for internal operations
         let secure_password = SecretVec::from_slice(password);
         Self::pbkdf2_internal(&secure_password, salt, iterations, key_length)
     }
 
-    /// Secure PBKDF2 implementation that returns regular Vec
+    /// Secure PBKDF2 implementation returning exact-size zeroizing storage.
     pub fn pbkdf2_secure(
         password: &[u8],
         salt: &[u8],
         iterations: u32,
         key_length: usize,
-    ) -> Result<Vec<u8>> {
-        let result = Self::pbkdf2(password, salt, iterations, key_length)?;
-        Ok(result.to_vec())
+    ) -> Result<ZeroizingBytes> {
+        Self::pbkdf2(password, salt, iterations, key_length)
     }
 
     /// Internal PBKDF2 implementation using secure types
@@ -239,7 +236,7 @@ impl<H: HashFunction + Clone, const S: usize> Pbkdf2<H, S> {
         salt: &[u8],
         iterations: u32,
         key_length: usize,
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<ZeroizingBytes> {
         // Strict parameter validation
         validate::parameter(
             iterations > 0,
@@ -268,7 +265,8 @@ impl<H: HashFunction + Clone, const S: usize> Pbkdf2<H, S> {
             });
         }
 
-        let mut result = Zeroizing::new(Vec::with_capacity(key_length));
+        let mut result = Zeroizing::new(boxed_bytes_zeroed(key_length));
+        let mut result_offset = 0usize;
 
         // Derive each block of the output
         // Each block is calculated independently using the F function
@@ -289,8 +287,8 @@ impl<H: HashFunction + Clone, const S: usize> Pbkdf2<H, S> {
                 hash_len
             };
 
-            // Append the needed bytes to the result
-            result.extend_from_slice(&block[..to_copy]);
+            result[result_offset..result_offset + to_copy].copy_from_slice(&block[..to_copy]);
+            result_offset += to_copy;
         }
 
         Ok(result)
@@ -309,25 +307,25 @@ impl<H: HashFunction + Clone, const S: usize> Pbkdf2<H, S> {
         salt: &[u8],
         iterations: u32,
         block_index: u32,
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<ZeroizingBytes> {
         // First iteration: HMAC(password, salt || block_index)
         // U_1 = PRF(P, S || INT_32_BE(i))
         let mut hmac = Hmac::<T>::new(password)?;
         hmac.update(salt)?;
         hmac.update(&block_index.to_be_bytes())?;
-        let result = Zeroizing::new(hmac.finalize()?);
+        let result = hmac.finalize()?;
 
         let mut prev = result.clone();
 
         // Subsequent iterations: HMAC(password, prev_result)
         // U_j = PRF(P, U_{j-1})
         // Combine results by XOR: U_1 XOR U_2 XOR ... XOR U_c
-        let mut output = Zeroizing::new(result.to_vec());
+        let mut output = result;
 
         for _ in 1..iterations {
             let mut hmac = Hmac::<T>::new(password)?;
             hmac.update(&prev)?;
-            prev = Zeroizing::new(hmac.finalize()?);
+            prev = hmac.finalize()?;
 
             // XOR the result with prev
             for i in 0..output.len() {
@@ -379,7 +377,7 @@ where
         salt: Option<&[u8]>,
         _info: Option<&[u8]>,
         length: usize,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<ZeroizingBytes> {
         // Use provided salt or fallback to default from params - FIXED: Removed needless borrow
         let effective_salt = match salt {
             Some(s) => s,
@@ -445,8 +443,8 @@ where
         Ok(PasswordHash {
             algorithm: format!("pbkdf2-{}", H::name().to_lowercase()),
             params,
-            salt: Zeroizing::new(self.params.salt.to_bytes()),
-            hash,
+            salt: self.params.salt.to_bytes(),
+            hash: hash.into_inner().into_vec(),
         })
     }
 

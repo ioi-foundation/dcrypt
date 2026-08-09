@@ -13,7 +13,7 @@ use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::ToString, vec::Vec};
 use core::{fmt, marker::PhantomData};
-use dcrypt_api::{Result as ApiResult, Signature as SignatureTrait};
+use dcrypt_api::{Result as ApiResult, SecretVec, Signature as SignatureTrait, ZeroizingBytes};
 use dcrypt_internal::{CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_params::pqc::ml_dsa::{MlDsa44Params, MlDsa65Params, MlDsa87Params, MlDsaSchemeParams};
 
@@ -34,7 +34,7 @@ pub struct MlDsaPublicKey(pub(crate) Vec<u8>);
 /// external provenance/framing when distinguishing affected legacy objects.
 #[derive(Clone)]
 pub struct MlDsaSecretKey {
-    bytes: Vec<u8>,
+    bytes: SecretVec,
     public_key: Option<Vec<u8>>,
 }
 
@@ -114,7 +114,7 @@ impl MlDsaSecretKey {
         };
 
         Ok(Self {
-            bytes: bytes.to_vec(),
+            bytes: SecretVec::from_slice(bytes),
             public_key: Some(public_key),
         })
     }
@@ -140,7 +140,7 @@ impl MlDsaSecretKey {
         }
 
         Ok(Self {
-            bytes: bytes.to_vec(),
+            bytes: SecretVec::from_slice(bytes),
             public_key: Some(public_key.as_ref().to_vec()),
         })
     }
@@ -148,6 +148,11 @@ impl MlDsaSecretKey {
     /// Return the exact FIPS 204 expanded private-key encoding.
     pub fn to_bytes(&self) -> &[u8] {
         &self.bytes
+    }
+
+    /// Export the expanded private key into exact-size zeroizing storage.
+    pub fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        self.bytes.to_bytes_zeroizing_boxed()
     }
 
     /// Return the public key retained at generation or paired import time.
@@ -274,7 +279,7 @@ pub trait MlDsaBackend: MlDsaSchemeParams + Sized {
         sign::validate_key_pair_internal::<Self>(secret_key, public_key)
     }
 
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Vec<u8>, Vec<u8>), SignError> {
+    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Vec<u8>, SecretVec), SignError> {
         sign::keypair_internal::<Self, R>(rng)
     }
 

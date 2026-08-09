@@ -6,14 +6,9 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-#[cfg(not(feature = "std"))]
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-
-#[cfg(feature = "std")]
-use std::vec::Vec;
-
 use crate::error::{validate, Error, Result};
+#[cfg(feature = "alloc")]
+use dcrypt_internal::zeroing::ZeroizingBytes;
 
 #[cfg(feature = "alloc")]
 pub mod shake;
@@ -30,7 +25,7 @@ pub use blake3::Blake3Xof;
 
 /// An Extendable Output Function (XOF) produces output of arbitrary length
 #[cfg(feature = "alloc")]
-pub type Xof = Vec<u8>;
+pub type Xof = ZeroizingBytes;
 
 /// Trait for extendable output functions
 pub trait ExtendableOutputFunction {
@@ -46,9 +41,10 @@ pub trait ExtendableOutputFunction {
     /// Squeezes output bytes into the provided buffer
     fn squeeze(&mut self, output: &mut [u8]) -> Result<()>;
 
-    /// Squeezes the specified number of output bytes into a new vector
+    /// Squeezes the specified number of output bytes into exact-size storage
+    /// that clears itself on drop.
     #[cfg(feature = "alloc")]
-    fn squeeze_into_vec(&mut self, len: usize) -> Result<Vec<u8>>;
+    fn squeeze_into_vec(&mut self, len: usize) -> Result<ZeroizingBytes>;
 
     /// Resets the XOF state
     fn reset(&mut self) -> Result<()>;
@@ -58,7 +54,7 @@ pub trait ExtendableOutputFunction {
 
     /// Convenience method to generate output in a single call
     #[cfg(feature = "alloc")]
-    fn generate(data: &[u8], len: usize) -> Result<Vec<u8>>
+    fn generate(data: &[u8], len: usize) -> Result<ZeroizingBytes>
     where
         Self: Sized,
     {
@@ -148,7 +144,7 @@ pub trait KeyedXof: ExtendableOutputFunction {
 
     /// Generates keyed output in a single call
     #[cfg(feature = "alloc")]
-    fn keyed_generate(key: &[u8], data: &[u8], len: usize) -> Result<Vec<u8>>
+    fn keyed_generate(key: &[u8], data: &[u8], len: usize) -> Result<ZeroizingBytes>
     where
         Self: Sized,
     {
@@ -173,7 +169,7 @@ pub trait DeriveKeyXof: ExtendableOutputFunction {
 
     /// Derives key material in a single call
     #[cfg(feature = "alloc")]
-    fn derive_key(context: &[u8], data: &[u8], len: usize) -> Result<Vec<u8>>
+    fn derive_key(context: &[u8], data: &[u8], len: usize) -> Result<ZeroizingBytes>
     where
         Self: Sized,
     {

@@ -107,6 +107,18 @@ impl<T: Zeroize> Zeroizing<T> {
     pub const fn new(value: T) -> Self {
         Self(value)
     }
+
+    /// Move the protected value out, leaving a zero/default value for `Drop`.
+    ///
+    /// This is primarily useful at an ownership boundary where an exact-size
+    /// boxed secret must become the caller's output without creating a second
+    /// secret allocation.
+    pub fn into_inner(mut self) -> T
+    where
+        T: Default,
+    {
+        core::mem::take(&mut self.0)
+    }
 }
 
 impl<T: Zeroize> Deref for Zeroizing<T> {
@@ -155,6 +167,38 @@ impl<T: Zeroize> ZeroizeOnDrop for Zeroizing<T> {}
 /// New secret-returning APIs should prefer this representation.
 #[cfg(any(feature = "alloc", feature = "std"))]
 pub type ZeroizingBytes = Zeroizing<Box<[u8]>>;
+
+#[cfg(any(feature = "alloc", feature = "std"))]
+impl Zeroizing<Box<[u8]>> {
+    /// Borrow the exact-size protected allocation as bytes.
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
+
+    /// Mutably borrow the exact-size protected allocation as bytes.
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+
+    /// Exact-size allocations have no inaccessible spare capacity.
+    pub fn capacity(&self) -> usize {
+        self.0.len()
+    }
+}
+
+#[cfg(any(feature = "alloc", feature = "std"))]
+impl AsRef<[u8]> for Zeroizing<Box<[u8]>> {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+#[cfg(any(feature = "alloc", feature = "std"))]
+impl AsMut<[u8]> for Zeroizing<Box<[u8]>> {
+    fn as_mut(&mut self) -> &mut [u8] {
+        &mut self.0
+    }
+}
 
 /// Allocate an exact-size boxed byte slice initialized to zero.
 ///
@@ -262,5 +306,12 @@ mod tests {
         assert_eq!(format!("{secret:?}"), "Zeroizing([REDACTED])");
         secret.zeroize();
         assert_eq!(&**secret, &[0, 0, 0]);
+    }
+
+    #[test]
+    fn zeroizing_value_can_be_moved_out_without_copying() {
+        let bytes = ZeroizingBytes::new(boxed_bytes_from_slice(&[1, 2, 3]));
+        let inner = bytes.into_inner();
+        assert_eq!(&*inner, &[1, 2, 3]);
     }
 }

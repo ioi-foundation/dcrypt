@@ -278,7 +278,8 @@ fn shake_mct_inner<X: ExtendableOutputFunction>(
     for _ in 0..iterations {
         let mut xof = X::new();
         xof.update(&md)?;
-        md = xof.squeeze_into_vec(out_len)?;
+        // The Monte Carlo digest is public test-vector state.
+        md = xof.squeeze_into_vec(out_len)?.to_vec();
     }
 
     Ok(md)

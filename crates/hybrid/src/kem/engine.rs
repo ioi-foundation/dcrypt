@@ -3,16 +3,19 @@
 //! A generic engine for creating hybrid KEMs.
 
 use super::traits::KemDimensions;
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::vec::Vec;
 use core::marker::PhantomData;
 use dcrypt_algorithms::{hash::sha2::Sha256, kdf::hkdf::Hkdf};
 use dcrypt_api::{
     error::Error as ApiError,
     error::Result as ApiResult,
     traits::serialize::{Serialize, SerializeSecret},
+    ZeroizingBytes,
 };
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, zeroizing_bytes_from_slice, Zeroize, ZeroizeOnDrop, Zeroizing,
+};
 
 const HYBRID_KEM_INFO_LABEL: &[u8] = b"dcrypt-hybrid-kem/v2";
 
@@ -32,8 +35,8 @@ impl HybridSharedSecret {
         false
     }
 
-    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Box<[u8]>> {
-        Zeroizing::new(Box::from(&self.0[..]))
+    pub fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(&self.0[..])
     }
 }
 
@@ -74,10 +77,8 @@ impl SerializeSecret for HybridSharedSecret {
         Ok(Self(value))
     }
 
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
-        // The workspace-wide trait currently fixes a `Vec<u8>` return type.
-        // Prefer the inherent exact-size boxed export above.
-        Zeroizing::new(self.0.to_vec())
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
+        self.to_bytes_zeroizing()
     }
 }
 
@@ -175,14 +176,15 @@ impl<C: KemDimensions, P: KemDimensions> SerializeSecret for HybridSecretKey<C, 
             post_quantum_sk: P::SecretKey::from_bytes(post_quantum_bytes)?,
         })
     }
-    // FIX: Implement to_bytes_zeroizing to correctly serialize by concatenating the keys.
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         let classical_bytes = self.classical_sk.to_bytes_zeroizing();
         let post_quantum_bytes = self.post_quantum_sk.to_bytes_zeroizing();
-        let mut combined = Vec::with_capacity(classical_bytes.len() + post_quantum_bytes.len());
-        combined.extend_from_slice(&classical_bytes);
-        combined.extend_from_slice(&post_quantum_bytes);
-        Zeroizing::new(combined)
+        let mut combined = Zeroizing::new(boxed_bytes_zeroed(
+            classical_bytes.len() + post_quantum_bytes.len(),
+        ));
+        combined[..classical_bytes.len()].copy_from_slice(&classical_bytes);
+        combined[classical_bytes.len()..].copy_from_slice(&post_quantum_bytes);
+        combined
     }
 }
 
@@ -240,11 +242,12 @@ where
     ) -> ApiResult<HybridSharedSecret> {
         let ciphertext_bytes = ciphertext.to_bytes();
 
-        let mut ikm = Zeroizing::new(Vec::with_capacity(
+        let mut ikm = Zeroizing::new(boxed_bytes_zeroed(
             4 + classical_ss_bytes.len() + 4 + post_quantum_ss_bytes.len(),
         ));
-        append_len_prefixed(&mut ikm, classical_ss_bytes);
-        append_len_prefixed(&mut ikm, post_quantum_ss_bytes);
+        let mut ikm_offset = 0;
+        write_len_prefixed(&mut ikm, &mut ikm_offset, classical_ss_bytes);
+        write_len_prefixed(&mut ikm, &mut ikm_offset, post_quantum_ss_bytes);
 
         let mut info = Vec::with_capacity(
             HYBRID_KEM_INFO_LABEL.len()
@@ -266,10 +269,8 @@ where
                 #[cfg(feature = "std")]
                 message: "HKDF derivation failed".to_string(),
             })?;
-        let okm = Zeroizing::new(Box::from(&derived[..]));
-
         let mut shared_secret = Zeroizing::new([0u8; 32]);
-        shared_secret.copy_from_slice(&okm);
+        shared_secret.copy_from_slice(&derived);
         Ok(HybridSharedSecret::new(shared_secret))
     }
 
@@ -336,7 +337,7 @@ where
             Ok(shared_secret) => shared_secret.to_bytes_zeroizing(),
             Err(err) => {
                 decapsulation_error = Some(err);
-                Zeroizing::new(vec![0u8; C::SHARED_SECRET_LEN])
+                Zeroizing::new(boxed_bytes_zeroed(C::SHARED_SECRET_LEN))
             }
         };
 
@@ -346,7 +347,7 @@ where
                 if decapsulation_error.is_none() {
                     decapsulation_error = Some(err);
                 }
-                Zeroizing::new(vec![0u8; P::SHARED_SECRET_LEN])
+                Zeroizing::new(boxed_bytes_zeroed(P::SHARED_SECRET_LEN))
             }
         };
 
@@ -368,4 +369,12 @@ where
 fn append_len_prefixed(out: &mut Vec<u8>, bytes: &[u8]) {
     out.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
     out.extend_from_slice(bytes);
+}
+
+fn write_len_prefixed(out: &mut [u8], offset: &mut usize, bytes: &[u8]) {
+    let length_end = *offset + 4;
+    out[*offset..length_end].copy_from_slice(&(bytes.len() as u32).to_be_bytes());
+    let data_end = length_end + bytes.len();
+    out[length_end..data_end].copy_from_slice(bytes);
+    *offset = data_end;
 }

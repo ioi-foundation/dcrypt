@@ -8,7 +8,8 @@ use crate::aes::keys::{Aes128Key, Aes256Key};
 use crate::cipher::{Aead, SymmetricCipher};
 use crate::error::{fill_random, validate_stream_state, Result, SymmetricResultExt};
 use crate::streaming::{StreamingDecrypt, StreamingEncrypt};
-use dcrypt_internal::{CryptoRng, Zeroize, Zeroizing};
+use dcrypt_api::SecretVec;
+use dcrypt_internal::{CryptoRng, Zeroize};
 use std::io::{Read, Write};
 
 pub(crate) const MAGIC: &[u8; 8] = b"DCRSTRM2";
@@ -142,8 +143,9 @@ fn frame_aad(
 pub struct FramedEncryptStream<W: Write, C: FramedAead> {
     writer: W,
     cipher: C,
-    buffer: Zeroizing<Vec<u8>>,
-    user_aad: Zeroizing<Vec<u8>>,
+    buffer: SecretVec,
+    // AAD is authenticated but deliberately public metadata.
+    user_aad: Vec<u8>,
     sequence: u64,
     stream_id: [u8; STREAM_ID_SIZE],
     base_nonce: [u8; NONCE_SIZE],
@@ -181,8 +183,8 @@ impl<W: Write, C: FramedAead> FramedEncryptStream<W, C> {
         Ok(Self {
             writer,
             cipher,
-            buffer: Zeroizing::new(Vec::with_capacity(FRAME_PLAINTEXT_MAX)),
-            user_aad: Zeroizing::new(user_aad.to_vec()),
+            buffer: SecretVec::empty(),
+            user_aad: user_aad.to_vec(),
             sequence: 0,
             stream_id,
             base_nonce,
@@ -256,10 +258,7 @@ impl<W: Write, C: FramedAead> FramedEncryptStream<W, C> {
     }
 
     fn flush_non_final(&mut self) -> Result<()> {
-        let frame = core::mem::replace(
-            &mut self.buffer,
-            Zeroizing::new(Vec::with_capacity(FRAME_PLAINTEXT_MAX)),
-        );
+        let frame = core::mem::replace(&mut self.buffer, SecretVec::empty());
         self.write_frame(&frame, false)
     }
 }
@@ -286,7 +285,7 @@ impl<W: Write, C: FramedAead> StreamingEncrypt<W> for FramedEncryptStream<W, C> 
             "stream finalize",
             "stream already finalized",
         )?;
-        let final_plaintext = core::mem::replace(&mut self.buffer, Zeroizing::new(Vec::new()));
+        let final_plaintext = core::mem::replace(&mut self.buffer, SecretVec::empty());
         self.write_frame(&final_plaintext, true)?;
         self.writer.flush().map_io_err()?;
         Ok(self.writer)
@@ -297,11 +296,12 @@ impl<W: Write, C: FramedAead> StreamingEncrypt<W> for FramedEncryptStream<W, C> 
 pub struct FramedDecryptStream<R: Read, C: FramedAead> {
     reader: R,
     cipher: C,
-    user_aad: Zeroizing<Vec<u8>>,
+    // AAD is authenticated but deliberately public metadata.
+    user_aad: Vec<u8>,
     expected_sequence: u64,
     stream_id: [u8; STREAM_ID_SIZE],
     base_nonce: [u8; NONCE_SIZE],
-    pending: Zeroizing<Vec<u8>>,
+    pending: SecretVec,
     pending_offset: usize,
     final_seen: bool,
     finished: bool,
@@ -343,11 +343,11 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
         Ok(Self {
             reader,
             cipher: C::from_key(key)?,
-            user_aad: Zeroizing::new(user_aad.to_vec()),
+            user_aad: user_aad.to_vec(),
             expected_sequence: 0,
             stream_id,
             base_nonce,
-            pending: Zeroizing::new(Vec::new()),
+            pending: SecretVec::empty(),
             pending_offset: 0,
             final_seen: false,
             finished: false,
@@ -405,7 +405,7 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
 
         // Allocation occurs only after every transmitted length is bounded and
         // cross-checked against the fixed AEAD tag size.
-        let mut ciphertext = Zeroizing::new(vec![0u8; ciphertext_len as usize]);
+        let mut ciphertext = vec![0u8; ciphertext_len as usize];
         self.reader.read_exact(&mut ciphertext).map_io_err()?;
         let nonce = derive_nonce(&self.base_nonce, sequence);
         let aad = frame_aad(
@@ -418,14 +418,16 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
             ciphertext_len,
             &self.user_aad,
         )?;
-        let plaintext = self.cipher.open(&nonce, &ciphertext, &aad)?;
+        let mut plaintext = self.cipher.open(&nonce, &ciphertext, &aad)?;
+        let pending = SecretVec::from_slice(&plaintext);
+        plaintext.zeroize();
         validate_stream_state(
-            plaintext.len() == plaintext_len as usize,
+            pending.len() == plaintext_len as usize,
             "stream cipher",
             "AEAD returned an unexpected plaintext length",
         )?;
 
-        self.pending = Zeroizing::new(plaintext);
+        self.pending = pending;
         self.pending_offset = 0;
         self.final_seen = final_frame;
         if !final_frame {
@@ -443,7 +445,6 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
         output[..take].copy_from_slice(&remaining[..take]);
         self.pending_offset += take;
         if self.pending_offset == self.pending.len() {
-            self.pending.zeroize();
             self.pending.clear();
             self.pending_offset = 0;
         }

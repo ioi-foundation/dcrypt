@@ -27,7 +27,9 @@ use std::vec::Vec;
 
 use dcrypt_internal::constant_time::ConstantTimeEq;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
+};
 
 // Import security types from dcrypt-core - FIXED PATH
 use dcrypt_common::security::SecretBuffer;
@@ -186,11 +188,12 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
         &self,
         j0: &[u8; GCM_BLOCK_SIZE],
         data_len: usize,
-    ) -> Result<Zeroizing<Vec<u8>>> {
+    ) -> Result<ZeroizingBytes> {
         // Validate the construction limit before allocating output. This also
         // makes the limit directly testable without constructing a huge slice.
         let num_blocks = gcm_block_count(data_len)?;
-        let mut keystream = Zeroizing::new(Vec::with_capacity(num_blocks * GCM_BLOCK_SIZE));
+        let mut keystream = Zeroizing::new(boxed_bytes_zeroed(num_blocks * GCM_BLOCK_SIZE));
+        let mut keystream_offset = 0usize;
 
         let mut counter = *j0;
         let mut ctr_val =
@@ -200,7 +203,9 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
         for _ in 0..num_blocks {
             let mut block = Zeroizing::new(counter);
             self.cipher.encrypt_block(block.as_mut())?;
-            keystream.extend_from_slice(block.as_ref());
+            keystream[keystream_offset..keystream_offset + GCM_BLOCK_SIZE]
+                .copy_from_slice(block.as_ref());
+            keystream_offset += GCM_BLOCK_SIZE;
             ctr_val = ctr_val.wrapping_add(1);
             counter[12..16].copy_from_slice(&ctr_val.to_be_bytes());
         }
@@ -298,9 +303,9 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
 
         // Generate keystream and decrypt data
         let keystream = self.generate_keystream(&j0, ciphertext_len)?;
-        let mut plaintext = Zeroizing::new(Vec::with_capacity(ciphertext_len));
+        let mut plaintext = Zeroizing::new(boxed_bytes_zeroed(ciphertext_len));
         for i in 0..ciphertext_len {
-            plaintext.push(ciphertext_data[i] ^ keystream[i]);
+            plaintext[i] = ciphertext_data[i] ^ keystream[i];
         }
 
         // Compare all tag bytes without a value-dependent early exit.
@@ -312,7 +317,7 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
         if tag_matches.unwrap_u8() == 0 {
             Err(Error::Authentication { algorithm: "GCM" })
         } else {
-            Ok(plaintext.to_vec())
+            Ok(plaintext.into_inner().into_vec())
         }
     }
 }

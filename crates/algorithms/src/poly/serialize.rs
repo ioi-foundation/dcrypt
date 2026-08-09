@@ -26,41 +26,25 @@ pub struct DefaultCoefficientSerde;
 
 impl<M: Modulus> CoefficientPacker<M> for DefaultCoefficientSerde {
     fn pack_coeffs(poly: &Polynomial<M>, bits_per_coeff: usize) -> Result<Vec<u8>> {
-        if bits_per_coeff == 0 || bits_per_coeff > 32 {
-            return Err(Error::Parameter {
-                name: "coefficient packing".into(),
-                reason: format!(
-                    "bits_per_coeff must be in range [1, 32], got {}",
-                    bits_per_coeff
-                )
-                .into(),
-            });
-        }
-
-        let n = M::N;
-        let total_bits = n * bits_per_coeff;
-        let num_bytes = total_bits.div_ceil(8); // FIXED: Use div_ceil
+        let num_bytes = packed_length::<M>(bits_per_coeff)?;
         let mut packed = vec![0u8; num_bytes];
-
-        let coeffs = poly.as_coeffs_slice();
-        let mask = (1u32 << bits_per_coeff) - 1;
-
-        let mut bit_pos = 0;
-        // FIXED: Use iterator instead of indexing
-        for &coeff in coeffs.iter().take(n) {
-            let masked_coeff = coeff & mask;
-
-            // Pack coefficient into byte array
-            for bit in 0..bits_per_coeff {
-                let byte_idx = bit_pos / 8;
-                let bit_idx = bit_pos % 8;
-                packed[byte_idx] |= (((masked_coeff >> bit) & 1) as u8) << bit_idx;
-                bit_pos += 1;
-            }
-        }
-
+        DefaultCoefficientSerde::pack_coeffs_into(poly, bits_per_coeff, &mut packed)?;
         Ok(packed)
     }
+}
+
+fn packed_length<M: Modulus>(bits_per_coeff: usize) -> Result<usize> {
+    if bits_per_coeff == 0 || bits_per_coeff > 32 {
+        return Err(Error::Parameter {
+            name: "coefficient packing".into(),
+            reason: format!(
+                "bits_per_coeff must be in range [1, 32], got {}",
+                bits_per_coeff
+            )
+            .into(),
+        });
+    }
+    Ok((M::N * bits_per_coeff).div_ceil(8))
 }
 
 impl<M: Modulus> CoefficientUnpacker<M> for DefaultCoefficientSerde {
@@ -126,6 +110,39 @@ pub const fn bytes_required(bits_per_coeff: usize, n: usize) -> usize {
 
 /// Optimized packing for common bit widths
 impl DefaultCoefficientSerde {
+    /// Pack directly into caller-owned exact-size storage.
+    ///
+    /// Secret-key encoders use this form so no growable byte allocation ever
+    /// temporarily owns encoded secret coefficients.
+    pub fn pack_coeffs_into<M: Modulus>(
+        poly: &Polynomial<M>,
+        bits_per_coeff: usize,
+        packed: &mut [u8],
+    ) -> Result<()> {
+        let expected = packed_length::<M>(bits_per_coeff)?;
+        if packed.len() != expected {
+            return Err(Error::Parameter {
+                name: "coefficient packing output".into(),
+                reason: format!("expected {expected} bytes, got {}", packed.len()).into(),
+            });
+        }
+        packed.fill(0);
+        let mask = if bits_per_coeff == 32 {
+            u32::MAX
+        } else {
+            (1u32 << bits_per_coeff) - 1
+        };
+        let mut bit_pos = 0;
+        for &coeff in poly.as_coeffs_slice().iter().take(M::N) {
+            let masked_coeff = coeff & mask;
+            for bit in 0..bits_per_coeff {
+                packed[bit_pos / 8] |= (((masked_coeff >> bit) & 1) as u8) << (bit_pos % 8);
+                bit_pos += 1;
+            }
+        }
+        Ok(())
+    }
+
     /// Optimized packing for 10-bit coefficients.
     pub fn pack_10bit<M: Modulus>(poly: &Polynomial<M>) -> Result<Vec<u8>> {
         let n = M::N;

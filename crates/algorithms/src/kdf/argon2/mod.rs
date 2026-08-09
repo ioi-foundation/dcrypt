@@ -24,7 +24,9 @@ use base64::Engine;
 use core::convert::TryInto;
 use core::time::Duration;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, zeroizing_bytes_from_slice, Zeroize, Zeroizing, ZeroizingBytes,
+};
 
 // Argon2 specific constants
 const ARGON2_VERSION_1_3: u32 = 0x13;
@@ -96,8 +98,6 @@ impl Zeroize for Block {
 }
 
 /// Memory block type alias
-type MemBlock = Block; // replace the old alias
-
 // ─── BLAMKA round + G mixing ──────────────────────────────────────────
 
 #[inline(always)]
@@ -241,10 +241,10 @@ where
     pub output_len: usize,
     /// Salt value for this hash operation
     pub salt: Salt<S>,
-    /// Optional associated data that will be included in the hash calculation
-    pub ad: Option<Zeroizing<Vec<u8>>>,
+    /// Optional public associated data included in the hash calculation.
+    pub ad: Option<Vec<u8>>,
     /// Optional secret value that can be used as an additional input
-    pub secret: Option<Zeroizing<Vec<u8>>>,
+    pub secret: Option<ZeroizingBytes>,
 }
 
 impl<const S: usize> Zeroize for Params<S>
@@ -328,12 +328,12 @@ where
     /// * `password` - The password to hash
     ///
     /// # Returns
-    /// * A `Result` containing the hashed password as a zeroizing byte vector
-    pub fn hash_password(&self, password: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
+    /// * A `Result` containing the hashed password in exact-size zeroizing storage
+    pub fn hash_password(&self, password: &[u8]) -> Result<ZeroizingBytes> {
         let p = &self.params;
         let salt_bytes = p.salt.as_ref();
-        let ad_bytes = p.ad.as_ref().map(|z_vec| z_vec.as_slice());
-        let secret_bytes = p.secret.as_ref().map(|z_vec| z_vec.as_slice());
+        let ad_bytes = p.ad.as_deref();
+        let secret_bytes = p.secret.as_ref().map(|bytes| &bytes[..]);
 
         internal_argon2_core(
             password,
@@ -431,7 +431,7 @@ fn internal_argon2_core(
     memory_cost_kib: u32,
     time_cost_iterations: u32,
     parallelism_lanes: u32,
-) -> Result<Zeroizing<Vec<u8>>> {
+) -> Result<ZeroizingBytes> {
     validate::parameter(
         output_len >= MIN_OUT_LEN,
         "output_len",
@@ -507,31 +507,32 @@ fn internal_argon2_core(
         return Err(Error::param("version", "unsupported Argon2 version"));
     }
 
-    let mut h0_buffer_cap = ARGON2_PREHASH_SEED_LENGTH;
-    h0_buffer_cap = h0_buffer_cap.max(
-        4 * 7 + password.len() + salt.len() + secret.unwrap_or(&[]).len() + ad.unwrap_or(&[]).len(),
-    );
-    let mut h0_buffer = Zeroizing::new(Vec::with_capacity(h0_buffer_cap));
-
-    h0_buffer.extend_from_slice(&parallelism_lanes.to_le_bytes());
-    h0_buffer.extend_from_slice(&(output_len as u32).to_le_bytes());
-    h0_buffer.extend_from_slice(&memory_cost_kib.to_le_bytes());
-    h0_buffer.extend_from_slice(&time_cost_iterations.to_le_bytes());
-    h0_buffer.extend_from_slice(&version.to_le_bytes());
-    h0_buffer.extend_from_slice(&(argon_type as u32).to_le_bytes());
-
-    h0_buffer.extend_from_slice(&(password.len() as u32).to_le_bytes());
-    h0_buffer.extend_from_slice(password);
-    h0_buffer.extend_from_slice(&(salt.len() as u32).to_le_bytes());
-    h0_buffer.extend_from_slice(salt);
-
     let secret_data = secret.unwrap_or(&[]);
-    h0_buffer.extend_from_slice(&(secret_data.len() as u32).to_le_bytes());
-    h0_buffer.extend_from_slice(secret_data);
-
     let ad_data = ad.unwrap_or(&[]);
-    h0_buffer.extend_from_slice(&(ad_data.len() as u32).to_le_bytes());
-    h0_buffer.extend_from_slice(ad_data);
+    let h0_buffer_len = 10 * 4 + password.len() + salt.len() + secret_data.len() + ad_data.len();
+    let mut h0_buffer = Zeroizing::new(boxed_bytes_zeroed(h0_buffer_len));
+    let mut h0_offset = 0usize;
+    let mut append_h0 = |bytes: &[u8]| {
+        let end = h0_offset + bytes.len();
+        h0_buffer[h0_offset..end].copy_from_slice(bytes);
+        h0_offset = end;
+    };
+
+    append_h0(&parallelism_lanes.to_le_bytes());
+    append_h0(&(output_len as u32).to_le_bytes());
+    append_h0(&memory_cost_kib.to_le_bytes());
+    append_h0(&time_cost_iterations.to_le_bytes());
+    append_h0(&version.to_le_bytes());
+    append_h0(&(argon_type as u32).to_le_bytes());
+    append_h0(&(password.len() as u32).to_le_bytes());
+    append_h0(password);
+    append_h0(&(salt.len() as u32).to_le_bytes());
+    append_h0(salt);
+    append_h0(&(secret_data.len() as u32).to_le_bytes());
+    append_h0(secret_data);
+    append_h0(&(ad_data.len() as u32).to_le_bytes());
+    append_h0(ad_data);
+    debug_assert_eq!(h0_offset, h0_buffer_len);
 
     // Calculate H0 using standard Blake2b-512 with inner_length=0 as per RFC 9106 Table 3
     // IMPORTANT: H0 uses inner_length=0, unlike H' which uses inner_length=64
@@ -540,8 +541,9 @@ fn internal_argon2_core(
     // - H': digest_length=output_len, inner_length=64, fanout=1
     let mut h0_hasher = create_blake2b_for_h0();
     h0_hasher.update(&h0_buffer)?;
-    let h0_digest = h0_hasher.finalize()?;
-    let mut h0 = Zeroizing::new(h0_digest.as_ref().to_vec());
+    let mut h0_digest = h0_hasher.finalize()?;
+    let mut h0 = zeroizing_bytes_from_slice(h0_digest.as_ref());
+    h0_digest.zeroize();
     h0_buffer.zeroize();
 
     // Memory allocation according to RFC 9106
@@ -559,24 +561,21 @@ fn internal_argon2_core(
     }
     let segment_length = lane_length / ARGON2_SYNC_POINTS;
 
-    let mut memory_matrix: Vec<MemBlock> =
-        vec![Block([0u8; ARGON2_BLOCK_SIZE]); num_memory_blocks_total as usize];
+    let mut memory_matrix = Zeroizing::new(
+        vec![Block([0u8; ARGON2_BLOCK_SIZE]); num_memory_blocks_total as usize].into_boxed_slice(),
+    );
 
     for lane_idx in 0..parallelism_lanes {
-        let mut block_seed = Zeroizing::new(Vec::with_capacity(h0.len() + 8));
+        let mut block_seed = Zeroizing::new(boxed_bytes_zeroed(ARGON2_PREHASH_SEED_LENGTH));
 
-        block_seed.extend_from_slice(&h0);
-        block_seed.extend_from_slice(&0u32.to_le_bytes());
-        block_seed.extend_from_slice(&lane_idx.to_le_bytes());
+        block_seed[..h0.len()].copy_from_slice(&h0);
+        block_seed[h0.len()..h0.len() + 4].copy_from_slice(&0u32.to_le_bytes());
+        block_seed[h0.len() + 4..].copy_from_slice(&lane_idx.to_le_bytes());
         let block0_val = h_prime_variable_output(&block_seed, ARGON2_BLOCK_SIZE)?;
         memory_matrix[(lane_idx * lane_length) as usize]
             .0
             .copy_from_slice(&block0_val);
-        block_seed.clear();
-
-        block_seed.extend_from_slice(&h0);
-        block_seed.extend_from_slice(&1u32.to_le_bytes());
-        block_seed.extend_from_slice(&lane_idx.to_le_bytes());
+        block_seed[h0.len()..h0.len() + 4].copy_from_slice(&1u32.to_le_bytes());
         let block1_val = h_prime_variable_output(&block_seed, ARGON2_BLOCK_SIZE)?;
         memory_matrix[(lane_idx * lane_length + 1) as usize]
             .0
@@ -741,7 +740,7 @@ fn internal_argon2_core(
     }
 
     let mut final_block_xor_sum_vec =
-        Zeroizing::new(memory_matrix[(lane_length - 1) as usize].0.to_vec());
+        zeroizing_bytes_from_slice(&memory_matrix[(lane_length - 1) as usize].0);
 
     for lane_idx in 1..parallelism_lanes {
         let last_block_in_lane_idx = (lane_idx * lane_length + (lane_length - 1)) as usize;
@@ -750,15 +749,14 @@ fn internal_argon2_core(
         }
     }
 
-    let final_hash_vec = h_prime_variable_output(&final_block_xor_sum_vec, output_len)?;
-    Ok(Zeroizing::new(final_hash_vec))
+    h_prime_variable_output(&final_block_xor_sum_vec, output_len)
 }
 
 // RFC 9106 §3.3 "Variable-length hash function H′":
-fn h_prime_variable_output(data: &[u8], t: usize) -> Result<Vec<u8>> {
+fn h_prime_variable_output(data: &[u8], t: usize) -> Result<ZeroizingBytes> {
     // T = 0 ⇒ empty
     if t == 0 {
-        return Ok(vec![]);
+        return Ok(Zeroizing::new(boxed_bytes_zeroed(0)));
     }
 
     // For T ≤ 64, just one BLAKE2b(T) call
@@ -766,8 +764,10 @@ fn h_prime_variable_output(data: &[u8], t: usize) -> Result<Vec<u8>> {
         let mut h = blake2b_params(t as u8);
         h.update(&u32::to_le_bytes(t as u32))?;
         h.update(data)?;
-        let v = h.finalize()?.as_ref().to_vec();
-        return Ok(v);
+        let mut digest = h.finalize()?;
+        let output = zeroizing_bytes_from_slice(digest.as_ref());
+        digest.zeroize();
+        return Ok(output);
     }
 
     // T > 64: compute r = ⌈T/32⌉ - 2, produce r of 32 B each + one of (T - 32r)
@@ -775,29 +775,38 @@ fn h_prime_variable_output(data: &[u8], t: usize) -> Result<Vec<u8>> {
     let ceil_div = |x: usize, y: usize| x.div_ceil(y);
     let r = ceil_div(t, 32) - 2;
 
-    let mut out = Vec::with_capacity(t);
+    let mut out = Zeroizing::new(boxed_bytes_zeroed(t));
+    let mut out_offset = 0usize;
     // --- V₁:
     let mut h = blake2b_params(64);
     h.update(&u32::to_le_bytes(t as u32))?;
     h.update(data)?;
-    let mut prev = h.finalize()?.as_ref().to_vec();
-    out.extend_from_slice(&prev[..32]);
+    let mut digest = h.finalize()?;
+    let mut prev = zeroizing_bytes_from_slice(digest.as_ref());
+    digest.zeroize();
+    out[..32].copy_from_slice(&prev[..32]);
+    out_offset += 32;
 
     // --- V₂..Vᵣ:
     for _ in 1..r {
         let mut h = blake2b_params(64);
         h.update(&prev)?;
-        let v = h.finalize()?.as_ref().to_vec();
-        out.extend_from_slice(&v[..32]);
-        prev = v;
+        let mut digest = h.finalize()?;
+        let next = zeroizing_bytes_from_slice(digest.as_ref());
+        digest.zeroize();
+        out[out_offset..out_offset + 32].copy_from_slice(&next[..32]);
+        out_offset += 32;
+        prev = next;
     }
 
     // --- Vᵣ₊₁ (final):
     let final_len = t - 32 * r;
     let mut h = blake2b_params(final_len as u8);
     h.update(&prev)?;
-    let v = h.finalize()?.as_ref().to_vec();
-    out.extend_from_slice(&v);
+    let mut digest = h.finalize()?;
+    let final_digest = zeroizing_bytes_from_slice(digest.as_ref());
+    digest.zeroize();
+    out[out_offset..].copy_from_slice(&final_digest);
 
     Ok(out)
 }
@@ -932,7 +941,7 @@ where
         salt_override: Option<&[u8]>,
         info_override: Option<&[u8]>,
         length_override: usize,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<ZeroizingBytes> {
         let p = &self.params;
         let effective_salt = salt_override.unwrap_or_else(|| p.salt.as_ref());
         let effective_length = if length_override > 0 {
@@ -940,10 +949,10 @@ where
         } else {
             p.output_len
         };
-        let effective_ad = info_override.or_else(|| p.ad.as_ref().map(|z_vec| z_vec.as_slice()));
-        let effective_secret = p.secret.as_ref().map(|z_vec| z_vec.as_slice());
+        let effective_ad = info_override.or_else(|| p.ad.as_deref());
+        let effective_secret = p.secret.as_ref().map(|bytes| &bytes[..]);
 
-        let derived_bytes_zeroizing = internal_argon2_core(
+        internal_argon2_core(
             input,
             effective_salt,
             effective_ad,
@@ -954,8 +963,7 @@ where
             p.memory_cost,
             p.time_cost,
             p.parallelism,
-        )?;
-        Ok(derived_bytes_zeroizing.to_vec())
+        )
     }
 }
 
@@ -1010,7 +1018,7 @@ where
         self
     }
 
-    fn derive(self) -> Result<Vec<u8>> {
+    fn derive(self) -> Result<ZeroizingBytes> {
         let ikm = self
             .ikm
             .ok_or_else(|| Error::param("input_key_material", "missing"))?;
@@ -1029,7 +1037,7 @@ where
         )
     }
 
-    fn derive_array<const N: usize>(self) -> Result<[u8; N]> {
+    fn derive_array<const N: usize>(self) -> Result<Zeroizing<[u8; N]>> {
         let ikm = self
             .ikm
             .ok_or_else(|| Error::param("input_key_material", "missing"))?;
@@ -1037,20 +1045,23 @@ where
             params: self.params,
         };
 
-        let vec_result = argon_instance_for_derivation.derive_key(
+        let result = argon_instance_for_derivation.derive_key(
             ikm,
             self.salt_override,
             self.info_override,
             N,
         )?;
 
-        vec_result
-            .try_into()
-            .map_err(|v_err: Vec<u8>| Error::Length {
+        if result.len() != N {
+            return Err(Error::Length {
                 context: "Argon2 derive_array output conversion",
                 expected: N,
-                actual: v_err.len(),
-            })
+                actual: result.len(),
+            });
+        }
+        let mut array = Zeroizing::new([0u8; N]);
+        array.copy_from_slice(&result);
+        Ok(array)
     }
 }
 
@@ -1104,8 +1115,8 @@ where
         Ok(PasswordHash {
             algorithm: type_str.to_string(),
             params: ph_params_map,
-            salt: Zeroizing::new(self.params.salt.as_ref().to_vec()),
-            hash: hashed_output_zeroizing,
+            salt: self.params.salt.as_ref().to_vec(),
+            hash: hashed_output_zeroizing.into_inner().into_vec(),
         })
     }
 
@@ -1131,14 +1142,10 @@ where
         let time_cost = stored_hash.param_as_u32("t")?;
         let parallelism = stored_hash.param_as_u32("p")?;
 
-        let ad_from_params: Option<Zeroizing<Vec<u8>>> = stored_hash
+        let ad_from_params: Option<Vec<u8>> = stored_hash
             .params
             .get("data")
-            .map(|s| {
-                base64::engine::general_purpose::STANDARD_NO_PAD
-                    .decode(s)
-                    .map(Zeroizing::new)
-            })
+            .map(|s| base64::engine::general_purpose::STANDARD_NO_PAD.decode(s))
             .transpose()
             .map_err(|_| {
                 Error::param(
@@ -1147,12 +1154,12 @@ where
                 )
             })?;
 
-        let secret_for_verification = self.params.secret.as_ref().map(|z_vec| z_vec.as_slice());
+        let secret_for_verification = self.params.secret.as_ref().map(|bytes| &bytes[..]);
 
         let computed_hash_zeroizing = internal_argon2_core(
             password.as_ref(),
             &stored_hash.salt,
-            ad_from_params.as_ref().map(|z| z.as_slice()),
+            ad_from_params.as_deref(),
             secret_for_verification,
             argon_variant_from_hash,
             version,

@@ -8,14 +8,14 @@
 
 use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::marker::PhantomData;
 use dcrypt_algorithms::error::Result as AlgoResult;
 use dcrypt_algorithms::poly::params::{MlDsaParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::ShakeXof128;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
-use dcrypt_internal::{Choice, ConditionallySelectable, Zeroize};
+use dcrypt_internal::{Choice, ConditionallySelectable, Zeroize, ZeroizeOnDrop};
 use dcrypt_params::pqc::ml_dsa::MlDsaSchemeParams;
 
 // Montgomery reduce is available from algorithms::poly::ntt when needed
@@ -23,14 +23,14 @@ use dcrypt_params::pqc::ml_dsa::MlDsaSchemeParams;
 /// A vector of polynomials of length L (columns of A).
 #[derive(Debug)]
 pub struct PolyVecL<P: MlDsaSchemeParams> {
-    pub(crate) polys: Vec<Polynomial<MlDsaParams>>,
+    pub(crate) polys: Box<[Polynomial<MlDsaParams>]>,
     _params: PhantomData<P>,
 }
 
 /// A vector of polynomials of length K (rows of A).
 #[derive(Debug)]
 pub struct PolyVecK<P: MlDsaSchemeParams> {
-    pub(crate) polys: Vec<Polynomial<MlDsaParams>>,
+    pub(crate) polys: Box<[Polynomial<MlDsaParams>]>,
     _params: PhantomData<P>,
 }
 
@@ -54,17 +54,33 @@ impl<P: MlDsaSchemeParams> Clone for PolyVecK<P> {
 impl<P: MlDsaSchemeParams> Zeroize for PolyVecL<P> {
     fn zeroize(&mut self) {
         for poly in self.polys.iter_mut() {
-            poly.coeffs.as_mut_slice().zeroize(); // Zeroes in place, length intact
+            poly.coeffs.as_mut().zeroize(); // Zeroes in place, length intact
         }
     }
 }
 impl<P: MlDsaSchemeParams> Zeroize for PolyVecK<P> {
     fn zeroize(&mut self) {
         for poly in self.polys.iter_mut() {
-            poly.coeffs.as_mut_slice().zeroize(); // Zeroes in place, length intact
+            poly.coeffs.as_mut().zeroize(); // Zeroes in place, length intact
         }
     }
 }
+
+impl<P: MlDsaSchemeParams> Drop for PolyVecL<P> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<P: MlDsaSchemeParams> ZeroizeOnDrop for PolyVecL<P> {}
+
+impl<P: MlDsaSchemeParams> Drop for PolyVecK<P> {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl<P: MlDsaSchemeParams> ZeroizeOnDrop for PolyVecK<P> {}
 
 impl<P: MlDsaSchemeParams> PolyVecL<P> {
     /// Creates a new PolyVecL with all coefficients = 0.
@@ -74,7 +90,7 @@ impl<P: MlDsaSchemeParams> PolyVecL<P> {
             polys.push(Polynomial::<MlDsaParams>::zero());
         }
         Self {
-            polys,
+            polys: polys.into_boxed_slice(),
             _params: PhantomData,
         }
     }
@@ -125,7 +141,7 @@ impl<P: MlDsaSchemeParams> PolyVecK<P> {
             polys.push(Polynomial::<MlDsaParams>::zero());
         }
         Self {
-            polys,
+            polys: polys.into_boxed_slice(),
             _params: PhantomData,
         }
     }

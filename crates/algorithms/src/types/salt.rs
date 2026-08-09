@@ -147,6 +147,8 @@ impl<const N: usize> FixedSize for Salt<N> {
 }
 
 impl<const N: usize> ByteSerializable for Salt<N> {
+    type Bytes = Vec<u8>;
+
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
     }

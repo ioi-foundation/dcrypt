@@ -63,6 +63,19 @@ BUILD_LINK_DIRECTIVE = re.compile(
 INTERNAL_ENTROPY = re.compile(
     r"\b(?:OsRng|thread_rng|getrandom|from_entropy)\b|\brand\s*::\s*random\b"
 )
+GROWABLE_ZEROIZING_BYTES = re.compile(
+    r"\bZeroizing\s*<\s*(?:(?:alloc|std)\s*::\s*vec\s*::\s*)?Vec\s*<\s*u8\s*>"
+)
+RAW_SECRET_BYTE_OUTPUT = re.compile(
+    r"\b(?:derive|derive_array|derive_key|extract|expand|hash_password|"
+    r"h_prime_variable_output|keyed_generate|mac|pbkdf2|pbkdf2_secure|"
+    r"serialize_private_key|serialize_secret_key|squeeze_into_vec|"
+    r"to_bytes_zeroizing)\s*(?:<[^>{};]*>)?\s*\([^{};]*\)\s*->\s*"
+    r"(?:(?:core\s*::\s*result\s*::\s*)?Result\s*<\s*)?"
+    r"(?:(?:(?:alloc|std)\s*::\s*vec\s*::\s*)?Vec\s*<\s*u8\s*>|"
+    r"\[\s*u8\s*;)",
+    re.DOTALL,
+)
 VERSIONED_SHARED_OBJECT = re.compile(r"\.so(?:\.\d+)*$", re.IGNORECASE)
 VERSIONED_DYLIB = re.compile(r"(?:\.\d+)*\.dylib$", re.IGNORECASE)
 NATIVE_MAGIC = (
@@ -1525,6 +1538,22 @@ def audit_source_tree(
             and not is_test_module
         ):
             patterns.append(("internally sourced OS/random entropy", INTERNAL_ENTROPY, code_only))
+        if relative.parts and relative.parts[0] == "src" and not is_test_module:
+            patterns.append(
+                (
+                    "growable zeroizing byte storage",
+                    GROWABLE_ZEROIZING_BYTES,
+                    code_only,
+                )
+            )
+            if check_internal_entropy:
+                patterns.append(
+                    (
+                        "raw secret byte output API",
+                        RAW_SECRET_BYTE_OUTPUT,
+                        code_only,
+                    )
+                )
         for kind, pattern, searchable in patterns:
             match = pattern.search(searchable)
             if match:
@@ -1584,6 +1613,8 @@ def self_test() -> None:
 const WORD: &str = "unsafe extern \\"C\\" cargo:rustc-link-lib=x";
 const RAW: &str = r###"unsafe /* extern \\"C\\" */"###;
 #![forbid(unsafe_code)]
+let secret: Zeroizing<Vec<u8>> = todo!();
+fn derive_key(input: &[u8]) -> Result<Vec<u8>> { todo!() }
 unsafe fn bad() {}
 extern "C" { fn foreign(); }
 #[link(name = "native")]
@@ -1609,6 +1640,8 @@ println!("cargo:rustc-link-lib=native");
     assert len(FFI_API.findall(code_only)) == 2
     assert len(NATIVE_BUILD_API.findall(code_only)) == 1
     assert len(BUILD_LINK_DIRECTIVE.findall(commentless)) == 2
+    assert len(GROWABLE_ZEROIZING_BYTES.findall(code_only)) == 1
+    assert len(RAW_SECRET_BYTE_OUTPUT.findall(code_only)) == 1
     assert UNSAFE_TOKEN.search("#![forbid(unsafe_code)]") is None
     assert has_crate_level_forbid("// header\n#![forbid(unsafe_code)]\nfn ok() {}")
     assert not has_crate_level_forbid("mod nested { #![forbid(unsafe_code)] }")

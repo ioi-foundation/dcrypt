@@ -7,7 +7,7 @@
 
 #[cfg(feature = "alloc")]
 use crate::alloc_prelude::*;
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::error::Result;
 use crate::hash::{HashAlgorithm, HashFunction};
@@ -127,11 +127,11 @@ impl_shake_zeroize!(Shake256);
 fn keccak_f1600(state: &mut [u64; KECCAK_STATE_SIZE]) {
     for &rc in RC.iter().take(KECCAK_ROUNDS) {
         // Theta step
-        let mut c = [0u64; 5];
+        let mut c = Zeroizing::new([0u64; 5]);
         for x in 0..5 {
             c[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
         }
-        let mut d = [0u64; 5];
+        let mut d = Zeroizing::new([0u64; 5]);
         for x in 0..5 {
             d[x] = c[(x + 4) % 5] ^ c[(x + 1) % 5].rotate_left(1);
         }
@@ -142,7 +142,7 @@ fn keccak_f1600(state: &mut [u64; KECCAK_STATE_SIZE]) {
         }
 
         // Rho and Pi steps
-        let mut b = [0u64; KECCAK_STATE_SIZE];
+        let mut b = Zeroizing::new([0u64; KECCAK_STATE_SIZE]);
         let mut x = 1;
         let mut y = 0;
         b[0] = state[0];
@@ -195,8 +195,10 @@ impl Shake128 {
                         lane |= (b as u64) << (8 * j);
                     }
                     self.state[i] ^= lane;
+                    lane.zeroize();
                 }
                 keccak_f1600(&mut self.state);
+                self.buffer.zeroize();
                 self.buffer_idx = 0;
             }
         }
@@ -210,6 +212,7 @@ impl Shake128 {
                     lane |= (b as u64) << (8 * j);
                 }
                 self.state[i] ^= lane;
+                lane.zeroize();
             }
             keccak_f1600(&mut self.state);
             idx += SHAKE128_RATE;
@@ -225,9 +228,9 @@ impl Shake128 {
         Ok(())
     }
 
-    fn finalize_internal(&mut self) -> Result<Vec<u8>> {
+    fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; SHAKE128_OUTPUT_SIZE]>> {
         // Padding: SHAKE domain separator 0x1F, then pad with zeros and final 0x80
-        let mut pad_block = [0u8; SHAKE128_RATE];
+        let mut pad_block = Zeroizing::new([0u8; SHAKE128_RATE]);
         pad_block[..self.buffer_idx].copy_from_slice(&self.buffer[..self.buffer_idx]);
         pad_block[self.buffer_idx] = 0x1F;
         pad_block[SHAKE128_RATE - 1] |= 0x80;
@@ -239,11 +242,12 @@ impl Shake128 {
                 lane |= (b as u64) << (8 * j);
             }
             self.state[i] ^= lane;
+            lane.zeroize();
         }
         keccak_f1600(&mut self.state);
 
         // Squeeze output
-        let mut result = vec![0u8; SHAKE128_OUTPUT_SIZE];
+        let mut result = Zeroizing::new([0u8; SHAKE128_OUTPUT_SIZE]);
         let mut offset = 0;
 
         while offset < SHAKE128_OUTPUT_SIZE {
@@ -264,6 +268,7 @@ impl Shake128 {
             }
         }
 
+        self.zeroize();
         Ok(result)
     }
 }
@@ -296,8 +301,10 @@ impl Shake256 {
                         lane |= (b as u64) << (8 * j);
                     }
                     self.state[i] ^= lane;
+                    lane.zeroize();
                 }
                 keccak_f1600(&mut self.state);
+                self.buffer.zeroize();
                 self.buffer_idx = 0;
             }
         }
@@ -311,6 +318,7 @@ impl Shake256 {
                     lane |= (b as u64) << (8 * j);
                 }
                 self.state[i] ^= lane;
+                lane.zeroize();
             }
             keccak_f1600(&mut self.state);
             idx += SHAKE256_RATE;
@@ -326,9 +334,9 @@ impl Shake256 {
         Ok(())
     }
 
-    fn finalize_internal(&mut self) -> Result<Vec<u8>> {
+    fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; SHAKE256_OUTPUT_SIZE]>> {
         // Padding: SHAKE domain separator 0x1F, then pad with zeros and final 0x80
-        let mut pad_block = [0u8; SHAKE256_RATE];
+        let mut pad_block = Zeroizing::new([0u8; SHAKE256_RATE]);
         pad_block[..self.buffer_idx].copy_from_slice(&self.buffer[..self.buffer_idx]);
         pad_block[self.buffer_idx] = 0x1F;
         pad_block[SHAKE256_RATE - 1] |= 0x80;
@@ -340,11 +348,12 @@ impl Shake256 {
                 lane |= (b as u64) << (8 * j);
             }
             self.state[i] ^= lane;
+            lane.zeroize();
         }
         keccak_f1600(&mut self.state);
 
         // Squeeze output
-        let mut result = vec![0u8; SHAKE256_OUTPUT_SIZE];
+        let mut result = Zeroizing::new([0u8; SHAKE256_OUTPUT_SIZE]);
         let mut offset = 0;
 
         while offset < SHAKE256_OUTPUT_SIZE {
@@ -365,6 +374,7 @@ impl Shake256 {
             }
         }
 
+        self.zeroize();
         Ok(result)
     }
 }
@@ -385,9 +395,9 @@ impl HashFunction for Shake128 {
 
     fn finalize(&mut self) -> Result<Self::Output> {
         let hash = self.finalize_internal()?;
-        let mut digest = [0u8; SHAKE128_OUTPUT_SIZE];
-        digest.copy_from_slice(&hash);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHAKE128_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&hash[..]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {
@@ -419,9 +429,9 @@ impl HashFunction for Shake256 {
 
     fn finalize(&mut self) -> Result<Self::Output> {
         let hash = self.finalize_internal()?;
-        let mut digest = [0u8; SHAKE256_OUTPUT_SIZE];
-        digest.copy_from_slice(&hash);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHAKE256_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&hash[..]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {

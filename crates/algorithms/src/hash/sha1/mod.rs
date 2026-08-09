@@ -5,9 +5,9 @@
 //! for compatibility with existing systems.
 
 use crate::error::{Error, Result};
-use crate::hash::{Hash, HashAlgorithm, HashFunction};
+use crate::hash::{HashAlgorithm, HashFunction};
 use crate::types::Digest;
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 #[cfg(feature = "alloc")]
 use crate::alloc_prelude::*;
@@ -49,6 +49,14 @@ impl Zeroize for Sha1 {
     }
 }
 
+impl Drop for Sha1 {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Sha1 {}
+
 impl Sha1 {
     /// Creates a new SHA-1 hasher
     pub fn new() -> Self {
@@ -62,10 +70,14 @@ impl Sha1 {
 
     /// Process a single block
     fn process_block(&mut self, block: &[u8; SHA1_BLOCK_SIZE]) {
-        let mut w = [0u32; 80];
+        let mut w = Zeroizing::new([0u32; 80]);
         // Prepare the message schedule
         for i in 0..16 {
-            w[i] = u32::from_be_bytes(block[i * 4..i * 4 + 4].try_into().expect("four bytes"));
+            let start = i * 4;
+            w[i] = (u32::from(block[start]) << 24)
+                | (u32::from(block[start + 1]) << 16)
+                | (u32::from(block[start + 2]) << 8)
+                | u32::from(block[start + 3]);
         }
         for i in 16..80 {
             w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);
@@ -105,6 +117,11 @@ impl Sha1 {
         self.h[2] = self.h[2].wrapping_add(c);
         self.h[3] = self.h[3].wrapping_add(d);
         self.h[4] = self.h[4].wrapping_add(e);
+        a.zeroize();
+        b.zeroize();
+        c.zeroize();
+        d.zeroize();
+        e.zeroize();
     }
 
     /// Internal update implementation
@@ -129,15 +146,16 @@ impl Sha1 {
             data_idx += copy_len;
 
             if self.buffer_len == SHA1_BLOCK_SIZE {
-                let mut block = [0u8; SHA1_BLOCK_SIZE];
+                let mut block = Zeroizing::new([0u8; SHA1_BLOCK_SIZE]);
                 block.copy_from_slice(&self.buffer);
                 self.process_block(&block);
+                self.buffer.zeroize();
                 self.buffer_len = 0;
             }
         }
 
         while data_idx + SHA1_BLOCK_SIZE <= data.len() {
-            let mut block = [0u8; SHA1_BLOCK_SIZE];
+            let mut block = Zeroizing::new([0u8; SHA1_BLOCK_SIZE]);
             block.copy_from_slice(&data[data_idx..data_idx + SHA1_BLOCK_SIZE]);
             self.process_block(&block);
             data_idx += SHA1_BLOCK_SIZE;
@@ -153,9 +171,9 @@ impl Sha1 {
     }
 
     /// Internal finalize implementation
-    fn finalize_internal(&mut self) -> Result<Hash> {
+    fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; SHA1_OUTPUT_SIZE]>> {
         // Padding
-        let mut buffer = [0u8; SHA1_BLOCK_SIZE];
+        let mut buffer = Zeroizing::new([0u8; SHA1_BLOCK_SIZE]);
         let mut buffer_idx = self.buffer_len;
 
         buffer[..self.buffer_len].copy_from_slice(&self.buffer[..self.buffer_len]);
@@ -174,13 +192,18 @@ impl Sha1 {
             *byte = 0;
         }
 
-        buffer[SHA1_BLOCK_SIZE - 8..].copy_from_slice(&self.total_len.to_be_bytes());
+        for (index, byte) in buffer[SHA1_BLOCK_SIZE - 8..].iter_mut().enumerate() {
+            *byte = (self.total_len >> (56 - index * 8)) as u8;
+        }
         self.process_block(&buffer);
 
-        let mut result = Vec::with_capacity(SHA1_OUTPUT_SIZE);
-        for &word in &self.h {
-            result.extend_from_slice(&word.to_be_bytes());
+        let mut result = Zeroizing::new([0u8; SHA1_OUTPUT_SIZE]);
+        for (word_index, &word) in self.h.iter().enumerate() {
+            for byte in 0..4 {
+                result[word_index * 4 + byte] = (word >> (24 - byte * 8)) as u8;
+            }
         }
+        self.zeroize();
         Ok(result)
     }
 }
@@ -206,9 +229,9 @@ impl HashFunction for Sha1 {
 
     fn finalize(&mut self) -> Result<Self::Output> {
         let hash = self.finalize_internal()?;
-        let mut digest = [0u8; SHA1_OUTPUT_SIZE];
-        digest.copy_from_slice(&hash);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHA1_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&hash[..]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {

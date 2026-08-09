@@ -155,6 +155,8 @@ impl<const N: usize> FixedSize for Tag<N> {
 }
 
 impl<const N: usize> ByteSerializable for Tag<N> {
+    type Bytes = Vec<u8>;
+
     fn to_bytes(&self) -> Vec<u8> {
         self.data.to_vec()
     }

@@ -13,7 +13,7 @@ fn test_hmac_sha1_rfc2202() {
     let expected = hex::decode("b617318655057264e28bc0b6fb378c8ef146be00").unwrap();
 
     let mac = Hmac::<Sha1>::mac(&key, data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 
     // Test case 2 - Key shorter than block size
     let key = b"Jefe";
@@ -21,7 +21,7 @@ fn test_hmac_sha1_rfc2202() {
     let expected = hex::decode("effcdf6ae5eb2fa2d27416d5f184df9c259a7c79").unwrap();
 
     let mac = Hmac::<Sha1>::mac(key, data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 
     // Test case 3 - Key and data that will cause padding
     let key = hex::decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap();
@@ -29,7 +29,7 @@ fn test_hmac_sha1_rfc2202() {
     let expected = hex::decode("125d7342b9ac11cd91a39af48aa17b4f63f175d3").unwrap();
 
     let mac = Hmac::<Sha1>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 
     // Test case 4 - Key longer than block size
     let key = hex::decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap();
@@ -37,7 +37,7 @@ fn test_hmac_sha1_rfc2202() {
     let expected = hex::decode("4c9007f4026250c6bc8414f9bf50c86c2d7235da").unwrap();
 
     let mac = Hmac::<Sha1>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 }
 
 /// Test vectors for HMAC-SHA-256 from RFC 4231
@@ -52,7 +52,7 @@ fn test_hmac_sha256_rfc4231() {
         hex::decode("b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7").unwrap();
 
     let mac = Hmac::<Sha256>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 
     // Test Case 2 - Key shorter than block size
     let key = hex::decode("4a656665").unwrap(); // "Jefe"
@@ -61,7 +61,7 @@ fn test_hmac_sha256_rfc4231() {
         hex::decode("5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843").unwrap();
 
     let mac = Hmac::<Sha256>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 
     // Test Case 3 - Key of 20 bytes (RFC 4231 test vector)
     let key = hex::decode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa").unwrap();
@@ -70,7 +70,7 @@ fn test_hmac_sha256_rfc4231() {
         hex::decode("773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe").unwrap();
 
     let mac = Hmac::<Sha256>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 
     // Test Case 4 - Key longer than block size
     let key = hex::decode("0102030405060708090a0b0c0d0e0f10111213141516171819").unwrap();
@@ -79,7 +79,7 @@ fn test_hmac_sha256_rfc4231() {
         hex::decode("82558a389a443c0ea4cc819899f2083a85f0faa3e578f8077a2e3ff46729665b").unwrap();
 
     let mac = Hmac::<Sha256>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 }
 
 /// Test vectors for HMAC-SHA-512 from RFC 4231
@@ -91,7 +91,7 @@ fn test_hmac_sha512_rfc4231() {
     let expected = hex::decode("87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854").unwrap();
 
     let mac = Hmac::<Sha512>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 
     // Test Case 2
     let key = hex::decode("4a656665").unwrap(); // "Jefe"
@@ -99,7 +99,7 @@ fn test_hmac_sha512_rfc4231() {
     let expected = hex::decode("164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea2505549758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737").unwrap();
 
     let mac = Hmac::<Sha512>::mac(&key, &data).unwrap();
-    assert_eq!(mac, expected);
+    assert_eq!(mac.as_slice(), expected.as_slice());
 }
 
 /// Test HMAC incremental interface
@@ -162,7 +162,7 @@ fn test_hmac_verify() {
 
     // Regression: the old `(len ^ expected) as u8` check accepted a valid
     // digest followed by 256 bytes because the mismatch narrowed to zero.
-    let mut tag_plus_256 = tag.clone();
+    let mut tag_plus_256 = tag.to_vec();
     tag_plus_256.extend_from_slice(&[0u8; 256]);
     assert!(!Hmac::<Sha256>::verify(key, message, &tag_plus_256).unwrap());
 }

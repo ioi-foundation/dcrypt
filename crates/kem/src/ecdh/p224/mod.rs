@@ -10,6 +10,7 @@
 //! key-confirmation tag. This is not RFC 9180 HPKE and makes no blanket
 //! constant-time or IND-CCA claim.
 
+use super::concat_kdf_ikm;
 use crate::error::Error as KemError;
 use alloc::vec::Vec;
 use dcrypt_algorithms::ec::p224 as ec; // Use P-224 algorithms
@@ -18,7 +19,7 @@ use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_api::{
     error::Error as ApiError,
     traits::serialize::{Serialize, SerializeSecret},
-    Kem, Key as ApiKey, Result as ApiResult,
+    Kem, Key as ApiKey, Result as ApiResult, ZeroizingBytes,
 };
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
@@ -121,8 +122,8 @@ impl EcdhP224SecretKey {
         drop(scalar);
         Ok(Self(buffer))
     }
-    pub fn to_bytes(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(self.0.as_ref().to_vec())
+    pub fn to_bytes(&self) -> ZeroizingBytes {
+        self.0.to_bytes_zeroizing_boxed()
     }
     pub fn validate(&self) -> ApiResult<()> {
         let _ = ec::Scalar::from_secret_buffer(self.0.clone())
@@ -135,15 +136,15 @@ impl SerializeSecret for EcdhP224SecretKey {
     fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         Self::from_bytes(bytes)
     }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         self.to_bytes()
     }
 }
 
 // --- Shared secret methods ---
 impl EcdhP224SharedSecret {
-    pub fn to_bytes(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(self.0.as_ref().to_vec())
+    pub fn to_bytes(&self) -> ZeroizingBytes {
+        self.0.to_bytes_zeroizing_boxed()
     }
 }
 
@@ -158,7 +159,7 @@ impl SerializeSecret for EcdhP224SharedSecret {
         }
         Ok(Self(ApiKey::new(bytes)))
     }
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         self.to_bytes()
     }
 }
@@ -223,7 +224,7 @@ fn calc_auth_tag(shared_secret: &[u8]) -> Result<[u8; ec::P224_TAG_SIZE], KemErr
     hmac.update(CONFIRMATION_LABEL).map_err(KemError::from)?;
 
     // Finalize and get tag (SHA256 produces 32-byte tags)
-    let tag_vec: Vec<u8> = hmac.finalize().map_err(KemError::from)?;
+    let tag_vec = hmac.finalize().map_err(KemError::from)?;
 
     // Truncate to P224_TAG_SIZE bytes
     let mut truncated = [0u8; ec::P224_TAG_SIZE];
@@ -287,12 +288,11 @@ impl Kem for EcdhP224 {
         }
         let x_coord_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
 
-        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
-            ec::P224_FIELD_ELEMENT_SIZE + 2 * ec::P224_POINT_COMPRESSED_SIZE,
-        ));
-        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
-        kdf_ikm.extend_from_slice(&ephemeral_pk_compressed);
-        kdf_ikm.extend_from_slice(&public_key_recipient.0);
+        let kdf_ikm = concat_kdf_ikm(
+            x_coord_bytes.as_ref(),
+            &ephemeral_pk_compressed,
+            &public_key_recipient.0,
+        );
 
         let ss_bytes = Zeroizing::new(
             ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
@@ -350,12 +350,11 @@ impl Kem for EcdhP224 {
         let q_r_point =
             ec::scalar_mult_base_g(&sk_r_scalar).map_err(|e| ApiError::from(KemError::from(e)))?;
 
-        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
-            ec::P224_FIELD_ELEMENT_SIZE + 2 * ec::P224_POINT_COMPRESSED_SIZE,
-        ));
-        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
-        kdf_ikm.extend_from_slice(pk_bytes); // Use only the PK part, not the full ciphertext
-        kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
+        let kdf_ikm = concat_kdf_ikm(
+            x_coord_bytes.as_ref(),
+            pk_bytes,
+            &q_r_point.serialize_compressed(),
+        );
 
         let ss_bytes = Zeroizing::new(
             ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))

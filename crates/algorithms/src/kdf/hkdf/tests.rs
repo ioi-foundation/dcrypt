@@ -128,10 +128,8 @@ fn test_hkdf_sha512() {
 /// 2. Output length too large
 #[test]
 fn test_hkdf_invalid_parameters() {
-    use dcrypt_internal::zeroing::Zeroizing;
-
     // Test with PRK too short (should be at least HashLen)
-    let short_prk = Zeroizing::new(vec![0; 16]); // Sha256::output_size is 32
+    let short_prk = [0; 16]; // Sha256::output_size is 32
     let info = b"info";
     let length = 32;
 
@@ -139,7 +137,7 @@ fn test_hkdf_invalid_parameters() {
     assert!(result.is_err());
 
     // Test with output length too large (should be ≤ 255*HashLen)
-    let prk = Zeroizing::new(vec![0; 32]);
+    let prk = [0; 32];
     let max_length = 255 * Sha256::output_size();
     let too_large = max_length + 1;
 

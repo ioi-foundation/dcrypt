@@ -28,7 +28,7 @@ use dcrypt_api::types::Ciphertext;
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::constant_time::ConstantTimeEq;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Size constants
 pub const CHACHA20POLY1305_KEY_SIZE: usize = CHACHA20_KEY_SIZE;
@@ -97,7 +97,10 @@ impl ChaCha20Poly1305 {
     }
 
     /// Derive the one-time Poly1305 key (RFC 8439 §2.8).
-    fn poly1305_key(&self, nonce: &[u8; CHACHA20POLY1305_NONCE_SIZE]) -> [u8; POLY1305_KEY_SIZE] {
+    fn poly1305_key(
+        &self,
+        nonce: &[u8; CHACHA20POLY1305_NONCE_SIZE],
+    ) -> Zeroizing<[u8; POLY1305_KEY_SIZE]> {
         // Create a Nonce object from the raw nonce bytes
         let nonce_obj = Nonce::<CHACHA20_NONCE_SIZE>::from_slice(nonce).expect("Valid nonce"); // This should never fail in internal code
 
@@ -109,10 +112,10 @@ impl ChaCha20Poly1305 {
             .expect("SecretBuffer has correct size");
 
         let mut chacha = ChaCha20::new(key_array, &nonce_obj);
-        let mut poly_key = [0u8; POLY1305_KEY_SIZE];
+        let mut poly_key = Zeroizing::new([0u8; POLY1305_KEY_SIZE]);
         // A 32-byte request cannot exhaust a freshly-created counter-0 stream.
         chacha
-            .keystream(&mut poly_key)
+            .keystream(&mut poly_key[..])
             .expect("fresh ChaCha20 counter has capacity for one block");
         poly_key
     }
@@ -153,10 +156,10 @@ impl ChaCha20Poly1305 {
         let poly_key = self.poly1305_key(nonce);
 
         // ciphertext || tag
-        let mut ct_buf = Vec::with_capacity(output_len);
+        let mut ct_buf = Zeroizing::new(boxed_bytes_zeroed(output_len));
 
         // --- encryption ----------------------------------------------------
-        ct_buf.extend_from_slice(plaintext);
+        ct_buf[..plaintext.len()].copy_from_slice(plaintext);
 
         // Create a Nonce object from the raw nonce bytes for ChaCha20
         let nonce_obj = Nonce::<CHACHA20_NONCE_SIZE>::from_slice(nonce)
@@ -169,12 +172,12 @@ impl ChaCha20Poly1305 {
             .try_into()
             .expect("SecretBuffer has correct size");
 
-        ChaCha20::with_counter(key_array, &nonce_obj, 1).encrypt(&mut ct_buf)?;
+        ChaCha20::with_counter(key_array, &nonce_obj, 1).encrypt(&mut ct_buf[..plaintext.len()])?;
 
         // --- tag -----------------------------------------------------------
-        let tag = self.calculate_tag_ct(&poly_key, aad, &ct_buf)?;
-        ct_buf.extend_from_slice(tag.as_ref());
-        Ok(ct_buf)
+        let tag = self.calculate_tag_ct(&poly_key, aad, &ct_buf[..plaintext.len()])?;
+        ct_buf[plaintext.len()..].copy_from_slice(tag.as_ref());
+        Ok(ct_buf.into_inner().into_vec())
     }
 
     /* --------------------------------------------------------------------- */
@@ -219,8 +222,8 @@ impl ChaCha20Poly1305 {
         let tag_ok = expected.as_ref().ct_eq(tag);
 
         // -------- decrypt ---------------------------------------------------
-        let mut m = Vec::with_capacity(encrypted.len());
-        m.extend_from_slice(encrypted);
+        let mut m = Zeroizing::new(boxed_bytes_zeroed(encrypted.len()));
+        m.copy_from_slice(encrypted);
 
         // Create a Nonce object from the raw nonce bytes for ChaCha20
         let nonce_obj = Nonce::<CHACHA20_NONCE_SIZE>::from_slice(nonce)
@@ -240,7 +243,7 @@ impl ChaCha20Poly1305 {
         let mask = 0u8.wrapping_sub(tag_ok.unwrap_u8());
 
         // Apply mask to all bytes
-        for byte in &mut m {
+        for byte in m.iter_mut() {
             *byte &= mask;
         }
 
@@ -251,7 +254,7 @@ impl ChaCha20Poly1305 {
         drop(burn);
 
         if bool::from(tag_ok) {
-            Ok(m) // m lives on success
+            Ok(m.into_inner().into_vec()) // ownership transfers on success
         } else {
             Err(Error::Authentication {
                 algorithm: "ChaCha20Poly1305",

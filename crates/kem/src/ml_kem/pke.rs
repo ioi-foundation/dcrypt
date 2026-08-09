@@ -158,11 +158,11 @@ fn encode_polyvec_12(vector: &PolyVec, k: usize, output: &mut [u8]) {
     }
 }
 
-fn decode_polyvec_12_checked(input: &[u8], k: usize) -> Option<PolyVec> {
+fn decode_polyvec_12_checked(input: &[u8], k: usize) -> Option<Zeroizing<PolyVec>> {
     if input.len() != k * POLY_BYTES {
         return None;
     }
-    let mut result = PolyVec::zero();
+    let mut result = Zeroizing::new(PolyVec::zero());
     for (index, polynomial) in result.polys.iter_mut().enumerate().take(k) {
         *polynomial = decode_12_checked(&input[index * POLY_BYTES..(index + 1) * POLY_BYTES])?;
     }

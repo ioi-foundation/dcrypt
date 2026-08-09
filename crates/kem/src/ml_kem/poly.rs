@@ -4,7 +4,7 @@
 //! This is intentionally local to ML-KEM; the generic cyclic transform in the
 //! algorithms crate is not interchangeable with the standardized transform.
 
-use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::params::{N, POLY_BYTES, Q};
 
@@ -123,6 +123,14 @@ impl Zeroize for Poly {
     }
 }
 
+impl Drop for Poly {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Poly {}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct PolyVec {
     pub(crate) polys: [Poly; 4],
@@ -159,6 +167,14 @@ impl Zeroize for PolyVec {
         self.polys.zeroize();
     }
 }
+
+impl Drop for PolyVec {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for PolyVec {}
 
 fn base_mul_pair(result: &mut [i16], a: &[i16], b: &[i16], zeta: i16) {
     let a0b0 = fqmul(a[0], b[0]);

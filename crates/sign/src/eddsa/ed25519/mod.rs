@@ -9,12 +9,15 @@
 
 #![forbid(unsafe_code)]
 
-use alloc::vec::Vec;
-
 use dcrypt_algorithms::hash::sha2::Sha512;
 use dcrypt_algorithms::hash::HashFunction;
-use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
-use dcrypt_internal::{ConstantTimeEq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_api::{
+    error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait, ZeroizingBytes,
+};
+use dcrypt_internal::{
+    zeroizing_bytes_from_slice, ConstantTimeEq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
+    Zeroizing,
+};
 
 use super::constants::{ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE};
 use super::point::EdwardsPoint;
@@ -147,8 +150,8 @@ impl Ed25519SecretKey {
         &self.seed
     }
 
-    pub fn export_seed(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(self.seed.to_vec())
+    pub fn export_seed(&self) -> ZeroizingBytes {
+        zeroizing_bytes_from_slice(&self.seed)
     }
 
     pub fn public_key(&self) -> ApiResult<Ed25519PublicKey> {

@@ -3,12 +3,10 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-#[cfg(feature = "alloc")]
-use alloc::{vec, vec::Vec};
-
 use dcrypt_internal::constant_time::ConstantTimeEq;
-use dcrypt_internal::random::{CryptoRng, Error as RandomError};
-use dcrypt_internal::zeroing::Zeroizing;
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, Error as RandomError};
+#[cfg(feature = "alloc")]
+use dcrypt_internal::zeroing::{boxed_bytes_zeroed, Zeroizing, ZeroizingBytes};
 
 /// Security level for KDFs in bits
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -64,8 +62,8 @@ pub fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
 pub fn generate_salt<R: CryptoRng + ?Sized>(
     rng: &mut R,
     len: usize,
-) -> core::result::Result<Zeroizing<Vec<u8>>, RandomError> {
-    let mut salt = vec![0u8; len];
-    rng.try_fill_bytes(&mut salt)?;
-    Ok(Zeroizing::new(salt))
+) -> core::result::Result<ZeroizingBytes, RandomError> {
+    let mut salt = Zeroizing::new(boxed_bytes_zeroed(len));
+    try_fill_bytes_zeroing_on_error(rng, &mut salt)?;
+    Ok(salt)
 }

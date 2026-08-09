@@ -3,9 +3,9 @@
 //! This module defines the traits that all signature algorithms must implement.
 //! The design prioritizes security by not requiring mutable access to secret keys.
 
-use crate::Result;
+use crate::{Result, ZeroizingBytes};
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
+use dcrypt_internal::zeroing::Zeroize;
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -113,9 +113,9 @@ pub trait SignatureSerialize: Signature {
     /// # Security Warning
     ///
     /// The returned bytes contain sensitive key material and must be
-    /// handled with appropriate care. The `Zeroizing` wrapper ensures
-    /// the bytes are cleared from memory when dropped.
-    fn serialize_secret_key(key: &Self::SecretKey) -> Zeroizing<Vec<u8>>;
+    /// handled with appropriate care. The exact-size zeroizing wrapper ensures
+    /// every initialized byte is cleared from memory when dropped.
+    fn serialize_secret_key(key: &Self::SecretKey) -> ZeroizingBytes;
 
     /// Import a secret key from bytes
     ///

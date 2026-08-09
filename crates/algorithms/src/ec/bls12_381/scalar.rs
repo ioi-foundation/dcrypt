@@ -1,14 +1,11 @@
 //! BLS12-381 scalar field F_q where q = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
 
-#[cfg(feature = "alloc")]
-use crate::alloc_prelude::*;
-
 use crate::error::{Error, Result};
 use crate::types::{ByteSerializable, ConstantTimeEq as DcryptConstantTimeEq, SecureZeroingType};
 use core::fmt;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use dcrypt_internal::constant_time::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{zeroizing_bytes_from_slice, Zeroize, Zeroizing, ZeroizingBytes};
 
 // Arithmetic helpers
 /// Compute a + b + carry, returning (result, carry)
@@ -325,8 +322,13 @@ impl Zeroize for Scalar {
 }
 
 impl ByteSerializable for Scalar {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_bytes().to_vec()
+    type Bytes = ZeroizingBytes;
+
+    fn to_bytes(&self) -> ZeroizingBytes {
+        let mut encoded = Zeroizing::new(self.to_bytes());
+        let output = zeroizing_bytes_from_slice(&encoded[..]);
+        encoded.zeroize();
+        output
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
@@ -338,7 +340,7 @@ impl ByteSerializable for Scalar {
             });
         }
 
-        let mut array = [0u8; 32];
+        let mut array = Zeroizing::new([0u8; 32]);
         array.copy_from_slice(bytes);
 
         Scalar::from_bytes(&array)
@@ -427,7 +429,7 @@ impl Scalar {
     /// ciphersuite specifications. Zero is a canonical field element; callers
     /// constructing a secret key must reject it.
     pub fn from_be_bytes(bytes: &[u8; 32]) -> CtOption<Scalar> {
-        let mut little_endian = *bytes;
+        let mut little_endian = Zeroizing::new(*bytes);
         little_endian.reverse();
         Self::from_bytes(&little_endian)
     }
@@ -441,7 +443,7 @@ impl Scalar {
 
     /// Create from 512-bit little-endian integer mod q
     pub fn from_bytes_wide(bytes: &[u8; 64]) -> Scalar {
-        Scalar::from_u512([
+        let limbs = Zeroizing::new([
             u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[0..8]).unwrap()),
             u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[8..16]).unwrap()),
             u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[16..24]).unwrap()),
@@ -450,7 +452,8 @@ impl Scalar {
             u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[40..48]).unwrap()),
             u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[48..56]).unwrap()),
             u64::from_le_bytes(<[u8; 8]>::try_from(&bytes[56..64]).unwrap()),
-        ])
+        ]);
+        Scalar::from_u512(&limbs)
     }
 
     /// Reduce a big-endian integer of at most 64 bytes modulo the scalar-field
@@ -468,7 +471,7 @@ impl Scalar {
             ));
         }
 
-        let mut wide = [0u8; 64];
+        let mut wide = Zeroizing::new([0u8; 64]);
         for (destination, source) in wide.iter_mut().zip(bytes.iter().rev()) {
             *destination = *source;
         }
@@ -495,10 +498,12 @@ impl Scalar {
         Self::from_be_bytes_mod_order(&expanded)
     }
 
-    fn from_u512(limbs: [u64; 8]) -> Scalar {
-        let d0 = Scalar([limbs[0], limbs[1], limbs[2], limbs[3]]);
-        let d1 = Scalar([limbs[4], limbs[5], limbs[6], limbs[7]]);
-        d0 * R2 + d1 * R3
+    fn from_u512(limbs: &[u64; 8]) -> Scalar {
+        let d0 = Zeroizing::new(Scalar([limbs[0], limbs[1], limbs[2], limbs[3]]));
+        let d1 = Zeroizing::new(Scalar([limbs[4], limbs[5], limbs[6], limbs[7]]));
+        let low = Zeroizing::new(&*d0 * &R2);
+        let high = Zeroizing::new(&*d1 * &R3);
+        &*low + &*high
     }
 
     /// Creates a scalar from four `u64` limbs (little-endian). This function will

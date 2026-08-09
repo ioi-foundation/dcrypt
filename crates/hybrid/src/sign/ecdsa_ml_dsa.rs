@@ -8,10 +8,10 @@ use alloc::vec::Vec;
 use dcrypt_api::{
     error::Error,
     traits::{Serialize, SerializeSecret},
-    Result, Signature as SignatureTrait,
+    Result, Signature as SignatureTrait, ZeroizingBytes,
 };
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_sign::ecdsa::{EcdsaP384, EcdsaP384PublicKey, EcdsaP384SecretKey, EcdsaP384Signature};
 use dcrypt_sign::mldsa::{MlDsa65, MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature};
 
@@ -100,14 +100,10 @@ impl SerializeSecret for HybridSecretKey {
         })
     }
 
-    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+    fn to_bytes_zeroizing(&self) -> ZeroizingBytes {
         let ecdsa_bytes = self.ecdsa_sk.to_bytes_zeroizing();
-        let ml_dsa_bytes = Zeroizing::new(self.ml_dsa_sk.to_bytes().to_vec());
-        Zeroizing::new(encode_framed(
-            HYBRID_SECRET_KEY_LABEL,
-            &ecdsa_bytes,
-            &ml_dsa_bytes,
-        ))
+        let ml_dsa_bytes = self.ml_dsa_sk.to_bytes_zeroizing();
+        encode_framed_secret(HYBRID_SECRET_KEY_LABEL, &ecdsa_bytes, &ml_dsa_bytes)
     }
 }
 
@@ -198,6 +194,25 @@ fn encode_framed(label: &[u8], first: &[u8], second: &[u8]) -> Vec<u8> {
     out.extend_from_slice(first);
     out.extend_from_slice(&(second.len() as u32).to_be_bytes());
     out.extend_from_slice(second);
+    out
+}
+
+fn encode_framed_secret(label: &[u8], first: &[u8], second: &[u8]) -> ZeroizingBytes {
+    let mut out = Zeroizing::new(boxed_bytes_zeroed(
+        1 + label.len() + 8 + first.len() + second.len(),
+    ));
+    let mut position = 0;
+    out[position] = label.len() as u8;
+    position += 1;
+    out[position..position + label.len()].copy_from_slice(label);
+    position += label.len();
+    out[position..position + 4].copy_from_slice(&(first.len() as u32).to_be_bytes());
+    position += 4;
+    out[position..position + first.len()].copy_from_slice(first);
+    position += first.len();
+    out[position..position + 4].copy_from_slice(&(second.len() as u32).to_be_bytes());
+    position += 4;
+    out[position..].copy_from_slice(second);
     out
 }
 

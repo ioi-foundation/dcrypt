@@ -21,7 +21,7 @@ use alloc::vec::Vec;
 use base64::{engine::general_purpose::STANDARD_NO_PAD, Engine as _};
 use core::fmt;
 use core::str::FromStr;
-use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
+use dcrypt_internal::zeroing::Zeroize;
 
 use crate::error::{Error, Result};
 
@@ -49,11 +49,11 @@ pub struct PasswordHash {
     /// Algorithm-specific parameters
     pub params: BTreeMap<String, String>,
 
-    /// The salt used for hashing
-    pub salt: Zeroizing<Vec<u8>>,
+    /// The public salt used for hashing.
+    pub salt: Vec<u8>,
 
-    /// The password hash
-    pub hash: Zeroizing<Vec<u8>>,
+    /// The public password verifier encoded in the PHC string.
+    pub hash: Vec<u8>,
 }
 
 // Manual implementation of Zeroize for PasswordHash
@@ -80,8 +80,8 @@ impl PasswordHash {
         Self {
             algorithm,
             params,
-            salt: Zeroizing::new(salt),
-            hash: Zeroizing::new(hash),
+            salt,
+            hash,
         }
     }
 
@@ -189,8 +189,8 @@ impl FromStr for PasswordHash {
         Ok(PasswordHash {
             algorithm,
             params,
-            salt: Zeroizing::new(salt),
-            hash: Zeroizing::new(hash),
+            salt,
+            hash,
         })
     }
 }

@@ -8,6 +8,7 @@ use dcrypt_algorithms::poly::params::{MlDsaParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::ShakeXof256;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
+use dcrypt_internal::Zeroizing;
 use dcrypt_params::pqc::ml_dsa::MlDsaSchemeParams;
 
 #[inline]
@@ -39,8 +40,8 @@ pub fn sample_poly_rej_bounded(
     let mut poly = Polynomial::<MlDsaParams>::zero();
     let mut coefficient = 0usize;
     while coefficient < MlDsaParams::N {
-        let mut byte = [0u8; 1];
-        xof.squeeze(&mut byte).map_err(SignError::from_algo)?;
+        let mut byte = Zeroizing::new([0u8; 1]);
+        xof.squeeze(&mut *byte).map_err(SignError::from_algo)?;
         for half in [byte[0] & 0x0f, byte[0] >> 4] {
             if let Some(value) = coeff_from_half_byte(half, eta) {
                 poly.coeffs[coefficient] = centered_to_mod_q(value);
@@ -102,8 +103,8 @@ pub fn sample_polyvecl_uniform_gamma1<P: MlDsaSchemeParams>(
 
         match gamma1 {
             val if val == (1 << 17) => {
-                let mut buf = [0u8; MlDsaParams::N * 18 / 8];
-                xof.squeeze(&mut buf).map_err(SignError::from_algo)?;
+                let mut buf = Zeroizing::new([0u8; MlDsaParams::N * 18 / 8]);
+                xof.squeeze(&mut *buf).map_err(SignError::from_algo)?;
 
                 for chunk in 0..(MlDsaParams::N / 4) {
                     let off = 9 * chunk;
@@ -130,8 +131,8 @@ pub fn sample_polyvecl_uniform_gamma1<P: MlDsaSchemeParams>(
                 }
             }
             val if val == (1 << 19) => {
-                let mut buf = [0u8; MlDsaParams::N * 20 / 8];
-                xof.squeeze(&mut buf).map_err(SignError::from_algo)?;
+                let mut buf = Zeroizing::new([0u8; MlDsaParams::N * 20 / 8]);
+                xof.squeeze(&mut *buf).map_err(SignError::from_algo)?;
 
                 for chunk in 0..(MlDsaParams::N / 2) {
                     let off = 5 * chunk;

@@ -7,9 +7,9 @@
 use crate::alloc_prelude::*;
 
 use crate::error::{validate, Result};
-use crate::hash::{Hash, HashAlgorithm, HashFunction};
+use crate::hash::{HashAlgorithm, HashFunction};
 use crate::types::Digest;
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 // Import security types from dcrypt-core
 use core::sync::atomic::{compiler_fence, Ordering};
@@ -309,7 +309,10 @@ impl Sha256 {
         for i in 0..16 {
             let start = i * 4;
             validate::max_length("SHA-256 block read", start + 4, SHA256_BLOCK_SIZE)?;
-            w[i] = u32::from_be_bytes(block[start..start + 4].try_into().expect("four bytes"));
+            w[i] = (u32::from(block[start]) << 24)
+                | (u32::from(block[start + 1]) << 16)
+                | (u32::from(block[start + 2]) << 8)
+                | u32::from(block[start + 3]);
         }
 
         for i in 16..64 {
@@ -379,6 +382,15 @@ impl Sha256 {
         state[6] = state[6].wrapping_add(guard[6]);
         state[7] = state[7].wrapping_add(guard[7]);
 
+        a.zeroize();
+        b.zeroize();
+        c.zeroize();
+        d.zeroize();
+        e.zeroize();
+        f.zeroize();
+        g.zeroize();
+        h.zeroize();
+
         // Memory barrier after processing
         compiler_fence(Ordering::SeqCst);
 
@@ -392,17 +404,18 @@ impl Sha256 {
             self.buffer_idx += fill;
             input = &input[fill..];
             if self.buffer_idx == SHA256_BLOCK_SIZE {
-                let mut block = [0u8; SHA256_BLOCK_SIZE];
+                let mut block = Zeroizing::new([0u8; SHA256_BLOCK_SIZE]);
                 block.copy_from_slice(&self.buffer);
                 Self::compress(&mut self.state, &block)?;
                 self.total_bytes += SHA256_BLOCK_SIZE as u64;
+                self.buffer.zeroize();
                 self.buffer_idx = 0;
             }
         }
         Ok(())
     }
 
-    fn finalize_internal(&mut self) -> Result<Hash> {
+    fn finalize_internal(&mut self) -> Result<Zeroizing<[u8; SHA256_OUTPUT_SIZE]>> {
         self.total_bytes += self.buffer_idx as u64;
         let bit_len = self.total_bytes * 8;
 
@@ -415,7 +428,7 @@ impl Sha256 {
             for b in &mut self.buffer[self.buffer_idx + 1..] {
                 *b = 0;
             }
-            let mut block = [0u8; SHA256_BLOCK_SIZE];
+            let mut block = Zeroizing::new([0u8; SHA256_BLOCK_SIZE]);
             block.copy_from_slice(&self.buffer);
             Self::compress(&mut self.state, &block)?;
             self.buffer = *pad_buffer;
@@ -425,14 +438,18 @@ impl Sha256 {
             }
         }
 
-        self.buffer[56..].copy_from_slice(&bit_len.to_be_bytes());
-        let mut block = [0u8; SHA256_BLOCK_SIZE];
+        for (index, byte) in self.buffer[56..].iter_mut().enumerate() {
+            *byte = (bit_len >> (56 - 8 * index)) as u8;
+        }
+        let mut block = Zeroizing::new([0u8; SHA256_BLOCK_SIZE]);
         block.copy_from_slice(&self.buffer);
         Self::compress(&mut self.state, &block)?;
 
-        let mut out = Vec::with_capacity(SHA256_OUTPUT_SIZE);
-        for &word in &self.state {
-            out.extend_from_slice(&word.to_be_bytes());
+        let mut out = Zeroizing::new([0u8; SHA256_OUTPUT_SIZE]);
+        for (word_index, &word) in self.state.iter().enumerate() {
+            for byte in 0..4 {
+                out[word_index * 4 + byte] = (word >> (24 - byte * 8)) as u8;
+            }
         }
         self.zeroize();
         Ok(out)
@@ -492,7 +509,12 @@ impl Sha512 {
         for i in 0..16 {
             let start = i * 8;
             validate::max_length("SHA-512 block read", start + 8, SHA512_BLOCK_SIZE)?;
-            w[i] = u64::from_be_bytes(block[start..start + 8].try_into().expect("eight bytes"));
+            let mut word = 0u64;
+            for byte in 0..8 {
+                word |= u64::from(block[start + byte]) << (56 - byte * 8);
+            }
+            w[i] = word;
+            word.zeroize();
         }
 
         for i in 16..80 {
@@ -562,6 +584,15 @@ impl Sha512 {
         state[6] = state[6].wrapping_add(guard[6]);
         state[7] = state[7].wrapping_add(guard[7]);
 
+        a.zeroize();
+        b.zeroize();
+        c.zeroize();
+        d.zeroize();
+        e.zeroize();
+        f.zeroize();
+        g.zeroize();
+        h.zeroize();
+
         // Memory barrier after processing
         compiler_fence(Ordering::SeqCst);
 
@@ -575,17 +606,18 @@ impl Sha512 {
             self.buffer_idx += fill;
             input = &input[fill..];
             if self.buffer_idx == SHA512_BLOCK_SIZE {
-                let mut block = [0u8; SHA512_BLOCK_SIZE];
+                let mut block = Zeroizing::new([0u8; SHA512_BLOCK_SIZE]);
                 block.copy_from_slice(&self.buffer);
                 Self::compress(&mut self.state, &block)?;
                 self.total_bytes = self.total_bytes.wrapping_add(SHA512_BLOCK_SIZE as u128);
+                self.buffer.zeroize();
                 self.buffer_idx = 0;
             }
         }
         Ok(())
     }
 
-    fn finalize_internal_u128(&mut self) -> Result<Hash> {
+    fn finalize_internal_u128(&mut self) -> Result<Zeroizing<[u8; SHA512_OUTPUT_SIZE]>> {
         self.total_bytes = self.total_bytes.wrapping_add(self.buffer_idx as u128);
         let bit_len = self.total_bytes.wrapping_mul(8);
 
@@ -597,7 +629,7 @@ impl Sha512 {
             for b in &mut self.buffer[self.buffer_idx + 1..] {
                 *b = 0;
             }
-            let mut block = [0u8; SHA512_BLOCK_SIZE];
+            let mut block = Zeroizing::new([0u8; SHA512_BLOCK_SIZE]);
             block.copy_from_slice(&self.buffer);
             Self::compress(&mut self.state, &block)?;
             self.buffer = *pad_buffer;
@@ -607,16 +639,18 @@ impl Sha512 {
             }
         }
 
-        self.buffer[SHA512_BLOCK_SIZE - 16..SHA512_BLOCK_SIZE - 8]
-            .copy_from_slice(&((bit_len >> 64) as u64).to_be_bytes());
-        self.buffer[SHA512_BLOCK_SIZE - 8..].copy_from_slice(&(bit_len as u64).to_be_bytes());
-        let mut block = [0u8; SHA512_BLOCK_SIZE];
+        for (index, byte) in self.buffer[SHA512_BLOCK_SIZE - 16..].iter_mut().enumerate() {
+            *byte = (bit_len >> (120 - index * 8)) as u8;
+        }
+        let mut block = Zeroizing::new([0u8; SHA512_BLOCK_SIZE]);
         block.copy_from_slice(&self.buffer);
         Self::compress(&mut self.state, &block)?;
 
-        let mut out = Vec::with_capacity(SHA512_OUTPUT_SIZE);
-        for &word in &self.state {
-            out.extend_from_slice(&word.to_be_bytes());
+        let mut out = Zeroizing::new([0u8; SHA512_OUTPUT_SIZE]);
+        for (word_index, &word) in self.state.iter().enumerate() {
+            for byte in 0..8 {
+                out[word_index * 8 + byte] = (word >> (56 - byte * 8)) as u8;
+            }
         }
         self.zeroize();
         Ok(out)
@@ -695,9 +729,9 @@ impl HashFunction for Sha256 {
 
     fn finalize(&mut self) -> Result<Self::Output> {
         let hash = self.finalize_internal()?;
-        let mut digest = [0u8; SHA256_OUTPUT_SIZE];
-        digest.copy_from_slice(&hash);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHA256_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&hash[..]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {
@@ -748,9 +782,9 @@ impl HashFunction for Sha224 {
         tmp.buffer_idx = self.buffer_idx;
         tmp.total_bytes = self.total_bytes;
         let full = tmp.finalize_internal()?;
-        let mut digest = [0u8; SHA224_OUTPUT_SIZE];
-        digest.copy_from_slice(&full[..SHA224_OUTPUT_SIZE]);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHA224_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA224_OUTPUT_SIZE]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {
@@ -815,9 +849,9 @@ impl HashFunction for Sha384 {
         tmp.buffer_idx = self.buffer_idx;
         tmp.total_bytes = self.total_bytes;
         let full = tmp.finalize_internal_u128()?;
-        let mut digest = [0u8; SHA384_OUTPUT_SIZE];
-        digest.copy_from_slice(&full[..SHA384_OUTPUT_SIZE]);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHA384_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA384_OUTPUT_SIZE]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {
@@ -854,9 +888,9 @@ impl HashFunction for Sha512 {
 
     fn finalize(&mut self) -> Result<Self::Output> {
         let hash = self.finalize_internal_u128()?;
-        let mut digest = [0u8; SHA512_OUTPUT_SIZE];
-        digest.copy_from_slice(&hash);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHA512_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&hash[..]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {
@@ -907,9 +941,9 @@ impl HashFunction for Sha512_224 {
         tmp.buffer_idx = self.buffer_idx;
         tmp.total_bytes = self.total_bytes;
         let full = tmp.finalize_internal_u128()?;
-        let mut digest = [0u8; SHA224_OUTPUT_SIZE];
-        digest.copy_from_slice(&full[..SHA224_OUTPUT_SIZE]);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHA224_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA224_OUTPUT_SIZE]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {
@@ -960,9 +994,9 @@ impl HashFunction for Sha512_256 {
         tmp.buffer_idx = self.buffer_idx;
         tmp.total_bytes = self.total_bytes;
         let full = tmp.finalize_internal_u128()?;
-        let mut digest = [0u8; SHA256_OUTPUT_SIZE];
-        digest.copy_from_slice(&full[..SHA256_OUTPUT_SIZE]);
-        Ok(Digest::new(digest))
+        let mut digest = Digest::<SHA256_OUTPUT_SIZE>::zeroed();
+        digest.as_mut().copy_from_slice(&full[..SHA256_OUTPUT_SIZE]);
+        Ok(digest)
     }
 
     fn output_size() -> usize {

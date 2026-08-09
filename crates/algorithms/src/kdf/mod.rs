@@ -34,14 +34,14 @@
 ///     .derive().unwrap();
 ///
 /// // Derive to fixed-size array
-/// let key3: [u8; 32] = kdf.builder()
+/// let key3: dcrypt_internal::zeroing::Zeroizing<[u8; 32]> = kdf.builder()
 ///     .with_ikm(b"password123")
 ///     .with_salt(salt.as_ref())
 ///     .with_info(b"context info")
 ///     .derive_array().unwrap();
 ///
 /// assert_eq!(key1, key2);
-/// assert_eq!(&key1, key3.as_ref());
+/// assert_eq!(&key1[..], &key3[..]);
 /// ```
 // Conditional imports for no_std
 #[cfg(feature = "alloc")]
@@ -49,13 +49,6 @@ extern crate alloc;
 
 #[cfg(feature = "alloc")]
 use crate::alloc_prelude::*;
-
-#[cfg(not(feature = "std"))]
-#[cfg(feature = "alloc")]
-use alloc::vec::Vec;
-
-#[cfg(feature = "std")]
-use std::vec::Vec;
 
 #[cfg(feature = "std")]
 use std::time::Duration;
@@ -65,6 +58,8 @@ use core::time::Duration;
 
 use ::core::marker::PhantomData;
 use dcrypt_internal::random::{CryptoRng, RngCore};
+#[cfg(feature = "alloc")]
+use dcrypt_internal::zeroing::{Zeroizing, ZeroizingBytes};
 
 // Import the new error types
 use crate::error::{Error, Result};
@@ -118,7 +113,7 @@ pub trait KdfAlgorithm {
 }
 
 /// Operation for KDF operations with improved type safety
-pub trait KdfOperation<'a, A: KdfAlgorithm, T = Vec<u8>>: Sized {
+pub trait KdfOperation<'a, A: KdfAlgorithm, T = ZeroizingBytes>: Sized {
     /// Set the input keying material
     fn with_ikm(self, ikm: &'a [u8]) -> Self;
 
@@ -135,7 +130,7 @@ pub trait KdfOperation<'a, A: KdfAlgorithm, T = Vec<u8>>: Sized {
     fn derive(self) -> Result<T>;
 
     /// Execute the key derivation into a fixed-size array
-    fn derive_array<const N: usize>(self) -> Result<[u8; N]>;
+    fn derive_array<const N: usize>(self) -> Result<Zeroizing<[u8; N]>>;
 }
 
 /// Common trait for all key derivation functions
@@ -158,7 +153,7 @@ pub trait KeyDerivationFunction {
     /// * `length` - Length of the output key in bytes
     ///
     /// # Returns
-    /// The derived key as a byte vector
+    /// The derived key in exact-size, zeroizing storage.
     #[cfg(feature = "alloc")]
     fn derive_key(
         &self,
@@ -166,7 +161,7 @@ pub trait KeyDerivationFunction {
         salt: Option<&[u8]>,
         info: Option<&[u8]>,
         length: usize,
-    ) -> Result<Vec<u8>>;
+    ) -> Result<ZeroizingBytes>;
 
     /// Creates a builder for fluent API usage - FIXED: Elided lifetime
     fn builder(&self) -> impl KdfOperation<'_, Self::Algorithm>
@@ -233,7 +228,7 @@ impl<H: HashFunction + Clone> KeyDerivationFunction for TypedHkdf<H> {
         salt: Option<&[u8]>,
         info: Option<&[u8]>,
         length: usize,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<ZeroizingBytes> {
         self.inner.derive_key(input, salt, info, length)
     }
 
@@ -286,7 +281,7 @@ impl<'a, H: HashFunction + Clone> KdfOperation<'a, HkdfAlgorithm<H>> for HKdfOpe
         self
     }
 
-    fn derive(self) -> Result<Vec<u8>> {
+    fn derive(self) -> Result<ZeroizingBytes> {
         let ikm = self
             .ikm
             .ok_or_else(|| Error::param("ikm", "Input keying material is required"))?;
@@ -294,7 +289,7 @@ impl<'a, H: HashFunction + Clone> KdfOperation<'a, HkdfAlgorithm<H>> for HKdfOpe
         self.kdf.derive_key(ikm, self.salt, self.info, self.length)
     }
 
-    fn derive_array<const N: usize>(self) -> Result<[u8; N]> {
+    fn derive_array<const N: usize>(self) -> Result<Zeroizing<[u8; N]>> {
         // Ensure the requested size matches
         if self.length != N {
             return Err(Error::Length {
@@ -307,7 +302,7 @@ impl<'a, H: HashFunction + Clone> KdfOperation<'a, HkdfAlgorithm<H>> for HKdfOpe
         let vec = self.derive()?;
 
         // Convert to fixed-size array
-        let mut array = [0u8; N];
+        let mut array = Zeroizing::new([0u8; N]);
         array.copy_from_slice(&vec);
         Ok(array)
     }
@@ -365,7 +360,7 @@ impl<H: HashFunction + Clone> KeyDerivationFunction for TypedPbkdf2<H> {
         salt: Option<&[u8]>,
         info: Option<&[u8]>,
         length: usize,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<ZeroizingBytes> {
         self.inner.derive_key(input, salt, info, length)
     }
 
@@ -428,7 +423,7 @@ impl<'a, H: HashFunction + Clone> KdfOperation<'a, Pbkdf2Algorithm<H>> for Pbkdf
         self
     }
 
-    fn derive(self) -> Result<Vec<u8>> {
+    fn derive(self) -> Result<ZeroizingBytes> {
         let password = self
             .password
             .ok_or_else(|| Error::param("password", "Password is required"))?;
@@ -448,7 +443,7 @@ impl<'a, H: HashFunction + Clone> KdfOperation<'a, Pbkdf2Algorithm<H>> for Pbkdf
         kdf.derive_key(password, Some(salt), None, self.length)
     }
 
-    fn derive_array<const N: usize>(self) -> Result<[u8; N]> {
+    fn derive_array<const N: usize>(self) -> Result<Zeroizing<[u8; N]>> {
         // Ensure the requested size matches
         if self.length != N {
             return Err(Error::Length {
@@ -461,7 +456,7 @@ impl<'a, H: HashFunction + Clone> KdfOperation<'a, Pbkdf2Algorithm<H>> for Pbkdf
         let vec = self.derive()?;
 
         // Convert to fixed-size array
-        let mut array = [0u8; N];
+        let mut array = Zeroizing::new([0u8; N]);
         array.copy_from_slice(&vec);
         Ok(array)
     }

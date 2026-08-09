@@ -5,7 +5,7 @@ use dcrypt_algorithms::hash::sha2::{Sha256, Sha384, Sha512}; // Added Sha512
 use dcrypt_algorithms::kdf::hkdf::Hkdf;
 use dcrypt_algorithms::kdf::KeyDerivationFunction; // Use PKE specific Result/Error
 use dcrypt_api::error::Error as ApiError;
-use dcrypt_internal::zeroing::Zeroizing;
+use dcrypt_internal::zeroing::{boxed_bytes_zeroed, Zeroizing, ZeroizingBytes};
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -54,7 +54,7 @@ fn kdf_transcript(
     shared_secret_z: &[u8],
     ephemeral_pk_bytes: &[u8],
     recipient_pk_bytes: &[u8],
-) -> PkeResult<Zeroizing<Vec<u8>>> {
+) -> PkeResult<ZeroizingBytes> {
     let total_len = shared_secret_z
         .len()
         .checked_add(ephemeral_pk_bytes.len())
@@ -62,13 +62,12 @@ fn kdf_transcript(
         .ok_or(PkeError::SerializationError(
             "ECIES KDF transcript length overflows the platform address space",
         ))?;
-    let mut transcript = Zeroizing::new(Vec::new());
-    transcript
-        .try_reserve_exact(total_len)
-        .map_err(|_| PkeError::SerializationError("unable to allocate ECIES KDF transcript"))?;
-    transcript.extend_from_slice(shared_secret_z);
-    transcript.extend_from_slice(ephemeral_pk_bytes);
-    transcript.extend_from_slice(recipient_pk_bytes);
+    let mut transcript = Zeroizing::new(boxed_bytes_zeroed(total_len));
+    let ephemeral_start = shared_secret_z.len();
+    let recipient_start = ephemeral_start + ephemeral_pk_bytes.len();
+    transcript[..ephemeral_start].copy_from_slice(shared_secret_z);
+    transcript[ephemeral_start..recipient_start].copy_from_slice(ephemeral_pk_bytes);
+    transcript[recipient_start..].copy_from_slice(recipient_pk_bytes);
     Ok(transcript)
 }
 
@@ -79,13 +78,13 @@ pub(crate) fn derive_symmetric_key_hkdf_sha256(
     recipient_pk_bytes: &[u8],
     key_output_len: usize,
     info: &[u8],
-) -> PkeResult<Zeroizing<Vec<u8>>> {
+) -> PkeResult<ZeroizingBytes> {
     let transcript = kdf_transcript(shared_secret_z, ephemeral_pk_bytes, recipient_pk_bytes)?;
     let kdf = Hkdf::<Sha256>::new();
     let key = kdf
         .derive_key(&transcript, Some(KDF_SALT), Some(info), key_output_len)
         .map_err(PkeError::from)?;
-    Ok(Zeroizing::new(key))
+    Ok(key)
 }
 
 /// Derives symmetric key from an ECDH shared secret using HKDF-SHA384.
@@ -95,13 +94,13 @@ pub(crate) fn derive_symmetric_key_hkdf_sha384(
     recipient_pk_bytes: &[u8],
     key_output_len: usize,
     info: &[u8],
-) -> PkeResult<Zeroizing<Vec<u8>>> {
+) -> PkeResult<ZeroizingBytes> {
     let transcript = kdf_transcript(shared_secret_z, ephemeral_pk_bytes, recipient_pk_bytes)?;
     let kdf = Hkdf::<Sha384>::new();
     let key = kdf
         .derive_key(&transcript, Some(KDF_SALT), Some(info), key_output_len)
         .map_err(PkeError::from)?;
-    Ok(Zeroizing::new(key))
+    Ok(key)
 }
 
 /// Derives symmetric key from an ECDH shared secret using HKDF-SHA512.
@@ -111,13 +110,13 @@ pub(crate) fn derive_symmetric_key_hkdf_sha512(
     recipient_pk_bytes: &[u8],
     key_output_len: usize,
     info: &[u8],
-) -> PkeResult<Zeroizing<Vec<u8>>> {
+) -> PkeResult<ZeroizingBytes> {
     let transcript = kdf_transcript(shared_secret_z, ephemeral_pk_bytes, recipient_pk_bytes)?;
     let kdf = Hkdf::<Sha512>::new();
     let key = kdf
         .derive_key(&transcript, Some(KDF_SALT), Some(info), key_output_len)
         .map_err(PkeError::from)?;
-    Ok(Zeroizing::new(key))
+    Ok(key)
 }
 
 /// Internal structure for ECIES ciphertext components.
