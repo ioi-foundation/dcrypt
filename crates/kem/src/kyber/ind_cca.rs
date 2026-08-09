@@ -14,7 +14,7 @@ use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_algorithms::poly::params::Modulus;
 use dcrypt_internal::constant_time::ConstantTimeEq;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
+use dcrypt_internal::zeroing::Zeroizing;
 
 use super::cpa_pke::{decrypt_cpa, encrypt_cpa, keypair_cpa};
 use super::params::{KyberParams, KyberPolyModParams, KYBER_SS_BYTES, KYBER_SYMKEY_SEED_BYTES};
@@ -66,8 +66,8 @@ pub(crate) fn kem_keygen<P: KyberParams, R: RngCore + CryptoRng>(
     let sk_cpa_bytes = pack_sk::<P>(&sk_cpa)?;
 
     // 4. Generate random s_fo (implicit rejection value)
-    let mut s_fo = [0u8; KYBER_SYMKEY_SEED_BYTES];
-    rng.try_fill_bytes(&mut s_fo)
+    let mut s_fo = Zeroizing::new([0u8; KYBER_SYMKEY_SEED_BYTES]);
+    rng.try_fill_bytes(s_fo.as_mut())
         .map_err(|_| AlgoError::Processing {
             operation: "Kyber KEM key generation",
             details: "caller-provided randomness source failed",
@@ -83,9 +83,6 @@ pub(crate) fn kem_keygen<P: KyberParams, R: RngCore + CryptoRng>(
     sk_cca_bytes.extend_from_slice(&h_pk);
     sk_cca_bytes.extend_from_slice(&s_fo);
 
-    // 7. Zeroize sensitive data
-    s_fo.zeroize();
-
     Ok((pk_cca_bytes, sk_cca_bytes))
 }
 
@@ -95,8 +92,8 @@ pub(crate) fn kem_encaps<P: KyberParams, R: RngCore + CryptoRng>(
     rng: &mut R,
 ) -> AlgoResult<(IndCcaCiphertextBytes, SharedSecretBytes)> {
     // 1. Generate random message m
-    let mut m_bytes = [0u8; KYBER_SYMKEY_SEED_BYTES];
-    rng.try_fill_bytes(&mut m_bytes)
+    let mut m_bytes = Zeroizing::new([0u8; KYBER_SYMKEY_SEED_BYTES]);
+    rng.try_fill_bytes(m_bytes.as_mut())
         .map_err(|_| AlgoError::Processing {
             operation: "Kyber KEM encapsulation",
             details: "caller-provided randomness source failed",
@@ -106,10 +103,12 @@ pub(crate) fn kem_encaps<P: KyberParams, R: RngCore + CryptoRng>(
     let h_pk = h_func(pk_cca_bytes)?;
 
     // 3. (K_bar, r) = G(m || H(pk))
-    let mut g_input = Vec::with_capacity(KYBER_SYMKEY_SEED_BYTES + KYBER_SS_BYTES);
+    let mut g_input = Zeroizing::new(Vec::with_capacity(KYBER_SYMKEY_SEED_BYTES + KYBER_SS_BYTES));
     g_input.extend_from_slice(&m_bytes);
     g_input.extend_from_slice(&h_pk);
     let (k_bar, r_coins) = g_func(&g_input)?;
+    let k_bar = Zeroizing::new(k_bar);
+    let r_coins = Zeroizing::new(r_coins);
 
     // 4. Unpack public key
     let pk_cpa = unpack_pk::<P>(pk_cca_bytes)?;
@@ -122,15 +121,10 @@ pub(crate) fn kem_encaps<P: KyberParams, R: RngCore + CryptoRng>(
 
     // 7. K = H(K_bar || H(ct))
     let h_ct = h_func(&ct_cca_bytes)?;
-    let mut k_input = Vec::with_capacity(2 * KYBER_SS_BYTES);
+    let mut k_input = Zeroizing::new(Vec::with_capacity(2 * KYBER_SS_BYTES));
     k_input.extend_from_slice(&k_bar);
     k_input.extend_from_slice(&h_ct);
     let k = h_func(&k_input)?;
-
-    // 8. Zeroize sensitive data
-    m_bytes.zeroize();
-    g_input.zeroize();
-    k_input.zeroize();
 
     Ok((ct_cca_bytes, Zeroizing::new(k)))
 }
@@ -172,16 +166,18 @@ pub(crate) fn kem_decaps<P: KyberParams>(
     let m_prime = decrypt_cpa::<P>(&sk_cpa, &ct_cpa)?;
 
     // 4. (K_bar', r') = G(m' || H(pk))
-    let mut g_input = Vec::with_capacity(KYBER_SYMKEY_SEED_BYTES + KYBER_SS_BYTES);
+    let mut g_input = Zeroizing::new(Vec::with_capacity(KYBER_SYMKEY_SEED_BYTES + KYBER_SS_BYTES));
     g_input.extend_from_slice(m_prime.as_ref());
     g_input.extend_from_slice(h_pk);
     let (k_bar_prime, r_prime) = g_func(&g_input)?;
+    let k_bar_prime = Zeroizing::new(k_bar_prime);
+    let r_prime = Zeroizing::new(r_prime);
 
     // 5. Re-encrypt m' to get ct'
     let pk_cpa = unpack_pk::<P>(pk_bytes)?;
 
     // Convert m_prime to fixed-size array for encrypt_cpa
-    let mut m_prime_array = [0u8; KYBER_SYMKEY_SEED_BYTES];
+    let mut m_prime_array = Zeroizing::new([0u8; KYBER_SYMKEY_SEED_BYTES]);
     m_prime_array.copy_from_slice(m_prime.as_ref());
 
     let ct_prime_cpa = encrypt_cpa::<P>(&pk_cpa, &m_prime_array, &r_prime)?;
@@ -194,7 +190,7 @@ pub(crate) fn kem_decaps<P: KyberParams>(
     let h_ct = h_func(ct_cca_bytes)?;
 
     // 8. Constant-time selection of K_bar' or s_fo
-    let mut k_input = Vec::with_capacity(2 * KYBER_SS_BYTES);
+    let mut k_input = Zeroizing::new(Vec::with_capacity(2 * KYBER_SS_BYTES));
     for i in 0..KYBER_SS_BYTES {
         // If ct_eq is true (1), select k_bar_prime[i], otherwise select s_fo[i]
         let mask = ct_eq.unwrap_u8().wrapping_sub(1); // 0x00 if equal, 0xFF if not equal
@@ -205,11 +201,6 @@ pub(crate) fn kem_decaps<P: KyberParams>(
 
     // 9. K = H(selected || H(ct))
     let k = h_func(&k_input)?;
-
-    // 10. Zeroize sensitive data
-    g_input.zeroize();
-    k_input.zeroize();
-    m_prime_array.zeroize();
 
     Ok(Zeroizing::new(k))
 }

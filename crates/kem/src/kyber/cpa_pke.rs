@@ -8,7 +8,7 @@ extern crate alloc;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
-use dcrypt_algorithms::error::Result as AlgoResult;
+use dcrypt_algorithms::error::{Error as AlgoError, Result as AlgoResult};
 use dcrypt_algorithms::poly::params::Modulus; // Add this import
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::{ShakeXof128, ShakeXof256};
@@ -84,8 +84,8 @@ fn sample_poly_cbd<P: KyberParams>(
 
     // Generate enough bytes for CBD sampling
     let bytes_needed = (eta as usize * KyberPolyModParams::N) / 4;
-    let mut buf = vec![0u8; bytes_needed];
-    xof.squeeze(&mut buf)?;
+    let mut buf = Zeroizing::new(vec![0u8; bytes_needed]);
+    xof.squeeze(buf.as_mut_slice())?;
 
     // CBD sampling
     let mut poly = Polynomial::<KyberPolyModParams>::zero();
@@ -167,14 +167,14 @@ pub(crate) fn keypair_cpa<P: KyberParams, R: RngCore + CryptoRng>(
     rng: &mut R,
 ) -> AlgoResult<(CpaPublicKeyInner<P>, CpaSecretKeyInner<P>)> {
     // Generate seeds
-    let mut rho = [0u8; KYBER_RHO_SEED_BYTES];
-    let mut sigma = [0u8; KYBER_NOISE_SEED_BYTES];
-    rng.try_fill_bytes(&mut rho)
+    let mut rho = Zeroizing::new([0u8; KYBER_RHO_SEED_BYTES]);
+    let mut sigma = Zeroizing::new([0u8; KYBER_NOISE_SEED_BYTES]);
+    rng.try_fill_bytes(rho.as_mut())
         .map_err(|_| AlgoError::Processing {
             operation: "Kyber CPA key generation",
             details: "caller-provided randomness source failed",
         })?;
-    rng.try_fill_bytes(&mut sigma)
+    rng.try_fill_bytes(sigma.as_mut())
         .map_err(|_| AlgoError::Processing {
             operation: "Kyber CPA key generation",
             details: "caller-provided randomness source failed",
@@ -207,7 +207,7 @@ pub(crate) fn keypair_cpa<P: KyberParams, R: RngCore + CryptoRng>(
     // Transform t to NTT domain for storage
     t.ntt_inplace()?;
 
-    Ok(((t, rho), s))
+    Ok(((t, *rho), s))
 }
 
 /// Kyber CPA PKE Encryption.
