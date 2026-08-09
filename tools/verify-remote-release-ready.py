@@ -185,6 +185,8 @@ class LiveEvidenceProvider:
             (
                 "gh",
                 "api",
+                "--hostname",
+                "github.com",
                 "--method",
                 "GET",
                 "--header",

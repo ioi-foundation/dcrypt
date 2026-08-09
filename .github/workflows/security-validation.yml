@@ -32,6 +32,7 @@ jobs:
       - name: Audit compiled and packaged implementation boundaries
         run: |
           python3 tools/verify-implementation-boundary.py --self-test
+          python3 tools/verify-remote-release-ready.py --self-test
           tools/verify-implementation-boundary.sh
       - name: Inspect optimized BLS secret-scalar assembly
         run: tools/verify-bls-secret-assembly.sh
@@ -150,12 +151,18 @@ jobs:
       - name: Audit resolved dependencies against RustSec
         run: |
           cargo audit
-          cargo audit --file migration/legacy-xchacha20poly1305/Cargo.lock
+          while IFS=$'\t' read -r category workspace; do
+            test -n "$category" && test -n "$workspace"
+            cargo audit --file "$workspace/Cargo.lock"
+          done < <(python3 tools/verify-implementation-boundary.py --list-classified-workspaces)
       - name: Enforce advisories, licenses, bans, and sources for all workspace roots
         run: |
           cargo deny --workspace --all-features check
-          cargo deny --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml \
-            --all-features check
+          while IFS=$'\t' read -r category workspace; do
+            test -n "$category" && test -n "$workspace"
+            cargo deny --manifest-path "$workspace/Cargo.toml" \
+              --all-features check
+          done < <(python3 tools/verify-implementation-boundary.py --list-classified-workspaces)
 
   miri:
     name: Miri (${{ matrix.crate }})
@@ -231,21 +238,19 @@ jobs:
           toolchain: nightly-2026-08-07
       - name: Install pinned cargo-fuzz
         run: cargo install cargo-fuzz --version 0.13.2 --locked
-      - name: Build every fuzz target
+      - name: Build and run every classified fuzz target
         run: |
-          cargo fuzz build signature_decoders
-          cargo fuzz build hybrid_decoders
-          cargo fuzz build symmetric_decoders
-          cargo fuzz build stream_frames
-          cargo fuzz build kem_decoders
-          cargo fuzz build bls12_381_decoders
-          cargo fuzz build legacy_xchacha_migration
-      - name: Run a bounded campaign for every fuzz target
-        run: |
-          cargo fuzz run signature_decoders -- -runs=1000
-          cargo fuzz run hybrid_decoders -- -runs=1000
-          cargo fuzz run symmetric_decoders -- -runs=1000
-          cargo fuzz run stream_frames -- -runs=1000
-          cargo fuzz run kem_decoders -- -runs=1000
-          cargo fuzz run bls12_381_decoders -- -runs=1000
-          cargo fuzz run legacy_xchacha_migration -- -runs=1000
+          while IFS=$'\t' read -r category workspace; do
+            test -n "$category" && test -n "$workspace"
+            test "$category" = fuzz || continue
+            (
+              cd "$workspace"
+              mapfile -t fuzz_targets < <(cargo fuzz list)
+              test "${#fuzz_targets[@]}" -gt 0
+              for fuzz_target in "${fuzz_targets[@]}"; do
+                test -n "$fuzz_target"
+                cargo fuzz build "$fuzz_target"
+                cargo fuzz run "$fuzz_target" -- -runs=1000 -seed=424242
+              done
+            )
+          done < <(python3 tools/verify-implementation-boundary.py --list-classified-workspaces)

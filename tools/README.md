@@ -146,6 +146,16 @@ Live publication requires all of the following:
 - all enabled release gates passing; and
 - an interactive confirmation containing the exact version.
 
+`verify-remote-release-ready.py` enforces the remote portion through read-only,
+authenticated queries. It requires `origin/master` to equal `HEAD`, matching
+local and remote annotated-tag objects and peeled commits, every reviewed
+GitHub Actions check to be successful for that exact SHA and issued by the
+trusted Actions app, a private draft release for the exact tag, and either an
+empty registry target or an explicitly authorized valid publication prefix.
+The execute flow runs this gate before the long local suite, immediately before
+the prompt, and once more after the prompt before the first upload so a stale
+interactive confirmation cannot authorize changed remote state.
+
 Each crate is first checked with `cargo publish --dry-run`, published in
 dependency order, and verified through the crates.io API before the next crate
 is attempted. The order is:

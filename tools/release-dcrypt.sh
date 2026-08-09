@@ -286,6 +286,7 @@ run_check_gates() {
 
     info "Running formatting and all-target/all-feature checks"
     cargo fmt --all -- --check
+    python3 "$SCRIPT_DIR/verify-remote-release-ready.py" --self-test
     local category workspace
     while IFS=$'\t' read -r category workspace; do
         [[ -n "$category" && -n "$workspace" ]] || continue
@@ -507,6 +508,8 @@ prepare_release() {
 
     local tag="v$VERSION"
     if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+        [[ "$(git cat-file -t "refs/tags/$tag")" == "tag" ]] \
+            || die "$tag already exists but is not an annotated tag object"
         [[ "$(git rev-list -n 1 "$tag")" == "$(git rev-parse HEAD)" ]] \
             || die "$tag already exists but does not point to HEAD"
         info "Local tag $tag already points to HEAD"
@@ -543,32 +546,12 @@ prepare_release() {
     printf '  tools/release-dcrypt.sh --version %q --execute\n' "$VERSION"
 }
 
-assert_tag_is_pushed() {
-    local tag="v$VERSION"
-    local head_commit local_tag_commit remote_tag_commit remote_direct
-
-    head_commit=$(git rev-parse HEAD)
-    git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null \
-        || die "local tag $tag does not exist; run --prepare first"
-    local_tag_commit=$(git rev-list -n 1 "$tag")
-    [[ "$local_tag_commit" == "$head_commit" ]] \
-        || die "$tag does not point to the checked-out commit"
-
-    remote_tag_commit=$(git ls-remote --tags origin "refs/tags/$tag^{}" | awk 'NR == 1 {print $1}')
-    if [[ -z "$remote_tag_commit" ]]; then
-        remote_direct=$(git ls-remote --tags origin "refs/tags/$tag" | awk 'NR == 1 {print $1}')
-        remote_tag_commit=$remote_direct
+run_remote_release_gate() {
+    local -a args=(--version "$VERSION")
+    if [[ -n "$RESUME_FROM" ]]; then
+        args+=(--resume "$RESUME_FROM")
     fi
-    [[ -n "$remote_tag_commit" ]] || die "$tag has not been pushed to origin"
-    [[ "$remote_tag_commit" == "$head_commit" ]] \
-        || die "origin's $tag does not resolve to the checked-out commit"
-
-    local branch
-    branch=$(current_branch)
-    [[ -n "$branch" ]] || die "cannot publish from detached HEAD"
-    git fetch --quiet origin "$branch"
-    git merge-base --is-ancestor "$head_commit" "origin/$branch" \
-        || die "the release commit is not present on origin/$branch"
+    "$SCRIPT_DIR/verify-remote-release-ready.py" "${args[@]}"
 }
 
 wait_for_registry() {
@@ -683,11 +666,16 @@ execute_release() {
     assert_clean_tree
     [[ "$(current_version)" == "$VERSION" ]] \
         || die "workspace is $(current_version), not $VERSION; run --prepare first"
-    assert_tag_is_pushed
+    # Fail quickly before running the long local suite, then repeat immediately
+    # before and after the interactive confirmation. The final check closes
+    # both the validation-window and user-delay races before the first upload.
+    run_remote_release_gate
     check_registry_target
     validate_manual_resume
     run_all_gates
+    run_remote_release_gate
     confirm_live_publish
+    run_remote_release_gate
 
     local -a published=()
     local entry relative_path crate_name
