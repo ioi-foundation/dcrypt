@@ -6,7 +6,39 @@ use dcrypt_algorithms::hash::sha2::Sha256;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::error::Error as ApiError; // Use the API error type
 use dcrypt_api::Signature as SignatureTrait;
-use rand::rngs::OsRng;
+use dcrypt_internal::ChaCha20Rng;
+
+fn test_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x42; 32])
+}
+
+#[test]
+fn rfc6979_sha256_sample_signature_matches() {
+    let bytes: [u8; ec::P256_SCALAR_SIZE] =
+        hex::decode("C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let secret = EcdsaP256SecretKey {
+        raw: ec::Scalar::new(bytes).unwrap(),
+        bytes,
+    };
+    let signature = EcdsaP256::sign(b"sample", &secret).unwrap();
+    let components = SignatureComponents::from_der(signature.as_ref()).unwrap();
+
+    assert_eq!(
+        components.r,
+        hex::decode("EFD48B2AACB6A8FD1140DD9CD45E81D69D2C877B56AAF991C34D0EA84EAF3716").unwrap()
+    );
+    let expected_rfc_s: [u8; ec::P256_SCALAR_SIZE] =
+        hex::decode("F7CB1C942D657C41D436C7A1B6E29F65F3E900DBB9AFF4064DC4AB2F843ACDA8")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let expected_rfc_s = ec::Scalar::new(expected_rfc_s).unwrap();
+    let expected_low_s = expected_rfc_s.negate().serialize();
+    assert_eq!(components.s, expected_low_s.to_vec());
+}
 use std::fs;
 use std::path::PathBuf;
 
@@ -357,7 +389,7 @@ fn hex_to_bytes(hex_str: &str) -> Vec<u8> {
 
 #[test]
 fn test_ecdsa_p256_sign_verify() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP256::keypair(&mut rng).unwrap();
     let message = b"Test message for ECDSA P-256";
     let signature = EcdsaP256::sign(message, &secret_key).unwrap();
@@ -368,7 +400,7 @@ fn test_ecdsa_p256_sign_verify() {
 
 #[test]
 fn signatures_are_low_s_and_high_s_twin_is_rejected() {
-    let (public_key, secret_key) = EcdsaP256::keypair(&mut OsRng).unwrap();
+    let (public_key, secret_key) = EcdsaP256::keypair(&mut test_rng()).unwrap();
     let message = b"canonical ECDSA";
     let signature = EcdsaP256::sign(message, &secret_key).unwrap();
     let components = SignatureComponents::from_der(&signature.0).unwrap();
@@ -401,7 +433,7 @@ fn signatures_are_low_s_and_high_s_twin_is_rejected() {
 
 #[test]
 fn test_deterministic_verification() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP256::keypair(&mut rng).unwrap();
     let message = b"Test message";
     let signature = EcdsaP256::sign(message, &secret_key).unwrap();
@@ -412,7 +444,7 @@ fn test_deterministic_verification() {
 
 #[test]
 fn test_empty_message() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP256::keypair(&mut rng).unwrap();
     let message = b"";
     let signature = EcdsaP256::sign(message, &secret_key).unwrap();
@@ -421,7 +453,7 @@ fn test_empty_message() {
 
 #[test]
 fn test_large_message() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP256::keypair(&mut rng).unwrap();
     let message = vec![0xAB; 10000];
     let signature = EcdsaP256::sign(&message, &secret_key).unwrap();
@@ -430,19 +462,19 @@ fn test_large_message() {
 
 #[test]
 fn test_multiple_signatures() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP256::keypair(&mut rng).unwrap();
     let message = b"Test message for multiple signatures";
     let sig1 = EcdsaP256::sign(message, &secret_key).unwrap();
     let sig2 = EcdsaP256::sign(message, &secret_key).unwrap();
     assert!(EcdsaP256::verify(message, &sig1, &public_key).is_ok());
     assert!(EcdsaP256::verify(message, &sig2, &public_key).is_ok());
-    assert_ne!(sig1.as_ref(), sig2.as_ref());
+    assert_eq!(sig1.as_ref(), sig2.as_ref());
 }
 
 #[test]
 fn test_wrong_public_key() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret_key1) = EcdsaP256::keypair(&mut rng).unwrap();
     let (public_key2, _) = EcdsaP256::keypair(&mut rng).unwrap();
     let message = b"Test message";
@@ -452,7 +484,7 @@ fn test_wrong_public_key() {
 
 #[test]
 fn test_invalid_signature() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, _) = EcdsaP256::keypair(&mut rng).unwrap();
     let invalid_sig = EcdsaP256Signature(vec![0x30, 0x06, 0x02, 0x01, 0x00, 0x02, 0x01, 0x00]);
     let message = b"Test message";
@@ -461,7 +493,7 @@ fn test_invalid_signature() {
 
 #[test]
 fn test_key_generation_details() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     for i in 0..5 {
         match EcdsaP256::keypair(&mut rng) {
             Ok((_, sec_key)) => {
@@ -478,7 +510,7 @@ fn test_key_generation_details() {
 
 #[test]
 fn test_signature_serialization() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, sec_key) = EcdsaP256::keypair(&mut rng).unwrap();
     let message = b"Test serialization";
     let signature = EcdsaP256::sign(message, &sec_key).unwrap();
@@ -553,7 +585,7 @@ fn test_scalar_edge_cases() {
 
 #[test]
 fn test_modular_inverse_comprehensive() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let mut two_bytes = [0u8; 32];
     two_bytes[31] = 2;
     let two = ec::Scalar::new(two_bytes).unwrap();

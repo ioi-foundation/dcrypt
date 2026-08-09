@@ -2,8 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-use subtle::{Choice, ConditionallySelectable};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::{Choice, ConditionallySelectable, Zeroize, ZeroizeOnDrop};
 
 /// `L = 2^252 + 27742317777372353535851937790883648493`.
 pub(crate) const GROUP_ORDER_BYTES: [u8; 32] = [
@@ -19,8 +18,22 @@ const GROUP_ORDER: [u64; 4] = [
 ];
 
 /// A canonical scalar modulo `L`.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub(crate) struct Scalar([u64; 4]);
+
+impl Zeroize for Scalar {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl Drop for Scalar {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
     pub(crate) fn zero() -> Self {

@@ -1,6 +1,209 @@
 //! Common utilities for ECDSA implementations
 
+use alloc::{vec, vec::Vec};
+use core::marker::PhantomData;
+use dcrypt_algorithms::hash::HashFunction;
+use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult};
+use dcrypt_internal::{Choice, Zeroize, Zeroizing};
+
+fn nonce_error(_message: &'static str) -> ApiError {
+    ApiError::InvalidParameter {
+        context: "RFC 6979 nonce generation",
+        #[cfg(feature = "std")]
+        message: _message.into(),
+    }
+}
+
+fn hmac_parts<H: HashFunction + Clone>(key: &[u8], parts: &[&[u8]]) -> ApiResult<Vec<u8>> {
+    let mut mac = Hmac::<H>::new(key).map_err(ApiError::from)?;
+    for part in parts {
+        mac.update(part).map_err(ApiError::from)?;
+    }
+    mac.finalize().map_err(ApiError::from)
+}
+
+fn replace_zeroized(destination: &mut Vec<u8>, replacement: Vec<u8>) {
+    let mut previous = core::mem::replace(destination, replacement);
+    previous.zeroize();
+}
+
+fn subtract_be(value: &mut [u8], modulus: &[u8]) {
+    let mut borrow = 0u16;
+    for index in (0..value.len()).rev() {
+        let difference = value[index] as i16 - modulus[index] as i16 - borrow as i16;
+        if difference < 0 {
+            value[index] = (difference + 256) as u8;
+            borrow = 1;
+        } else {
+            value[index] = difference as u8;
+            borrow = 0;
+        }
+    }
+}
+
+fn shift_right_be(value: &mut [u8], shift: usize) {
+    debug_assert!(shift < 8);
+    if shift == 0 {
+        return;
+    }
+    let mut carry = 0u8;
+    for byte in value {
+        let next_carry = *byte << (8 - shift);
+        *byte = (*byte >> shift) | carry;
+        carry = next_carry;
+    }
+}
+
+/// RFC 6979 `bits2int`, returned as exactly `rolen = ceil(qlen / 8)` bytes.
+fn bits2int(input: &[u8], qlen: usize, rolen: usize) -> ApiResult<Vec<u8>> {
+    if qlen == 0 || rolen == 0 || qlen > rolen * 8 || qlen <= (rolen - 1) * 8 {
+        return Err(nonce_error("invalid subgroup-order bit length"));
+    }
+
+    let mut output = vec![0u8; rolen];
+    if input.len() >= rolen {
+        output.copy_from_slice(&input[..rolen]);
+        shift_right_be(&mut output, rolen * 8 - qlen);
+    } else {
+        output[rolen - input.len()..].copy_from_slice(input);
+    }
+    Ok(output)
+}
+
+/// RFC 6979 `bits2octets`: reduce the leftmost `qlen` digest bits modulo q.
+pub(crate) fn bits2octets(hash: &[u8], order: &[u8], qlen: usize) -> ApiResult<Vec<u8>> {
+    let rolen = order.len();
+    let mut output = bits2int(hash, qlen, rolen)?;
+    if output.as_slice() >= order {
+        subtract_be(&mut output, order);
+    }
+    Ok(output)
+}
+
+fn ct_valid_nonce(candidate: &[u8], order: &[u8]) -> Choice {
+    if candidate.len() != order.len() {
+        return Choice::from(0);
+    }
+
+    let mut nonzero = 0u8;
+    let mut less = 0u8;
+    let mut greater = 0u8;
+    for (&candidate_byte, &order_byte) in candidate.iter().zip(order) {
+        nonzero |= candidate_byte;
+        let undecided = (less | greater) ^ 1;
+        let byte_less = ((candidate_byte as u16).wrapping_sub(order_byte as u16) >> 15) as u8;
+        let byte_greater = ((order_byte as u16).wrapping_sub(candidate_byte as u16) >> 15) as u8;
+        less |= byte_less & undecided;
+        greater |= byte_greater & undecided;
+    }
+
+    let is_nonzero = ((nonzero | nonzero.wrapping_neg()) >> 7) & 1;
+    Choice::from(is_nonzero & less)
+}
+
+/// Stateful RFC 6979 section 3.2 nonce generator.
+///
+/// Keeping `K` and `V` alive matters for the astronomically unlikely ECDSA
+/// retry case (`r = 0` or `s = 0`): the next nonce follows step H rather than
+/// repeating the same deterministic candidate forever.
+pub(crate) struct Rfc6979<H> {
+    k: Vec<u8>,
+    v: Vec<u8>,
+    order: Vec<u8>,
+    qlen: usize,
+    candidate_was_returned: bool,
+    hash: PhantomData<H>,
+}
+
+impl<H: HashFunction + Clone> Rfc6979<H> {
+    pub(crate) fn new(
+        secret_scalar: &[u8],
+        message_hash: &[u8],
+        order: &[u8],
+        qlen: usize,
+    ) -> ApiResult<Self> {
+        if secret_scalar.len() != order.len() || !bool::from(ct_valid_nonce(secret_scalar, order)) {
+            return Err(nonce_error("secret scalar is not canonical"));
+        }
+        let mut h1 = bits2octets(message_hash, order, qlen)?;
+        let output_len = H::output_size();
+        if output_len == 0 {
+            return Err(nonce_error("hash output is empty"));
+        }
+
+        let mut k = vec![0u8; output_len];
+        let mut v = vec![1u8; output_len];
+        let initialization = (|| -> ApiResult<()> {
+            let next_k = hmac_parts::<H>(&k, &[&v, &[0], secret_scalar, &h1])?;
+            replace_zeroized(&mut k, next_k);
+            let next_v = hmac_parts::<H>(&k, &[&v])?;
+            replace_zeroized(&mut v, next_v);
+            let next_k = hmac_parts::<H>(&k, &[&v, &[1], secret_scalar, &h1])?;
+            replace_zeroized(&mut k, next_k);
+            let next_v = hmac_parts::<H>(&k, &[&v])?;
+            replace_zeroized(&mut v, next_v);
+            Ok(())
+        })();
+        h1.zeroize();
+        if let Err(error) = initialization {
+            k.zeroize();
+            v.zeroize();
+            return Err(error);
+        }
+        Ok(Self {
+            k,
+            v,
+            order: order.to_vec(),
+            qlen,
+            candidate_was_returned: false,
+            hash: PhantomData,
+        })
+    }
+
+    fn retry_step(&mut self) -> ApiResult<()> {
+        let next_k = hmac_parts::<H>(&self.k, &[&self.v, &[0]])?;
+        replace_zeroized(&mut self.k, next_k);
+        let next_v = hmac_parts::<H>(&self.k, &[&self.v])?;
+        replace_zeroized(&mut self.v, next_v);
+        Ok(())
+    }
+
+    pub(crate) fn next_nonce(&mut self) -> ApiResult<Vec<u8>> {
+        if self.candidate_was_returned {
+            self.retry_step()?;
+            self.candidate_was_returned = false;
+        }
+
+        loop {
+            let mut t = Zeroizing::new(Vec::with_capacity(self.order.len()));
+            while t.len() < self.order.len() {
+                let next_v = hmac_parts::<H>(&self.k, &[&self.v])?;
+                replace_zeroized(&mut self.v, next_v);
+                let needed = self.order.len() - t.len();
+                t.extend_from_slice(&self.v[..core::cmp::min(needed, self.v.len())]);
+            }
+
+            let mut candidate = bits2int(&t, self.qlen, self.order.len())?;
+            if bool::from(ct_valid_nonce(&candidate, &self.order)) {
+                self.candidate_was_returned = true;
+                return Ok(candidate);
+            }
+            candidate.zeroize();
+            self.retry_step()?;
+        }
+    }
+}
+
+impl<H> Drop for Rfc6979<H> {
+    fn drop(&mut self) {
+        self.k.zeroize();
+        self.v.zeroize();
+        self.order.zeroize();
+        self.qlen.zeroize();
+        self.candidate_was_returned.zeroize();
+    }
+}
 
 /// Return true when a canonical big-endian scalar lies above `order / 2`.
 ///
@@ -233,17 +436,17 @@ impl SignatureComponents {
         Ok((len, len_end))
     }
 
-    fn parse_integer(der: &[u8], pos: &mut usize, name: &'static str) -> ApiResult<Vec<u8>> {
+    fn parse_integer(der: &[u8], pos: &mut usize, _name: &'static str) -> ApiResult<Vec<u8>> {
         let tag = *der.get(*pos).ok_or_else(|| ApiError::InvalidSignature {
             context: "ECDSA DER parsing",
             #[cfg(feature = "std")]
-            message: format!("Missing DER INTEGER tag for {name}"),
+            message: format!("Missing DER INTEGER tag for {_name}"),
         })?;
         if tag != 0x02 {
             return Err(ApiError::InvalidSignature {
                 context: "ECDSA DER parsing",
                 #[cfg(feature = "std")]
-                message: format!("Invalid DER INTEGER tag for {name}"),
+                message: format!("Invalid DER INTEGER tag for {_name}"),
             });
         }
         *pos += 1;
@@ -254,7 +457,7 @@ impl SignatureComponents {
             return Err(ApiError::InvalidSignature {
                 context: "ECDSA DER parsing",
                 #[cfg(feature = "std")]
-                message: format!("DER INTEGER {name} cannot be empty"),
+                message: format!("DER INTEGER {_name} cannot be empty"),
             });
         }
 
@@ -263,7 +466,7 @@ impl SignatureComponents {
             .ok_or_else(|| ApiError::InvalidSignature {
                 context: "ECDSA DER parsing",
                 #[cfg(feature = "std")]
-                message: format!("DER INTEGER {name} length overflow"),
+                message: format!("DER INTEGER {_name} length overflow"),
             })?;
 
         let value = der
@@ -271,7 +474,7 @@ impl SignatureComponents {
             .ok_or_else(|| ApiError::InvalidSignature {
                 context: "ECDSA DER parsing",
                 #[cfg(feature = "std")]
-                message: format!("Truncated DER INTEGER {name}"),
+                message: format!("Truncated DER INTEGER {_name}"),
             })?;
 
         // ECDSA components are non-negative ASN.1 INTEGERs. Interpreting a
@@ -281,7 +484,7 @@ impl SignatureComponents {
             return Err(ApiError::InvalidSignature {
                 context: "ECDSA DER parsing",
                 #[cfg(feature = "std")]
-                message: format!("DER INTEGER {name} must not be negative"),
+                message: format!("DER INTEGER {_name} must not be negative"),
             });
         }
 
@@ -289,7 +492,7 @@ impl SignatureComponents {
             return Err(ApiError::InvalidSignature {
                 context: "ECDSA DER parsing",
                 #[cfg(feature = "std")]
-                message: format!("DER INTEGER {name} is not minimally encoded"),
+                message: format!("DER INTEGER {_name} is not minimally encoded"),
             });
         }
 
@@ -301,6 +504,79 @@ impl SignatureComponents {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dcrypt_algorithms::hash::sha2::{Sha224, Sha256, Sha384, Sha512};
+
+    fn rfc6979_vector<H: HashFunction + Clone>(
+        secret_hex: &str,
+        order_hex: &str,
+        qlen: usize,
+        expected_nonce_hex: &str,
+    ) {
+        let secret = hex::decode(secret_hex).unwrap();
+        let order = hex::decode(order_hex).unwrap();
+        let digest = H::digest(b"sample").unwrap();
+        let mut generator = Rfc6979::<H>::new(&secret, digest.as_ref(), &order, qlen).unwrap();
+        assert_eq!(
+            generator.next_nonce().unwrap(),
+            hex::decode(expected_nonce_hex).unwrap()
+        );
+    }
+
+    #[test]
+    fn rfc6979_prime_curve_nonce_vectors() {
+        // RFC 6979 appendices A.2.3 through A.2.7, message = "sample".
+        rfc6979_vector::<Sha256>(
+            "6FAB034934E4C0FC9AE67F5B5659A9D7D1FEFD187EE09FD4",
+            "FFFFFFFFFFFFFFFFFFFFFFFF99DEF836146BC9B1B4D22831",
+            192,
+            "32B1B6D7D42A05CB449065727A84804FB1A3E34D8F261496",
+        );
+        rfc6979_vector::<Sha224>(
+            "F220266E1105BFE3083E03EC7A3A654651F45E37167E88600BF257C1",
+            "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D",
+            224,
+            "C1D1F2F10881088301880506805FEB4825FE09ACB6816C36991AA06D",
+        );
+        rfc6979_vector::<Sha256>(
+            "C9AFA9D845BA75166B5C215767B1D6934E50C3DB36E89B127B8A622B120F6721",
+            "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551",
+            256,
+            "A6E3C57DD01ABE90086538398355DD4C3B17AA873382B0F24D6129493D8AAD60",
+        );
+        rfc6979_vector::<Sha384>(
+            concat!(
+                "6B9D3DAD2E1B8C1C05B19875B6659F4DE23C3B667BF297BA9AA47740787137D8",
+                "96D5724E4C70A825F872C9EA60D2EDF5"
+            ),
+            concat!(
+                "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF",
+                "581A0DB248B0A77AECEC196ACCC52973"
+            ),
+            384,
+            concat!(
+                "94ED910D1A099DAD3254E9242AE85ABDE4BA15168EAF0CA87A555FD56D10FBCA",
+                "2907E3E83BA95368623B8C4686915CF9"
+            ),
+        );
+        rfc6979_vector::<Sha512>(
+            concat!(
+                "00FAD06DAA62BA3B25D2FB40133DA757205DE67F5BB0018FEE8C86E1B68C7E75C",
+                "AA896EB32F1F47C70855836A6D16FCC1466F6D8FBEC67DB89EC0C08B0E996B83",
+                "538"
+            ),
+            concat!(
+                "01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+                "FA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386",
+                "409"
+            ),
+            521,
+            concat!(
+                "01DAE2EA071F8110DC26882D4D5EAE0621A3256FC8847FB9022E2B7D28E6F1019",
+                "8B1574FDD03A9053C08A1854A168AA5A57470EC97DD5CE090124EF52A2F7ECBF",
+                "FD3"
+            ),
+        );
+    }
 
     #[test]
     fn canonical_scalar_check_rejects_zero_order_and_larger_values() {

@@ -11,12 +11,13 @@ publish = true
 
 [features]
 trace = []
-default = ["std"]
+default = ["std", "traditional", "post-quantum"]
 std = [
     "alloc",
     "dcrypt-api/std", 
     "dcrypt-common/std", 
-    "dcrypt-internal/std"
+    "dcrypt-internal/std",
+    "dcrypt-algorithms/std"
 ]
 no_std = [
     "alloc",
@@ -25,27 +26,24 @@ no_std = [
     "dcrypt-internal/no_std"
 ]
 alloc = ["dcrypt-api/alloc", "dcrypt-common/alloc", "dcrypt-internal/alloc", "dcrypt-algorithms/alloc"]
-traditional = []  # Feature flag for traditional signatures (ECDSA, EdDSA, RSA, etc.)
-post-quantum = [] # Feature flag for post-quantum signatures (Dilithium, Falcon, etc.)
+traditional = []  # Feature flag for traditional signatures (ECDSA and EdDSA)
+post-quantum = [] # Feature flag for post-quantum signatures (ML-DSA)
 
 [dependencies]
 dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false }
 dcrypt-common = { path = "../common", version = "=2.0.0", default-features = false }
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
 dcrypt-params = { path = "../params", version = "=2.0.0" }
-dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0" }
-zeroize = { workspace = true }
-rand = { workspace = true }
-subtle = "2.5"
+dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["alloc", "ec", "hash", "mac", "xof"] }
 
 [dev-dependencies]
-rand_chacha = { workspace = true }
 hex = "0.4"
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
-name = "dilithium"
+name = "mldsa"
 harness = false
+required-features = ["post-quantum"]
 
 [package.metadata.release]
 publish = true

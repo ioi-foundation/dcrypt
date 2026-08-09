@@ -1,6 +1,5 @@
 use super::*;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+use dcrypt_internal::{ChaCha20Rng, RngCore};
 
 fn test_rng() -> ChaCha20Rng {
     ChaCha20Rng::from_seed([0x42; 32])
@@ -255,7 +254,7 @@ fn test_key_serialization_round_trip() {
     let (original_public, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Simulate saving/loading just the secret key
-    let secret_bytes = secret.seed.clone();
+    let secret_bytes = secret.seed;
 
     // Reconstruct secret key from seed
     let reconstructed_secret = Ed25519SecretKey::from_seed(&secret_bytes).unwrap();
@@ -416,7 +415,7 @@ fn test_secure_comparison() {
 
 #[test]
 fn example_secure_seed_handling() {
-    use zeroize::Zeroize;
+    use dcrypt_internal::Zeroize;
 
     // Generate a keypair
     let mut rng = test_rng();

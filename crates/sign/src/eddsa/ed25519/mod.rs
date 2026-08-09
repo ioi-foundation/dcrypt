@@ -9,15 +9,12 @@
 
 #![forbid(unsafe_code)]
 
-#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 use dcrypt_algorithms::hash::sha2::Sha512;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
-use rand::{CryptoRng, RngCore};
-use subtle::ConstantTimeEq;
-use zeroize::{Zeroize, Zeroizing};
+use dcrypt_internal::{ConstantTimeEq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::constants::{ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE};
 use super::point::EdwardsPoint;
@@ -27,7 +24,7 @@ use super::scalar::Scalar;
 pub struct Ed25519;
 
 /// Canonically encoded, non-identity, prime-order Ed25519 public key.
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Ed25519PublicKey(pub [u8; ED25519_PUBLIC_KEY_SIZE]);
 
 impl core::fmt::Debug for Ed25519PublicKey {
@@ -56,6 +53,8 @@ impl Drop for Ed25519SecretKey {
     }
 }
 
+impl ZeroizeOnDrop for Ed25519SecretKey {}
+
 impl core::fmt::Debug for Ed25519SecretKey {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Ed25519SecretKey")
@@ -65,7 +64,7 @@ impl core::fmt::Debug for Ed25519SecretKey {
 }
 
 /// Canonically encoded Ed25519 signature bytes (`R || S`).
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct Ed25519Signature(pub [u8; ED25519_SIGNATURE_SIZE]);
 
 impl core::fmt::Debug for Ed25519Signature {
@@ -76,19 +75,19 @@ impl core::fmt::Debug for Ed25519Signature {
     }
 }
 
-fn invalid_key(context: &'static str, message: &'static str) -> ApiError {
+fn invalid_key(context: &'static str, _message: &'static str) -> ApiError {
     ApiError::InvalidKey {
         context,
         #[cfg(feature = "std")]
-        message: message.to_string(),
+        message: _message.to_string(),
     }
 }
 
-fn invalid_signature(context: &'static str, message: &'static str) -> ApiError {
+fn invalid_signature(context: &'static str, _message: &'static str) -> ApiError {
     ApiError::InvalidSignature {
         context,
         #[cfg(feature = "std")]
-        message: message.to_string(),
+        message: _message.to_string(),
     }
 }
 
@@ -205,10 +204,14 @@ impl SignatureTrait for Ed25519 {
 
     /// Generate a key from caller-provided cryptographic randomness.
     fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> ApiResult<Self::KeyPair> {
-        let mut seed = [0u8; ED25519_SECRET_KEY_SIZE];
-        rng.fill_bytes(&mut seed);
+        let mut seed = Zeroizing::new([0u8; ED25519_SECRET_KEY_SIZE]);
+        rng.try_fill_bytes(&mut *seed)
+            .map_err(|_| ApiError::RandomGenerationError {
+                context: "Ed25519::keypair",
+                #[cfg(feature = "std")]
+                message: "caller-provided randomness source failed".into(),
+            })?;
         let secret = Ed25519SecretKey::from_seed(&seed)?;
-        seed.zeroize();
         let public = secret.public_key()?;
         Ok((public, secret))
     }

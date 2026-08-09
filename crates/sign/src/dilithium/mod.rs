@@ -5,20 +5,19 @@
 //! keys, and signatures use Algorithms 22, 24, and 26 of final FIPS 204.
 //! Independent implementations are used only as verification-workspace oracles.
 //!
-//! The historical `Dilithium2`, `Dilithium3`, and `Dilithium5` type names remain
-//! as source-compatible aliases for `MlDsa44`, `MlDsa65`, and `MlDsa87`. They do
-//! not select the removed pre-FIPS dcrypt implementation.
+//! Version 3 exposes only the final-standard `MlDsa44`, `MlDsa65`, and
+//! `MlDsa87` names. Pre-standard Dilithium names are deliberately absent so a
+//! caller cannot mistake legacy encodings or semantics for FIPS 204 objects.
 
 use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::ToString, vec::Vec};
 use core::{fmt, marker::PhantomData};
 use dcrypt_api::{Result as ApiResult, Signature as SignatureTrait};
+use dcrypt_internal::{CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_params::pqc::dilithium::{
     Dilithium2Params, Dilithium3Params, Dilithium5Params, DilithiumSchemeParams,
 };
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 mod arithmetic;
 mod encoding;
@@ -27,70 +26,78 @@ mod sampling;
 mod sign;
 
 /// ML-DSA public key encoded with FIPS 204 Algorithm 22 (`pkEncode`).
-#[derive(Clone, Debug, Zeroize)]
-pub struct DilithiumPublicKey(pub(crate) Vec<u8>);
+#[derive(Clone, Debug)]
+pub struct MlDsaPublicKey(pub(crate) Vec<u8>);
 
 /// ML-DSA expanded private key encoded with FIPS 204 Algorithm 24 (`skEncode`).
 ///
 /// In particular, bytes `64..128` contain the complete 64-byte `tr = H(pk, 64)`
 /// value. Bare bytes do not carry a format version, so use paired import or
 /// external provenance/framing when distinguishing affected legacy objects.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
-pub struct DilithiumSecretKey {
+#[derive(Clone)]
+pub struct MlDsaSecretKey {
     bytes: Vec<u8>,
     public_key: Option<Vec<u8>>,
 }
 
 /// ML-DSA signature encoded with FIPS 204 Algorithm 26 (`sigEncode`).
 #[derive(Clone, Debug)]
-pub struct DilithiumSignatureData(pub(crate) Vec<u8>);
+pub struct MlDsaSignature(pub(crate) Vec<u8>);
 
-/// Standards-oriented spelling of [`DilithiumPublicKey`].
-pub type MlDsaPublicKey = DilithiumPublicKey;
-/// Standards-oriented spelling of [`DilithiumSecretKey`].
-pub type MlDsaSecretKey = DilithiumSecretKey;
-/// Standards-oriented spelling of [`DilithiumSignatureData`].
-pub type MlDsaSignature = DilithiumSignatureData;
+impl Zeroize for MlDsaSecretKey {
+    fn zeroize(&mut self) {
+        self.bytes.zeroize();
+        self.public_key.zeroize();
+    }
+}
 
-impl fmt::Debug for DilithiumSecretKey {
+impl Drop for MlDsaSecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for MlDsaSecretKey {}
+
+impl fmt::Debug for MlDsaSecretKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("DilithiumSecretKey")
+        f.debug_struct("MlDsaSecretKey")
             .field("bytes", &"[REDACTED]")
             .finish()
     }
 }
 
-impl AsRef<[u8]> for DilithiumPublicKey {
+impl AsRef<[u8]> for MlDsaPublicKey {
     fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl AsMut<[u8]> for DilithiumPublicKey {
+impl AsMut<[u8]> for MlDsaPublicKey {
     fn as_mut(&mut self) -> &mut [u8] {
         &mut self.0
     }
 }
 
-impl AsRef<[u8]> for DilithiumSecretKey {
+impl AsRef<[u8]> for MlDsaSecretKey {
     fn as_ref(&self) -> &[u8] {
         &self.bytes
     }
 }
 
-impl AsRef<[u8]> for DilithiumSignatureData {
+impl AsRef<[u8]> for MlDsaSignature {
     fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }
 
-impl AsMut<[u8]> for DilithiumSignatureData {
+impl AsMut<[u8]> for MlDsaSignature {
     fn as_mut(&mut self) -> &mut [u8] {
         &mut self.0
     }
 }
 
-impl DilithiumSecretKey {
+impl MlDsaSecretKey {
     /// Decode and fully validate a final-FIPS-204 expanded private key.
     ///
     /// Validation recomputes `A*s1+s2`, `t1`, `t0`, the public key, and the
@@ -120,7 +127,7 @@ impl DilithiumSecretKey {
     /// public key to equal the public key derived from all secret components.
     pub fn from_bytes_with_public_key(
         bytes: &[u8],
-        public_key: &DilithiumPublicKey,
+        public_key: &MlDsaPublicKey,
     ) -> Result<Self, SignError> {
         match bytes.len() {
             2560 => Dilithium2Params::validate_key_pair(bytes, public_key.as_ref())?,
@@ -146,11 +153,11 @@ impl DilithiumSecretKey {
     }
 
     /// Return the public key retained at generation or paired import time.
-    pub fn public_key(&self) -> Result<DilithiumPublicKey, SignError> {
+    pub fn public_key(&self) -> Result<MlDsaPublicKey, SignError> {
         self.public_key
             .as_ref()
             .cloned()
-            .map(DilithiumPublicKey)
+            .map(MlDsaPublicKey)
             .ok_or_else(|| {
                 SignError::InvalidKey(
                     "public-key derivation is unavailable for an unpaired imported ML-DSA expanded key; import with from_bytes_with_public_key"
@@ -160,7 +167,7 @@ impl DilithiumSecretKey {
     }
 }
 
-impl DilithiumPublicKey {
+impl MlDsaPublicKey {
     /// Decode and validate a final-FIPS-204 public key.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, SignError> {
         match bytes.len() {
@@ -184,7 +191,7 @@ impl DilithiumPublicKey {
     }
 }
 
-impl DilithiumSignatureData {
+impl MlDsaSignature {
     /// Decode a final-FIPS-204 signature and enforce canonical hint encoding.
     ///
     /// Duplicate or unsorted hint indices, non-monotonic hint boundaries, and
@@ -297,7 +304,7 @@ impl MlDsaBackend for Dilithium3Params {}
 impl MlDsaBackend for Dilithium5Params {}
 
 /// ML-DSA signature scheme parameterized by a final FIPS 204 parameter set.
-pub struct Dilithium<P: DilithiumSchemeParams + 'static> {
+pub struct MlDsa<P: DilithiumSchemeParams + 'static> {
     _params: PhantomData<P>,
 }
 
@@ -316,16 +323,16 @@ fn format_pure_message(message: &[u8], context: &[u8]) -> Result<Vec<u8>, SignEr
     Ok(formatted)
 }
 
-impl<P> Dilithium<P>
+impl<P> MlDsa<P>
 where
     P: MlDsaBackend + Send + Sync + 'static,
 {
     /// Generate a hedged FIPS 204 pure signature with an explicit caller RNG.
     pub fn sign_with_rng<R: CryptoRng + RngCore>(
         message: &[u8],
-        secret_key: &DilithiumSecretKey,
+        secret_key: &MlDsaSecretKey,
         rng: &mut R,
-    ) -> ApiResult<DilithiumSignatureData> {
+    ) -> ApiResult<MlDsaSignature> {
         Self::sign_with_context_rng(message, &[], secret_key, rng)
     }
 
@@ -333,25 +340,24 @@ where
     pub fn sign_with_context_rng<R: CryptoRng + RngCore>(
         message: &[u8],
         context: &[u8],
-        secret_key: &DilithiumSecretKey,
+        secret_key: &MlDsaSecretKey,
         rng: &mut R,
-    ) -> ApiResult<DilithiumSignatureData> {
+    ) -> ApiResult<MlDsaSignature> {
         let formatted = format_pure_message(message, context).map_err(dcrypt_api::Error::from)?;
-        let mut randomizer = [0u8; 32];
-        rng.try_fill_bytes(&mut randomizer)
+        let mut randomizer = Zeroizing::new([0u8; 32]);
+        rng.try_fill_bytes(&mut *randomizer)
             .map_err(|error| dcrypt_api::Error::from(SignError::Rng(error.to_string())))?;
         let result = P::sign_internal(&formatted, secret_key.as_ref(), &randomizer, None)
-            .map(DilithiumSignatureData)
+            .map(MlDsaSignature)
             .map_err(dcrypt_api::Error::from);
-        randomizer.zeroize();
         result
     }
 
     /// Generate the optional deterministic FIPS 204 pure signature.
     pub fn sign_deterministic(
         message: &[u8],
-        secret_key: &DilithiumSecretKey,
-    ) -> ApiResult<DilithiumSignatureData> {
+        secret_key: &MlDsaSecretKey,
+    ) -> ApiResult<MlDsaSignature> {
         Self::sign_deterministic_with_context(message, &[], secret_key)
     }
 
@@ -359,20 +365,20 @@ where
     pub fn sign_deterministic_with_context(
         message: &[u8],
         context: &[u8],
-        secret_key: &DilithiumSecretKey,
-    ) -> ApiResult<DilithiumSignatureData> {
+        secret_key: &MlDsaSecretKey,
+    ) -> ApiResult<MlDsaSignature> {
         let formatted = format_pure_message(message, context).map_err(dcrypt_api::Error::from)?;
         let signature = P::sign_internal(&formatted, secret_key.as_ref(), &[0u8; 32], None)
             .map_err(dcrypt_api::Error::from)?;
-        Ok(DilithiumSignatureData(signature))
+        Ok(MlDsaSignature(signature))
     }
 
     /// Verify a pure FIPS 204 signature with an explicit context.
     pub fn verify_with_context(
         message: &[u8],
         context: &[u8],
-        signature: &DilithiumSignatureData,
-        public_key: &DilithiumPublicKey,
+        signature: &MlDsaSignature,
+        public_key: &MlDsaPublicKey,
     ) -> ApiResult<()> {
         validate_hint_encoding_for_len(signature.as_ref()).map_err(dcrypt_api::Error::from)?;
         let formatted = format_pure_message(message, context).map_err(dcrypt_api::Error::from)?;
@@ -384,11 +390,11 @@ where
     #[doc(hidden)]
     pub fn sign_internal_with_randomizer(
         formatted_message: &[u8],
-        secret_key: &DilithiumSecretKey,
+        secret_key: &MlDsaSecretKey,
         randomizer: &[u8; 32],
-    ) -> ApiResult<DilithiumSignatureData> {
+    ) -> ApiResult<MlDsaSignature> {
         P::sign_internal(formatted_message, secret_key.as_ref(), randomizer, None)
-            .map(DilithiumSignatureData)
+            .map(MlDsaSignature)
             .map_err(dcrypt_api::Error::from)
     }
 
@@ -396,11 +402,11 @@ where
     #[doc(hidden)]
     pub fn sign_mu_with_randomizer(
         mu: &[u8; 64],
-        secret_key: &DilithiumSecretKey,
+        secret_key: &MlDsaSecretKey,
         randomizer: &[u8; 32],
-    ) -> ApiResult<DilithiumSignatureData> {
+    ) -> ApiResult<MlDsaSignature> {
         P::sign_internal(&[], secret_key.as_ref(), randomizer, Some(mu))
-            .map(DilithiumSignatureData)
+            .map(MlDsaSignature)
             .map_err(dcrypt_api::Error::from)
     }
 
@@ -408,8 +414,8 @@ where
     #[doc(hidden)]
     pub fn verify_internal_message(
         formatted_message: &[u8],
-        signature: &DilithiumSignatureData,
-        public_key: &DilithiumPublicKey,
+        signature: &MlDsaSignature,
+        public_key: &MlDsaPublicKey,
     ) -> ApiResult<()> {
         validate_hint_encoding_for_len(signature.as_ref()).map_err(dcrypt_api::Error::from)?;
         P::verify_internal(
@@ -425,8 +431,8 @@ where
     #[doc(hidden)]
     pub fn verify_mu(
         mu: &[u8; 64],
-        signature: &DilithiumSignatureData,
-        public_key: &DilithiumPublicKey,
+        signature: &MlDsaSignature,
+        public_key: &MlDsaPublicKey,
     ) -> ApiResult<()> {
         validate_hint_encoding_for_len(signature.as_ref()).map_err(dcrypt_api::Error::from)?;
         P::verify_internal(&[], signature.as_ref(), public_key.as_ref(), Some(mu))
@@ -434,13 +440,13 @@ where
     }
 }
 
-impl<P> SignatureTrait for Dilithium<P>
+impl<P> SignatureTrait for MlDsa<P>
 where
     P: MlDsaBackend + Send + Sync + 'static,
 {
-    type PublicKey = DilithiumPublicKey;
-    type SecretKey = DilithiumSecretKey;
-    type SignatureData = DilithiumSignatureData;
+    type PublicKey = MlDsaPublicKey;
+    type SecretKey = MlDsaSecretKey;
+    type SignatureData = MlDsaSignature;
     type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
@@ -450,8 +456,8 @@ where
     fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> ApiResult<Self::KeyPair> {
         let (public, secret) = P::keypair(rng).map_err(dcrypt_api::Error::from)?;
         Ok((
-            DilithiumPublicKey(public.clone()),
-            DilithiumSecretKey {
+            MlDsaPublicKey(public.clone()),
+            MlDsaSecretKey {
                 bytes: secret,
                 public_key: Some(public),
             },
@@ -492,18 +498,11 @@ fn validate_hint_encoding_for_len(signature: &[u8]) -> Result<(), SignError> {
 }
 
 /// ML-DSA-44 (FIPS 204 security category 2).
-pub type MlDsa44 = Dilithium<Dilithium2Params>;
+pub type MlDsa44 = MlDsa<Dilithium2Params>;
 /// ML-DSA-65 (FIPS 204 security category 3).
-pub type MlDsa65 = Dilithium<Dilithium3Params>;
+pub type MlDsa65 = MlDsa<Dilithium3Params>;
 /// ML-DSA-87 (FIPS 204 security category 5).
-pub type MlDsa87 = Dilithium<Dilithium5Params>;
-
-/// Compatibility alias for [`MlDsa44`].
-pub type Dilithium2 = MlDsa44;
-/// Compatibility alias for [`MlDsa65`].
-pub type Dilithium3 = MlDsa65;
-/// Compatibility alias for [`MlDsa87`].
-pub type Dilithium5 = MlDsa87;
+pub type MlDsa87 = MlDsa<Dilithium5Params>;
 
 #[cfg(test)]
 mod tests;

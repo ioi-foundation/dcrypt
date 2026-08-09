@@ -6,13 +6,53 @@ use dcrypt_algorithms::hash::sha2::Sha384;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::error::Error as ApiError; // Use the API error type
 use dcrypt_api::Signature as SignatureTrait;
-use rand::rngs::OsRng;
+use dcrypt_internal::ChaCha20Rng;
+
+fn test_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x42; 32])
+}
 use std::fs;
 use std::path::PathBuf;
 
 #[test]
+fn rfc6979_sha384_sample_signature_matches() {
+    let bytes: [u8; ec::P384_SCALAR_SIZE] = hex::decode(concat!(
+        "6B9D3DAD2E1B8C1C05B19875B6659F4DE23C3B667BF297BA9AA47740787137D8",
+        "96D5724E4C70A825F872C9EA60D2EDF5"
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+    let secret = EcdsaP384SecretKey {
+        raw: ec::Scalar::new(bytes).unwrap(),
+        bytes,
+    };
+    let signature = EcdsaP384::sign(b"sample", &secret).unwrap();
+    let components = SignatureComponents::from_der(signature.as_ref()).unwrap();
+
+    assert_eq!(
+        components.r,
+        hex::decode(concat!(
+            "94EDBB92A5ECB8AAD4736E56C691916B3F88140666CE9FA73D64C4EA95AD133C",
+            "81A648152E44ACF96E36DD1E80FABE46"
+        ))
+        .unwrap()
+    );
+    let expected_rfc_s: [u8; ec::P384_SCALAR_SIZE] = hex::decode(concat!(
+        "99EF4AEB15F178CEA1FE40DB2603138F130E740A19624526203B6351D0A3A94F",
+        "A329C145786E679E7B82C71A38628AC8"
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+    let expected_rfc_s = ec::Scalar::new(expected_rfc_s).unwrap();
+    let expected_low_s = expected_rfc_s.negate().serialize();
+    assert_eq!(components.s, expected_low_s.to_vec());
+}
+
+#[test]
 fn test_ecdsa_p384_signatures_are_low_s_and_high_s_is_rejected() {
-    let (public_key, secret_key) = EcdsaP384::keypair(&mut OsRng).unwrap();
+    let (public_key, secret_key) = EcdsaP384::keypair(&mut test_rng()).unwrap();
     let message = b"canonical";
     let signature = EcdsaP384::sign(message, &secret_key).unwrap();
     let components = SignatureComponents::from_der(&signature.0).unwrap();
@@ -347,18 +387,16 @@ fn hex_to_bytes(hex_str: &str) -> Vec<u8> {
 /*                          ORIGINAL BASIC TESTS                             */
 /* ------------------------------------------------------------------------- */
 #[test]
-fn test_reduce_zero_rejected() {
-    // After the fix, a zero value should simply be rejected.
+fn coordinate_reduction_preserves_zero() {
+    // Coordinate/hash reduction is allowed to produce zero. Callers that
+    // require a non-zero ECDSA scalar reject it at the protocol boundary.
     let zero_bytes = [0u8; 48];
-    assert!(
-        reduce_bytes_to_scalar(&zero_bytes).is_err(),
-        "Zero input should not be silently mapped to one"
-    );
+    assert!(reduce_bytes_to_scalar(&zero_bytes).unwrap().is_zero());
 }
 
 #[test]
 fn test_empty_message() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = b"";
     let signature = EcdsaP384::sign(message, &secret_key).unwrap();
@@ -367,7 +405,7 @@ fn test_empty_message() {
 
 #[test]
 fn test_large_message() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = vec![0xAB; 10000];
     let signature = EcdsaP384::sign(&message, &secret_key).unwrap();
@@ -376,7 +414,7 @@ fn test_large_message() {
 
 #[test]
 fn test_ecdsa_p384_sign_verify() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = b"Test message for ECDSA P-384";
     let signature = EcdsaP384::sign(message, &secret_key).unwrap();
@@ -387,7 +425,7 @@ fn test_ecdsa_p384_sign_verify() {
 
 #[test]
 fn test_deterministic_verification() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = b"Test message";
     let signature = EcdsaP384::sign(message, &secret_key).unwrap();
@@ -398,7 +436,7 @@ fn test_deterministic_verification() {
 
 #[test]
 fn test_key_generation_details() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     for i in 0..5 {
         match EcdsaP384::keypair(&mut rng) {
             Ok((_, sec_key)) => {
@@ -414,19 +452,19 @@ fn test_key_generation_details() {
 
 #[test]
 fn test_multiple_signatures() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = b"Test message for multiple signatures";
     let sig1 = EcdsaP384::sign(message, &secret_key).unwrap();
     let sig2 = EcdsaP384::sign(message, &secret_key).unwrap();
     assert!(EcdsaP384::verify(message, &sig1, &public_key).is_ok());
     assert!(EcdsaP384::verify(message, &sig2, &public_key).is_ok());
-    assert_ne!(sig1.as_ref(), sig2.as_ref());
+    assert_eq!(sig1.as_ref(), sig2.as_ref());
 }
 
 #[test]
 fn test_wrong_public_key() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret_key1) = EcdsaP384::keypair(&mut rng).unwrap();
     let (public_key2, _) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = b"Test message";
@@ -436,7 +474,7 @@ fn test_wrong_public_key() {
 
 #[test]
 fn test_invalid_signature() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, _) = EcdsaP384::keypair(&mut rng).unwrap();
     let invalid_sig = EcdsaP384Signature(vec![0x30, 0x06, 0x02, 0x01, 0x00, 0x02, 0x01, 0x00]);
     let message = b"Test message";
@@ -459,7 +497,7 @@ fn test_der_malformed() {
 
 #[test]
 fn test_signature_serialization() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, sec_key) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = b"Test serialization";
     let signature = EcdsaP384::sign(message, &sec_key).unwrap();
@@ -513,7 +551,7 @@ fn test_scalar_edge_cases() {
 
 #[test]
 fn test_modular_inverse_comprehensive() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let mut two_bytes = [0u8; 48];
     two_bytes[47] = 2;
     let two = ec::Scalar::new(two_bytes).unwrap();
@@ -676,7 +714,7 @@ fn test_hash_edge_cases() {
 
 #[test]
 fn test_cross_validation() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     for _ in 0..3 {
         let (pk1, sk1) = EcdsaP384::keypair(&mut rng).unwrap();
         let (pk2, sk2) = EcdsaP384::keypair(&mut rng).unwrap();
@@ -701,14 +739,14 @@ fn test_cross_validation() {
 
 #[test]
 fn test_deterministic_k_properties() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, sk) = EcdsaP384::keypair(&mut rng).unwrap();
     let message = b"Test deterministic k";
     let mut signatures: Vec<EcdsaP384Signature> = Vec::new();
     for _ in 0..5 {
         let sig = EcdsaP384::sign(message, &sk).unwrap();
         for prev_sig in &signatures {
-            assert_ne!(sig.as_ref(), prev_sig.as_ref());
+            assert_eq!(sig.as_ref(), prev_sig.as_ref());
         }
         signatures.push(sig);
     }

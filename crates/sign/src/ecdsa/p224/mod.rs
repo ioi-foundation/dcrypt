@@ -4,22 +4,22 @@
 //! and SP 800-56A Rev. 3: Recommendation for Pair-Wise Key-Establishment Schemes
 //! Using Discrete Logarithm Cryptography. SHA-224 is used as the hash function.
 
-use crate::ecdsa::common::{is_canonical_nonzero_scalar, is_high_s, SignatureComponents};
+use crate::ecdsa::common::{
+    bits2octets, is_canonical_nonzero_scalar, is_high_s, Rfc6979, SignatureComponents,
+};
+use alloc::vec::Vec;
 use dcrypt_algorithms::ec::p224 as ec;
-use dcrypt_algorithms::hash::sha2::{Sha224, Sha224Algorithm}; // Import Sha224Algorithm for BLOCK_SIZE
-use dcrypt_algorithms::hash::{HashAlgorithm, HashFunction}; // Import HashAlgorithm for BLOCK_SIZE
-use dcrypt_algorithms::mac::hmac::Hmac;
+use dcrypt_algorithms::hash::sha2::Sha224;
+use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
-use dcrypt_internal::constant_time::ct_eq;
+use dcrypt_internal::{constant_time::ct_eq, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop};
 use dcrypt_params::traditional::ecdsa::NIST_P224;
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize; // ZeroizeOnDrop is implicitly handled by ec::Scalar's own Drop
 
 /// ECDSA signature scheme using NIST P-224 curve (secp224r1)
 pub struct EcdsaP224;
 
 /// P-224 public key in uncompressed format (0x04 || X || Y)
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct EcdsaP224PublicKey(pub [u8; ec::P224_POINT_UNCOMPRESSED_SIZE]);
 
 /// P-224 secret key
@@ -31,8 +31,8 @@ pub struct EcdsaP224SecretKey {
 
 impl Zeroize for EcdsaP224SecretKey {
     fn zeroize(&mut self) {
+        self.raw.zeroize();
         self.bytes.zeroize();
-        // self.raw is an ec::Scalar, which implements ZeroizeOnDrop.
     }
 }
 
@@ -41,6 +41,8 @@ impl Drop for EcdsaP224SecretKey {
         self.zeroize();
     }
 }
+
+impl ZeroizeOnDrop for EcdsaP224SecretKey {}
 
 /// P-224 signature encoded in ASN.1 DER format
 #[derive(Clone)]
@@ -118,15 +120,40 @@ impl SignatureTrait for EcdsaP224 {
         hasher.update(message).map_err(ApiError::from)?;
         let hash_output = hasher.finalize().map_err(ApiError::from)?;
 
-        let mut z_bytes_fixed_size = [0u8; ec::P224_SCALAR_SIZE];
-        z_bytes_fixed_size.copy_from_slice(hash_output.as_ref());
-        let z = reduce_bytes_to_scalar_p224(&z_bytes_fixed_size)?;
+        let z_octets = bits2octets(hash_output.as_ref(), &NIST_P224.n, 224)?;
+        let z_bytes: [u8; ec::P224_SCALAR_SIZE] =
+            z_octets
+                .as_slice()
+                .try_into()
+                .map_err(|_| ApiError::InvalidLength {
+                    context: "ECDSA-P224 hash conversion",
+                    expected: ec::P224_SCALAR_SIZE,
+                    actual: z_octets.len(),
+                })?;
+        let z = ec::Scalar::from_bytes_reduced(z_bytes);
 
         let d = secret_key.raw.clone();
-        let mut rng = rand::thread_rng();
+        let mut d_bytes = d.serialize();
+        let nonces_result =
+            Rfc6979::<Sha224>::new(&d_bytes, hash_output.as_ref(), &NIST_P224.n, 224);
+        d_bytes.zeroize();
+        let mut nonces = nonces_result?;
 
         loop {
-            let k = deterministic_k_hedged_p224(&d, &z, &mut rng);
+            let mut nonce = nonces.next_nonce()?;
+            let mut nonce_bytes: [u8; ec::P224_SCALAR_SIZE] =
+                nonce
+                    .as_slice()
+                    .try_into()
+                    .map_err(|_| ApiError::InvalidLength {
+                        context: "ECDSA-P224 nonce",
+                        expected: ec::P224_SCALAR_SIZE,
+                        actual: nonce.len(),
+                    })?;
+            nonce.zeroize();
+            let scalar = ec::Scalar::new(nonce_bytes).map_err(ApiError::from);
+            nonce_bytes.zeroize();
+            let k = scalar?;
 
             let kg = ec::scalar_mult_base_g(&k).map_err(ApiError::from)?;
 
@@ -214,9 +241,17 @@ impl SignatureTrait for EcdsaP224 {
         hasher.update(message).map_err(ApiError::from)?;
         let hash_output = hasher.finalize().map_err(ApiError::from)?;
 
-        let mut z_bytes_fixed_size = [0u8; ec::P224_SCALAR_SIZE];
-        z_bytes_fixed_size.copy_from_slice(hash_output.as_ref());
-        let z = reduce_bytes_to_scalar_p224(&z_bytes_fixed_size)?;
+        let z_octets = bits2octets(hash_output.as_ref(), &NIST_P224.n, 224)?;
+        let z_bytes: [u8; ec::P224_SCALAR_SIZE] =
+            z_octets
+                .as_slice()
+                .try_into()
+                .map_err(|_| ApiError::InvalidLength {
+                    context: "ECDSA-P224 hash conversion",
+                    expected: ec::P224_SCALAR_SIZE,
+                    actual: z_octets.len(),
+                })?;
+        let z = ec::Scalar::from_bytes_reduced(z_bytes);
 
         let s_inv = s.inv_mod_n().map_err(ApiError::from)?;
         let u1 = z.mul_mod_n(&s_inv).map_err(ApiError::from)?;
@@ -259,102 +294,8 @@ impl SignatureTrait for EcdsaP224 {
     }
 }
 
-fn deterministic_k_hedged_p224<R: RngCore + CryptoRng>(
-    d: &ec::Scalar,
-    z: &ec::Scalar,
-    rng: &mut R,
-) -> ec::Scalar {
-    use zeroize::Zeroize;
-    let hash_len = Sha224Algorithm::OUTPUT_SIZE; // 28 bytes
-
-    let mut rbuf = [0u8; ec::P224_SCALAR_SIZE];
-    rng.fill_bytes(&mut rbuf[..hash_len]);
-
-    let mut v_hmac_block = [0x01u8; Sha224Algorithm::BLOCK_SIZE];
-    let mut k_hmac_block = [0x00u8; Sha224Algorithm::BLOCK_SIZE];
-
-    // Step C
-    {
-        let mut mac = Hmac::<Sha224>::new(&k_hmac_block).unwrap();
-        mac.update(&v_hmac_block).unwrap();
-        mac.update(&[0x00]).unwrap();
-        mac.update(&d.serialize()).unwrap();
-        mac.update(&z.serialize()).unwrap();
-        mac.update(&rbuf[..hash_len]).unwrap();
-        let mac_res = mac.finalize().unwrap();
-        k_hmac_block[..hash_len].copy_from_slice(&mac_res);
-        k_hmac_block[hash_len..].fill(0);
-    }
-    // Step D
-    let v_new_res = Hmac::<Sha224>::mac(&k_hmac_block, &v_hmac_block).unwrap();
-    v_hmac_block[..hash_len].copy_from_slice(&v_new_res);
-    v_hmac_block[hash_len..].fill(0);
-    // Step E
-    {
-        let mut mac = Hmac::<Sha224>::new(&k_hmac_block).unwrap();
-        mac.update(&v_hmac_block).unwrap();
-        mac.update(&[0x01]).unwrap();
-        mac.update(&d.serialize()).unwrap();
-        mac.update(&z.serialize()).unwrap();
-        mac.update(&rbuf[..hash_len]).unwrap();
-        let mac_res = mac.finalize().unwrap();
-        k_hmac_block[..hash_len].copy_from_slice(&mac_res);
-        k_hmac_block[hash_len..].fill(0);
-    }
-    // Step F
-    let v_new_res = Hmac::<Sha224>::mac(&k_hmac_block, &v_hmac_block).unwrap();
-    v_hmac_block[..hash_len].copy_from_slice(&v_new_res);
-    v_hmac_block[hash_len..].fill(0);
-
-    // Step G/H
-    loop {
-        let v_new_res = Hmac::<Sha224>::mac(&k_hmac_block, &v_hmac_block).unwrap();
-        v_hmac_block[..hash_len].copy_from_slice(&v_new_res);
-        v_hmac_block[hash_len..].fill(0);
-
-        let mut candidate_scalar_bytes = [0u8; ec::P224_SCALAR_SIZE];
-        candidate_scalar_bytes.copy_from_slice(&v_hmac_block[..ec::P224_SCALAR_SIZE]);
-
-        // Attempt to create a scalar. ec::Scalar::new() will perform reduction and check for zero.
-        if let Ok(candidate) = ec::Scalar::new(candidate_scalar_bytes) {
-            // If candidate is valid (non-zero and < n), return it.
-            rbuf.zeroize();
-            return candidate;
-        }
-
-        // Retry path (step H): update K and V if candidate was invalid (e.g., zero after reduction)
-        let mut mac = Hmac::<Sha224>::new(&k_hmac_block).unwrap();
-        mac.update(&v_hmac_block).unwrap();
-        mac.update(&[0x00]).unwrap();
-        let mac_res = mac.finalize().unwrap();
-        k_hmac_block[..hash_len].copy_from_slice(&mac_res);
-        k_hmac_block[hash_len..].fill(0);
-
-        let v_new_res = Hmac::<Sha224>::mac(&k_hmac_block, &v_hmac_block).unwrap();
-        v_hmac_block[..hash_len].copy_from_slice(&v_new_res);
-        v_hmac_block[hash_len..].fill(0);
-    }
-}
-
 fn reduce_bytes_to_scalar_p224(bytes: &[u8; ec::P224_SCALAR_SIZE]) -> ApiResult<ec::Scalar> {
-    ec::Scalar::new(*bytes).map_err(|algo_err| {
-        match algo_err {
-            dcrypt_algorithms::error::Error::Parameter {
-                ref name,
-                ref reason,
-            } if name.as_ref() == "P-224 Scalar"
-                && reason.as_ref().contains("Scalar cannot be zero") =>
-            {
-                ApiError::InvalidSignature {
-                    context: "ECDSA-P224 scalar reduction",
-                    #[cfg(feature = "std")]
-                    message: "Computed scalar component is zero or invalid".to_string(),
-                }
-            }
-            // Catch-all for other algo errors, converting them directly to ApiError
-            _ => ApiError::from(algo_err),
-        }
-    })
+    Ok(ec::Scalar::from_bytes_reduced(*bytes))
 }
 
 #[cfg(test)]

@@ -1,7 +1,6 @@
 use super::*;
 use dcrypt_algorithms::hash::{HashFunction, Sha256, Shake256};
-use rand::{CryptoRng, Error as RngError, RngCore};
-use rand_chacha::{rand_core::SeedableRng, ChaCha20Rng};
+use dcrypt_internal::{ChaCha20Rng, CryptoRng, Error as RngError, RngCore};
 
 const MESSAGE: &[u8] = b"FIPS 204 ML-DSA interoperability test";
 
@@ -74,11 +73,11 @@ macro_rules! roundtrip_test {
             assert!(<$scheme>::verify(MESSAGE, &signature, &public_key).is_ok());
             assert!(<$scheme>::verify(b"wrong message", &signature, &public_key).is_err());
 
-            let decoded_public = DilithiumPublicKey::from_bytes(public_key.as_ref()).unwrap();
+            let decoded_public = MlDsaPublicKey::from_bytes(public_key.as_ref()).unwrap();
             let decoded_secret =
-                DilithiumSecretKey::from_bytes_with_public_key(secret_key.as_ref(), &public_key)
+                MlDsaSecretKey::from_bytes_with_public_key(secret_key.as_ref(), &public_key)
                     .unwrap();
-            let decoded_signature = DilithiumSignatureData::from_bytes(signature.as_ref()).unwrap();
+            let decoded_signature = MlDsaSignature::from_bytes(signature.as_ref()).unwrap();
             assert_eq!(decoded_public.as_ref(), public_key.as_ref());
             assert_eq!(decoded_secret.as_ref(), secret_key.as_ref());
             assert_eq!(decoded_signature.as_ref(), signature.as_ref());
@@ -94,7 +93,7 @@ macro_rules! roundtrip_test {
 fn expanded_key_import_derives_and_validates_public_key() {
     let mut rng = ChaCha20Rng::from_seed([0x35; 32]);
     let (public, secret) = MlDsa44::keypair(&mut rng).unwrap();
-    let imported = DilithiumSecretKey::from_bytes(secret.as_ref()).unwrap();
+    let imported = MlDsaSecretKey::from_bytes(secret.as_ref()).unwrap();
     assert_eq!(imported.public_key().unwrap().as_ref(), public.as_ref());
 }
 
@@ -107,7 +106,7 @@ fn paired_import_rejects_incoherent_t0_without_panicking() {
     // encoded at 96 bytes each. The remaining bytes encode t0.
     malformed[128 + 8 * 96..].fill(0);
 
-    assert!(DilithiumSecretKey::from_bytes_with_public_key(&malformed, &public).is_err());
+    assert!(MlDsaSecretKey::from_bytes_with_public_key(&malformed, &public).is_err());
 }
 
 roundtrip_test!(ml_dsa_44_roundtrip, MlDsa44, 1312, 2560, 2420, "ML-DSA-44");
@@ -169,27 +168,27 @@ fn expanded_key_decoder_rejects_malformed_or_incoherent_components() {
 
     let mut malformed_tr = secret.as_ref().to_vec();
     malformed_tr[64] ^= 1;
-    assert!(DilithiumSecretKey::from_bytes(&malformed_tr).is_err());
+    assert!(MlDsaSecretKey::from_bytes(&malformed_tr).is_err());
 
     // For eta=2 each secret coefficient occupies three bits and only encoded
     // values 0..=4 are canonical. Seven must be rejected before coherence work.
     let mut noncanonical_s1 = secret.as_ref().to_vec();
     noncanonical_s1[128] = (noncanonical_s1[128] & !0x07) | 0x07;
-    assert!(DilithiumSecretKey::from_bytes(&noncanonical_s1).is_err());
+    assert!(MlDsaSecretKey::from_bytes(&noncanonical_s1).is_err());
 
     let mut incoherent_s1 = secret.as_ref().to_vec();
     incoherent_s1[128] ^= 1;
-    assert!(DilithiumSecretKey::from_bytes(&incoherent_s1).is_err());
+    assert!(MlDsaSecretKey::from_bytes(&incoherent_s1).is_err());
 
     let mut incoherent_t0 = secret.as_ref().to_vec();
     incoherent_t0[128 + 8 * 96] ^= 1;
-    assert!(DilithiumSecretKey::from_bytes(&incoherent_t0).is_err());
+    assert!(MlDsaSecretKey::from_bytes(&incoherent_t0).is_err());
 
     let (different_public, _) = MlDsa44::keypair(&mut rng).unwrap();
     assert!(
-        DilithiumSecretKey::from_bytes_with_public_key(secret.as_ref(), &different_public).is_err()
+        MlDsaSecretKey::from_bytes_with_public_key(secret.as_ref(), &different_public).is_err()
     );
-    assert!(DilithiumSecretKey::from_bytes_with_public_key(secret.as_ref(), &public).is_ok());
+    assert!(MlDsaSecretKey::from_bytes_with_public_key(secret.as_ref(), &public).is_ok());
 }
 
 macro_rules! nist_keygen_kat {
@@ -259,30 +258,30 @@ fn signature_parser_rejects_noncanonical_hint_encodings() {
     const OMEGA: usize = 80;
 
     let canonical_empty_hint = vec![0u8; 2420];
-    assert!(DilithiumSignatureData::from_bytes(&canonical_empty_hint).is_ok());
+    assert!(MlDsaSignature::from_bytes(&canonical_empty_hint).is_ok());
 
     let mut nonzero_padding = canonical_empty_hint.clone();
     nonzero_padding[HINT_OFFSET] = 1;
-    assert!(DilithiumSignatureData::from_bytes(&nonzero_padding).is_err());
+    assert!(MlDsaSignature::from_bytes(&nonzero_padding).is_err());
 
     let mut duplicate_indices = canonical_empty_hint.clone();
     duplicate_indices[HINT_OFFSET] = 7;
     duplicate_indices[HINT_OFFSET + 1] = 7;
     duplicate_indices[HINT_OFFSET + OMEGA..HINT_OFFSET + OMEGA + 4].copy_from_slice(&[2, 2, 2, 2]);
-    assert!(DilithiumSignatureData::from_bytes(&duplicate_indices).is_err());
+    assert!(MlDsaSignature::from_bytes(&duplicate_indices).is_err());
 
     let mut unsorted_indices = canonical_empty_hint.clone();
     unsorted_indices[HINT_OFFSET] = 8;
     unsorted_indices[HINT_OFFSET + 1] = 3;
     unsorted_indices[HINT_OFFSET + OMEGA..HINT_OFFSET + OMEGA + 4].copy_from_slice(&[2, 2, 2, 2]);
-    assert!(DilithiumSignatureData::from_bytes(&unsorted_indices).is_err());
+    assert!(MlDsaSignature::from_bytes(&unsorted_indices).is_err());
 
     let mut nonmonotonic_boundaries = canonical_empty_hint;
     nonmonotonic_boundaries[HINT_OFFSET] = 3;
     nonmonotonic_boundaries[HINT_OFFSET + 1] = 9;
     nonmonotonic_boundaries[HINT_OFFSET + OMEGA..HINT_OFFSET + OMEGA + 4]
         .copy_from_slice(&[2, 1, 1, 1]);
-    assert!(DilithiumSignatureData::from_bytes(&nonmonotonic_boundaries).is_err());
+    assert!(MlDsaSignature::from_bytes(&nonmonotonic_boundaries).is_err());
 }
 
 #[test]
@@ -310,7 +309,7 @@ fn verification_rejects_a_canonical_encoding_with_out_of_range_z() {
     encoded[32] = 0;
     encoded[33] = 0;
     encoded[34] &= !0x03;
-    let malformed = DilithiumSignatureData::from_bytes(&encoded).unwrap();
+    let malformed = MlDsaSignature::from_bytes(&encoded).unwrap();
     assert!(MlDsa44::verify(MESSAGE, &malformed, &public).is_err());
 }
 
@@ -326,5 +325,5 @@ fn old_32_byte_tr_plus_padding_private_key_fails_paired_import() {
     legacy_layout.extend_from_slice(&[0u8; 32]);
     assert_eq!(legacy_layout.len(), 2560);
 
-    assert!(DilithiumSecretKey::from_bytes_with_public_key(&legacy_layout, &public).is_err());
+    assert!(MlDsaSecretKey::from_bytes_with_public_key(&legacy_layout, &public).is_err());
 }

@@ -1,17 +1,13 @@
 //! ECDSA signature implementations for NIST curves
 //!
 //! This module provides secure implementations of the Elliptic Curve Digital
-//! Signature Algorithm (ECDSA) using NIST P-192, P-256, P-384, and P-521 curves. // Added P-192
+//! Signature Algorithm (ECDSA) using the NIST P-224, P-256, P-384, and P-521 curves.
 
 pub mod common;
-pub mod p192; // Added P-192 module
 pub mod p224;
 pub mod p256;
 pub mod p384;
 pub mod p521;
-
-// Re-export P-192 types // Added P-192 exports
-pub use p192::{EcdsaP192, EcdsaP192PublicKey, EcdsaP192SecretKey, EcdsaP192Signature};
 
 // Re-export P-224 types
 pub use p224::{EcdsaP224, EcdsaP224PublicKey, EcdsaP224SecretKey, EcdsaP224Signature};

@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 use super::field::FieldElement;
 use super::scalar::{Scalar, GROUP_ORDER_BYTES};

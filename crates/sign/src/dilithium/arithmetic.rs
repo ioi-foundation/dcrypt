@@ -7,8 +7,8 @@ use super::polyvec::{PolyVecK, PolyVecL};
 use crate::error::Error as SignError;
 use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
+use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq};
 use dcrypt_params::pqc::dilithium::{DilithiumSchemeParams, DILITHIUM_N, DILITHIUM_Q};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 /// Dilithium modulus Q
 const Q: i32 = 8_380_417;
@@ -244,7 +244,7 @@ pub(crate) fn check_norm_poly_ct(poly: &Polynomial<DilithiumParams>, bound: u32)
     let mut valid = Choice::from(1u8);
     for &coeff in poly.coeffs.iter() {
         let centered = to_centered(coeff);
-        valid = valid & ct_lt_u32(ct_abs_i32(centered), bound);
+        valid &= ct_lt_u32(ct_abs_i32(centered), bound);
     }
     valid
 }
@@ -256,7 +256,7 @@ pub(crate) fn check_norm_polyvec_l_ct<P: DilithiumSchemeParams>(
 ) -> Choice {
     let mut valid = Choice::from(1u8);
     for poly in pv.polys.iter() {
-        valid = valid & check_norm_poly_ct(poly, bound);
+        valid &= check_norm_poly_ct(poly, bound);
     }
     valid
 }
@@ -268,7 +268,7 @@ pub(crate) fn check_norm_polyvec_k_ct<P: DilithiumSchemeParams>(
 ) -> Choice {
     let mut valid = Choice::from(1u8);
     for poly in pv.polys.iter() {
-        valid = valid & check_norm_poly_ct(poly, bound);
+        valid &= check_norm_poly_ct(poly, bound);
     }
     valid
 }

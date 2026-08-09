@@ -6,13 +6,57 @@ use dcrypt_algorithms::hash::sha2::Sha512;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::Signature as SignatureTrait;
-use rand::rngs::OsRng;
+use dcrypt_internal::ChaCha20Rng;
+
+fn test_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x42; 32])
+}
 use std::fs;
 use std::path::PathBuf;
 
 #[test]
+fn rfc6979_sha512_sample_signature_matches() {
+    let bytes: [u8; ec::P521_SCALAR_SIZE] = hex::decode(concat!(
+        "00FAD06DAA62BA3B25D2FB40133DA757205DE67F5BB0018FEE8C86E1B68C7E75C",
+        "AA896EB32F1F47C70855836A6D16FCC1466F6D8FBEC67DB89EC0C08B0E996B83",
+        "538"
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+    let secret = EcdsaP521SecretKey {
+        raw: ec::Scalar::new(bytes).unwrap(),
+        bytes,
+    };
+    let signature = EcdsaP521::sign(b"sample", &secret).unwrap();
+    let components = SignatureComponents::from_der(signature.as_ref()).unwrap();
+
+    let expected_r: [u8; ec::P521_SCALAR_SIZE] = hex::decode(concat!(
+        "00C328FAFCBD79DD77850370C46325D987CB525569FB63C5D3BC53950E6D4C5F1",
+        "74E25A1EE9017B5D450606ADD152B534931D7D4E8455CC91F9B15BF05EC36E37",
+        "7FA"
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+    assert_eq!(components.r, expected_r[1..].to_vec());
+
+    let expected_rfc_s: [u8; ec::P521_SCALAR_SIZE] = hex::decode(concat!(
+        "00617CCE7CF5064806C467F678D3B4080D6F1CC50AF26CA209417308281B68AF2",
+        "82623EAA63E5B5C0723D8B8C37FF0777B1A20F8CCB1DCCC43997F1EE0E44DA4A",
+        "67A"
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+    let expected_rfc_s = ec::Scalar::new(expected_rfc_s).unwrap();
+    assert!(!is_high_s(&expected_rfc_s.serialize(), &NIST_P521.n));
+    assert_eq!(components.s, expected_rfc_s.serialize()[1..].to_vec());
+}
+
+#[test]
 fn test_ecdsa_p521_signatures_are_low_s_and_high_s_is_rejected() {
-    let (public_key, secret_key) = EcdsaP521::keypair(&mut OsRng).unwrap();
+    let (public_key, secret_key) = EcdsaP521::keypair(&mut test_rng()).unwrap();
     let message = b"canonical";
     let signature = EcdsaP521::sign(message, &secret_key).unwrap();
     let components = SignatureComponents::from_der(&signature.0).unwrap();
@@ -55,7 +99,7 @@ fn canon(combo: &str) -> String {
 // New helper function for parsing hex strings into fixed-size byte arrays (e.g., for P-521 scalars/coordinates)
 fn hex_to_fixed_size_bytes<const N: usize>(hex_str: &str) -> Result<[u8; N], String> {
     let mut corrected_hex_str = hex_str.to_string();
-    if corrected_hex_str.len() % 2 != 0 {
+    if !corrected_hex_str.len().is_multiple_of(2) {
         // Prepend '0' to make length even, common for some test vector formats
         corrected_hex_str.insert(0, '0');
     }
@@ -99,7 +143,7 @@ fn hex_to_vec_tolerant(hex_str: &str) -> Result<Vec<u8>, String> {
         return Ok(Vec::new());
     }
     let mut corrected_hex_str = hex_str.to_string();
-    if corrected_hex_str.len() % 2 != 0 {
+    if !corrected_hex_str.len().is_multiple_of(2) {
         corrected_hex_str.insert(0, '0');
     }
     hex::decode(&corrected_hex_str).map_err(|e| {
@@ -329,7 +373,7 @@ fn vectors_dir() -> PathBuf {
 
 #[test]
 fn test_ecdsa_p521_sign_verify() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = b"Test message for ECDSA P-521";
     let signature = EcdsaP521::sign(message, &secret_key).unwrap();
@@ -340,7 +384,7 @@ fn test_ecdsa_p521_sign_verify() {
 
 #[test]
 fn test_deterministic_verification() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = b"Test message";
     let signature = EcdsaP521::sign(message, &secret_key).unwrap();
@@ -351,7 +395,7 @@ fn test_deterministic_verification() {
 
 #[test]
 fn test_empty_message() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = b"";
     let signature = EcdsaP521::sign(message, &secret_key).unwrap();
@@ -360,7 +404,7 @@ fn test_empty_message() {
 
 #[test]
 fn test_large_message() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = vec![0xAB; 10000];
     let signature = EcdsaP521::sign(&message, &secret_key).unwrap();
@@ -369,20 +413,19 @@ fn test_large_message() {
 
 #[test]
 fn test_multiple_signatures() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = b"Test message for multiple signatures";
     let sig1 = EcdsaP521::sign(message, &secret_key).unwrap();
     let sig2 = EcdsaP521::sign(message, &secret_key).unwrap();
     assert!(EcdsaP521::verify(message, &sig1, &public_key).is_ok());
     assert!(EcdsaP521::verify(message, &sig2, &public_key).is_ok());
-    // Signatures should be different due to hedged nonce generation
-    assert_ne!(sig1.as_ref(), sig2.as_ref());
+    assert_eq!(sig1.as_ref(), sig2.as_ref());
 }
 
 #[test]
 fn test_wrong_public_key() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret_key1) = EcdsaP521::keypair(&mut rng).unwrap();
     let (public_key2, _) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = b"Test message";
@@ -392,7 +435,7 @@ fn test_wrong_public_key() {
 
 #[test]
 fn test_invalid_signature() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, _) = EcdsaP521::keypair(&mut rng).unwrap();
     let invalid_sig = EcdsaP521Signature(vec![0x30, 0x06, 0x02, 0x01, 0x00, 0x02, 0x01, 0x00]);
     let message = b"Test message";
@@ -401,7 +444,7 @@ fn test_invalid_signature() {
 
 #[test]
 fn test_key_generation_details() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     for i in 0..5 {
         match EcdsaP521::keypair(&mut rng) {
             Ok((_, sec_key)) => {
@@ -418,7 +461,7 @@ fn test_key_generation_details() {
 
 #[test]
 fn test_signature_serialization() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, sec_key) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = b"Test serialization";
     let signature = EcdsaP521::sign(message, &sec_key).unwrap();
@@ -526,7 +569,7 @@ fn test_p521_scalar_zero_rejected() {
 
 #[test]
 fn test_modular_inverse_comprehensive() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let mut two_bytes = [0u8; 66];
     two_bytes[65] = 2; // P-521 scalar is 66 bytes
     let two = ec::Scalar::new(two_bytes).unwrap();
@@ -578,7 +621,7 @@ fn test_cofactor_validation() {
 
 #[test]
 fn test_cross_validation() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     for _ in 0..3 {
         let (pk1, sk1) = EcdsaP521::keypair(&mut rng).unwrap();
         let (pk2, sk2) = EcdsaP521::keypair(&mut rng).unwrap();
@@ -611,16 +654,16 @@ fn test_cross_validation() {
 
 #[test]
 fn test_deterministic_k_properties() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, sk) = EcdsaP521::keypair(&mut rng).unwrap();
     let message = b"Test deterministic k";
 
-    // Generate multiple signatures to ensure they're different (due to hedging)
+    // RFC 6979 produces the same signature for the same key and message.
     let mut signatures: Vec<EcdsaP521Signature> = Vec::new();
     for _ in 0..5 {
         let sig = EcdsaP521::sign(message, &sk).unwrap();
         for prev_sig in &signatures {
-            assert_ne!(sig.as_ref(), prev_sig.as_ref());
+            assert_eq!(sig.as_ref(), prev_sig.as_ref());
         }
         signatures.push(sig);
     }

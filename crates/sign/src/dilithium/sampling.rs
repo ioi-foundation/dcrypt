@@ -20,7 +20,7 @@ fn coeff_from_half_byte(value: u8, eta: u32) -> Option<i32> {
 }
 
 /// FIPS 204 Algorithm 31, `RejBoundedPoly`.
-pub fn sample_poly_rej_bounded<P: DilithiumSchemeParams>(
+pub fn sample_poly_rej_bounded(
     seed: &[u8; 64],
     nonce: u16,
     eta: u32,
@@ -62,7 +62,7 @@ pub fn sample_polyvecl_rej_bounded<P: DilithiumSchemeParams>(
     let mut pv = PolyVecL::<P>::zero();
 
     for i in 0..P::L_DIM {
-        pv.polys[i] = sample_poly_rej_bounded::<P>(seed, i as u16, eta)?;
+        pv.polys[i] = sample_poly_rej_bounded(seed, i as u16, eta)?;
     }
 
     Ok(pv)
@@ -76,7 +76,7 @@ pub fn sample_polyveck_rej_bounded<P: DilithiumSchemeParams>(
     let mut pv = PolyVecK::<P>::zero();
 
     for i in 0..P::K_DIM {
-        pv.polys[i] = sample_poly_rej_bounded::<P>(seed, (P::L_DIM + i) as u16, eta)?;
+        pv.polys[i] = sample_poly_rej_bounded(seed, (P::L_DIM + i) as u16, eta)?;
     }
 
     Ok(pv)

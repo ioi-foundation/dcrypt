@@ -6,7 +6,7 @@
 
 #![forbid(unsafe_code)]
 
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq};
 
 const LIMB_BITS: u32 = 51;
 const LIMB_MASK: u64 = (1u64 << LIMB_BITS) - 1;

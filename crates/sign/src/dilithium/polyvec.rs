@@ -15,9 +15,8 @@ use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::ShakeXof128;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
+use dcrypt_internal::{Choice, ConditionallySelectable, Zeroize};
 use dcrypt_params::pqc::dilithium::DilithiumSchemeParams;
-use subtle::{Choice, ConditionallySelectable};
-use zeroize::Zeroize;
 
 // Montgomery reduce is available from algorithms::poly::ntt when needed
 

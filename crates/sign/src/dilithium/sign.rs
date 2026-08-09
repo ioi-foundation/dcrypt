@@ -17,7 +17,7 @@
 //! - NTT library functions handle domain management correctly per FIPS 204
 //! - After inv_ntt_inplace(), coefficients are in standard domain per FIPS 204
 //!
-//! Internal module - use public `Dilithium2/3/5` types instead.
+//! Internal module; use the public `MlDsa44`, `MlDsa65`, or `MlDsa87` types.
 
 use super::arithmetic::{
     challenge_poly_mul, check_norm_polyvec_k_ct, check_norm_polyvec_l_ct, highbits_polyvec,
@@ -35,14 +35,14 @@ use super::sampling::{
 
 use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
-use alloc::{format, vec, vec::Vec};
+use alloc::{format, string::ToString, vec, vec::Vec};
 use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
 use dcrypt_algorithms::xof::shake::ShakeXof256;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
+use dcrypt_internal::{
+    Choice, ConditionallySelectable, ConstantTimeEq, CryptoRng, RngCore, Zeroize, Zeroizing,
+};
 use dcrypt_params::pqc::dilithium::{DilithiumSchemeParams, DILITHIUM_N};
-use rand::{CryptoRng, RngCore};
-use subtle::{Choice, ConditionallySelectable, ConstantTimeEq};
-use zeroize::Zeroize;
 
 struct SigningAttempt<P: DilithiumSchemeParams> {
     c_tilde_seed: Vec<u8>,
@@ -50,6 +50,15 @@ struct SigningAttempt<P: DilithiumSchemeParams> {
     h_hint_poly: PolyVecK<P>,
     candidate_valid: Choice,
 }
+
+type SigningInputs<P> = (
+    [u8; 64],
+    Vec<PolyVecL<P>>,
+    Vec<u8>,
+    PolyVecL<P>,
+    PolyVecK<P>,
+    PolyVecK<P>,
+);
 
 #[inline(always)]
 fn ct_assign_bytes(dst: &mut [u8], src: &[u8], choice: Choice) {
@@ -75,17 +84,7 @@ fn prepare_signing_inputs<P>(
     sk_bytes: &[u8],
     randomizer: &[u8; 32],
     supplied_mu: Option<&[u8; 64]>,
-) -> Result<
-    (
-        [u8; 64],
-        Vec<PolyVecL<P>>,
-        Vec<u8>,
-        PolyVecL<P>,
-        PolyVecK<P>,
-        PolyVecK<P>,
-    ),
-    SignError,
->
+) -> Result<SigningInputs<P>, SignError>
 where
     P: DilithiumSchemeParams,
 {
@@ -235,15 +234,10 @@ where
     P: DilithiumSchemeParams,
     R: RngCore + CryptoRng,
 {
-    let mut xi = [0u8; 32];
-    rng.try_fill_bytes(&mut xi)
-        .map_err(|error| SignError::KeyGeneration {
-            algorithm: P::NAME,
-            details: error.to_string(),
-        })?;
-    let result = keypair_from_seed_internal::<P>(&xi);
-    xi.zeroize();
-    result
+    let mut xi = Zeroizing::new([0u8; 32]);
+    rng.try_fill_bytes(&mut *xi)
+        .map_err(|error| SignError::Rng(error.to_string()))?;
+    keypair_from_seed_internal::<P>(&xi)
 }
 
 /// FIPS 204 Algorithm 6, exposed within the crate for exact ACVP replay.
@@ -397,7 +391,7 @@ where
         selected_z = PolyVecL::<P>::conditional_select(&selected_z, &attempt.z_vec, take_candidate);
         selected_h =
             PolyVecK::<P>::conditional_select(&selected_h, &attempt.h_hint_poly, take_candidate);
-        found_valid = found_valid | attempt.candidate_valid;
+        found_valid |= attempt.candidate_valid;
 
         attempt.c_tilde_seed.zeroize();
         attempt.z_vec.zeroize();
