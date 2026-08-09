@@ -763,7 +763,12 @@ def compilation_matrix(
         ("no-default-features", ["--no-default-features"]),
     )
     matrix: list[tuple[str, str, str, list[str]]] = []
-    for target_label in ("linux-x86-64", "linux-aarch64", "wasm", "no-std"):
+    # `--all-features` intentionally enables the workspace's `std` features,
+    # so it is meaningful only on targets that provide `std`. The bare-metal
+    # target is exercised below with no defaults and again by the functional
+    # per-package no_std profiles; asking Cargo for `std` on thumb would test an
+    # impossible feature combination instead of the supported contract.
+    for target_label in ("linux-x86-64", "linux-aarch64", "wasm"):
         for profile, feature_args in profiles:
             matrix.append(
                 (
@@ -773,6 +778,14 @@ def compilation_matrix(
                     feature_args,
                 )
             )
+    matrix.append(
+        (
+            "no-std:no-default-features",
+            targets["no-std"],
+            "no-default-features",
+            ["--no-default-features"],
+        )
+    )
     return matrix
 
 
