@@ -505,7 +505,7 @@ confirm_live_publish() {
     local expected="publish dcrypt $VERSION"
     local response
     printf "\n${YELLOW}crates.io uploads are permanent.${NC}\n"
-    printf 'Type %q to continue: ' "$expected"
+    printf 'Type %s to continue: ' "$expected"
     read -r response
     [[ "$response" == "$expected" ]] || die "publication confirmation did not match"
 }
