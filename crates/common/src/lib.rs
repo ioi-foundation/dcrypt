@@ -11,8 +11,6 @@ extern crate alloc;
 
 pub mod ec_common;
 pub mod math_common;
-pub mod mceliece_common;
-pub mod ntru_common;
 pub mod security;
 
 // Re-export core security types

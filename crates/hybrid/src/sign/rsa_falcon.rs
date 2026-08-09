@@ -5,9 +5,9 @@ use dcrypt_api::{
     Error, Result, Signature as SignatureTrait,
 };
 // use dcrypt_sign::traditional::rsa::RsaPss; // RsaPss not yet implemented/exposed in dcrypt-sign
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_sign::falcon::{Falcon512, FalconPublicKey, FalconSecretKey, FalconSignature};
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 // Stub for RsaPss until implemented in dcrypt-sign
 // This prevents compilation errors while RsaPss is missing
@@ -50,17 +50,39 @@ const HYBRID_PUBLIC_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/rsa-pss+falcon-512/pu
 const HYBRID_SECRET_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/rsa-pss+falcon-512/secret/v1";
 const HYBRID_SIGNATURE_LABEL: &[u8] = b"dcrypt-hybrid-sig/rsa-pss+falcon-512/signature/v1";
 
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct HybridPublicKey {
     rsa_pk: <RsaPss as SignatureTrait>::PublicKey,
     falcon_pk: <Falcon512 as SignatureTrait>::PublicKey,
 }
 
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+impl Zeroize for HybridPublicKey {
+    fn zeroize(&mut self) {
+        self.rsa_pk.zeroize();
+        self.falcon_pk.zeroize();
+    }
+}
+
+#[derive(Clone)]
 pub struct HybridSecretKey {
     rsa_sk: <RsaPss as SignatureTrait>::SecretKey,
     falcon_sk: <Falcon512 as SignatureTrait>::SecretKey,
 }
+
+impl Zeroize for HybridSecretKey {
+    fn zeroize(&mut self) {
+        self.rsa_sk.zeroize();
+        self.falcon_sk.zeroize();
+    }
+}
+
+impl Drop for HybridSecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for HybridSecretKey {}
 
 #[derive(Clone)]
 pub struct HybridSignature {

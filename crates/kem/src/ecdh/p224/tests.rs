@@ -1,6 +1,6 @@
 use super::*;
+use crate::test_rng::TestRng;
 use dcrypt_api::Kem as KemTrait; // Use the trait from api
-use rand::rngs::OsRng;
 
 #[cfg(test)]
 mod test_utils {
@@ -21,7 +21,7 @@ use test_utils::secret_buffer_from_slice;
 
 #[test]
 fn test_ecdh_p224_kem_keypair_generation() {
-    let keypair_result = EcdhP224::keypair(&mut OsRng);
+    let keypair_result = EcdhP224::keypair(&mut TestRng);
     assert!(
         keypair_result.is_ok(),
         "Keypair generation failed: {:?}",
@@ -34,9 +34,9 @@ fn test_ecdh_p224_kem_keypair_generation() {
 
 #[test]
 fn test_ecdh_p224_kem_encapsulate_decapsulate_roundtrip() {
-    let (pk_r, sk_r) = EcdhP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, sk_r) = EcdhP224::keypair(&mut TestRng).expect("Recipient keygen failed");
 
-    let encapsulate_result = EcdhP224::encapsulate(&mut OsRng, &pk_r);
+    let encapsulate_result = EcdhP224::encapsulate(&mut TestRng, &pk_r);
     assert!(
         encapsulate_result.is_ok(),
         "Encapsulation failed: {:?}",
@@ -68,11 +68,11 @@ fn test_ecdh_p224_kem_encapsulate_decapsulate_roundtrip() {
 
 #[test]
 fn test_ecdh_p224_kem_decapsulate_wrong_secret_key() {
-    let (pk_r, _sk_r1) = EcdhP224::keypair(&mut OsRng).expect("Recipient keygen1 failed");
-    let (_pk_r2, sk_r2) = EcdhP224::keypair(&mut OsRng).expect("Recipient keygen2 failed"); // Different secret key
+    let (pk_r, _sk_r1) = EcdhP224::keypair(&mut TestRng).expect("Recipient keygen1 failed");
+    let (_pk_r2, sk_r2) = EcdhP224::keypair(&mut TestRng).expect("Recipient keygen2 failed"); // Different secret key
 
     let (ciphertext, _shared_secret_sender) =
-        EcdhP224::encapsulate(&mut OsRng, &pk_r).expect("Encapsulation failed");
+        EcdhP224::encapsulate(&mut TestRng, &pk_r).expect("Encapsulation failed");
 
     let decapsulate_result = EcdhP224::decapsulate(&sk_r2, &ciphertext); // Use wrong secret key
     assert!(
@@ -84,10 +84,10 @@ fn test_ecdh_p224_kem_decapsulate_wrong_secret_key() {
 
 #[test]
 fn test_ecdh_p224_kem_decapsulate_tampered_ciphertext() {
-    let (pk_r, sk_r) = EcdhP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, sk_r) = EcdhP224::keypair(&mut TestRng).expect("Recipient keygen failed");
 
     let (mut ciphertext, _shared_secret_sender) =
-        EcdhP224::encapsulate(&mut OsRng, &pk_r).expect("Encapsulation failed");
+        EcdhP224::encapsulate(&mut TestRng, &pk_r).expect("Encapsulation failed");
 
     // Fix: Tamper with the first byte of the ephemeral public key portion
     // (avoiding accidental corruption of tag structure)
@@ -102,9 +102,9 @@ fn test_ecdh_p224_kem_decapsulate_tampered_ciphertext() {
 
 #[test]
 fn test_ecdh_p224_kem_ciphertext_structure() {
-    let (pk_r, _sk_r) = EcdhP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, _sk_r) = EcdhP224::keypair(&mut TestRng).expect("Recipient keygen failed");
     let (ciphertext, _shared_secret) =
-        EcdhP224::encapsulate(&mut OsRng, &pk_r).expect("Encapsulation failed");
+        EcdhP224::encapsulate(&mut TestRng, &pk_r).expect("Encapsulation failed");
 
     // Verify ciphertext structure: compressed point + auth tag
     assert_eq!(ciphertext.to_bytes().len(), ec::P224_CIPHERTEXT_SIZE);
@@ -123,7 +123,7 @@ fn test_ecdh_p224_kem_ciphertext_structure() {
 
 #[test]
 fn test_p224_public_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP224::keypair(&mut rng).unwrap();
 
     // Round-trip
@@ -135,7 +135,7 @@ fn test_p224_public_key_serialization() {
 
 #[test]
 fn test_p224_secret_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (_, sk) = EcdhP224::keypair(&mut rng).unwrap();
 
     // Export and verify length
@@ -160,7 +160,7 @@ fn test_p224_secret_key_serialization() {
 
 #[test]
 fn test_p224_authenticated_ciphertext_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP224::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhP224::encapsulate(&mut rng, &pk).unwrap();
 
@@ -200,7 +200,7 @@ fn test_p224_invalid_ciphertext() {
 
 #[test]
 fn test_p224_full_kem_with_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate and serialize
     let (pk, sk) = EcdhP224::keypair(&mut rng).unwrap();

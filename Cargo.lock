@@ -432,7 +432,6 @@ dependencies = [
  "dcrypt-sign",
  "rand 0.8.7",
  "rand_chacha 0.3.1",
- "zeroize",
 ]
 
 [[package]]
@@ -451,8 +450,6 @@ dependencies = [
  "dcrypt-params",
  "rand 0.8.7",
  "rand_chacha 0.3.1",
- "subtle",
- "zeroize",
 ]
 
 [[package]]
@@ -471,9 +468,6 @@ dependencies = [
  "hex",
  "rand 0.8.7",
  "rand_chacha 0.3.1",
- "subtle",
- "thiserror",
- "zeroize",
 ]
 
 [[package]]

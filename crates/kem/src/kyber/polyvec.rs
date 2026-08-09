@@ -11,16 +11,22 @@ use alloc::vec::Vec;
 use dcrypt_algorithms::error::Result as AlgoResult;
 use dcrypt_algorithms::poly::params::Modulus;
 use dcrypt_algorithms::poly::polynomial::Polynomial;
-use zeroize::Zeroize;
+use dcrypt_internal::zeroing::Zeroize;
 
 use super::params::{KyberParams, KyberPolyModParams};
 
 /// A vector of polynomials, typically of dimension K.
-#[derive(Debug, PartialEq, Eq, Zeroize)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct PolyVec<P: KyberParams> {
     /// The polynomials in this vector.
     pub(crate) polys: Vec<Polynomial<KyberPolyModParams>>,
     _params: core::marker::PhantomData<P>,
+}
+
+impl<P: KyberParams> Zeroize for PolyVec<P> {
+    fn zeroize(&mut self) {
+        self.polys.zeroize();
+    }
 }
 
 impl<P: KyberParams> Clone for PolyVec<P> {

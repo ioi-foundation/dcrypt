@@ -6,8 +6,8 @@ use dcrypt_algorithms::ec::p521 as ec;
 use dcrypt_algorithms::types::{Nonce, SecretBytes as AlgoSecretBytes};
 use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::traits::Pke;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::format;
@@ -33,8 +33,10 @@ impl AsRef<[u8]> for EciesP521PublicKey {
 }
 
 /// Secret key for ECIES P-521. Stores serialized scalar (66 bytes).
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EciesP521SecretKey([u8; ec::P521_SCALAR_SIZE]);
+
+impl_zeroize_on_drop_tuple!(EciesP521SecretKey);
 
 impl AsRef<[u8]> for EciesP521SecretKey {
     fn as_ref(&self) -> &[u8] {

@@ -12,9 +12,9 @@ use dcrypt_algorithms::error::{Error as AlgoError, Result as AlgoResult};
 use dcrypt_algorithms::hash::sha3::{Sha3_256, Sha3_512};
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_algorithms::poly::params::Modulus;
-use rand::{CryptoRng, RngCore};
-use subtle::ConstantTimeEq;
-use zeroize::{Zeroize, Zeroizing};
+use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 use super::cpa_pke::{decrypt_cpa, encrypt_cpa, keypair_cpa};
 use super::params::{KyberParams, KyberPolyModParams, KYBER_SS_BYTES, KYBER_SYMKEY_SEED_BYTES};
@@ -67,7 +67,11 @@ pub(crate) fn kem_keygen<P: KyberParams, R: RngCore + CryptoRng>(
 
     // 4. Generate random s_fo (implicit rejection value)
     let mut s_fo = [0u8; KYBER_SYMKEY_SEED_BYTES];
-    rng.fill_bytes(&mut s_fo);
+    rng.try_fill_bytes(&mut s_fo)
+        .map_err(|_| AlgoError::Processing {
+            operation: "Kyber KEM key generation",
+            details: "caller-provided randomness source failed",
+        })?;
 
     // 5. H(pk)
     let h_pk = h_func(&pk_cca_bytes)?;
@@ -92,7 +96,11 @@ pub(crate) fn kem_encaps<P: KyberParams, R: RngCore + CryptoRng>(
 ) -> AlgoResult<(IndCcaCiphertextBytes, SharedSecretBytes)> {
     // 1. Generate random message m
     let mut m_bytes = [0u8; KYBER_SYMKEY_SEED_BYTES];
-    rng.fill_bytes(&mut m_bytes);
+    rng.try_fill_bytes(&mut m_bytes)
+        .map_err(|_| AlgoError::Processing {
+            operation: "Kyber KEM encapsulation",
+            details: "caller-provided randomness source failed",
+        })?;
 
     // 2. H(pk)
     let h_pk = h_func(pk_cca_bytes)?;
@@ -107,7 +115,7 @@ pub(crate) fn kem_encaps<P: KyberParams, R: RngCore + CryptoRng>(
     let pk_cpa = unpack_pk::<P>(pk_cca_bytes)?;
 
     // 5. Encrypt m using CPA encryption with randomness r
-    let ct_cpa = encrypt_cpa::<P, R>(&pk_cpa, &m_bytes, &r_coins, rng)?;
+    let ct_cpa = encrypt_cpa::<P>(&pk_cpa, &m_bytes, &r_coins)?;
 
     // 6. Pack ciphertext
     let ct_cca_bytes = pack_ciphertext::<P>(&ct_cpa)?;
@@ -176,8 +184,7 @@ pub(crate) fn kem_decaps<P: KyberParams>(
     let mut m_prime_array = [0u8; KYBER_SYMKEY_SEED_BYTES];
     m_prime_array.copy_from_slice(m_prime.as_ref());
 
-    let ct_prime_cpa =
-        encrypt_cpa::<P, _>(&pk_cpa, &m_prime_array, &r_prime, &mut rand::thread_rng())?;
+    let ct_prime_cpa = encrypt_cpa::<P>(&pk_cpa, &m_prime_array, &r_prime)?;
     let ct_prime_bytes = pack_ciphertext::<P>(&ct_prime_cpa)?;
 
     // 6. Constant-time comparison: ct' == ct

@@ -1,10 +1,10 @@
 use super::*;
+use crate::test_rng::TestRng;
 use dcrypt_api::traits::Pke as PkeTrait;
-use rand::rngs::OsRng;
 
 #[test]
 fn test_ecies_p224_keypair_generation() {
-    let keypair_result = EciesP224::keypair(&mut OsRng);
+    let keypair_result = EciesP224::keypair(&mut TestRng);
     assert!(
         keypair_result.is_ok(),
         "Keypair generation failed: {:?}",
@@ -17,10 +17,10 @@ fn test_ecies_p224_keypair_generation() {
 
 #[test]
 fn test_ecies_p224_encrypt_decrypt_roundtrip_no_aad() {
-    let (pk_r, sk_r) = EciesP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, sk_r) = EciesP224::keypair(&mut TestRng).expect("Recipient keygen failed");
     let plaintext = b"This is a secret message for ECIES P-224 without AAD.";
 
-    let encrypt_result = EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut OsRng); // Explicit type for None
+    let encrypt_result = EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut TestRng); // Explicit type for None
     assert!(
         encrypt_result.is_ok(),
         "Encryption failed: {:?}",
@@ -45,13 +45,13 @@ fn test_ecies_p224_encrypt_decrypt_roundtrip_no_aad() {
 
 #[test]
 fn test_ecies_p224_encrypt_decrypt_roundtrip_with_aad() {
-    let (pk_r, sk_r) = EciesP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, sk_r) = EciesP224::keypair(&mut TestRng).expect("Recipient keygen failed");
     let plaintext = b"Another secret message with P-224 ECIES.";
     let aad_val = b"Authenticated Associated Data";
     let aad: Option<&[u8]> = Some(&aad_val[..]); // Cast to slice
 
     let ciphertext =
-        EciesP224::encrypt(&pk_r, plaintext, aad, &mut OsRng).expect("Encryption failed");
+        EciesP224::encrypt(&pk_r, plaintext, aad, &mut TestRng).expect("Encryption failed");
     let decrypted_plaintext =
         EciesP224::decrypt(&sk_r, &ciphertext, aad).expect("Decryption failed");
 
@@ -60,12 +60,12 @@ fn test_ecies_p224_encrypt_decrypt_roundtrip_with_aad() {
 
 #[test]
 fn test_ecies_p224_decrypt_wrong_secret_key() {
-    let (pk_r, _sk_r1) = EciesP224::keypair(&mut OsRng).expect("Recipient keygen1 failed");
-    let (_pk_r2, sk_r2) = EciesP224::keypair(&mut OsRng).expect("Recipient keygen2 failed");
+    let (pk_r, _sk_r1) = EciesP224::keypair(&mut TestRng).expect("Recipient keygen1 failed");
+    let (_pk_r2, sk_r2) = EciesP224::keypair(&mut TestRng).expect("Recipient keygen2 failed");
     let plaintext = b"Message for key1.";
 
-    let ciphertext =
-        EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut OsRng).expect("Encryption failed");
+    let ciphertext = EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut TestRng)
+        .expect("Encryption failed");
     let decrypt_result = EciesP224::decrypt(&sk_r2, &ciphertext, None::<&[u8]>);
 
     assert!(
@@ -84,11 +84,11 @@ fn test_ecies_p224_decrypt_wrong_secret_key() {
 
 #[test]
 fn test_ecies_p224_decrypt_tampered_ciphertext_ephemeral_pk() {
-    let (pk_r, sk_r) = EciesP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, sk_r) = EciesP224::keypair(&mut TestRng).expect("Recipient keygen failed");
     let plaintext = b"Sensitive data.";
 
-    let mut ciphertext =
-        EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut OsRng).expect("Encryption failed");
+    let mut ciphertext = EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut TestRng)
+        .expect("Encryption failed");
     if !ciphertext.is_empty() {
         ciphertext[1] ^= 0xFF;
     }
@@ -102,11 +102,11 @@ fn test_ecies_p224_decrypt_tampered_ciphertext_ephemeral_pk() {
 
 #[test]
 fn test_ecies_p224_decrypt_tampered_ciphertext_aead_part() {
-    let (pk_r, sk_r) = EciesP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, sk_r) = EciesP224::keypair(&mut TestRng).expect("Recipient keygen failed");
     let plaintext = b"More sensitive data.";
 
-    let mut ciphertext =
-        EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut OsRng).expect("Encryption failed");
+    let mut ciphertext = EciesP224::encrypt(&pk_r, plaintext, None::<&[u8]>, &mut TestRng)
+        .expect("Encryption failed");
     if ciphertext.len()
         > ec::P224_POINT_UNCOMPRESSED_SIZE + 1 + CHACHA20POLY1305_NONCE_LEN + 1 + 4 + 1
     {
@@ -131,7 +131,7 @@ fn test_ecies_p224_decrypt_tampered_ciphertext_aead_part() {
 
 #[test]
 fn test_ecies_p224_decrypt_wrong_aad() {
-    let (pk_r, sk_r) = EciesP224::keypair(&mut OsRng).expect("Recipient keygen failed");
+    let (pk_r, sk_r) = EciesP224::keypair(&mut TestRng).expect("Recipient keygen failed");
     let plaintext = b"Data with AAD.";
     let aad1_val = b"Correct AAD";
     let aad1: Option<&[u8]> = Some(&aad1_val[..]);
@@ -139,7 +139,7 @@ fn test_ecies_p224_decrypt_wrong_aad() {
     let aad2: Option<&[u8]> = Some(&aad2_val[..]);
 
     let ciphertext =
-        EciesP224::encrypt(&pk_r, plaintext, aad1, &mut OsRng).expect("Encryption failed");
+        EciesP224::encrypt(&pk_r, plaintext, aad1, &mut TestRng).expect("Encryption failed");
     let decrypt_result = EciesP224::decrypt(&sk_r, &ciphertext, aad2);
 
     assert!(

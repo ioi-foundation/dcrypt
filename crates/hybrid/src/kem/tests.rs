@@ -3,12 +3,12 @@
 use super::{
     EcdhK256Kyber512, EcdhP256Kyber512, EcdhP256Kyber768, EcdhP384Kyber1024, EcdhP521Kyber1024,
 };
+use crate::test_rng::TestRng;
 use dcrypt_api::{Kem, Serialize};
-use rand::rngs::OsRng;
 
 #[test]
 fn test_ecdh_p256_kyber_768_kem_full_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EcdhP256Kyber768::keypair(&mut rng).expect("Keypair generation failed");
 
     // Encapsulate and Decapsulate
@@ -29,7 +29,7 @@ fn test_ecdh_p256_kyber_768_kem_full_roundtrip() {
 
 #[test]
 fn test_ecdh_p384_kyber_1024_kem_full_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EcdhP384Kyber1024::keypair(&mut rng).expect("Keypair generation failed");
 
     // Encapsulate and Decapsulate
@@ -50,7 +50,7 @@ fn test_ecdh_p384_kyber_1024_kem_full_roundtrip() {
 
 #[test]
 fn test_ecdh_p256_kyber_512_kem_full_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EcdhP256Kyber512::keypair(&mut rng).expect("Keypair generation failed");
 
     let (ciphertext, ss_sender) = EcdhP256Kyber512::encapsulate(&mut rng, &pk).unwrap();
@@ -68,7 +68,7 @@ fn test_ecdh_p256_kyber_512_kem_full_roundtrip() {
 
 #[test]
 fn test_ecdh_p521_kyber_1024_kem_full_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EcdhP521Kyber1024::keypair(&mut rng).expect("Keypair generation failed");
 
     let (ciphertext, ss_sender) = EcdhP521Kyber1024::encapsulate(&mut rng, &pk).unwrap();
@@ -86,7 +86,7 @@ fn test_ecdh_p521_kyber_1024_kem_full_roundtrip() {
 
 #[test]
 fn test_ecdh_k256_kyber_512_kem_full_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EcdhK256Kyber512::keypair(&mut rng).expect("Keypair generation failed");
 
     let (ciphertext, ss_sender) = EcdhK256Kyber512::encapsulate(&mut rng, &pk).unwrap();
@@ -104,7 +104,7 @@ fn test_ecdh_k256_kyber_512_kem_full_roundtrip() {
 
 #[test]
 fn test_hybrid_kem_decapsulation_wrong_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk1, _) = EcdhP256Kyber768::keypair(&mut rng).unwrap();
     let (_, sk2) = EcdhP256Kyber768::keypair(&mut rng).unwrap();
 
@@ -119,7 +119,7 @@ fn test_hybrid_kem_decapsulation_wrong_key() {
 
 #[test]
 fn test_hybrid_serialization_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP384Kyber1024::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhP384Kyber1024::encapsulate(&mut rng, &pk).unwrap();
 

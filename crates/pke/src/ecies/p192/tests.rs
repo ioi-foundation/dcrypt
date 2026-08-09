@@ -1,12 +1,12 @@
 //! Tests for ECIES P-192
 
 use super::*; // Import from parent mod (p192/mod.rs)
+use crate::test_rng::TestRng;
 use dcrypt_api::traits::Pke; // The main PKE trait
-use rand::rngs::OsRng;
 
 #[test]
 fn test_ecies_p192_keypair_generation() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let keypair_result = EciesP192::keypair(&mut rng);
     assert!(
         keypair_result.is_ok(),
@@ -21,7 +21,7 @@ fn test_ecies_p192_keypair_generation() {
 
 #[test]
 fn test_ecies_p192_encrypt_decrypt_roundtrip_no_aad() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk_recipient, sk_recipient) =
         EciesP192::keypair(&mut rng).expect("Keypair generation failed");
 
@@ -51,7 +51,7 @@ fn test_ecies_p192_encrypt_decrypt_roundtrip_no_aad() {
 
 #[test]
 fn test_ecies_p192_encrypt_decrypt_roundtrip_with_aad() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk_recipient, sk_recipient) =
         EciesP192::keypair(&mut rng).expect("Keypair generation failed");
 
@@ -71,7 +71,7 @@ fn test_ecies_p192_encrypt_decrypt_roundtrip_with_aad() {
 
 #[test]
 fn test_ecies_p192_decrypt_wrong_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk_recipient1, _sk_recipient1) =
         EciesP192::keypair(&mut rng).expect("Keypair 1 generation failed");
     let (_pk_recipient2, sk_recipient2) =
@@ -102,7 +102,7 @@ fn test_ecies_p192_decrypt_wrong_key() {
 
 #[test]
 fn test_ecies_p192_decrypt_tampered_ciphertext() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk_recipient, sk_recipient) =
         EciesP192::keypair(&mut rng).expect("Keypair generation failed");
 
@@ -138,7 +138,7 @@ fn test_ecies_p192_decrypt_tampered_ciphertext() {
 
 #[test]
 fn test_ecies_p192_decrypt_wrong_aad() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk_recipient, sk_recipient) =
         EciesP192::keypair(&mut rng).expect("Keypair generation failed");
 

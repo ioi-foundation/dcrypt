@@ -13,8 +13,8 @@ use dcrypt_algorithms::poly::params::Modulus; // Add this import
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::{ShakeXof128, ShakeXof256};
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroizing;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroizing;
 
 use super::params::{
     KyberParams, KyberPolyModParams, KYBER_NOISE_SEED_BYTES, KYBER_RHO_SEED_BYTES,
@@ -169,8 +169,16 @@ pub(crate) fn keypair_cpa<P: KyberParams, R: RngCore + CryptoRng>(
     // Generate seeds
     let mut rho = [0u8; KYBER_RHO_SEED_BYTES];
     let mut sigma = [0u8; KYBER_NOISE_SEED_BYTES];
-    rng.fill_bytes(&mut rho);
-    rng.fill_bytes(&mut sigma);
+    rng.try_fill_bytes(&mut rho)
+        .map_err(|_| AlgoError::Processing {
+            operation: "Kyber CPA key generation",
+            details: "caller-provided randomness source failed",
+        })?;
+    rng.try_fill_bytes(&mut sigma)
+        .map_err(|_| AlgoError::Processing {
+            operation: "Kyber CPA key generation",
+            details: "caller-provided randomness source failed",
+        })?;
 
     // Generate matrix A
     let a = gen_matrix_a::<P>(&rho)?;
@@ -203,11 +211,10 @@ pub(crate) fn keypair_cpa<P: KyberParams, R: RngCore + CryptoRng>(
 }
 
 /// Kyber CPA PKE Encryption.
-pub(crate) fn encrypt_cpa<P: KyberParams, R: RngCore + CryptoRng>(
+pub(crate) fn encrypt_cpa<P: KyberParams>(
     pk_cpa_inner: &CpaPublicKeyInner<P>,
     msg_bytes: &[u8; KYBER_SYMKEY_SEED_BYTES],
     coins_bytes: &[u8; KYBER_SYMKEY_SEED_BYTES],
-    _rng: &mut R,
 ) -> AlgoResult<CpaCiphertextInner<P>> {
     let (t_hat, rho) = pk_cpa_inner;
 

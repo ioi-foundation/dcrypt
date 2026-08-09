@@ -1,11 +1,11 @@
 // File: crates/pke/src/ecies/p521/tests.rs
 use super::*;
-use dcrypt_api::error::Error as ApiError;
-use rand::rngs::OsRng; // Alias for clarity
+use crate::test_rng::TestRng;
+use dcrypt_api::error::Error as ApiError; // Alias for clarity
 
 #[test]
 fn test_ecies_p521_keypair_generation() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let result = EciesP521::keypair(&mut rng);
     assert!(
         result.is_ok(),
@@ -19,7 +19,7 @@ fn test_ecies_p521_keypair_generation() {
 
 #[test]
 fn test_ecies_p521_encrypt_decrypt_no_aad() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EciesP521::keypair(&mut rng).expect("Keypair generation failed");
     let plaintext = b"Hello, ECIES P521!";
     let aad: Option<&[u8]> = None;
@@ -35,7 +35,7 @@ fn test_ecies_p521_encrypt_decrypt_no_aad() {
 
 #[test]
 fn test_ecies_p521_encrypt_decrypt_with_aad() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EciesP521::keypair(&mut rng).expect("Keypair generation failed");
     let plaintext = b"Authenticated Encryption Test P521";
     let aad_data = *b"Some Associated Authenticated Data P521";
@@ -52,7 +52,7 @@ fn test_ecies_p521_encrypt_decrypt_with_aad() {
 
 #[test]
 fn test_ecies_p521_decrypt_wrong_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _sk) = EciesP521::keypair(&mut rng).expect("Keypair generation failed");
     let (_pk_wrong, sk_wrong) =
         EciesP521::keypair(&mut rng).expect("Second keypair generation failed");
@@ -76,7 +76,7 @@ fn test_ecies_p521_decrypt_wrong_key() {
 
 #[test]
 fn test_ecies_p521_decrypt_tampered_ciphertext() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EciesP521::keypair(&mut rng).expect("Keypair generation failed");
     let plaintext = b"Do not tamper with this P521!";
     let aad_data = *b"Tamper test AAD P521";
@@ -106,7 +106,7 @@ fn test_ecies_p521_decrypt_tampered_ciphertext() {
 
 #[test]
 fn test_ecies_p521_decrypt_wrong_aad() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EciesP521::keypair(&mut rng).expect("Keypair generation failed");
     let plaintext = b"AAD sensitivity test P521";
     let aad1_data = *b"Correct AAD P521";
@@ -130,7 +130,7 @@ fn test_ecies_p521_decrypt_wrong_aad() {
 
 #[test]
 fn test_ecies_p521_invalid_public_key_for_encryption() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let invalid_pk_bytes = [0u8; ec::P521_POINT_UNCOMPRESSED_SIZE]; // e.g., point at infinity (all zeros for uncompressed)
     let invalid_pk = EciesP521PublicKey(invalid_pk_bytes);
     let plaintext = b"Test invalid PK P521";
@@ -155,7 +155,7 @@ fn test_ecies_p521_invalid_public_key_for_encryption() {
 
 #[test]
 fn test_ecies_p521_empty_plaintext() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EciesP521::keypair(&mut rng).expect("Keypair generation failed");
     let plaintext = b""; // Empty plaintext
     let aad_data = *b"Empty plaintext AAD P521";

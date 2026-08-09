@@ -9,10 +9,10 @@ use dcrypt_api::{
     traits::{Serialize, SerializeSecret},
     Result, Signature as SignatureTrait,
 };
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_sign::dilithium::{MlDsa65, MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature};
 use dcrypt_sign::ecdsa::{EcdsaP384, EcdsaP384PublicKey, EcdsaP384SecretKey, EcdsaP384Signature};
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Hybrid signature scheme combining ECDSA P-384 and FIPS 204 ML-DSA-65.
 pub struct EcdsaMlDsa65Hybrid;
@@ -24,17 +24,39 @@ const HYBRID_PUBLIC_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/
 const HYBRID_SECRET_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/secret/v2";
 const HYBRID_SIGNATURE_LABEL: &[u8] = b"dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/signature/v2";
 
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct HybridPublicKey {
     ecdsa_pk: <EcdsaP384 as SignatureTrait>::PublicKey,
     ml_dsa_pk: <MlDsa65 as SignatureTrait>::PublicKey,
 }
 
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+impl Zeroize for HybridPublicKey {
+    fn zeroize(&mut self) {
+        self.ecdsa_pk.zeroize();
+        self.ml_dsa_pk.zeroize();
+    }
+}
+
+#[derive(Clone)]
 pub struct HybridSecretKey {
     ecdsa_sk: <EcdsaP384 as SignatureTrait>::SecretKey,
     ml_dsa_sk: <MlDsa65 as SignatureTrait>::SecretKey,
 }
+
+impl Zeroize for HybridSecretKey {
+    fn zeroize(&mut self) {
+        self.ecdsa_sk.zeroize();
+        self.ml_dsa_sk.zeroize();
+    }
+}
+
+impl Drop for HybridSecretKey {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for HybridSecretKey {}
 
 #[derive(Clone)]
 pub struct HybridSignature {
@@ -282,12 +304,12 @@ fn read_u32(bytes: &[u8], pos: &mut usize, field: &'static str) -> Result<u32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_rng::TestRng;
     use dcrypt_api::Signature;
-    use rand::rngs::OsRng;
 
     #[test]
     fn hybrid_signature_roundtrip_preserves_both_components() {
-        let mut rng = OsRng;
+        let mut rng = TestRng;
         let message = b"hybrid signature framing test";
         let (pk, sk) = EcdsaDilithiumHybrid::keypair(&mut rng).unwrap();
         let sig = EcdsaDilithiumHybrid::sign(message, &sk).unwrap();
@@ -310,7 +332,7 @@ mod tests {
 
     #[test]
     fn version_one_nonstandard_dilithium_framing_is_rejected() {
-        let mut rng = OsRng;
+        let mut rng = TestRng;
         let message = b"legacy hybrid framing rejection";
         let (pk, sk) = EcdsaMlDsa65Hybrid::keypair(&mut rng).unwrap();
         let sig = EcdsaMlDsa65Hybrid::sign(message, &sk).unwrap();

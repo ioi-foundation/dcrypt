@@ -1,8 +1,8 @@
 // File: crates/kem/src/ecdh/k256/tests.rs
 use super::*;
+use crate::test_rng::TestRng;
 use dcrypt_algorithms::ec::k256 as ec_k256;
 use dcrypt_api::Kem;
-use rand::rngs::OsRng;
 
 #[cfg(test)]
 mod test_utils {
@@ -23,7 +23,7 @@ use test_utils::secret_buffer_from_slice;
 
 #[test]
 fn test_k256_kem_basic_flow() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate recipient keypair
     let (recipient_pk, recipient_sk) = EcdhK256::keypair(&mut rng).unwrap();
@@ -60,7 +60,7 @@ fn test_k256_kem_basic_flow() {
 
 #[test]
 fn test_k256_kem_wrong_secret_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate two keypairs
     let (recipient_pk, _) = EcdhK256::keypair(&mut rng).unwrap();
@@ -83,7 +83,7 @@ fn test_k256_kem_wrong_secret_key() {
 
 #[test]
 fn test_k256_kem_invalid_public_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Test with all-zero public key (invalid identity point encoding)
     let invalid_pk = EcdhK256PublicKey([0u8; ec_k256::K256_POINT_COMPRESSED_SIZE]);
@@ -95,7 +95,7 @@ fn test_k256_kem_invalid_public_key() {
 
 #[test]
 fn test_k256_kem_tampered_ciphertext() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (public_key, secret_key) = EcdhK256::keypair(&mut rng).expect("Keypair generation failed");
     let (mut ciphertext, shared_secret_sender) =
         EcdhK256::encapsulate(&mut rng, &public_key).expect("Encapsulation failed");
@@ -127,7 +127,7 @@ fn test_k256_kem_tampered_ciphertext() {
 
 #[test]
 fn test_k256_public_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhK256::keypair(&mut rng).unwrap();
 
     // Round-trip
@@ -139,7 +139,7 @@ fn test_k256_public_key_serialization() {
 
 #[test]
 fn test_k256_secret_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (_, sk) = EcdhK256::keypair(&mut rng).unwrap();
 
     // Export and verify length
@@ -165,7 +165,7 @@ fn test_k256_secret_key_serialization() {
 
 #[test]
 fn test_k256_ciphertext_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhK256::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhK256::encapsulate(&mut rng, &pk).unwrap();
 
@@ -194,7 +194,7 @@ fn test_k256_invalid_public_key() {
 #[test]
 fn test_k256_secp256k1_compatibility() {
     // Verify this is using secp256k1 curve
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhK256::keypair(&mut rng).unwrap();
 
     // secp256k1 compressed points start with 0x02 or 0x03
@@ -204,7 +204,7 @@ fn test_k256_secp256k1_compatibility() {
 
 #[test]
 fn test_k256_full_kem_with_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate and serialize
     let (pk, sk) = EcdhK256::keypair(&mut rng).unwrap();

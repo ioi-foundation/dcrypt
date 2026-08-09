@@ -16,8 +16,8 @@ use dcrypt_api::{
     traits::serialize::{Serialize, SerializeSecret},
     Kem as KemTrait, Key as ApiKey, Result as ApiResult,
 };
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::ind_cca::{kem_decaps, kem_encaps, kem_keygen};
 use super::params::KyberParams; // IND-CCA2 scheme components
@@ -26,8 +26,10 @@ use super::params::KyberParams; // IND-CCA2 scheme components
 ///
 /// # Security Note
 /// No direct byte access is provided. Use explicit methods for serialization.
-#[derive(Clone, Debug, Zeroize)]
+#[derive(Clone, Debug)]
 pub struct KyberPublicKey(Vec<u8>);
+
+impl_zeroize_tuple!(KyberPublicKey);
 
 impl KyberPublicKey {
     pub fn new(data: Vec<u8>) -> Self {
@@ -62,8 +64,10 @@ impl Serialize for KyberPublicKey {
 /// - Implements Zeroize for secure cleanup
 /// - No direct byte access through traits
 /// - All access must be explicit and auditable
-#[derive(Clone, Debug, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone, Debug)]
 pub struct KyberSecretKey(Vec<u8>);
+
+impl_zeroize_on_drop_tuple!(KyberSecretKey);
 
 impl KyberSecretKey {
     pub fn new(data: Vec<u8>) -> Self {
@@ -144,8 +148,10 @@ impl Serialize for KyberCiphertext {
 /// - Implements Zeroize for secure cleanup
 /// - No direct byte access through traits
 /// - Should be used immediately for key derivation
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct KyberSharedSecret(ApiKey);
+
+impl_zeroize_on_drop_tuple!(KyberSharedSecret);
 
 impl KyberSharedSecret {
     pub fn new(key: ApiKey) -> Self {

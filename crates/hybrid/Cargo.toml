@@ -14,9 +14,19 @@ std = [
     "dcrypt-api/std", 
     "dcrypt-common/std", 
     "dcrypt-internal/std",
+    "dcrypt-algorithms/std",
+    "dcrypt-kem/std",
+    "dcrypt-sign/std",
     "alloc"
 ]
-alloc = []
+alloc = [
+    "dcrypt-api/alloc",
+    "dcrypt-common/alloc",
+    "dcrypt-internal/alloc",
+    "dcrypt-algorithms/alloc",
+    "dcrypt-kem/alloc",
+    "dcrypt-sign/alloc",
+]
 no_std = [
     "dcrypt-api/no_std", 
     "dcrypt-common/no_std", 
@@ -28,13 +38,12 @@ dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false }
 dcrypt-common = { path = "../common", version = "=2.0.0", default-features = false }
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
 dcrypt-params = { path = "../params", version = "=2.0.0" }
-dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0" }
-dcrypt-kem = { path = "../kem", version = "=2.0.0" }
-dcrypt-sign = { path = "../sign", version = "=2.0.0" }
-zeroize = { workspace = true }
-rand = { workspace = true }
+dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["alloc", "hash", "kdf", "mac"] }
+dcrypt-kem = { path = "../kem", version = "=2.0.0", default-features = false, features = ["alloc", "traditional", "post-quantum"] }
+dcrypt-sign = { path = "../sign", version = "=2.0.0", default-features = false, features = ["alloc", "traditional", "post-quantum"] }
 
 [dev-dependencies]
+rand = { version = "=0.8.7" }
 rand_chacha = { workspace = true }
 criterion = { version = "0.5", features = ["html_reports"] }
 

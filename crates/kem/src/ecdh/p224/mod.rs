@@ -20,23 +20,29 @@ use dcrypt_api::{
     Kem, Key as ApiKey, Result as ApiResult,
 };
 use dcrypt_common::security::SecretBuffer;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// ECDH KEM with P-224 curve
 pub struct EcdhP224;
 
 /// Public key for ECDH-P224 KEM (compressed EC point)
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct EcdhP224PublicKey([u8; ec::P224_POINT_COMPRESSED_SIZE]);
 
+impl_zeroize_tuple!(EcdhP224PublicKey);
+
 /// Secret key for ECDH-P224 KEM (scalar value)
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP224SecretKey(SecretBuffer<{ ec::P224_SCALAR_SIZE }>);
 
+impl_zeroize_on_drop_tuple!(EcdhP224SecretKey);
+
 /// Shared secret from ECDH-P224 KEM
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP224SharedSecret(ApiKey);
+
+impl_zeroize_on_drop_tuple!(EcdhP224SharedSecret);
 
 /// Ciphertext for ECDH-P224 KEM (compressed ephemeral public key + authentication tag)
 #[derive(Clone)]

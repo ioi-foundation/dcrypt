@@ -6,8 +6,8 @@ use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::traits::symmetric::{DecryptOperation, EncryptOperation}; // Import operation traits
 use dcrypt_api::traits::Pke;
 use dcrypt_api::traits::SymmetricCipher as ApiSymmetricCipherTrait;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::format;
@@ -31,8 +31,10 @@ impl AsRef<[u8]> for EciesP256PublicKey {
 }
 
 /// Secret key for ECIES P-256. Stores serialized scalar.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EciesP256SecretKey([u8; ec::P256_SCALAR_SIZE]);
+
+impl_zeroize_on_drop_tuple!(EciesP256SecretKey);
 
 impl AsRef<[u8]> for EciesP256SecretKey {
     fn as_ref(&self) -> &[u8] {

@@ -1,8 +1,8 @@
 // File: crates/kem/src/ecdh/b283k/tests.rs
 use super::*;
+use crate::test_rng::TestRng;
 use dcrypt_algorithms::ec::b283k as ec_b283k;
 use dcrypt_api::Kem;
-use rand::rngs::OsRng;
 
 #[cfg(test)]
 mod test_utils {
@@ -23,7 +23,7 @@ use test_utils::secret_buffer_from_slice;
 
 #[test]
 fn test_b283k_kem_basic_flow() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate recipient keypair
     let (recipient_pk, recipient_sk) = EcdhB283k::keypair(&mut rng).unwrap();
@@ -60,7 +60,7 @@ fn test_b283k_kem_basic_flow() {
 
 #[test]
 fn test_b283k_kem_wrong_secret_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate two keypairs
     let (recipient_pk, _) = EcdhB283k::keypair(&mut rng).unwrap();
@@ -83,7 +83,7 @@ fn test_b283k_kem_wrong_secret_key() {
 
 #[test]
 fn test_b283k_kem_invalid_public_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Test with all-zero public key (invalid identity point encoding)
     let invalid_pk = EcdhB283kPublicKey([0u8; ec_b283k::B283K_POINT_COMPRESSED_SIZE]);
@@ -95,7 +95,7 @@ fn test_b283k_kem_invalid_public_key() {
 
 #[test]
 fn test_b283k_kem_tampered_ciphertext() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (public_key, secret_key) = EcdhB283k::keypair(&mut rng).expect("Keypair generation failed");
     let (mut ciphertext, shared_secret_sender) =
         EcdhB283k::encapsulate(&mut rng, &public_key).expect("Encapsulation failed");
@@ -127,7 +127,7 @@ fn test_b283k_kem_tampered_ciphertext() {
 
 #[test]
 fn test_b283k_public_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhB283k::keypair(&mut rng).unwrap();
 
     // Round-trip
@@ -139,7 +139,7 @@ fn test_b283k_public_key_serialization() {
 
 #[test]
 fn test_b283k_secret_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (_, sk) = EcdhB283k::keypair(&mut rng).unwrap();
 
     // Export and verify length
@@ -165,7 +165,7 @@ fn test_b283k_secret_key_serialization() {
 
 #[test]
 fn test_b283k_ciphertext_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhB283k::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhB283k::encapsulate(&mut rng, &pk).unwrap();
 
@@ -178,7 +178,7 @@ fn test_b283k_ciphertext_serialization() {
 
 #[test]
 fn test_b283k_shared_secret_size() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EcdhB283k::keypair(&mut rng).unwrap();
     let (ct, ss) = EcdhB283k::encapsulate(&mut rng, &pk).unwrap();
 
@@ -202,7 +202,7 @@ fn test_b283k_invalid_public_key() {
 #[test]
 fn test_b283k_binary_curve_properties() {
     // Binary curves have different properties than prime curves
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhB283k::keypair(&mut rng).unwrap();
 
     // Binary curve compressed points can start with 0x02 or 0x03
@@ -215,7 +215,7 @@ fn test_b283k_binary_curve_properties() {
 
 #[test]
 fn test_b283k_full_kem_with_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate and serialize
     let (pk, sk) = EcdhB283k::keypair(&mut rng).unwrap();

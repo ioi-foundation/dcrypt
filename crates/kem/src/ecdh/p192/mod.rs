@@ -20,8 +20,8 @@ use dcrypt_api::{
     Kem, Key as ApiKey, Result as ApiResult,
 };
 use dcrypt_common::security::SecretBuffer;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// ECDH KEM with P-192 curve
 pub struct EcdhP192;
@@ -31,24 +31,30 @@ pub struct EcdhP192;
 /// # Security Note
 /// This type provides no direct byte access. Use the `to_bytes()` method
 /// for serialization and `from_bytes()` for deserialization.
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct EcdhP192PublicKey([u8; ec::P192_POINT_COMPRESSED_SIZE]);
+
+impl_zeroize_tuple!(EcdhP192PublicKey);
 
 /// Secret key for ECDH-P192 KEM (scalar value)
 ///
 /// # Security Note
 /// This type provides no direct byte access to prevent key exposure.
 /// Use the `to_bytes()` method which returns a `Zeroizing` wrapper.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP192SecretKey(SecretBuffer<{ ec::P192_SCALAR_SIZE }>);
+
+impl_zeroize_on_drop_tuple!(EcdhP192SecretKey);
 
 /// Shared secret from ECDH-P192 KEM
 ///
 /// # Security Note
 /// This type provides no direct byte access to prevent secret leakage.
 /// Convert to application keys immediately after generation.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP192SharedSecret(ApiKey);
+
+impl_zeroize_on_drop_tuple!(EcdhP192SharedSecret);
 
 /// Ciphertext for ECDH-P192 KEM (compressed ephemeral public key)
 ///

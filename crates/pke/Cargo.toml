@@ -14,38 +14,33 @@ default = ["std"]
 std = [
     "dcrypt-api/std",
     "dcrypt-common/std",
+    "dcrypt-internal/std",
     "dcrypt-algorithms/std",
-    "dep:thiserror",
     "alloc"          # The 'std' feature of 'pke' also implies 'alloc'
 ]
 alloc = [
     "dcrypt-api/alloc",
     "dcrypt-common/alloc",
+    "dcrypt-internal/alloc",
     "dcrypt-algorithms/alloc",
-    # NO 'dep:alloc' here. The features above will trigger alloc usage in those deps.
 ]
 no_std = [
+    "alloc",
     "dcrypt-api/no_std",
     "dcrypt-common/no_std",
-    # As before, no "algorithms/no_std"
+    "dcrypt-internal/no_std",
 ]
 
 [dependencies]
 dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false }
 dcrypt-common = { path = "../common", version = "=2.0.0", default-features = false }
-dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["ec", "kdf", "aead", "hash"] }
+dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["alloc", "ec", "kdf", "aead", "hash", "mac", "stream"] }
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
 dcrypt-params = { path = "../params", version = "=2.0.0" }
-rand = { workspace = true, default-features = false }
-zeroize = { workspace = true }
-subtle = { workspace = true, default-features = false }
-
-thiserror = { workspace = true, optional = true }
-# REMOVED: alloc = { package = "alloc", version = "1.0.0", optional = true }
-
 
 [dev-dependencies]
 hex = "0.4"
+rand = { version = "=0.8.7" }
 rand_chacha = { workspace = true }
 
 [package.metadata.release]

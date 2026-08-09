@@ -1,9 +1,9 @@
 // File: crates/kem/src/ecdh/p256/tests.rs
 use super::*;
+use crate::test_rng::TestRng;
 use dcrypt_algorithms::ec::p256 as ec_p256;
 use dcrypt_api::Kem;
-use rand::rngs::OsRng;
-use rand::{CryptoRng, RngCore};
+use dcrypt_internal::random::{CryptoRng, Error as RandomError, RngCore};
 
 #[cfg(test)]
 mod test_utils {
@@ -24,7 +24,7 @@ use test_utils::secret_buffer_from_slice;
 
 #[test]
 fn test_p256_kem_basic_flow() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate recipient keypair
     let (recipient_pk, recipient_sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -46,7 +46,7 @@ fn test_p256_kem_basic_flow() {
 
 #[test]
 fn test_p256_kem_multiple_encapsulations() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate recipient keypair
     let (recipient_pk, recipient_sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -71,7 +71,7 @@ fn test_p256_kem_multiple_encapsulations() {
 
 #[test]
 fn test_p256_kem_invalid_public_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Test with all-zero public key (identity point)
     let invalid_pk = EcdhP256PublicKey([0u8; ec_p256::P256_POINT_COMPRESSED_SIZE]);
@@ -90,7 +90,7 @@ fn test_p256_kem_invalid_public_key() {
 
 #[test]
 fn test_p256_kem_invalid_ciphertext() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate recipient keypair
     let (_, recipient_sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -105,7 +105,7 @@ fn test_p256_kem_invalid_ciphertext() {
 
 #[test]
 fn test_p256_kem_wrong_secret_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate two keypairs
     let (recipient_pk, _) = EcdhP256::keypair(&mut rng).unwrap();
@@ -137,7 +137,7 @@ mod test_vectors {
         // Since the KEM API doesn't expose this directly, we'll test
         // the overall flow with generated keys
 
-        let mut rng = OsRng;
+        let mut rng = TestRng;
         let (pk, sk) = EcdhP256::keypair(&mut rng).unwrap();
 
         // Test multiple encapsulations/decapsulations
@@ -150,7 +150,7 @@ mod test_vectors {
 
     #[test]
     fn test_p256_kem_edge_cases() {
-        let mut rng = OsRng;
+        let mut rng = TestRng;
 
         // Test with multiple recipients
         let recipients: Vec<_> = (0..3)
@@ -169,7 +169,7 @@ mod test_vectors {
 #[test]
 fn test_p256_kem_deterministic_shared_secret() {
     // For the same ephemeral key and recipient key, the shared secret should be deterministic
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate fixed recipient keypair
     let (recipient_pk, recipient_sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -187,7 +187,7 @@ fn test_p256_kem_deterministic_shared_secret() {
 
 #[test]
 fn test_p256_kem_serialization_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate keypair
     let (pk, sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -209,7 +209,7 @@ mod nist_compliance {
 
     #[test]
     fn test_p256_point_validation() {
-        let mut rng = OsRng;
+        let mut rng = TestRng;
 
         // Generate valid keypair
         let (_, sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -230,7 +230,7 @@ mod nist_compliance {
 #[test]
 fn test_p256_kem_consistency_across_implementations() {
     // This test ensures our implementation produces consistent results
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Run multiple iterations to catch any non-determinism
     for _ in 0..10 {
@@ -255,7 +255,7 @@ fn test_p256_kem_consistency_across_implementations() {
 
 #[test]
 fn test_p256_kem_compressed_format_sizes() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate keypair and verify sizes
     let (pk, sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -283,7 +283,7 @@ fn test_p256_kem_compressed_format_sizes() {
 
 #[test]
 fn test_p256_kem_invalid_compressed_prefix() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Test various invalid prefixes for compressed points
     let invalid_prefixes = [0x00, 0x01, 0x04, 0x05, 0xFF];
@@ -304,7 +304,7 @@ fn test_p256_kem_invalid_compressed_prefix() {
 
 #[test]
 fn test_p256_public_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP256::keypair(&mut rng).unwrap();
 
     // Round-trip
@@ -316,7 +316,7 @@ fn test_p256_public_key_serialization() {
 
 #[test]
 fn test_p256_secret_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (_, sk) = EcdhP256::keypair(&mut rng).unwrap();
 
     // Export and verify length
@@ -342,7 +342,7 @@ fn test_p256_secret_key_serialization() {
 
 #[test]
 fn test_p256_ciphertext_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP256::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhP256::encapsulate(&mut rng, &pk).unwrap();
 
@@ -370,7 +370,7 @@ fn test_p256_invalid_public_key() {
 
 #[test]
 fn test_p256_full_kem_with_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate and serialize
     let (pk, sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -392,9 +392,9 @@ fn test_p256_full_kem_with_serialization() {
 
 #[test]
 fn test_p256_zeroization() {
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (_, sk) = EcdhP256::keypair(&mut rng).unwrap();
 
     // Get zeroizing bytes
@@ -434,7 +434,7 @@ impl RngCore for ZeroThenOneRng {
         self.fills += 1;
     }
 
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), RandomError> {
         self.fill_bytes(dest);
         Ok(())
     }
@@ -444,7 +444,7 @@ impl CryptoRng for ZeroThenOneRng {}
 
 #[test]
 fn encapsulation_rejection_samples_invalid_ephemeral_scalar() {
-    let (public_key, secret_key) = EcdhP256::keypair(&mut OsRng).unwrap();
+    let (public_key, secret_key) = EcdhP256::keypair(&mut TestRng).unwrap();
     let mut rng = ZeroThenOneRng { fills: 0 };
     let (ciphertext, sender_secret) = EcdhP256::encapsulate(&mut rng, &public_key).unwrap();
     assert!(rng.fills >= 2, "zero scalar must be rejected and resampled");

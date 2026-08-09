@@ -21,15 +21,17 @@ use dcrypt_api::{
     Kem, Key as ApiKey, Result as ApiResult,
 };
 use dcrypt_common::security::SecretBuffer;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// ECDH KEM with P-256 curve
 pub struct EcdhP256;
 
 /// Public key for ECDH-P-256 KEM (compressed EC point)
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct EcdhP256PublicKey([u8; ec_p256::P256_POINT_COMPRESSED_SIZE]);
+
+impl_zeroize_tuple!(EcdhP256PublicKey);
 
 impl AsRef<[u8]> for EcdhP256PublicKey {
     fn as_ref(&self) -> &[u8] {
@@ -44,8 +46,10 @@ impl AsMut<[u8]> for EcdhP256PublicKey {
 }
 
 /// Secret key for ECDH-P-256 KEM (scalar value)
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP256SecretKey(SecretBuffer<{ ec_p256::P256_SCALAR_SIZE }>);
+
+impl_zeroize_on_drop_tuple!(EcdhP256SecretKey);
 
 impl AsRef<[u8]> for EcdhP256SecretKey {
     fn as_ref(&self) -> &[u8] {
@@ -54,8 +58,10 @@ impl AsRef<[u8]> for EcdhP256SecretKey {
 }
 
 /// Shared secret from ECDH-P-256 KEM
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP256SharedSecret(ApiKey);
+
+impl_zeroize_on_drop_tuple!(EcdhP256SharedSecret);
 
 impl AsRef<[u8]> for EcdhP256SharedSecret {
     fn as_ref(&self) -> &[u8] {
@@ -249,7 +255,13 @@ impl Kem for EcdhP256 {
         // not an operation failure.
         let ephemeral_scalar = loop {
             let mut ephemeral_bytes = [0u8; ec_p256::P256_SCALAR_SIZE];
-            rng.fill_bytes(&mut ephemeral_bytes);
+            rng.try_fill_bytes(&mut ephemeral_bytes).map_err(|_| {
+                ApiError::RandomGenerationError {
+                    context: "ECDH-P256 encapsulate",
+                    #[cfg(feature = "std")]
+                    message: "caller-provided randomness source failed".to_string(),
+                }
+            })?;
             let ephemeral_buffer = SecretBuffer::new(ephemeral_bytes);
             if let Ok(scalar) = ec_p256::Scalar::from_secret_buffer(ephemeral_buffer) {
                 break scalar;

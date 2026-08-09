@@ -21,15 +21,17 @@ use dcrypt_api::{
     Kem, Key as ApiKey, Result as ApiResult,
 };
 use dcrypt_common::security::SecretBuffer;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// ECDH KEM with P-521 curve
 pub struct EcdhP521;
 
 /// Public key for ECDH-P521 KEM (compressed EC point)
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct EcdhP521PublicKey([u8; ec_p521::P521_POINT_COMPRESSED_SIZE]);
+
+impl_zeroize_tuple!(EcdhP521PublicKey);
 
 impl AsRef<[u8]> for EcdhP521PublicKey {
     fn as_ref(&self) -> &[u8] {
@@ -44,8 +46,10 @@ impl AsMut<[u8]> for EcdhP521PublicKey {
 }
 
 /// Secret key for ECDH-P521 KEM (scalar value)
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP521SecretKey(SecretBuffer<{ ec_p521::P521_SCALAR_SIZE }>);
+
+impl_zeroize_on_drop_tuple!(EcdhP521SecretKey);
 
 impl AsRef<[u8]> for EcdhP521SecretKey {
     fn as_ref(&self) -> &[u8] {
@@ -54,8 +58,10 @@ impl AsRef<[u8]> for EcdhP521SecretKey {
 }
 
 /// Shared secret from ECDH-P521 KEM
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhP521SharedSecret(ApiKey);
+
+impl_zeroize_on_drop_tuple!(EcdhP521SharedSecret);
 
 impl AsRef<[u8]> for EcdhP521SharedSecret {
     fn as_ref(&self) -> &[u8] {

@@ -21,15 +21,17 @@ use dcrypt_api::{
     Kem, Key as ApiKey, Result as ApiResult,
 };
 use dcrypt_common::security::SecretBuffer;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// ECDH KEM with sect283k1 curve
 pub struct EcdhB283k;
 
 /// Public key for ECDH-B283k KEM (compressed EC point)
-#[derive(Clone, Zeroize)]
+#[derive(Clone)]
 pub struct EcdhB283kPublicKey([u8; ec_b283k::B283K_POINT_COMPRESSED_SIZE]);
+
+impl_zeroize_tuple!(EcdhB283kPublicKey);
 
 impl AsRef<[u8]> for EcdhB283kPublicKey {
     fn as_ref(&self) -> &[u8] {
@@ -44,8 +46,10 @@ impl AsMut<[u8]> for EcdhB283kPublicKey {
 }
 
 /// Secret key for ECDH-B283k KEM (scalar value)
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhB283kSecretKey(SecretBuffer<{ ec_b283k::B283K_SCALAR_SIZE }>);
+
+impl_zeroize_on_drop_tuple!(EcdhB283kSecretKey);
 
 impl AsRef<[u8]> for EcdhB283kSecretKey {
     fn as_ref(&self) -> &[u8] {
@@ -54,8 +58,10 @@ impl AsRef<[u8]> for EcdhB283kSecretKey {
 }
 
 /// Shared secret from ECDH-B283k KEM
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EcdhB283kSharedSecret(ApiKey);
+
+impl_zeroize_on_drop_tuple!(EcdhB283kSharedSecret);
 
 impl AsRef<[u8]> for EcdhB283kSharedSecret {
     fn as_ref(&self) -> &[u8] {

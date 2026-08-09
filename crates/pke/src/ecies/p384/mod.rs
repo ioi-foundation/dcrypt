@@ -7,8 +7,8 @@ use dcrypt_algorithms::types::{Nonce, SecretBytes as AlgoSecretBytes};
 use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::traits::Pke;
 // Removed unused import: use dcrypt_api::SymmetricCipher as ApiSymmetricCipherTrait;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 use alloc::format;
@@ -32,8 +32,10 @@ impl AsRef<[u8]> for EciesP384PublicKey {
 }
 
 /// Secret key for ECIES P-384. Stores serialized scalar.
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Clone)]
 pub struct EciesP384SecretKey([u8; ec::P384_SCALAR_SIZE]);
+
+impl_zeroize_on_drop_tuple!(EciesP384SecretKey);
 
 impl AsRef<[u8]> for EciesP384SecretKey {
     fn as_ref(&self) -> &[u8] {

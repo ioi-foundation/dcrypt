@@ -1,8 +1,8 @@
 //! Tests for ECDH KEM P-192
 
 use super::*; // Import from parent mod (p192/mod.rs)
+use crate::test_rng::TestRng;
 use dcrypt_api::Kem; // The main KEM trait
-use rand::rngs::OsRng;
 
 #[cfg(test)]
 mod test_utils {
@@ -23,7 +23,7 @@ use test_utils::secret_buffer_from_slice;
 
 #[test]
 fn test_ecdh_p192_keypair_generation() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let keypair_result = EcdhP192::keypair(&mut rng);
     assert!(
         keypair_result.is_ok(),
@@ -38,7 +38,7 @@ fn test_ecdh_p192_keypair_generation() {
 
 #[test]
 fn test_ecdh_p192_kem_roundtrip() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // 1. Generate recipient's key pair
     let (public_key, secret_key) = EcdhP192::keypair(&mut rng).expect("Keypair generation failed");
@@ -77,7 +77,7 @@ fn test_ecdh_p192_kem_roundtrip() {
 
 #[test]
 fn test_ecdh_p192_kem_decapsulate_wrong_key() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Recipient 1
     let (public_key1, _secret_key1) =
@@ -101,7 +101,7 @@ fn test_ecdh_p192_kem_decapsulate_wrong_key() {
 
 #[test]
 fn test_ecdh_p192_kem_decapsulate_tampered_ciphertext() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (public_key, secret_key) = EcdhP192::keypair(&mut rng).expect("Keypair generation failed");
 
     let (mut ciphertext, shared_secret_sender) =
@@ -137,7 +137,7 @@ fn test_ecdh_p192_kem_decapsulate_tampered_ciphertext() {
 
 #[test]
 fn test_p192_public_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP192::keypair(&mut rng).unwrap();
 
     // Round-trip
@@ -149,7 +149,7 @@ fn test_p192_public_key_serialization() {
 
 #[test]
 fn test_p192_secret_key_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (_, sk) = EcdhP192::keypair(&mut rng).unwrap();
 
     // Export and verify length
@@ -174,7 +174,7 @@ fn test_p192_secret_key_serialization() {
 
 #[test]
 fn test_p192_ciphertext_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP192::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhP192::encapsulate(&mut rng, &pk).unwrap();
 
@@ -197,7 +197,7 @@ fn test_p192_invalid_public_key() {
 
 #[test]
 fn test_p192_full_kem_with_serialization() {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate and serialize
     let (pk, sk) = EcdhP192::keypair(&mut rng).unwrap();

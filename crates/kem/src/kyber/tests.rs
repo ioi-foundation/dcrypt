@@ -7,13 +7,15 @@ use crate::kyber::{Kyber1024, Kyber512, Kyber768};
 #[cfg(test)]
 use dcrypt_api::Kem;
 #[cfg(test)]
-use rand::SeedableRng;
-#[cfg(test)]
-use rand_chacha::ChaChaRng;
+use dcrypt_internal::random::ChaCha20Rng;
+
+fn test_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([42; 32])
+}
 
 #[test]
 fn test_kyber512_keygen() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
     let result = Kyber512::keypair(&mut rng);
     assert!(result.is_ok());
 
@@ -24,7 +26,7 @@ fn test_kyber512_keygen() {
 
 #[test]
 fn test_kyber768_keygen() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
     let result = Kyber768::keypair(&mut rng);
     assert!(result.is_ok());
 
@@ -35,7 +37,7 @@ fn test_kyber768_keygen() {
 
 #[test]
 fn test_kyber1024_keygen() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
     let result = Kyber1024::keypair(&mut rng);
     assert!(result.is_ok());
 
@@ -46,7 +48,7 @@ fn test_kyber1024_keygen() {
 
 #[test]
 fn test_kyber512_encaps_decaps() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
 
     // Generate keypair
     let (pk, sk) = Kyber512::keypair(&mut rng).unwrap();
@@ -66,7 +68,7 @@ fn test_kyber512_encaps_decaps() {
 
 #[test]
 fn test_kyber768_encaps_decaps() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
 
     // Generate keypair
     let (pk, sk) = Kyber768::keypair(&mut rng).unwrap();
@@ -86,7 +88,7 @@ fn test_kyber768_encaps_decaps() {
 
 #[test]
 fn test_kyber1024_encaps_decaps() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
 
     // Generate keypair
     let (pk, sk) = Kyber1024::keypair(&mut rng).unwrap();
@@ -106,7 +108,7 @@ fn test_kyber1024_encaps_decaps() {
 
 #[test]
 fn test_invalid_ciphertext() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
 
     // Generate keypair
     let (pk, sk) = Kyber512::keypair(&mut rng).unwrap();
@@ -128,7 +130,7 @@ fn test_invalid_ciphertext() {
 
 #[test]
 fn test_wrong_key_sizes() {
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = test_rng();
 
     // Create keys with wrong sizes using the public new methods
     let bad_pk = crate::kyber::KyberPublicKey::new(vec![0u8; 100]); // Wrong size

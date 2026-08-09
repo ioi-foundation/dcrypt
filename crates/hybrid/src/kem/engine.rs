@@ -11,9 +11,9 @@ use dcrypt_api::{
     traits::serialize::{Serialize, SerializeSecret},
     Key as ApiKey,
 };
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_kem::kyber::KyberSharedSecret;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 const HYBRID_KEM_INFO_LABEL: &[u8] = b"dcrypt-hybrid-kem/v2";
 
