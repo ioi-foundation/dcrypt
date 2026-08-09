@@ -254,7 +254,9 @@ impl SignatureTrait for Ed25519 {
 
         let mut signature = [0u8; ED25519_SIGNATURE_SIZE];
         signature[..32].copy_from_slice(&r_bytes);
-        signature[32..].copy_from_slice(&response.to_bytes());
+        let response_bytes = response.to_bytes();
+        // The response becomes public only as part of the completed signature.
+        signature[32..].copy_from_slice(&response_bytes[..]);
         Ok(Ed25519Signature(signature))
     }
 

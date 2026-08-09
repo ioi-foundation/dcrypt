@@ -30,6 +30,10 @@ const P_PLUS_THREE_OVER_EIGHT: [u8; 32] = [
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct FieldElement([u64; 5]);
 
+// `ConditionallySelectable` requires `Copy`. Therefore safe Rust cannot promise
+// erasure of compiler- or register-created copies of a field element. Owned
+// arithmetic scratch below is nevertheless kept in `Zeroizing` storage so its
+// initialized representation is cleared on every normal and error path.
 impl Default for FieldElement {
     fn default() -> Self {
         Self::zero()
@@ -61,12 +65,12 @@ impl FieldElement {
 
     /// Decode a value known to be below the field modulus.
     pub(crate) fn from_bytes_unchecked(bytes: &[u8; 32]) -> Self {
-        let mut limbs = [0u64; 5];
+        let mut limbs = Zeroizing::new([0u64; 5]);
         for bit in 0..255 {
             let value = u64::from((bytes[bit / 8] >> (bit % 8)) & 1);
             limbs[bit / LIMB_BITS as usize] |= value << (bit % LIMB_BITS as usize);
         }
-        Self(limbs)
+        Self(limbs.into_inner())
     }
 
     pub(crate) fn add(&self, rhs: &Self) -> Self {
@@ -125,12 +129,16 @@ impl FieldElement {
 
     /// Return a square root of `self`, if one exists.
     pub(crate) fn sqrt(&self) -> Option<Self> {
-        let mut root = self.pow(&P_PLUS_THREE_OVER_EIGHT);
-        if !bool::from(root.square().ct_eq(self)) {
-            root = root.mul(&sqrt_m1());
+        let mut root = Zeroizing::new(self.pow(&P_PLUS_THREE_OVER_EIGHT));
+        let squared = Zeroizing::new(root.square());
+        if !bool::from(squared.ct_eq(self)) {
+            let adjusted = Zeroizing::new(root.mul(&sqrt_m1()));
+            root.zeroize();
+            *root = adjusted.into_inner();
         }
-        if bool::from(root.square().ct_eq(self)) {
-            Some(root)
+        let squared = Zeroizing::new(root.square());
+        if bool::from(squared.ct_eq(self)) {
+            Some(root.into_inner())
         } else {
             None
         }
@@ -163,7 +171,7 @@ impl FieldElement {
             let choice = Choice::from((exponent[bit / 8] >> (bit % 8)) & 1);
             let selected = Zeroizing::new(Self::conditional_select(&squared, &multiplied, choice));
             accumulator.zeroize();
-            *accumulator = *selected;
+            *accumulator = selected.into_inner();
         }
         accumulator.into_inner()
     }
@@ -171,11 +179,11 @@ impl FieldElement {
 
 impl ConditionallySelectable for FieldElement {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let mut limbs = [0u64; 5];
+        let mut limbs = Zeroizing::new([0u64; 5]);
         for (index, limb) in limbs.iter_mut().enumerate() {
             *limb = u64::conditional_select(&a.0[index], &b.0[index], choice);
         }
-        Self(limbs)
+        Self(limbs.into_inner())
     }
 }
 
@@ -305,5 +313,19 @@ mod tests {
             a.invert().to_bytes(),
             field("4dcd88822d0589ded58c28d85290e85dcd88822d0589ded58c28d85290e85d73").to_bytes()
         );
+    }
+
+    #[test]
+    fn zeroize_clears_the_owned_copy_only() {
+        // This intentionally tests the owner-local guarantee: the explicit
+        // owner is cleared, while an earlier `Copy` remains outside what safe
+        // Rust can promise to erase.
+        let original = field("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
+        let mut owned_copy = original;
+
+        owned_copy.zeroize();
+
+        assert_eq!(&*owned_copy.to_bytes(), &[0u8; 32]);
+        assert_ne!(&*original.to_bytes(), &[0u8; 32]);
     }
 }

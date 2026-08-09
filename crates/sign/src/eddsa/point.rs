@@ -32,6 +32,10 @@ pub(crate) struct EdwardsPoint {
     t: FieldElement,
 }
 
+// `ConditionallySelectable` requires `Copy`. Safe Rust therefore cannot erase
+// compiler- or register-created point copies. Secret scalar-multiplication
+// scratch is still placed in `Zeroizing` owners so every initialized owner is
+// cleared on all normal and error paths.
 impl Default for EdwardsPoint {
     fn default() -> Self {
         Self::identity()
@@ -84,11 +88,15 @@ impl EdwardsPoint {
         let f = Zeroizing::new(d.sub(&c));
         let g = Zeroizing::new(d.add(&c));
         let h = Zeroizing::new(b.add(&a));
+        let x = Zeroizing::new(e.mul(&f));
+        let y = Zeroizing::new(g.mul(&h));
+        let z = Zeroizing::new(f.mul(&g));
+        let t = Zeroizing::new(e.mul(&h));
         Self {
-            x: e.mul(&f),
-            y: g.mul(&h),
-            z: f.mul(&g),
-            t: e.mul(&h),
+            x: x.into_inner(),
+            y: y.into_inner(),
+            z: z.into_inner(),
+            t: t.into_inner(),
         }
     }
 
@@ -105,11 +113,15 @@ impl EdwardsPoint {
         let g = Zeroizing::new(d.add(&b));
         let f = Zeroizing::new(g.sub(&c));
         let h = Zeroizing::new(d.sub(&b));
+        let x = Zeroizing::new(e.mul(&f));
+        let y = Zeroizing::new(g.mul(&h));
+        let z = Zeroizing::new(f.mul(&g));
+        let t = Zeroizing::new(e.mul(&h));
         Self {
-            x: e.mul(&f),
-            y: g.mul(&h),
-            z: f.mul(&g),
-            t: e.mul(&h),
+            x: x.into_inner(),
+            y: y.into_inner(),
+            z: z.into_inner(),
+            t: t.into_inner(),
         }
     }
 
@@ -122,7 +134,7 @@ impl EdwardsPoint {
             let selected =
                 Zeroizing::new(Self::conditional_select(&doubled, &added, scalar.bit(bit)));
             accumulator.zeroize();
-            *accumulator = *selected;
+            *accumulator = selected.into_inner();
         }
         accumulator.into_inner()
     }
@@ -202,11 +214,15 @@ impl EdwardsPoint {
 
 impl ConditionallySelectable for EdwardsPoint {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
+        let x = Zeroizing::new(FieldElement::conditional_select(&a.x, &b.x, choice));
+        let y = Zeroizing::new(FieldElement::conditional_select(&a.y, &b.y, choice));
+        let z = Zeroizing::new(FieldElement::conditional_select(&a.z, &b.z, choice));
+        let t = Zeroizing::new(FieldElement::conditional_select(&a.t, &b.t, choice));
         Self {
-            x: FieldElement::conditional_select(&a.x, &b.x, choice),
-            y: FieldElement::conditional_select(&a.y, &b.y, choice),
-            z: FieldElement::conditional_select(&a.z, &b.z, choice),
-            t: FieldElement::conditional_select(&a.t, &b.t, choice),
+            x: x.into_inner(),
+            y: y.into_inner(),
+            z: z.into_inner(),
+            t: t.into_inner(),
         }
     }
 }
@@ -263,5 +279,21 @@ mod tests {
         assert!(!mixed.is_strict_prime_order());
         let encoded = mixed.compress();
         assert!(EdwardsPoint::decompress(&encoded).is_some());
+    }
+
+    #[test]
+    fn zeroize_clears_the_owned_point_copy_only() {
+        // As with field elements, this makes the owner-local guarantee and
+        // the accepted `Copy` limitation explicit.
+        let original = EdwardsPoint::basepoint();
+        let mut owned_copy = original;
+
+        owned_copy.zeroize();
+
+        assert!(bool::from(owned_copy.x.is_zero()));
+        assert!(bool::from(owned_copy.y.is_zero()));
+        assert!(bool::from(owned_copy.z.is_zero()));
+        assert!(bool::from(owned_copy.t.is_zero()));
+        assert!(!bool::from(original.x.is_zero()));
     }
 }
