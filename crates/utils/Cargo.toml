@@ -33,3 +33,6 @@ base64 = "0.22.1"
 
 [package.metadata.release]
 publish = true
+
+[lints]
+workspace = true

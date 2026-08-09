@@ -65,6 +65,7 @@ Options:
                        a clean tree before versioning continues.
   --skip-tests         Skip workspace, ACVP, and isolated timing tests.
   --skip-checks        Skip format/check, audit/deny, Miri, and fuzz builds.
+                       The implementation-boundary gate cannot be skipped.
   --resume CRATE       Resume a partial --execute at CRATE, or use "auto" to
                        trust crates.io as the source of truth.
   --registry-wait SEC  Maximum registry propagation wait per crate (default 300).
@@ -72,11 +73,11 @@ Options:
   -h, --help           Show this help.
 
 Safe workflow:
-  tools/release-dcrypt.sh --version 2.0.0
-  tools/release-dcrypt.sh --version 2.0.0 --prepare
+  tools/release-dcrypt.sh --version 3.0.0
+  tools/release-dcrypt.sh --version 3.0.0 --prepare
   git push origin <current-branch>
-  git push origin v2.0.0
-  tools/release-dcrypt.sh --version 2.0.0 --execute
+  git push origin v3.0.0
+  tools/release-dcrypt.sh --version 3.0.0 --execute
 EOF
 }
 
@@ -223,7 +224,7 @@ require_security_subcommand() {
 
 run_check_gates() {
     if [[ "$SKIP_CHECKS" == true ]]; then
-        warn "format, static, supply-chain, Miri, and fuzz gates were explicitly skipped"
+        warn "format, static, supply-chain, Miri, and fuzz gates were explicitly skipped; the implementation-boundary gate still ran"
         return
     fi
 
@@ -334,7 +335,7 @@ create_release_commit_if_needed() {
     fi
 
     if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
-        git add Cargo.toml crates/*/Cargo.toml tests/Cargo.toml
+        git add Cargo.toml Cargo.lock crates/*/Cargo.toml tests/Cargo.toml
         git commit -m "chore: release version $VERSION"
     fi
 }

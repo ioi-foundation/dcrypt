@@ -6,9 +6,10 @@
 //!
 //! Releases through `v1.2.3` contain serious memory-safety,
 //! authentication, nonce-handling, and format vulnerabilities and must not be
-//! used for production cryptography. `v2.0.0` is the first remediated release,
-//! but has not completed an independent post-remediation audit or FIPS
-//! validation. Consult the workspace `SECURITY.md` before use.
+//! used for production cryptography. `v2.0.0` contains important remediations
+//! but is withdrawn for violating the project's implementation policy. No
+//! published dcrypt release is currently supported. Consult the workspace
+//! `SECURITY.md` before use.
 //!
 //! ## Features
 //!
@@ -43,6 +44,7 @@
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
 
 // Core re-exports (always available)
 pub use dcrypt_api as api;

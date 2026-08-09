@@ -47,3 +47,6 @@ subtle = "2.4"   # Make sure constant-time comparison is available
 
 [package.metadata.release]
 publish = true
+
+[lints]
+workspace = true

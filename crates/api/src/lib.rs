@@ -4,6 +4,7 @@
 //! trait definitions, error types, and common types used throughout the library.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 extern crate alloc;

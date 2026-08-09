@@ -4,6 +4,7 @@
 //! protocols, both traditional and post-quantum.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
 
 pub mod ecdh;
 pub mod error;

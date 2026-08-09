@@ -4,10 +4,13 @@ tools/*
 !tools/README.md
 !tools/release-dcrypt.sh
 !tools/verify-publish-ready.sh
+!tools/verify-implementation-boundary.py
+!tools/verify-implementation-boundary.sh
 !tools/update-benchmarks.sh
 !tools/bench-processor/
 tree.md
 Cargo.lock
+!/Cargo.lock
 .gitignore
 !fuzz/.gitignore
 output.txt

@@ -4,6 +4,7 @@
 //! other dcrypt crates but are not part of the public API.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
 
 pub mod constant_time;
 pub mod endian;

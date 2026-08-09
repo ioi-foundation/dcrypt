@@ -25,3 +25,6 @@ rand = { version = "0.8.6" }
 
 [package.metadata.release]
 publish = true
+
+[lints]
+workspace = true

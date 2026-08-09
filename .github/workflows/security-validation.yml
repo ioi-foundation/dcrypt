@@ -17,6 +17,23 @@ env:
   RUST_BACKTRACE: "1"
 
 jobs:
+  implementation-boundary:
+    name: Zero unsafe / zero FFI implementation boundary
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust and every supported compilation target
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+          targets: aarch64-unknown-linux-gnu,wasm32-unknown-unknown,thumbv7em-none-eabihf
+      - name: Audit compiled and packaged implementation boundaries
+        run: |
+          python3 tools/verify-implementation-boundary.py --self-test
+          tools/verify-implementation-boundary.sh
+
   format-and-check:
     name: Format and all-target workspace check
     runs-on: ubuntu-24.04
@@ -94,8 +111,6 @@ jobs:
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: stable
-      - name: Resolve the ignored lockfile for this audit
-        run: cargo generate-lockfile
       - name: Install pinned security tools
         run: |
           cargo install --root "$RUNNER_TEMP/security-tools" cargo-audit --version 0.22.2 --locked

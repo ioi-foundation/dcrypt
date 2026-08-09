@@ -1,5 +1,6 @@
 //! Public Key Encryption (PKE) schemes for the dcrypt library.
 #![cfg_attr(not(feature = "std"), no_std)]
+#![forbid(unsafe_code)]
 
 // Required for Vec, String, format! in no_std + alloc environments
 // This makes the `alloc` crate available when the "alloc" feature of this crate ("pke") is enabled.

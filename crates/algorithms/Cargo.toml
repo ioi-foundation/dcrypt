@@ -147,3 +147,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [package.metadata.release]
 publish = true
+
+[lints]
+workspace = true

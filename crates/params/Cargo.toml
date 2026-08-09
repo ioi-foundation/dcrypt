@@ -11,3 +11,6 @@ publish = true
 
 [package.metadata.release]
 publish = true
+
+[lints]
+workspace = true

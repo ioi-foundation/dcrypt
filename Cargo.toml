@@ -139,3 +139,9 @@ sign-tag = false
 [package.metadata.release]
 # The root crate should be published
 publish = true
+
+[lints]
+workspace = true
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

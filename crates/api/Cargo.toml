@@ -29,3 +29,6 @@ loom = "0.7.2"
 
 [package.metadata.release]
 publish = true
+
+[lints]
+workspace = true

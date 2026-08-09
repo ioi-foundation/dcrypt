@@ -3,6 +3,7 @@
 //! This library provides common constants used across the dcrypt project.
 
 #![no_std]
+#![forbid(unsafe_code)]
 
 // Traditional algorithm constants
 pub mod traditional;

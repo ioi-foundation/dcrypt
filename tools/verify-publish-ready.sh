@@ -122,7 +122,16 @@ require_command cargo || true
 require_command jq || true
 require_command curl || true
 require_command git || true
+require_command python3 || true
 if ((ERRORS > 0)); then
+    exit 1
+fi
+
+printf "\n${BLUE}Zero-unsafe and zero-FFI implementation boundary${NC}\n"
+if "$SCRIPT_DIR/verify-implementation-boundary.sh"; then
+    pass "implementation boundary passed"
+else
+    fail "implementation boundary failed"
     exit 1
 fi
 
