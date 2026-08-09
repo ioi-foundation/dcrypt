@@ -4,6 +4,7 @@
 // Declare test submodules
 pub mod aead_tests;
 pub mod block_cipher_tests;
+pub mod bls;
 pub mod ecdh;
 pub mod hash_tests;
 pub mod hybrid; // Added Hybrid tests

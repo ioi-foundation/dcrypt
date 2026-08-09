@@ -345,6 +345,7 @@ dependencies = [
  "dcrypt-legacy-xchacha20poly1305-migration",
  "dcrypt-sign",
  "fips204",
+ "hkdf",
  "k256",
  "libcrux-ml-dsa",
  "ml-dsa",
@@ -354,6 +355,7 @@ dependencies = [
  "p521",
  "rand 0.8.6",
  "rand_chacha",
+ "sha2 0.10.9",
  "sha2 0.9.9",
 ]
 

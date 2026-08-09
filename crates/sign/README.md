@@ -8,9 +8,13 @@ Digital Signature Schemes for the dcrypt library.
 
 ## Overview
 
-`dcrypt-sign` exposes a unified API for traditional and post-quantum signature schemes. Individual implementations target the encodings and equations in the cited standards; this is not a blanket conformance, side-channel, or certification claim.
-
-The crate offers signature algorithms through the `dcrypt-api` traits.
+`dcrypt-sign` exposes protected APIs for traditional and post-quantum signature
+schemes. ECDSA, Ed25519, and ML-DSA implement the `dcrypt-api` signature traits.
+BLS uses a dedicated API so its secret key can remain deliberately non-`Clone`
+and its aggregation and proof-of-possession rules stay visible in the type
+surface. Individual implementations target the encodings and equations in the
+cited standards; this is not a blanket conformance, side-channel, or
+certification claim.
 Published versions through `v1.2.3` contain critical defects. `v2.0.0` retains
 important remediations but is withdrawn because it violates dcrypt's
 zero-unsafe/zero-FFI implementation policy. The next supported line is v3; see
@@ -24,6 +28,7 @@ certified.
 -   **Traditional Cryptography**: Provides implementations for industry-standard algorithms:
     -   ECDSA over NIST curves P-224, P-256, P-384, and P-521, with strict DER and low-`s` policy.
     -   Ed25519 with RFC 8032 encoding and strict verification behavior.
+    -   Minimum-public-key BLS12-381 Basic, Message Augmentation, and Proof of Possession profiles pinned to `draft-irtf-cfrg-bls-signature-07`, plus an explicitly separate Ethereum draft-v4 PoP adapter.
 -   **Security Focused**:
     -   Automatic zeroization of secret key material on drop to mitigate data remanence.
     -   Deterministic signing for Ed25519 and deterministic nonce generation (RFC 6979) for ECDSA to enhance security against fault attacks and weak RNGs.
@@ -50,6 +55,7 @@ responsible for supplying a compatible allocator and a cryptographic RNG.
 | :--- | :--- | :--- |
 | **ECDSA** | `EcdsaP224`, `EcdsaP256`, `EcdsaP384`, `EcdsaP521` | FIPS 186-5 |
 | **EdDSA** | `Ed25519` | RFC 8032 |
+| **BLS12-381 (minimum public key)** | `Bls12381G2Basic`, `Bls12381G2MessageAugmentation`, `Bls12381G2ProofOfPossession`; separate `Eth2Bls12381G2PopV4` adapter | CFRG BLS draft-07; Ethereum draft-v4 profile |
 
 ## Installation
 
@@ -69,7 +75,33 @@ entropy boundary; reusing or hard-coding that seed is insecure.
 
 ## Usage
 
-All signature schemes in this crate implement the `dcrypt::api::Signature` trait, providing a consistent and easy-to-use interface.
+ECDSA, Ed25519, and ML-DSA implement `dcrypt::api::Signature`. BLS uses the
+dedicated protected API shown below.
+
+### Example: BLS12-381 Basic (minimum public key)
+
+```rust
+use dcrypt::sign::bls::{Bls12381G2Basic, Bls12381SecretKey};
+
+fn sign(ikm: &[u8]) -> dcrypt::api::Result<()> {
+    // Draft-07 requires at least 32 unpredictable IKM bytes and an explicit
+    // caller-chosen salt. An application may instead call `generate` with its
+    // own CryptoRng.
+    let secret = Bls12381SecretKey::key_gen(ikm, b"example application salt")?;
+    let public = secret.public_key()?;
+    let message = b"standard BLS signature";
+    let signature = Bls12381G2Basic::sign(&secret, message)?;
+    Bls12381G2Basic::verify(&public, message, &signature)?;
+    Ok(())
+}
+```
+
+Use `Bls12381G2ProofOfPossession` when same-message aggregation is required;
+its aggregate verification methods take and validate a proof for every public
+key. Ethereum consensus callers must deliberately select
+`Eth2Bls12381G2PopV4`, whose verification contract relies on Ethereum's
+registration-time proof validation and whose empty fast-aggregate case matches
+the consensus specification.
 
 ### Example: ML-DSA-44 (Post-Quantum)
 
@@ -136,7 +168,7 @@ fn sign_with_application_entropy(seed: [u8; 32]) -> dcrypt::api::Result<()> {
 This crate uses feature flags to control which code is included, allowing you to optimize binary size by excluding unused algorithm families.
 
 -   `std`: (Enabled by default) Enables functionality that requires the standard library.
--   `traditional`: Enables ECDSA and EdDSA signature schemes.
+-   `traditional`: Enables ECDSA, Ed25519, and BLS12-381 signature schemes.
 -   `post-quantum`: Enables ML-DSA signature schemes.
 
 The selected dcrypt facade features determine which families are exposed.

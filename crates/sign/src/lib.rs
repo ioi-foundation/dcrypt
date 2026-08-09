@@ -17,10 +17,18 @@ pub mod mldsa;
 pub use mldsa::{MlDsa44, MlDsa65, MlDsa87};
 
 #[cfg(feature = "traditional")]
+pub mod bls;
+#[cfg(feature = "traditional")]
 pub mod ecdsa;
 #[cfg(feature = "traditional")]
 pub mod eddsa;
 
+#[cfg(feature = "traditional")]
+pub use bls::{
+    Bls12381G2Basic, Bls12381G2MessageAugmentation, Bls12381G2ProofOfPossession,
+    Bls12381ProofOfPossession, Bls12381PublicKey, Bls12381SecretKey, Bls12381Signature,
+    Eth2Bls12381G2PopV4,
+};
 #[cfg(feature = "traditional")]
 pub use ecdsa::{
     EcdsaP224, EcdsaP224PublicKey, EcdsaP224SecretKey, EcdsaP224Signature, EcdsaP256,
@@ -72,6 +80,19 @@ mod rng_failure_tests {
     fn ed25519_keypair_rng_failure() {
         assert!(matches!(
             Ed25519::keypair(&mut FailingRng),
+            Err(dcrypt_api::Error::RandomGenerationError { .. })
+        ));
+    }
+
+    #[cfg(feature = "traditional")]
+    #[test]
+    fn bls_keygen_rng_failure() {
+        assert!(matches!(
+            Bls12381SecretKey::generate(&mut FailingRng, b"caller salt"),
+            Err(dcrypt_api::Error::RandomGenerationError { .. })
+        ));
+        assert!(matches!(
+            Eth2Bls12381G2PopV4::generate(&mut FailingRng),
             Err(dcrypt_api::Error::RandomGenerationError { .. })
         ));
     }

@@ -28,6 +28,7 @@ fn exchange<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::algorithms::Result<(
 The BLS12-381 module additionally provides strict subgroup-checked decoding,
 optimal Ate pairings, and RFC 9380 hash-to-curve for G1 and G2. Those primitives
 support standard BLS signature ciphersuites, including Eth2-style schemes,
-without an external hash-to-curve library; ciphersuite-level KeyGen, DST,
-proof-of-possession, aggregation, and validation rules remain the caller's
-responsibility.
+without an external hash-to-curve library. Applications should use the
+high-level draft-07 and explicitly separated Eth2-v4 profiles in
+`dcrypt_sign::bls`; low-level callers remain responsible for every ciphersuite
+rule.

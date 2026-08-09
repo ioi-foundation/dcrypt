@@ -3,6 +3,9 @@
 use dcrypt_algorithms::ec::bls12_381::{
     Bls12_381Scalar, G1Affine, G1Projective, G2Affine, G2Projective,
 };
+use dcrypt_sign::bls::{
+    Bls12381ProofOfPossession, Bls12381PublicKey, Bls12381SecretKey, Bls12381Signature,
+};
 use libfuzzer_sys::fuzz_target;
 
 const INPUT_MAX: usize = 4 * 1024;
@@ -42,4 +45,12 @@ fuzz_target!(|input: &[u8]| {
     let _ = G2Projective::from_bytes(&g2_compressed);
     let _ = Bls12_381Scalar::from_bytes(&scalar);
     let _ = Bls12_381Scalar::from_bytes_wide(&wide_scalar);
+
+    // High-level ciphersuite contracts differ intentionally: public keys and
+    // secret keys reject identity/zero, while canonical subgroup signature and
+    // proof identity encodings are accepted for equation-level handling.
+    let _ = Bls12381SecretKey::from_bytes(input);
+    let _ = Bls12381PublicKey::from_bytes(input);
+    let _ = Bls12381Signature::from_bytes(input);
+    let _ = Bls12381ProofOfPossession::from_bytes(input);
 });

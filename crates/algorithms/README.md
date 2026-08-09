@@ -66,9 +66,9 @@ The crate provides a broad range of cryptographic primitives, categorized as fol
 *   **Koblitz Curve:** `secp256k1`.
 *   **Pairing-Friendly Curve:** BLS12-381, including G1/G2 operations, strict
     decoding, RFC 9380 hash-to-curve, and optimal Ate pairing. These are the
-    building blocks for standard BLS ciphersuites, including Eth2-style
-    schemes; protocol-level KeyGen, DST, aggregation, and proof-of-possession
-    rules remain the caller's responsibility.
+    runtime building blocks for the high-level standard profiles in
+    `dcrypt-sign::bls`. Callers assembling these primitives directly remain
+    responsible for every ciphersuite rule.
 
 ### Post-Quantum Primitives
 *   **Lattice-Based Math:** Includes generic polynomial support used by the owned final FIPS 204 ML-DSA implementation. ML-KEM uses its distinct seven-layer transform in `dcrypt-kem`.

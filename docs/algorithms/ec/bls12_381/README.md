@@ -4,13 +4,11 @@
 arithmetic, optimal Ate pairings, strict compressed-point decoding, and RFC
 9380 hash-to-curve for both G1 and G2.
 
-These are the complete low-level ingredients needed to implement standard BLS
-signature ciphersuites directly on dcrypt, including the Eth2-style
-minimum-public-key-size construction (public keys in G1, signatures in G2).
-No external hash-to-curve library is required. The module deliberately does not
-pretend that a pairing equation alone is a complete ciphersuite: applications
-must also implement the selected specification's KeyGen, exact DST, validation,
-proof-of-possession or augmentation rules, aggregation policy, and wire framing.
+These are the low-level ingredients behind the standard minimum-public-key BLS
+profiles in `dcrypt_sign::bls`; no external hash-to-curve library is required.
+Applications should use that high-level module for draft-07 Basic,
+Augmentation, Proof of Possession, or the separately named Ethereum draft-v4
+adapter. A pairing equation alone is not a complete ciphersuite.
 
 ## Eth2-style core equation
 
@@ -19,39 +17,42 @@ fixed demonstration value, not production KeyGen.
 
 ```rust
 use dcrypt_algorithms::ec::bls12_381::{
-    pairing, Bls12_381Scalar, G1Affine, G1Projective, G2Affine, G2Projective,
+    pairing, G1Affine, G1Projective, G2Affine, G2Projective,
 };
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_api::types::SecretBytes;
 
-let mut secret = Bls12_381Scalar::from(42u64);
-assert!(!bool::from(secret.is_zero()));
+let mut encoded_secret = [0u8; 32];
+encoded_secret[31] = 42;
+let secret = SecretBytes::new(encoded_secret);
 
-let public_key = G1Affine::from(G1Projective::generator() * secret);
+let public_key = G1Affine::from(
+    G1Projective::generator().multiply_secret_be_bytes(&secret)?,
+);
 let message_point = G2Projective::hash_to_curve(
     b"message",
     b"BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_",
 )?;
-let signature = G2Affine::from(message_point * secret);
+let signature = G2Affine::from(message_point.multiply_secret_be_bytes(&secret)?);
 
 assert_eq!(
     pairing(&public_key, &G2Affine::from(message_point)),
     pairing(&G1Affine::generator(), &signature),
 );
-secret.zeroize();
+drop(secret);
 # Ok::<(), dcrypt_algorithms::Error>(())
 ```
 
-Production KeyGen must follow the chosen BLS ciphersuite and reject a zero
-scalar. `Bls12_381Scalar` is a general `Copy` field element, not a protected
-long-lived secret-key container; keep encoded key material in exact-size
-zeroizing storage and clear temporary arithmetic scalars after use.
+Production code should use `dcrypt_sign::bls::Bls12381SecretKey`, whose KeyGen
+implements the selected draft profile and whose exact-size storage is neither
+`Copy` nor `Clone`. `Bls12_381Scalar` remains a general `Copy` field element for
+public arithmetic, not a protected long-lived secret-key container.
 
 ## Validation and serialization
 
-- Use `G1Projective::from_bytes_validated` and
-  `G2Projective::from_bytes_validated` for untrusted public keys and signatures.
-  They enforce canonical compression flags, on-curve decoding, subgroup
-  membership, and non-identity.
+- Use `G1Projective::from_bytes_validated` for untrusted public points when a
+  protocol requires a nonidentity value. BLS signature decoding has different
+  identity semantics; use the high-level `Bls12381Signature` parser instead of
+  applying the low-level nonidentity helper indiscriminately.
 - `G1Projective::hash_to_curve` and `G2Projective::hash_to_curve` implement the
   RFC 9380 random-oracle suites, including the RFC oversize-DST procedure.
 - Always use the exact DST required by the selected BLS ciphersuite. A different

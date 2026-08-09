@@ -21,6 +21,7 @@ chacha20poly1305 = { version = "=0.10.1", default-features = false, features = [
 chacha20 = { version = "=0.9.1", default-features = false }
 dcrypt-legacy-xchacha20poly1305-migration = { path = "../migration/legacy-xchacha20poly1305" }
 fips204 = { version = "=0.4.6", default-features = false, features = ["ml-dsa-44", "ml-dsa-65", "ml-dsa-87"] }
+hkdf = "=0.12.4"
 k256 = { version = "=0.13.4", default-features = false, features = ["arithmetic", "ecdh"] }
 libcrux-ml-dsa = { version = "=0.0.10", default-features = false, features = ["acvp", "mldsa44", "mldsa65", "mldsa87"] }
 ml-dsa = { version = "=0.1.1", default-features = false }
@@ -31,3 +32,4 @@ p521 = { version = "=0.13.3", default-features = false, features = ["arithmetic"
 rand = { version = "=0.8.6", default-features = false }
 rand_chacha = "=0.3.1"
 sha2 = "=0.9.9"
+sha2_010 = { package = "sha2", version = "=0.10.9" }

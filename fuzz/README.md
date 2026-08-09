@@ -14,7 +14,8 @@ public entry points that accept attacker-controlled encodings:
 - `kem_decoders`: canonical and malformed FIPS 203 ML-KEM key/ciphertext
   encodings plus the retained P-224/P-256/P-384/P-521/K-256 ECDH-KEM types.
 - `bls12_381_decoders`: compressed and uncompressed G1/G2 encodings, strict
-  subgroup/identity validation, and canonical or wide scalar inputs.
+  subgroup/identity validation, canonical or wide scalar inputs, and the
+  high-level BLS secret/public/signature/proof parser contracts.
 - `legacy_xchacha_migration`: both arbitrary unauthenticated inputs and
   synthesized authenticated ciphertext for the isolated legacy decryptor. Two
   committed seeds force successful decryption with and without AAD; the

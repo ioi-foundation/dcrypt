@@ -29,7 +29,7 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use dcrypt-owned safe-Rust key generation, signing, verification, sampling, arithmetic, and exact encodings. Public APIs support deterministic signing and hedged signing with caller-provided randomness and contexts. All 615 official ACVP cases pass exactly; independent implementations are confined to the excluded verification workspace. This is not a claim that dcrypt is formally verified, audited, or FIPS validated.
 2.  **Pure-Rust FIPS 203 (ML-KEM)**: Final-standard ML-KEM-512, ML-KEM-768, and ML-KEM-1024 use owned safe-Rust arithmetic, encoding, and SHA3/SHAKE primitives. All 240 official ACVP cases pass exactly; this project is not a FIPS-validated cryptographic module.
 3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + ML-KEM-768`) and hybrid Digital Signatures, designed to combine independent primitive families.
-4.  **BLS12-381 Pairing Engine**: Safe-Rust group arithmetic, optimal Ate pairings, strict point decoding, and RFC 9380 hash-to-curve for G1 and G2. These primitives are sufficient to build standard BLS ciphersuites, including Eth2-style minimum-public-key-size schemes, without an external hash-to-curve library. Applications remain responsible for the selected ciphersuite's KeyGen, domain separation, proof-of-possession, aggregation, and protocol validation rules.
+4.  **BLS12-381 Signatures and Pairings**: Safe-Rust group arithmetic, optimal Ate pairings, strict point decoding, and RFC 9380 hash-to-curve support high-level minimum-public-key Basic, Message Augmentation, and Proof of Possession schemes pinned to CFRG BLS draft-07. A separately named adapter preserves Ethereum's draft-v4 PoP and empty fast-aggregate semantics. No external runtime hash-to-curve library is required.
 
 ## 🛡️ Key Design Principles
 
@@ -106,32 +106,24 @@ fn encrypt<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
 }
 ```
 
-### Example 3: BLS12-381 Bilinear Pairings
+### Example 3: Standard BLS12-381 Signatures
 
-Perform bilinear pairings and hash-to-curve operations standard in decentralized identity and ZK systems.
+Create a minimum-public-key Basic signature through the protected high-level
+API. Use `Bls12381G2ProofOfPossession` for same-message aggregation, or select
+`Eth2Bls12381G2PopV4` explicitly when implementing Ethereum consensus rules.
 
 ```rust
-use dcrypt::algorithms::ec::bls12_381::{
-    pairing, Bls12_381Scalar, G1Projective, G2Affine, G2Projective,
-};
+use dcrypt::internal::{CryptoRng, RngCore};
+use dcrypt::sign::bls::{Bls12381G2Basic, Bls12381SecretKey};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Hash a message to a point on G1 using IETF hash-to-curve
-    let msg = b"Decentralized Identity";
-    let dst = b"BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_";
-    
-    // hash_to_curve returns a projective point
-    let point_g1 = G1Projective::hash_to_curve(msg, dst)?.to_affine();
-
-    // Demonstration scalar only. A real BLS ciphersuite must run its specified
-    // KeyGen procedure and reject zero.
-    let secret = Bls12_381Scalar::from(42u64);
-    let public_g2 = G2Affine::from(G2Projective::generator() * secret);
-
-    // 3. Compute Pairing e(H(m), [s]G2)
-    let result = pairing(&point_g1, &public_g2);
-    
-    println!("Pairing computed successfully: {:?}", result);
+fn sign<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
+    // dcrypt obtains no OS entropy. Generate 32 bytes of IKM through the
+    // caller-owned CSPRNG, then run draft-07 KeyGen with an explicit salt.
+    let secret = Bls12381SecretKey::generate(rng, b"example application salt")?;
+    let public = secret.public_key()?;
+    let message = b"standard BLS signature";
+    let signature = Bls12381G2Basic::sign(&secret, message)?;
+    Bls12381G2Basic::verify(&public, message, &signature)?;
     Ok(())
 }
 ```
@@ -148,7 +140,7 @@ dcrypt provides a unified API for classical, post-quantum, and hybrid operations
 | **XOFs** | `SHAKE-128/256`, `BLAKE3` |
 | **Password Hashing** | `Argon2id` (default), `Argon2i`, `Argon2d`, `PBKDF2` |
 | **Key Derivation** | `HKDF`, `PBKDF2` |
-| **Digital Signatures** | `ECDSA` (P-224, P-256, P-384, P-521), `Ed25519` |
+| **Digital Signatures** | `ECDSA` (P-224, P-256, P-384, P-521), `Ed25519`, BLS12-381 minimum-public-key Basic/Aug/PoP and separate Eth2 PoP-v4 |
 | **Post-Quantum Signatures** | `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87` (final FIPS 204) |
 | **Key Exchange / KEM** | `ECDH` (P-224, P-256, P-384, P-521, K-256) |
 | **Pairing-Friendly Curves** | `BLS12-381` (G1, G2, Gt, Pairings, Hash-to-Curve) |
@@ -165,7 +157,7 @@ The library is organized as a workspace of specialized crates to align type-safe
 *   **`dcrypt-symmetric`**: High-level AEADs, stream ciphers, and secure key management wrappers.
 *   **`dcrypt-pke`**: Public Key Encryption schemes, specifically **ECIES** (Elliptic Curve Integrated Encryption Scheme) over standard NIST curves.
 *   **`dcrypt-kem`**: Owned implementations of final FIPS 203 ML-KEM and ECDH-based KEMs.
-*   **`dcrypt-sign`**: Implementations of final FIPS 204 ML-DSA, ECDSA, and Ed25519.
+*   **`dcrypt-sign`**: Implementations of final FIPS 204 ML-DSA, ECDSA, Ed25519, and high-level BLS12-381 signature profiles.
 *   **`dcrypt-hybrid`**: Ready-to-use combiners for KEMs and Signatures ensuring crypto-agility.
 *   **`dcrypt-tests`**: Contains the ACVP test harness and Constant-Time Verification Suite.
 
@@ -177,11 +169,12 @@ Security is the primary driver for dcrypt. The library employs a rigorous testin
 The repository contains a custom statistical regression engine (`dcrypt-tests/src/suites/constant_time`). The security-validation workflow runs it serially as a regression gate and labels its scope explicitly. It is not dudect or ctgrind, and those stronger target-specific checks remain required before any production constant-time claim.
 *   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the combined signals.
 *   **Noise Gating**: Maintains a persistent noise profile and aborts inconclusive runs when the host environment is materially noisier than the historical baseline.
-*   **Coverage**: Exercises critical paths in ML-KEM, ML-DSA verification, hybrid constructions, ECDH, and AEAD implementations for timing regressions.
+*   **Coverage**: Exercises critical paths in ML-KEM, ML-DSA verification, BLS secret scalar multiplication, hybrid constructions, ECDH, and AEAD implementations for timing regressions.
 
 ### Standards testing
 *   **ACVP Test Harness**: Includes an ACVP JSON test harness for supported parameter sets. Passing vectors is a correctness gate, not NIST validation or certification.
 *   **ML-DSA Interoperability**: Runtime key generation, signing, verification, and complete expanded-key validation use only the dcrypt-owned implementation. The official key-generation, signature-generation, and signature-verification ACVP results are checked exactly. A separate non-published workspace performs bidirectional and byte-for-byte tests against `fips204`, libcrux, and RustCrypto. Bare expanded keys are validated coherently and retain their derived public key; paired import additionally rejects a mismatched public key.
+*   **BLS Interoperability**: Ethereum-compatible KeyGen is checked against the four published ERC-2333 master-key vectors. Draft-07 KeyGen and all four minimum-public-key domains (Basic, Augmentation, PoP signatures, and PoP proofs) are checked byte-for-byte against an independent implementation confined to the excluded verification workspace. Draft-07 Appendix B still marks G2/minimum-public-key vectors as TBA, so no nonexistent official signature-vector claim is made.
 *   **No certification claim**: dcrypt is not a FIPS-validated cryptographic module. Each algorithm and encoding must be assessed independently.
 
 ## 📄 License

@@ -26,7 +26,7 @@ no_std = [
     "dcrypt-internal/no_std"
 ]
 alloc = ["dcrypt-api/alloc", "dcrypt-common/alloc", "dcrypt-internal/alloc", "dcrypt-algorithms/alloc"]
-traditional = ["alloc"] # ECDSA and Ed25519
+traditional = ["alloc", "dcrypt-algorithms/kdf"] # ECDSA, Ed25519, and BLS12-381
 post-quantum = ["alloc"] # FIPS 204 ML-DSA
 
 [dependencies]

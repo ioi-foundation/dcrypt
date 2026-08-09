@@ -9,7 +9,8 @@ The main areas are:
 - `algorithms`: owned low-level hashes, ciphers, KDFs, elliptic curves,
   BLS12-381 pairings, and RFC 9380 hash-to-curve.
 - `kem`: ECDH KEMs and final FIPS 203 ML-KEM.
-- `sign`: ECDSA, dcrypt-owned strict Ed25519, and final FIPS 204 ML-DSA.
+- `sign`: ECDSA, dcrypt-owned strict Ed25519, final FIPS 204 ML-DSA, and
+  high-level BLS12-381 draft-07/explicit Eth2-v4 profiles.
 - `pke`: versioned dcrypt ECIES constructions.
 - `hybrid`: ECDH/ML-KEM combiners and ECDSA-P384/ML-DSA-65 signatures.
 - `params`: constants only for implemented algorithms.
