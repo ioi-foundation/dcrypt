@@ -82,7 +82,7 @@ impl<B: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> Cbc<B> {
 
         // Process the plaintext in blocks
         for chunk in plaintext.chunks(block_size) {
-            let mut block = [0u8; 16]; // AES block size is 16 bytes
+            let mut block = Zeroizing::new([0u8; 16]); // AES block size is 16 bytes
             block[..chunk.len()].copy_from_slice(chunk);
 
             // XOR with previous ciphertext block (or IV for the first block)
@@ -91,10 +91,10 @@ impl<B: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> Cbc<B> {
             }
 
             // Encrypt the XORed block
-            self.cipher.encrypt_block(&mut block)?;
+            self.cipher.encrypt_block(&mut block[..])?;
 
             // Append to ciphertext and update previous block
-            ciphertext.extend_from_slice(&block);
+            ciphertext.extend_from_slice(&block[..]);
             prev_block = block.to_vec();
         }
 

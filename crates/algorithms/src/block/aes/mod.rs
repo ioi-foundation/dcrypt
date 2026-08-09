@@ -122,14 +122,14 @@ fn rotate_word(word: u32) -> u32 {
 /// Substitutes each byte in a word using the AES S-box, with bitsliced implementation
 #[inline(always)]
 fn sub_word(word: u32) -> u32 {
-    let bytes = u32_to_bytes(word);
-    let sub_bytes = [
+    let bytes = Zeroizing::new(u32_to_bytes(word));
+    let sub_bytes = Zeroizing::new([
         bitsliced_sbox(bytes[0]),
         bitsliced_sbox(bytes[1]),
         bitsliced_sbox(bytes[2]),
         bitsliced_sbox(bytes[3]),
-    ];
-    bytes_to_u32(&sub_bytes)
+    ]);
+    bytes_to_u32(&sub_bytes[..])
 }
 
 /// Type-level constants for AES-128
@@ -241,7 +241,7 @@ impl Aes128 {
     fn expand_key(key: &[u8]) -> Result<SecretBuffer<176>> {
         validate::length("AES-128 key", key.len(), AES128_KEY_SIZE)?;
 
-        let mut round_keys_u32 = [0u32; 44];
+        let mut round_keys_u32 = Zeroizing::new([0u32; 44]);
 
         // Initial key schedule
         for i in 0..4 {
@@ -250,21 +250,21 @@ impl Aes128 {
 
         // Key expansion
         for i in 4..44 {
-            let mut temp = round_keys_u32[i - 1];
+            let mut temp = Zeroizing::new(round_keys_u32[i - 1]);
             if i % 4 == 0 {
-                temp = sub_word(rotate_word(temp)) ^ RCON[i / 4];
+                *temp = sub_word(rotate_word(*temp)) ^ RCON[i / 4];
             }
-            round_keys_u32[i] = round_keys_u32[i - 4] ^ temp;
+            round_keys_u32[i] = round_keys_u32[i - 4] ^ *temp;
         }
 
         // Convert to bytes
-        let mut round_key_bytes = [0u8; 176];
+        let mut round_key_bytes = Zeroizing::new([0u8; 176]);
         for i in 0..44 {
-            let bytes = u32_to_bytes(round_keys_u32[i]);
-            round_key_bytes[i * 4..(i + 1) * 4].copy_from_slice(&bytes);
+            let bytes = Zeroizing::new(u32_to_bytes(round_keys_u32[i]));
+            round_key_bytes[i * 4..(i + 1) * 4].copy_from_slice(&bytes[..]);
         }
 
-        Ok(SecretBuffer::new(round_key_bytes))
+        Ok(SecretBuffer::new(*round_key_bytes))
     }
 
     /// SubBytes step with bitsliced implementation
@@ -278,7 +278,7 @@ impl Aes128 {
 
     /// ShiftRows step
     fn shift_rows(state: &mut [u8; 16]) {
-        let mut temp = [0u8; 16];
+        let mut temp = Zeroizing::new([0u8; 16]);
         temp.copy_from_slice(state);
         state[0] = temp[0];
         state[4] = temp[4];
@@ -341,7 +341,7 @@ impl Aes128 {
 
     /// Inverse ShiftRows
     fn inv_shift_rows(state: &mut [u8; 16]) {
-        let mut temp = [0u8; 16];
+        let mut temp = Zeroizing::new([0u8; 16]);
         temp.copy_from_slice(state);
         state[0] = temp[0];
         state[4] = temp[4];
@@ -421,7 +421,7 @@ impl BlockCipher for Aes128 {
         compiler_fence(Ordering::SeqCst);
 
         // Copy block to state array
-        let mut state = [0u8; 16];
+        let mut state = Zeroizing::new([0u8; 16]);
         state.copy_from_slice(block);
 
         // Initial round - AddRoundKey
@@ -443,7 +443,7 @@ impl BlockCipher for Aes128 {
         Self::add_round_key(&mut state, &round_key_bytes[160..176])?;
 
         // Copy state back to block
-        block.copy_from_slice(&state);
+        block.copy_from_slice(&state[..]);
         Ok(())
     }
 
@@ -462,7 +462,7 @@ impl BlockCipher for Aes128 {
         compiler_fence(Ordering::SeqCst);
 
         // Copy block to state array
-        let mut state = [0u8; 16];
+        let mut state = Zeroizing::new([0u8; 16]);
         state.copy_from_slice(block);
 
         // Initial round - AddRoundKey (final round key)
@@ -484,7 +484,7 @@ impl BlockCipher for Aes128 {
         Self::add_round_key(&mut state, &round_key_bytes[0..16])?;
 
         // Copy state back to block
-        block.copy_from_slice(&state);
+        block.copy_from_slice(&state[..]);
         Ok(())
     }
 
@@ -502,7 +502,7 @@ impl Aes192 {
     fn expand_key(key: &[u8]) -> Result<SecretBuffer<208>> {
         validate::length("AES-192 key", key.len(), AES192_KEY_SIZE)?;
 
-        let mut round_keys_u32 = [0u32; 52];
+        let mut round_keys_u32 = Zeroizing::new([0u32; 52]);
 
         // Initial key schedule
         for i in 0..6 {
@@ -511,21 +511,21 @@ impl Aes192 {
 
         // Key expansion
         for i in 6..52 {
-            let mut temp = round_keys_u32[i - 1];
+            let mut temp = Zeroizing::new(round_keys_u32[i - 1]);
             if i % 6 == 0 {
-                temp = sub_word(rotate_word(temp)) ^ RCON[i / 6];
+                *temp = sub_word(rotate_word(*temp)) ^ RCON[i / 6];
             }
-            round_keys_u32[i] = round_keys_u32[i - 6] ^ temp;
+            round_keys_u32[i] = round_keys_u32[i - 6] ^ *temp;
         }
 
         // Convert to bytes
-        let mut round_key_bytes = [0u8; 208];
+        let mut round_key_bytes = Zeroizing::new([0u8; 208]);
         for i in 0..52 {
-            let bytes = u32_to_bytes(round_keys_u32[i]);
-            round_key_bytes[i * 4..(i + 1) * 4].copy_from_slice(&bytes);
+            let bytes = Zeroizing::new(u32_to_bytes(round_keys_u32[i]));
+            round_key_bytes[i * 4..(i + 1) * 4].copy_from_slice(&bytes[..]);
         }
 
-        Ok(SecretBuffer::new(round_key_bytes))
+        Ok(SecretBuffer::new(*round_key_bytes))
     }
 }
 
@@ -555,7 +555,7 @@ impl BlockCipher for Aes192 {
         compiler_fence(Ordering::SeqCst);
 
         // Copy block to state array
-        let mut state = [0u8; 16];
+        let mut state = Zeroizing::new([0u8; 16]);
         state.copy_from_slice(block);
 
         // Initial round - AddRoundKey
@@ -577,7 +577,7 @@ impl BlockCipher for Aes192 {
         Aes128::add_round_key(&mut state, &round_key_bytes[192..208])?;
 
         // Copy state back to block
-        block.copy_from_slice(&state);
+        block.copy_from_slice(&state[..]);
         Ok(())
     }
 
@@ -596,7 +596,7 @@ impl BlockCipher for Aes192 {
         compiler_fence(Ordering::SeqCst);
 
         // Copy block to state array
-        let mut state = [0u8; 16];
+        let mut state = Zeroizing::new([0u8; 16]);
         state.copy_from_slice(block);
 
         // Initial round - AddRoundKey (final round key)
@@ -618,7 +618,7 @@ impl BlockCipher for Aes192 {
         Aes128::add_round_key(&mut state, &round_key_bytes[0..16])?;
 
         // Copy state back to block
-        block.copy_from_slice(&state);
+        block.copy_from_slice(&state[..]);
         Ok(())
     }
 
@@ -636,7 +636,7 @@ impl Aes256 {
     fn expand_key(key: &[u8]) -> Result<SecretBuffer<240>> {
         validate::length("AES-256 key", key.len(), AES256_KEY_SIZE)?;
 
-        let mut round_keys_u32 = [0u32; 60];
+        let mut round_keys_u32 = Zeroizing::new([0u32; 60]);
 
         // Initial key schedule
         for i in 0..8 {
@@ -645,23 +645,23 @@ impl Aes256 {
 
         // Key expansion
         for i in 8..60 {
-            let mut temp = round_keys_u32[i - 1];
+            let mut temp = Zeroizing::new(round_keys_u32[i - 1]);
             if i % 8 == 0 {
-                temp = sub_word(rotate_word(temp)) ^ RCON[i / 8];
+                *temp = sub_word(rotate_word(*temp)) ^ RCON[i / 8];
             } else if i % 8 == 4 {
-                temp = sub_word(temp);
+                *temp = sub_word(*temp);
             }
-            round_keys_u32[i] = round_keys_u32[i - 8] ^ temp;
+            round_keys_u32[i] = round_keys_u32[i - 8] ^ *temp;
         }
 
         // Convert to bytes
-        let mut round_key_bytes = [0u8; 240];
+        let mut round_key_bytes = Zeroizing::new([0u8; 240]);
         for i in 0..60 {
-            let bytes = u32_to_bytes(round_keys_u32[i]);
-            round_key_bytes[i * 4..(i + 1) * 4].copy_from_slice(&bytes);
+            let bytes = Zeroizing::new(u32_to_bytes(round_keys_u32[i]));
+            round_key_bytes[i * 4..(i + 1) * 4].copy_from_slice(&bytes[..]);
         }
 
-        Ok(SecretBuffer::new(round_key_bytes))
+        Ok(SecretBuffer::new(*round_key_bytes))
     }
 }
 
@@ -691,7 +691,7 @@ impl BlockCipher for Aes256 {
         compiler_fence(Ordering::SeqCst);
 
         // Copy block to state array
-        let mut state = [0u8; 16];
+        let mut state = Zeroizing::new([0u8; 16]);
         state.copy_from_slice(block);
 
         // Initial round - AddRoundKey
@@ -713,7 +713,7 @@ impl BlockCipher for Aes256 {
         Aes128::add_round_key(&mut state, &round_key_bytes[224..240])?;
 
         // Copy state back to block
-        block.copy_from_slice(&state);
+        block.copy_from_slice(&state[..]);
         Ok(())
     }
 
@@ -732,7 +732,7 @@ impl BlockCipher for Aes256 {
         compiler_fence(Ordering::SeqCst);
 
         // Copy block to state array
-        let mut state = [0u8; 16];
+        let mut state = Zeroizing::new([0u8; 16]);
         state.copy_from_slice(block);
 
         // Initial round - AddRoundKey (final round key)
@@ -754,7 +754,7 @@ impl BlockCipher for Aes256 {
         Aes128::add_round_key(&mut state, &round_key_bytes[0..16])?;
 
         // Copy state back to block
-        block.copy_from_slice(&state);
+        block.copy_from_slice(&state[..]);
         Ok(())
     }
 
