@@ -6,17 +6,21 @@
 [![Security validation](https://img.shields.io/github/actions/workflow/status/ioi-foundation/dcrypt/security-validation.yml?branch=master&style=flat-square)](https://github.com/ioi-foundation/dcrypt/actions/workflows/security-validation.yml)
 
 > [!WARNING]
-> `v1.2.3` is confirmed to contain serious security defects. Earlier releases
-> have not been cleared. `v2.0.0` is the first remediated release, but has not
-> completed an independent post-remediation audit or FIPS validation. See
-> [SECURITY.md](SECURITY.md) before evaluating or migrating this project.
+> No dcrypt release is currently supported. `v2.0.0` contains important
+> security remediations, but is withdrawn because its implementation and
+> normal/build dependency closure violate the project's zero-unsafe,
+> zero-native-code, and zero-FFI policy. `v1.2.3` contains critical defects and
+> is not a safe fallback; earlier releases remain unsupported and uncleared.
+> See the [v2.0.0 withdrawal notice](docs/security/V2.0.0-WITHDRAWAL.md) and
+> [SECURITY.md](SECURITY.md).
 
 **dcrypt** (Decentralized Cryptography) is a Rust workspace for classical,
-post-quantum, and hybrid cryptographic APIs. Security-sensitive standard
-algorithms are being moved to reviewed ecosystem implementations and checked
-against independent known-answer tests. Rust and the absence of FFI in most
-paths reduce some implementation risks, but do not by themselves establish
-memory safety, side-channel resistance, or suitability for production.
+post-quantum, and hybrid cryptographic APIs. The corrective release is being
+developed under a strict contract: published dcrypt code and its normal/build
+dependency closure must contain no unsafe Rust, native code, or FFI. External
+implementations may be used only as isolated test oracles. These constraints
+reduce implementation risk but do not by themselves prove cryptographic
+correctness, side-channel resistance, or suitability for production.
 
 ## 🚀 Novel Capabilities
 
@@ -29,7 +33,7 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 
 ## 🛡️ Key Design Principles
 
-*   **Rust-first implementation**: Most implementation code avoids FFI. This narrows the attack surface; it is not a memory-safety or security proof.
+*   **Safe-Rust implementation boundary**: The next supported release must contain no unsafe Rust, native code, or FFI in published dcrypt crates or their normal/build dependency closure. This is an enforceable implementation policy, not by itself a security proof.
 *   **Post-Quantum APIs**: Exposes ML-DSA and ML-KEM parameter sets for interoperability testing and evaluation.
 *   **Defense-in-Depth**: Hybrid schemes combine battle-tested classical algorithms (ECDH/ECDSA) with modern PQC primitives.
 *   **Timing Analysis**: Security-sensitive paths are tested with a built-in statistical **Constant-Time Verification Suite** where applicable; passing statistical tests is not presented as a proof of constant-time execution.
@@ -38,11 +42,11 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 
 ## 📦 Quick Start
 
-Do not select `v1.2.3`; it is confirmed affected, and earlier
-introduced-version ranges remain under investigation. Use `2.0.0` or later and
-pin the exact version you have reviewed. The examples below describe the
-breaking `v2.0.0` API and are not a substitute for application-specific security
-review.
+Do not select `v1.2.3`; it contains critical defects. Do not select `v2.0.0` as
+a replacement; it has been withdrawn for violating the project's implementation
+policy. Earlier releases are unsupported and have not been cleared. The examples
+below describe the withdrawn `v2.0.0` API for development context only and are
+not a recommendation to deploy any currently published release.
 
 ### Example 1: Hybrid Post-Quantum Key Exchange
 

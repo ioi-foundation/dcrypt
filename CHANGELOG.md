@@ -7,6 +7,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Security
+
+- Withdrew `v2.0.0`. That release retains important remediations for the four
+  published stop-ship advisories, but its published implementation and
+  normal/build dependency closure violate dcrypt's zero-unsafe,
+  zero-native-code, and zero-FFI policy. This policy violation is not, by
+  itself, evidence of a new cryptographic exploit in `v2.0.0`.
+- Declared that no current release is supported: `v1.2.3` contains critical
+  defects and is not a safe fallback, while earlier releases remain unsupported
+  and uncleared. The immutable `v2.0.0` tag is retained for provenance.
+- Established `v3.0.0` as the planned corrective line because the implementation
+  boundary and caller-supplied-randomness contract require breaking changes.
+
 ## [2.0.0] - 2026-08-08
 
 ### Changed
@@ -89,7 +102,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Migration
 - The remediation release is SemVer-major. It must not be published as `1.2.x`:
-  `v1.2.3` remains affected; `v2.0.0` is the first patched release.
+  `v1.2.3` remains affected; `v2.0.0` is the first release containing these
+  remediations, but it has since been withdrawn as described above.
 - This release is intentionally incompatible with affected dcrypt formats.
   Version-1 streaming data, the former custom XChaCha construction, legacy
   dcrypt Dilithium objects, and version-1 ECDSA/ML-DSA hybrid objects are not

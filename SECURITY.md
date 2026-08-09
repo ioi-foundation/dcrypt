@@ -4,30 +4,37 @@ At IOI Foundation, we take the security of our software products seriously. This
 
 ## Current security status
 
-`v1.2.3` is confirmed affected by multiple serious security defects and must
-not be treated as production-safe cryptography. Earlier releases have not been
-cleared and remain unsupported while their exact introduced-version ranges are
-investigated. The confirmed defects include safe-API memory unsoundness,
-Ed25519 authentication bypass, GCM nonce
-reuse, an unauthenticated streaming format, a nonstandard construction exposed
-as XChaCha20-Poly1305, unsafe GCM tag truncation, and nonstandard objects exposed
-as FIPS 204 ML-DSA.
+No dcrypt release is currently supported.
 
-`v2.0.0` contains breaking remediations and regression tests for these findings
-and is the first patched release. It passed the repository's release validation
-gates, but has not received an independent post-remediation security audit or
-FIPS validation. Because the remediations change public APIs and reject affected
-wire formats, they are published as a SemVer-major release rather than another
-`1.2.x` release. Updating does not retroactively secure data, signatures, or
-binaries created by affected releases.
+`v2.0.0` contains important breaking remediations and regression tests for the
+published memory-unsafety, Ed25519 authentication-bypass, GCM nonce-reuse, and
+streaming-format advisories. It is nevertheless withdrawn because dcrypt code
+and its normal/build dependency closure contain unsafe Rust and dependencies
+that do not meet the project's zero-unsafe, zero-native-code, and zero-FFI
+implementation policy. This is an implementation-policy and release-assurance
+failure; it is not a claim that unsafe Rust or native dependencies have, by
+themselves, demonstrated a new cryptographic exploit in `v2.0.0`.
+
+`v1.2.3` is confirmed affected by multiple critical or high-severity defects and
+is not a safe fallback. Earlier releases remain unsupported and uncleared. The
+corrective line is planned as `v3.0.0` because restoring the implementation
+boundary requires breaking API and dependency changes, including
+caller-supplied cryptographic randomness.
+
+The immutable annotated `v2.0.0` tag is retained as historical provenance. See
+the [withdrawal notice](docs/security/V2.0.0-WITHDRAWAL.md) for the exact scope
+and corrective-release contract. Updating software does not retroactively
+secure data, signatures, authorizations, or binaries created by an affected
+release.
 
 ## Supported Versions
 
 | Version | Security status |
 | ------- | --------------- |
-| `v2.0.0` | Current remediated line; not independently audited or FIPS validated |
-| `v1.2.3` | Confirmed affected; do not use for production cryptography |
-| Earlier releases | Exact affected ranges under investigation; unsupported and not cleared |
+| `v3.0.0` | Planned corrective line; not yet released |
+| `v2.0.0` | Withdrawn; important fixes present, implementation policy violated |
+| `v1.2.3` | Confirmed critically affected; not a safe fallback |
+| Earlier releases | Unsupported and not cleared |
 
 ## Migration and incident response
 
@@ -76,16 +83,11 @@ Users of an affected release should assume the following:
   crash dumps, swap, or allocator reuse; rotate sensitive values where that
   exposure matters and remove retained diagnostic artifacts.
 
-Artifacts older than `v2.0.0` should be considered affected until their exact
-introduced-version ranges are established. Maintainers should yank affected
-crates where operationally feasible and publish separate advisories for the
-memory-unsafety, Ed25519 bypass, GCM nonce misuse, and streaming protocol
-failures.
-
-Repository-local, RustSec-style disclosure drafts for those four stop-ship
-issues are indexed in [`docs/security/README.md`](docs/security/README.md). Their
-identifiers are not assigned RustSec IDs and they have not yet been externally
-published.
+Artifacts older than `v2.0.0` should be considered affected unless and until a
+published advisory establishes a narrower range. The memory-unsafety, Ed25519
+bypass, GCM nonce misuse, and streaming protocol failures are published as
+GitHub Security Advisories and submitted to RustSec; see
+[`docs/security/README.md`](docs/security/README.md).
 
 ## Reporting a Vulnerability
 
