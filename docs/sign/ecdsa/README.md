@@ -16,11 +16,14 @@ The module provides implementations for the following NIST-recommended curves, e
 
 | Struct Name | NIST Curve | Scalar Size | Hash Function | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **`EcdsaP192`** | `secp192r1` | 24 bytes | `SHA-256` | ✅ Implemented |
 | **`EcdsaP224`** | `secp224r1` | 28 bytes | `SHA-224` | ✅ Implemented |
 | **`EcdsaP256`** | `secp256r1` | 32 bytes | `SHA-256` | ✅ Implemented |
 | **`EcdsaP384`** | `secp384r1` | 48 bytes | `SHA-384` | ✅ Implemented |
 | **`EcdsaP521`** | `secp521r1` | 66 bytes | `SHA-512` | ✅ Implemented |
+
+P-224 is retained for transition and interoperability at approximately
+112-bit security. P-192 signing was removed for v3 because NIST SP 800-186
+limits that curve to legacy use.
 
 -----
 

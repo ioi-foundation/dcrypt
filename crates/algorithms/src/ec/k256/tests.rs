@@ -32,13 +32,10 @@ fn test_field_arithmetic() {
 }
 
 #[test]
-fn test_scalar_reduction() {
+fn test_scalar_canonical_decoding() {
     // A scalar larger than the group order n
     let large_scalar_bytes = [0xFF; 32];
-    let scalar = Scalar::new(large_scalar_bytes).unwrap();
-
-    // The result should be different from the input
-    assert_ne!(scalar.serialize(), large_scalar_bytes);
+    assert!(Scalar::new(large_scalar_bytes).is_err());
 
     // Test zero rejection
     assert!(Scalar::new([0; 32]).is_err());
@@ -121,8 +118,7 @@ fn test_point_uncompressed_roundtrip() {
         "Identity should serialize to all zeros"
     );
 
-    let deserialized_id = Point::deserialize_uncompressed(&uncompressed_id).unwrap();
-    assert!(deserialized_id.is_identity());
+    assert!(Point::deserialize_uncompressed(&uncompressed_id).is_err());
 }
 
 #[test]
@@ -364,15 +360,13 @@ fn test_point_group_properties() {
     let identity = Point::identity();
     assert_eq!(g.add(&identity), g, "Identity element failed");
 
-    // Test that nG = O for the group order n
+    // The group order is not a canonical private scalar.
     let n_bytes = [
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         0xFE, 0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36,
         0x41, 0x41,
     ];
-    let n = Scalar::new(n_bytes).unwrap();
-    let result = g.mul(&n).unwrap();
-    assert!(result.is_identity(), "nG should equal identity");
+    assert!(Scalar::new(n_bytes).is_err());
 }
 
 #[test]
@@ -385,11 +379,7 @@ fn test_edge_cases() {
         "Identity should compress to all zeros"
     );
 
-    let decompressed = Point::deserialize_compressed(&compressed).unwrap();
-    assert!(
-        decompressed.is_identity(),
-        "Decompressed identity should be identity"
-    );
+    assert!(Point::deserialize_compressed(&compressed).is_err());
 
     // Test field element edge cases
     assert!(FieldElement::zero().is_zero());

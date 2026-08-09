@@ -19,6 +19,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   and uncleared. The immutable `v2.0.0` tag is retained for provenance.
 - Established `v3.0.0` as the planned corrective line because the implementation
   boundary and caller-supplied-randomness contract require breaking changes.
+- Removed the affected sect283k1/ECDH-B283 implementation. Tagged releases
+  `v0.9.0-beta.1` through withdrawn `v2.0.0` accepted an order-two peer point
+  without subgroup validation and used an incorrect group-order constant,
+  allowing a malicious ciphertext to expose secret-scalar parity and, for one
+  parity, produce a predictable KEM secret. See
+  `docs/security/V3-TRADITIONAL-EC-REMOVALS.md`.
+- Retained P-224 for approximately 112-bit transition/interoperability uses and
+  removed low-level P-192 plus its ECDH, ECIES, and ECDSA public surfaces. NIST
+  SP 800-186 limits P-192 to legacy use.
+
+### Changed
+
+- Traditional P-224/P-256/P-384/P-521/secp256k1 scalar imports now require a
+  canonical nonzero value below the group order. Point decoders require
+  canonical field coordinates, a valid SEC 1 prefix, and an on-curve,
+  non-identity point at KEM/PKE boundaries.
+- Versioned ECDH-KEM and ECIES KDF transcripts bind the shared x-coordinate,
+  ephemeral encoded point, and recipient encoded public key. ECIES rejects
+  malformed nonce lengths before performing ECDH.
 
 ## [2.0.0] - 2026-08-08
 

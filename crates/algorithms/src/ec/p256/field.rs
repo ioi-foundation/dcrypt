@@ -245,12 +245,11 @@ impl FieldElement {
     /// Constant-time check across all limbs to determine if the
     /// field element is the additive identity.
     pub fn is_zero(&self) -> bool {
-        for limb in self.0.iter() {
-            if *limb != 0 {
-                return false;
-            }
+        let mut any = 0u32;
+        for &limb in &self.0 {
+            any |= limb;
         }
-        true
+        any == 0
     }
 
     /// Return `true` if the field element is odd (least-significant bit set)

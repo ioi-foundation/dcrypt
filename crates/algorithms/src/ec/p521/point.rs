@@ -2,7 +2,8 @@
 
 use crate::ec::p521::{
     constants::{
-        P521_FIELD_ELEMENT_SIZE, P521_POINT_COMPRESSED_SIZE, P521_POINT_UNCOMPRESSED_SIZE,
+        P521_FIELD_ELEMENT_SIZE, P521_LIMBS, P521_POINT_COMPRESSED_SIZE,
+        P521_POINT_UNCOMPRESSED_SIZE,
     },
     field::FieldElement,
     scalar::Scalar,
@@ -14,7 +15,7 @@ use dcrypt_params::traditional::ecdsa::NIST_P521;
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PointFormat {
-    /// Identity point (all zeros)
+    /// SEC 1 identity point (`0x00`)
     Identity,
     /// Uncompressed format: 0x04 || x || y
     Uncompressed,
@@ -146,17 +147,7 @@ impl Point {
         }
 
         match (bytes[0], bytes.len()) {
-            (0x00, P521_POINT_UNCOMPRESSED_SIZE) => {
-                // Check if all bytes are zero (identity encoding)
-                if bytes.iter().all(|&b| b == 0) {
-                    Ok(PointFormat::Identity)
-                } else {
-                    Err(Error::param(
-                        "P-521 Point",
-                        "Invalid identity point encoding",
-                    ))
-                }
-            }
+            (0x00, 1) => Ok(PointFormat::Identity),
             (0x04, P521_POINT_UNCOMPRESSED_SIZE) => Ok(PointFormat::Uncompressed),
             (0x02 | 0x03, P521_POINT_COMPRESSED_SIZE) => Ok(PointFormat::Compressed),
             _ => Err(Error::param(
@@ -173,7 +164,10 @@ impl Point {
     /// - 66 bytes: x-coordinate (big-endian)
     /// - 66 bytes: y-coordinate (big-endian)
     ///
-    /// The identity point is represented as all zeros.
+    /// For the identity this fixed-width API returns an all-zero internal
+    /// sentinel. SEC 1 encodes identity as the single byte `0x00`, so the
+    /// sentinel is deliberately rejected by the deserializer and must not be
+    /// placed on the wire.
     pub fn serialize_uncompressed(&self) -> [u8; P521_POINT_UNCOMPRESSED_SIZE] {
         let mut result = [0u8; P521_POINT_UNCOMPRESSED_SIZE];
 
@@ -193,14 +187,9 @@ impl Point {
     /// Deserialize point from uncompressed byte format
     ///
     /// Supports the standard uncompressed format (0x04 || x || y) and
-    /// recognizes the all-zeros encoding for the identity element.
+    /// rejects non-canonical fixed-width encodings of the identity element.
     pub fn deserialize_uncompressed(bytes: &[u8]) -> Result<Self> {
         validate::length("P-521 Point", bytes.len(), P521_POINT_UNCOMPRESSED_SIZE)?;
-
-        // Check for identity point (all zeros)
-        if bytes.iter().all(|&b| b == 0) {
-            return Ok(Self::identity());
-        }
 
         // Validate uncompressed format indicator
         if bytes[0] != 0x04 {
@@ -227,8 +216,9 @@ impl Point {
     /// - 0x03 prefix if y-coordinate is odd
     /// - Followed by the x-coordinate in big-endian format
     ///
-    /// The identity point is encoded as 67 zero bytes for consistency
-    /// with the uncompressed format.
+    /// For the identity this fixed-width API returns an all-zero internal
+    /// sentinel, which is not a canonical SEC 1 encoding and is rejected by
+    /// the deserializer.
     ///
     /// This format reduces storage/transmission size by ~50% compared to
     /// uncompressed points while maintaining full recoverability.
@@ -265,11 +255,6 @@ impl Point {
             bytes.len(),
             P521_POINT_COMPRESSED_SIZE,
         )?;
-
-        // Identity encoding
-        if bytes.iter().all(|&b| b == 0) {
-            return Ok(Self::identity());
-        }
 
         let tag = bytes[0];
         if tag != 0x02 && tag != 0x03 {
@@ -351,10 +336,6 @@ impl Point {
     ///
     /// Returns the identity element if scalar is zero.
     pub fn mul(&self, scalar: &Scalar) -> Result<Self> {
-        if scalar.is_zero() {
-            return Ok(Self::identity());
-        }
-
         let mut r0 = ProjectivePoint {
             is_identity: Choice::from(1), // ∞
             x: FieldElement::zero(),
@@ -587,13 +568,10 @@ impl ProjectivePoint {
     /// Performs the conversion (X:Y:Z) → (X/Z², Y/Z³) using field inversion.
     /// This is the most expensive operation but only needed for final results.
     pub fn to_affine(&self) -> Point {
-        if self.is_identity.into() {
-            return Point::identity();
-        }
-
-        // Compute the modular inverse of Z
-        let z_inv = self
-            .z
+        // Select a non-zero denominator for the identity so conversion does
+        // not branch on a scalar-derived result.
+        let safe_z = Self::select_field(&self.z, &FieldElement::one(), self.is_identity);
+        let z_inv = safe_z
             .invert()
             .expect("Non-zero Z coordinate should be invertible");
         let z_inv_squared = z_inv.square();
@@ -604,26 +582,26 @@ impl ProjectivePoint {
         let y_affine = self.y.mul(&z_inv_cubed);
 
         Point {
-            is_identity: Choice::from(0),
-            x: x_affine,
-            y: y_affine,
+            is_identity: self.is_identity,
+            x: Self::select_field(&x_affine, &FieldElement::zero(), self.is_identity),
+            y: Self::select_field(&y_affine, &FieldElement::zero(), self.is_identity),
         }
     }
 
-    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
-        let select_field = |lhs: &FieldElement, rhs: &FieldElement| {
-            let mut out = [0u32; 17];
-            for (i, limb) in out.iter_mut().enumerate() {
-                *limb = u32::conditional_select(&lhs.0[i], &rhs.0[i], choice);
-            }
-            FieldElement(out)
-        };
+    fn select_field(a: &FieldElement, b: &FieldElement, choice: Choice) -> FieldElement {
+        let mut out = [0u32; P521_LIMBS];
+        for (i, limb) in out.iter_mut().enumerate() {
+            *limb = u32::conditional_select(&a.0[i], &b.0[i], choice);
+        }
+        FieldElement(out)
+    }
 
+    fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         Self {
             is_identity: Choice::conditional_select(&a.is_identity, &b.is_identity, choice),
-            x: select_field(&a.x, &b.x),
-            y: select_field(&a.y, &b.y),
-            z: select_field(&a.z, &b.z),
+            x: Self::select_field(&a.x, &b.x, choice),
+            y: Self::select_field(&a.y, &b.y, choice),
+            z: Self::select_field(&a.z, &b.z, choice),
         }
     }
 }

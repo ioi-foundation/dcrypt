@@ -14,7 +14,7 @@ use dcrypt_params::traditional::ecdsa::NIST_P384;
 /// Format of a serialized elliptic curve point
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PointFormat {
-    /// Identity point (all zeros)
+    /// SEC 1 identity point (`0x00`)
     Identity,
     /// Uncompressed format: 0x04 || x || y
     Uncompressed,
@@ -132,17 +132,7 @@ impl Point {
         }
 
         match (bytes[0], bytes.len()) {
-            (0x00, P384_POINT_UNCOMPRESSED_SIZE) => {
-                // Check if all bytes are zero (identity encoding)
-                if bytes.iter().all(|&b| b == 0) {
-                    Ok(PointFormat::Identity)
-                } else {
-                    Err(Error::param(
-                        "P-384 Point",
-                        "Invalid identity point encoding",
-                    ))
-                }
-            }
+            (0x00, 1) => Ok(PointFormat::Identity),
             (0x04, P384_POINT_UNCOMPRESSED_SIZE) => Ok(PointFormat::Uncompressed),
             (0x02 | 0x03, P384_POINT_COMPRESSED_SIZE) => Ok(PointFormat::Compressed),
             _ => Err(Error::param(
@@ -154,7 +144,10 @@ impl Point {
 
     /// Serialize point to uncompressed format: 0x04 || x || y
     ///
-    /// The identity point is represented as all zeros.
+    /// For the identity this fixed-width API returns an all-zero internal
+    /// sentinel. SEC 1 encodes identity as the single byte `0x00`, so the
+    /// sentinel is deliberately rejected by the deserializer and must not be
+    /// placed on the wire.
     pub fn serialize_uncompressed(&self) -> [u8; P384_POINT_UNCOMPRESSED_SIZE] {
         let mut result = [0u8; P384_POINT_UNCOMPRESSED_SIZE];
 
@@ -174,14 +167,9 @@ impl Point {
     /// Deserialize point from uncompressed byte format
     ///
     /// Supports the standard uncompressed format (0x04 || x || y) and
-    /// recognizes the all-zeros encoding for the identity element.
+    /// rejects non-canonical fixed-width encodings of the identity element.
     pub fn deserialize_uncompressed(bytes: &[u8]) -> Result<Self> {
         validate::length("P-384 Point", bytes.len(), P384_POINT_UNCOMPRESSED_SIZE)?;
-
-        // Check for identity point (all zeros)
-        if bytes.iter().all(|&b| b == 0) {
-            return Ok(Self::identity());
-        }
 
         // Validate uncompressed format indicator
         if bytes[0] != 0x04 {
@@ -207,6 +195,10 @@ impl Point {
     /// - 0x02 prefix if y-coordinate is even
     /// - 0x03 prefix if y-coordinate is odd
     /// - Followed by the x-coordinate in big-endian format
+    ///
+    /// For the identity this fixed-width API returns an all-zero internal
+    /// sentinel, which is not a canonical SEC 1 encoding and is rejected by
+    /// the deserializer.
     pub fn serialize_compressed(&self) -> [u8; P384_POINT_COMPRESSED_SIZE] {
         let mut out = [0u8; P384_POINT_COMPRESSED_SIZE];
 
@@ -231,11 +223,6 @@ impl Point {
             bytes.len(),
             P384_POINT_COMPRESSED_SIZE,
         )?;
-
-        // Identity encoding
-        if bytes.iter().all(|&b| b == 0) {
-            return Ok(Self::identity());
-        }
 
         let tag = bytes[0];
         if tag != 0x02 && tag != 0x03 {
@@ -309,10 +296,6 @@ impl Point {
     ///
     /// Uses constant-time double-and-add algorithm.
     pub fn mul(&self, scalar: &Scalar) -> Result<Self> {
-        if scalar.is_zero() {
-            return Ok(Self::identity());
-        }
-
         let scalar_bytes = scalar.as_secret_buffer().as_ref();
 
         // Work in Jacobian/projective coordinates throughout
@@ -526,13 +509,11 @@ impl ProjectivePoint {
 
     /// Convert Jacobian projective coordinates back to affine coordinates
     pub fn to_affine(&self) -> Point {
-        if self.is_identity.into() {
-            return Point::identity();
-        }
-
-        // Compute the modular inverse of Z
-        let z_inv = self
-            .z
+        // Select a non-zero denominator for the identity so conversion does
+        // not branch on a scalar-derived result.
+        let safe_z =
+            FieldElement::conditional_select(&self.z, &FieldElement::one(), self.is_identity);
+        let z_inv = safe_z
             .invert()
             .expect("Non-zero Z coordinate should be invertible");
         let z_inv_squared = z_inv.square();
@@ -543,9 +524,9 @@ impl ProjectivePoint {
         let y_affine = self.y.mul(&z_inv_cubed);
 
         Point {
-            is_identity: Choice::from(0),
-            x: x_affine,
-            y: y_affine,
+            is_identity: self.is_identity,
+            x: FieldElement::conditional_select(&x_affine, &FieldElement::zero(), self.is_identity),
+            y: FieldElement::conditional_select(&y_affine, &FieldElement::zero(), self.is_identity),
         }
     }
 }

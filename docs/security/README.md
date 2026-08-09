@@ -18,3 +18,8 @@ release is currently supported.
 
 The remaining compatibility and hardening findings are tracked in the
 workspace `SECURITY.md` and `CHANGELOG.md`.
+
+The v3 audit also identified a subgroup-validation failure in the former
+sect283k1/ECDH-B283 surface. See the
+[traditional-EC removal notice](V3-TRADITIONAL-EC-REMOVALS.md) for the affected
+tag range, evidence, impact, and migration guidance.

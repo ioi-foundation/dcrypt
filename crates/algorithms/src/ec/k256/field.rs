@@ -88,7 +88,11 @@ impl FieldElement {
 
     /// Check if this field element is zero.
     pub fn is_zero(&self) -> bool {
-        self.0.iter().all(|&l| l == 0)
+        let mut any = 0u32;
+        for &limb in &self.0 {
+            any |= limb;
+        }
+        any == 0
     }
 
     /// Check if this field element is odd (least significant bit is 1).
@@ -115,10 +119,12 @@ impl FieldElement {
 
     /// Negate a field element modulo p.
     pub fn negate(&self) -> Self {
-        if self.is_zero() {
-            return *self;
-        }
-        FieldElement(Self::MOD_LIMBS).sub(self)
+        let negated = FieldElement(Self::MOD_LIMBS).sub(self);
+        Self::conditional_select(
+            &negated.0,
+            &Self::zero().0,
+            Choice::from(self.is_zero() as u8),
+        )
     }
 
     /// Multiply two field elements modulo p.
@@ -286,25 +292,17 @@ impl FieldElement {
             result[i] &= 0xFFFF_FFFF;
         }
 
-        // If result[8] is non-zero, we need another reduction step
-        if result[8] > 0 {
-            // result[8] * 2^256 ≡ result[8] * (2^32 + 977) (mod p)
-            let overflow = result[8];
-            result[8] = 0;
-
-            // Add overflow * 977 to result[0]
-            result[0] += overflow * 977;
-            // Add overflow to result[1] (for the 2^32 part)
-            result[1] += overflow;
-
-            // Propagate carries again
-            for i in 0..8 {
-                if i < 7 {
-                    result[i + 1] += result[i] >> 32;
-                }
-                result[i] &= 0xFFFF_FFFF;
-            }
+        // Fold the ninth limb unconditionally so reduction does not branch on
+        // secret field values.
+        let overflow = result[8];
+        result[8] = 0;
+        result[0] += overflow * 977;
+        result[1] += overflow;
+        for i in 0..7 {
+            result[i + 1] += result[i] >> 32;
+            result[i] &= 0xFFFF_FFFF;
         }
+        result[7] &= 0xFFFF_FFFF;
 
         // Convert back to u32 array
         let mut r = [0u32; 8];
@@ -313,13 +311,8 @@ impl FieldElement {
         }
 
         // Final reduction if r >= p
-        let fe = FieldElement(r);
-        if !fe.is_valid() {
-            let (reduced, _) = Self::sbb8(r, Self::MOD_LIMBS);
-            FieldElement(reduced)
-        } else {
-            fe
-        }
+        let (reduced, borrow) = Self::sbb8(r, Self::MOD_LIMBS);
+        Self::conditional_select(&r, &reduced, Choice::from((borrow ^ 1) as u8))
     }
 }
 

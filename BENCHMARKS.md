@@ -178,7 +178,6 @@ the current ML-KEM or ML-DSA implementations.
 | `65536` | 268.23 µs |
 | `8` | 471.74 µs |
 | `8_messages` | 37.73 µs |
-| `B-283k` | 10.24 s |
 | `K-256` | 39.56 ms |
 | `OsRng` | 832.41 µs |
 | `P-256` | 539.86 ms |
@@ -189,7 +188,6 @@ the current ML-KEM or ML-DSA implementations.
 | `aad_256` | 16.95 µs |
 | `aad_64` | 16.51 µs |
 | `alloc_dealloc_cycle` | 3.26 ms |
-| `b283k_generate_keypair` | 382.60 ms |
 | `builder_derive` | 4.87 ms |
 | `complete` | 1.06 ms |
 | `compress` | 738.21 µs |

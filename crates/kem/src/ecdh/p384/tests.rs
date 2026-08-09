@@ -4,6 +4,17 @@ use crate::test_rng::TestRng;
 use dcrypt_algorithms::ec::p384;
 use dcrypt_api::Kem;
 
+#[test]
+fn shared_secret_deserialization_requires_exact_length() {
+    type Secret = EcdhP384SharedSecret;
+    use dcrypt_api::traits::serialize::SerializeSecret;
+
+    let len = p384::P384_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE;
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len]).is_ok());
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len - 1]).is_err());
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len + 1]).is_err());
+}
+
 #[cfg(test)]
 mod test_utils {
     use dcrypt_common::security::SecretBuffer;

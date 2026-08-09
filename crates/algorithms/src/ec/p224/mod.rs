@@ -36,6 +36,7 @@ use crate::hash::sha2::Sha256;
 use crate::kdf::hkdf::Hkdf;
 use crate::kdf::KeyDerivationFunction as KdfTrait;
 use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroizing;
 use dcrypt_params::traditional::ecdsa::NIST_P224;
 
 /// Get the standard base point G of the P-224 curve
@@ -64,14 +65,14 @@ pub fn scalar_mult_base_g(scalar: &Scalar) -> Result<Point> {
 ///
 /// Returns (private_key, public_key) pair suitable for ECDH key agreement.
 pub fn generate_keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Scalar, Point)> {
-    let mut scalar_bytes = [0u8; P224_SCALAR_SIZE];
+    let mut scalar_bytes = Zeroizing::new([0u8; P224_SCALAR_SIZE]);
 
     // Use rejection sampling for uniform distribution
     loop {
-        rng.try_fill_bytes(&mut scalar_bytes)?;
+        rng.try_fill_bytes(&mut scalar_bytes[..])?;
 
         // Attempt to create a valid scalar (non-zero, < n)
-        match Scalar::new(scalar_bytes) {
+        match Scalar::new(*scalar_bytes) {
             Ok(private_key) => {
                 // Compute corresponding public key
                 let public_key = scalar_mult_base_g(&private_key)?;

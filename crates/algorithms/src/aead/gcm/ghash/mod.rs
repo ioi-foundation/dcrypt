@@ -109,6 +109,7 @@ impl GHash {
     /// `Ok(())` on success, or an error if the block length is invalid.
     pub fn update_block(&mut self, block: &[u8], block_len: usize) -> Result<()> {
         validate::max_length("GHASH block", block_len, GCM_BLOCK_SIZE)?;
+        validate::min_length("GHASH block input", block.len(), block_len)?;
 
         // Create a temporary block with zeros
         let mut temp_block = [0u8; GCM_BLOCK_SIZE];
@@ -118,8 +119,8 @@ impl GHash {
             // Only copy if within valid range (constant-time selection)
             // For each position i, we compute a mask that's 0xFF if i < block_len, and 0x00 otherwise
             // This avoids branches and ensures constant-time operation
-            let in_range = ((block_len as isize - 1 - i as isize) >> 63) as u8;
-            let mask = !in_range; // 0xFF if i < block_len, 0x00 otherwise
+            let in_range = i.wrapping_sub(block_len) >> (usize::BITS - 1);
+            let mask = 0u8.wrapping_sub(in_range as u8);
 
             // Only read from input if in range (avoid out-of-bounds access).
             let source_byte = if i < block_len { block[i] } else { 0 };

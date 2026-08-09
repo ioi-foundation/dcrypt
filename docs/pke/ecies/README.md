@@ -10,7 +10,10 @@ The encryption process follows these general steps:
 
 1.  **Key Agreement**: The sender generates a new, temporary (ephemeral) elliptic curve keypair for each encryption operation. An Elliptic Curve Diffie-Hellman (ECDH) key exchange is performed between the sender's ephemeral private key and the recipient's public key. This results in a shared secret point on the curve.
 
-2.  **Key Derivation**: The x-coordinate of the shared secret point is used as input to a **HMAC-based Key Derivation Function (HKDF)**. The ephemeral public key is used as a salt for the KDF. This process derives a strong symmetric key suitable for an AEAD (Authenticated Encryption with Associated Data) cipher.
+2.  **Key Derivation**: HKDF receives a transcript containing the shared
+    x-coordinate, the encoded ephemeral public key, and the encoded recipient
+    public key. A fixed v3 extraction salt and a versioned, curve-and-cipher
+    suite label domain-separate the derived AEAD key.
 
 3.  **Authenticated Encryption**: The actual plaintext message is encrypted using a secure AEAD cipher (such as `ChaCha20Poly1305` or `AES-256-GCM`) with the derived symmetric key. The AEAD cipher ensures both the confidentiality and the integrity/authenticity of the message.
 
@@ -26,17 +29,20 @@ The `ecies` module is organized into a generic core and specific implementations
     *   Generic helper functions for key derivation using HKDF with different hash functions (`derive_symmetric_key_hkdf_sha256`, `derive_symmetric_key_hkdf_sha384`, etc.).
     *   Re-exports of the concrete ECIES implementations.
 
-*   `p192/`, `p224/`, `p256/`, `p384/`, `p521/`: These sub-modules contain the concrete ECIES implementations for the standard NIST elliptic curves. Each module defines a struct (e.g., `EciesP256`) that implements the `dcrypt_api::traits::Pke` trait, bundling a specific curve with a corresponding KDF and AEAD cipher.
+*   `p224/`, `p256/`, `p384/`, `p521/`: These sub-modules contain the concrete ECIES implementations for the retained NIST elliptic curves. Each module defines a struct (e.g., `EciesP256`) that implements the `dcrypt_api::traits::Pke` trait, bundling a specific curve with a corresponding KDF and AEAD cipher.
 
 ### Implemented Schemes
 
 | Struct | Elliptic Curve | Key Derivation Function (KDF) | AEAD Cipher |
 | :--- | :--- | :--- | :--- |
-| `EciesP192` | NIST P-192 | HKDF-SHA256 | ChaCha20Poly1305 |
 | `EciesP224` | NIST P-224 | HKDF-SHA256 | ChaCha20Poly1305 |
 | `EciesP256` | NIST P-256 | HKDF-SHA256 | ChaCha20Poly1305 |
 | `EciesP384` | NIST P-384 | HKDF-SHA384 | AES-256-GCM |
 | `EciesP521` | NIST P-521 | HKDF-SHA512 | AES-256-GCM |
+
+P-224 is retained for transition and interoperability at approximately
+112-bit security; P-256 or stronger is preferred for new deployments. P-192
+was removed for v3 because NIST SP 800-186 limits it to legacy use.
 
 ## Ciphertext Wire Format
 

@@ -9,7 +9,6 @@ mod support;
 use support::TestRng;
 
 // Import all ECDH implementations
-use dcrypt_kem::ecdh::b283k::EcdhB283k;
 use dcrypt_kem::ecdh::k256::EcdhK256;
 use dcrypt_kem::ecdh::p256::EcdhP256;
 use dcrypt_kem::ecdh::p384::EcdhP384;
@@ -35,10 +34,6 @@ fn bench_ecdh_keypair_comparison(c: &mut Criterion) {
         b.iter(|| EcdhK256::keypair(&mut rng).unwrap());
     });
 
-    group.bench_function("B-283k", |b| {
-        b.iter(|| EcdhB283k::keypair(&mut rng).unwrap());
-    });
-
     group.finish();
 }
 
@@ -51,7 +46,6 @@ fn bench_ecdh_encapsulate_comparison(c: &mut Criterion) {
     let (pk_p384, _) = EcdhP384::keypair(&mut rng).unwrap();
     let (pk_p521, _) = EcdhP521::keypair(&mut rng).unwrap();
     let (pk_k256, _) = EcdhK256::keypair(&mut rng).unwrap();
-    let (pk_b283k, _) = EcdhB283k::keypair(&mut rng).unwrap();
 
     group.bench_function("P-256", |b| {
         b.iter(|| EcdhP256::encapsulate(&mut rng, &pk_p256).unwrap());
@@ -67,10 +61,6 @@ fn bench_ecdh_encapsulate_comparison(c: &mut Criterion) {
 
     group.bench_function("K-256", |b| {
         b.iter(|| EcdhK256::encapsulate(&mut rng, &pk_k256).unwrap());
-    });
-
-    group.bench_function("B-283k", |b| {
-        b.iter(|| EcdhB283k::encapsulate(&mut rng, &pk_b283k).unwrap());
     });
 
     group.finish();
@@ -93,9 +83,6 @@ fn bench_ecdh_decapsulate_comparison(c: &mut Criterion) {
     let (pk_k256, sk_k256) = EcdhK256::keypair(&mut rng).unwrap();
     let (ct_k256, _) = EcdhK256::encapsulate(&mut rng, &pk_k256).unwrap();
 
-    let (pk_b283k, sk_b283k) = EcdhB283k::keypair(&mut rng).unwrap();
-    let (ct_b283k, _) = EcdhB283k::encapsulate(&mut rng, &pk_b283k).unwrap();
-
     group.bench_function("P-256", |b| {
         b.iter(|| EcdhP256::decapsulate(&sk_p256, &ct_p256).unwrap());
     });
@@ -110,10 +97,6 @@ fn bench_ecdh_decapsulate_comparison(c: &mut Criterion) {
 
     group.bench_function("K-256", |b| {
         b.iter(|| EcdhK256::decapsulate(&sk_k256, &ct_k256).unwrap());
-    });
-
-    group.bench_function("B-283k", |b| {
-        b.iter(|| EcdhB283k::decapsulate(&sk_b283k, &ct_b283k).unwrap());
     });
 
     group.finish();
@@ -131,13 +114,12 @@ fn bench_ecdh_throughput_comparison(c: &mut Criterion) {
     let mut rng = TestRng;
 
     // Use different iteration counts based on curve performance
-    // Deprecated curves (P-192, P-224) removed from benchmark
+    // Legacy P-192 and the invalid sect283k1 implementation were removed.
     let configs = [
         ("P-256", 100), // Fast curve, more iterations
         ("P-384", 50),  // Medium curve, fewer iterations
         ("P-521", 20),  // Slower curve, fewer iterations
-        ("K-256", 10),  // Very slow curve, minimal iterations
-        ("B-283k", 5),  // Extremely slow curve, minimal iterations
+        ("K-256", 10),  // Slow curve, minimal iterations
     ];
 
     // Benchmark operations per second for each curve
@@ -170,13 +152,6 @@ fn bench_ecdh_throughput_comparison(c: &mut Criterion) {
                         let (pk, sk) = EcdhK256::keypair(&mut rng).unwrap();
                         let (ct, _) = EcdhK256::encapsulate(&mut rng, &pk).unwrap();
                         let _ = EcdhK256::decapsulate(&sk, &ct).unwrap();
-                    }
-                }
-                "B-283k" => {
-                    for _ in 0..iterations {
-                        let (pk, sk) = EcdhB283k::keypair(&mut rng).unwrap();
-                        let (ct, _) = EcdhB283k::encapsulate(&mut rng, &pk).unwrap();
-                        let _ = EcdhB283k::decapsulate(&sk, &ct).unwrap();
                     }
                 }
                 _ => unreachable!(),
@@ -227,15 +202,6 @@ fn print_ecdh_sizes() {
     println!("  Secret key:    {:3} bytes", sk_k256.as_ref().len());
     println!("  Ciphertext:    {:3} bytes", ct_k256.as_ref().len());
     println!("  Shared secret: {:3} bytes", ss_k256.as_ref().len());
-
-    // B-283k
-    let (pk_b283k, sk_b283k) = EcdhB283k::keypair(&mut rng).unwrap();
-    let (ct_b283k, ss_b283k) = EcdhB283k::encapsulate(&mut rng, &pk_b283k).unwrap();
-    println!("\nB-283k (sect283k1):");
-    println!("  Public key:    {:3} bytes", pk_b283k.as_ref().len());
-    println!("  Secret key:    {:3} bytes", sk_b283k.as_ref().len());
-    println!("  Ciphertext:    {:3} bytes", ct_b283k.as_ref().len());
-    println!("  Shared secret: {:3} bytes", ss_b283k.as_ref().len());
 
     println!("\n=========================================\n");
 }

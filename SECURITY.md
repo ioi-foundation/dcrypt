@@ -82,6 +82,16 @@ Users of an affected release should assume the following:
   or out-of-length memory. Consider secrets exposed through process memory,
   crash dumps, swap, or allocator reuse; rotate sensitive values where that
   exposure matters and remove retained diagnostic artifacts.
+- The removed sect283k1/ECDH-B283 surface accepted an order-two peer point
+  without subgroup validation. Applications that processed attacker-controlled
+  B-283 public keys or ciphertexts must treat derived keys and protected data as
+  potentially compromised and rotate the corresponding long-term keys. The
+  affected tag range and evidence are documented in
+  [`docs/security/V3-TRADITIONAL-EC-REMOVALS.md`](docs/security/V3-TRADITIONAL-EC-REMOVALS.md).
+- P-192 is not offered by v3 for new signing or encryption. Migrate P-192 keys
+  and protocols to a retained, independently reviewed suite. P-224 remains only
+  for approximately 112-bit transition/interoperability requirements; prefer
+  P-256 or stronger for new deployments.
 
 Artifacts older than `v2.0.0` should be considered affected unless and until a
 published advisory establishes a narrower range. The memory-unsafety, Ed25519

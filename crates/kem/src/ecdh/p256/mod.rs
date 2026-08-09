@@ -25,6 +25,11 @@ use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroizing;
 
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
+const KDF_INFO: &[u8] = b"dcrypt-v3/ECDH-P256-KEM/shared-secret";
+
 /// ECDH KEM with P-256 curve
 pub struct EcdhP256;
 
@@ -157,16 +162,23 @@ impl SerializeSecret for EcdhP256SecretKey {
 
 // --- Shared secret methods ---
 impl EcdhP256SharedSecret {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        self.0.as_ref().to_vec()
+    pub fn to_bytes(&self) -> Zeroizing<Vec<u8>> {
+        Zeroizing::new(self.0.as_ref().to_vec())
     }
     pub fn to_zeroizing_bytes(&self) -> Zeroizing<Vec<u8>> {
-        Zeroizing::new(self.to_bytes())
+        self.to_bytes()
     }
 }
 
 impl SerializeSecret for EcdhP256SharedSecret {
     fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        if bytes.len() != ec_p256::P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE {
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP256SharedSecret::from_bytes",
+                expected: ec_p256::P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE,
+                actual: bytes.len(),
+            });
+        }
         Ok(Self(ApiKey::new(bytes)))
     }
     fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
@@ -287,9 +299,8 @@ impl Kem for EcdhP256 {
         kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(&ephemeral_point.serialize_compressed());
         kdf_ikm.extend_from_slice(&public_key_recipient.0);
-        let info: Option<&[u8]> = Some(b"ECDH-P256-KEM");
         let ss_bytes = Zeroizing::new(
-            ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, info)
+            ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,
         );
         let shared_secret = EcdhP256SharedSecret(ApiKey::new(&ss_bytes[..]));
@@ -333,9 +344,8 @@ impl Kem for EcdhP256 {
         kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(&ciphertext_ephemeral_pk.0);
         kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
-        let info: Option<&[u8]> = Some(b"ECDH-P256-KEM");
         let ss_bytes = Zeroizing::new(
-            ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, info)
+            ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,
         );
         let shared_secret = EcdhP256SharedSecret(ApiKey::new(&ss_bytes[..]));

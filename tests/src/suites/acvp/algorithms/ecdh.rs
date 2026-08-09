@@ -3,7 +3,7 @@
 use crate::suites::acvp::error::{EngineError, Result};
 use crate::suites::acvp::model::{TestCase, TestGroup};
 use crate::test_rng::OsRng;
-use dcrypt_algorithms::ec::{b283k, k256, p192, p224, p256, p384, p521};
+use dcrypt_algorithms::ec::{k256, p224, p256, p384, p521};
 use dcrypt_common::security::SecretBuffer;
 use hex;
 
@@ -26,9 +26,7 @@ fn lookup<'a>(case: &'a TestCase, group: &'a TestGroup, names: &[&str]) -> Optio
 fn is_curve_supported(curve: &str) -> bool {
     matches!(
         curve,
-        "P-192"
-            | "secp192r1"
-            | "P-224"
+        "P-224"
             | "secp224r1"
             | "P-256"
             | "secp256r1"
@@ -38,8 +36,6 @@ fn is_curve_supported(curve: &str) -> bool {
             | "secp521r1"
             | "K-256"
             | "secp256k1"
-            | "B-283"
-            | "sect283k1"
     )
 }
 
@@ -120,13 +116,11 @@ pub(crate) fn ecdh_component(group: &TestGroup, case: &TestCase) -> Result<()> {
         let d_bytes = hex::decode(&d_iut_hex)?;
 
         let z_hex = match curve.as_str() {
-            "P-192" | "secp192r1" => compute_ecdh_p192(&d_bytes, &qx_bytes, &qy_bytes)?,
             "P-224" | "secp224r1" => compute_ecdh_p224(&d_bytes, &qx_bytes, &qy_bytes)?,
             "P-256" | "secp256r1" => compute_ecdh_p256(&d_bytes, &qx_bytes, &qy_bytes)?,
             "P-384" | "secp384r1" => compute_ecdh_p384(&d_bytes, &qx_bytes, &qy_bytes)?,
             "P-521" | "secp521r1" => compute_ecdh_p521(&d_bytes, &qx_bytes, &qy_bytes)?,
             "K-256" | "secp256k1" => compute_ecdh_k256(&d_bytes, &qx_bytes, &qy_bytes)?,
-            "B-283" | "sect283k1" => compute_ecdh_b283k(&d_bytes, &qx_bytes, &qy_bytes)?,
             _ => return Err(EngineError::Crypto(format!("Unsupported curve: {}", curve))),
         };
 
@@ -145,25 +139,6 @@ pub(crate) fn ecdh_component(group: &TestGroup, case: &TestCase) -> Result<()> {
         // --- GENERATION LOGIC (for AFT tests) ---
         // This path is taken when dIUT is missing. The IUT must generate a keypair.
         let (qx_iut_hex, qy_iut_hex, z_hex) = match curve.as_str() {
-            "P-192" | "secp192r1" => {
-                let (d_iut, q_iut) = p192::generate_keypair(&mut OsRng)?;
-                let peer_point = p192::Point::new_uncompressed(
-                    qx_bytes
-                        .as_slice()
-                        .try_into()
-                        .map_err(|_| EngineError::InvalidData("Invalid qx for P-192".into()))?,
-                    qy_bytes
-                        .as_slice()
-                        .try_into()
-                        .map_err(|_| EngineError::InvalidData("Invalid qy for P-192".into()))?,
-                )?;
-                let shared_point = p192::scalar_mult(&d_iut, &peer_point)?;
-                (
-                    hex::encode(q_iut.x_coordinate_bytes()),
-                    hex::encode(q_iut.y_coordinate_bytes()),
-                    hex::encode(shared_point.x_coordinate_bytes()),
-                )
-            }
             "P-224" | "secp224r1" => {
                 let (d_iut, q_iut) = p224::generate_keypair(&mut OsRng)?;
                 let peer_point = p224::Point::new_uncompressed(
@@ -227,23 +202,6 @@ pub(crate) fn ecdh_component(group: &TestGroup, case: &TestCase) -> Result<()> {
                     })?,
                 )?;
                 let shared_point = k256::scalar_mult(&d_iut, &peer_point)?;
-                (
-                    hex::encode(q_iut.x_coordinate_bytes()),
-                    hex::encode(q_iut.y_coordinate_bytes()),
-                    hex::encode(shared_point.x_coordinate_bytes()),
-                )
-            }
-            "B-283" | "sect283k1" => {
-                let (d_iut, q_iut) = b283k::generate_keypair(&mut OsRng)?;
-                let peer_point = b283k::Point::new_uncompressed(
-                    qx_bytes.as_slice().try_into().map_err(|_| {
-                        EngineError::InvalidData("Invalid qx size for B-283".into())
-                    })?,
-                    qy_bytes.as_slice().try_into().map_err(|_| {
-                        EngineError::InvalidData("Invalid qy size for B-283".into())
-                    })?,
-                )?;
-                let shared_point = b283k::scalar_mult(&d_iut, &peer_point)?;
                 (
                     hex::encode(q_iut.x_coordinate_bytes()),
                     hex::encode(q_iut.y_coordinate_bytes()),
@@ -320,45 +278,6 @@ pub(crate) fn ecdh_validity(group: &TestGroup, case: &TestCase) -> Result<()> {
 }
 
 // Helper functions for each curve (for VAL tests)
-
-fn compute_ecdh_p192(d: &[u8], qx: &[u8], qy: &[u8]) -> Result<String> {
-    use p192::{Point, Scalar};
-
-    let mut d_bytes = [0u8; p192::P192_SCALAR_SIZE];
-    if d.len() > p192::P192_SCALAR_SIZE {
-        return Err(EngineError::InvalidData(
-            "Invalid P-192 private key size".into(),
-        ));
-    }
-    d_bytes[p192::P192_SCALAR_SIZE - d.len()..].copy_from_slice(d);
-    let scalar = Scalar::from_secret_buffer(SecretBuffer::new(d_bytes))
-        .map_err(|e| EngineError::Crypto(e.to_string()))?;
-
-    let peer_point = Point::new_uncompressed(
-        qx.try_into()
-            .map_err(|_| EngineError::InvalidData("Invalid qx for P-192".into()))?,
-        qy.try_into()
-            .map_err(|_| EngineError::InvalidData("Invalid qy for P-192".into()))?,
-    )
-    .map_err(|e| EngineError::Crypto(e.to_string()))?;
-
-    if peer_point.is_identity() {
-        return Err(EngineError::Crypto(
-            "Peer public key is point at infinity".into(),
-        ));
-    }
-
-    let shared_point =
-        p192::scalar_mult(&scalar, &peer_point).map_err(|e| EngineError::Crypto(e.to_string()))?;
-
-    if shared_point.is_identity() {
-        return Err(EngineError::Crypto(
-            "Shared secret is point at infinity".into(),
-        ));
-    }
-
-    Ok(hex::encode(shared_point.x_coordinate_bytes()))
-}
 
 fn compute_ecdh_p224(d: &[u8], qx: &[u8], qy: &[u8]) -> Result<String> {
     use p224::{Point, Scalar};
@@ -523,33 +442,6 @@ fn compute_ecdh_k256(d: &[u8], qx: &[u8], qy: &[u8]) -> Result<String> {
     Ok(hex::encode(shared_point.x_coordinate_bytes()))
 }
 
-fn compute_ecdh_b283k(d: &[u8], qx: &[u8], qy: &[u8]) -> Result<String> {
-    use b283k::{Point, Scalar};
-
-    let mut d_bytes = [0u8; b283k::B283K_SCALAR_SIZE];
-    if d.len() > b283k::B283K_SCALAR_SIZE {
-        return Err(EngineError::InvalidData(
-            "Invalid B-283 private key size".into(),
-        ));
-    }
-    d_bytes[b283k::B283K_SCALAR_SIZE - d.len()..].copy_from_slice(d);
-    let scalar = Scalar::from_secret_buffer(SecretBuffer::new(d_bytes))
-        .map_err(|e| EngineError::Crypto(e.to_string()))?;
-
-    let peer_point = Point::new_uncompressed(
-        qx.try_into()
-            .map_err(|_| EngineError::InvalidData("Invalid qx for B-283".into()))?,
-        qy.try_into()
-            .map_err(|_| EngineError::InvalidData("Invalid qy for B-283".into()))?,
-    )
-    .map_err(|e| EngineError::Crypto(e.to_string()))?;
-
-    let shared_point =
-        b283k::scalar_mult(&scalar, &peer_point).map_err(|e| EngineError::Crypto(e.to_string()))?;
-
-    Ok(hex::encode(shared_point.x_coordinate_bytes()))
-}
-
 /// Register ECDH handlers
 pub fn register(map: &mut std::collections::HashMap<DispatchKey, HandlerFn>) {
     // KAS-ECC-CDH-Component tests
@@ -566,9 +458,7 @@ pub fn register(map: &mut std::collections::HashMap<DispatchKey, HandlerFn>) {
     insert(map, "KAS-ECC", "VAL", "VAL", ecdh_validity);
 
     // Register handlers for specific curve variants if needed
-    for curve in &[
-        "P-192", "P-224", "P-256", "P-384", "P-521", "K-256", "B-283",
-    ] {
+    for curve in &["P-224", "P-256", "P-384", "P-521", "K-256"] {
         let algo = format!("ECDH-{}", curve);
         insert(map, &algo, "AFT", "AFT", ecdh_component);
         insert(map, &algo, "VAL", "VAL", ecdh_validity);

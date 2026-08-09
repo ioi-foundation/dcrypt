@@ -25,6 +25,11 @@ use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroizing;
 
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
+const KDF_INFO: &[u8] = b"dcrypt-v3/ECDH-P521-KEM/shared-secret";
+
 /// ECDH KEM with P-521 curve
 pub struct EcdhP521;
 
@@ -164,6 +169,13 @@ impl EcdhP521SharedSecret {
 
 impl SerializeSecret for EcdhP521SharedSecret {
     fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        if bytes.len() != ec_p521::P521_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE {
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP521SharedSecret::from_bytes",
+                expected: ec_p521::P521_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE,
+                actual: bytes.len(),
+            });
+        }
         Ok(Self(ApiKey::new(bytes)))
     }
     fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
@@ -267,9 +279,8 @@ impl Kem for EcdhP521 {
         kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(&ephemeral_point.serialize_compressed());
         kdf_ikm.extend_from_slice(&public_key_recipient.0);
-        let info: Option<&[u8]> = Some(b"ECDH-P521-KEM");
         let ss_bytes = Zeroizing::new(
-            ec_p521::kdf_hkdf_sha512_for_ecdh_kem(&kdf_ikm, info)
+            ec_p521::kdf_hkdf_sha512_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,
         );
         let shared_secret = EcdhP521SharedSecret(ApiKey::new(&ss_bytes[..]));
@@ -313,9 +324,8 @@ impl Kem for EcdhP521 {
         kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(&ciphertext_ephemeral_pk.0);
         kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
-        let info: Option<&[u8]> = Some(b"ECDH-P521-KEM");
         let ss_bytes = Zeroizing::new(
-            ec_p521::kdf_hkdf_sha512_for_ecdh_kem(&kdf_ikm, info)
+            ec_p521::kdf_hkdf_sha512_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,
         );
         let shared_secret = EcdhP521SharedSecret(ApiKey::new(&ss_bytes[..]));

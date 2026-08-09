@@ -15,11 +15,10 @@ fn test_compression_roundtrip() {
     let decompressed = Point::deserialize_compressed(&compressed).unwrap();
     assert_eq!(g, decompressed);
 
-    // Test identity point
+    // Fixed-width encodings cannot represent SEC 1's one-byte identity.
     let identity = Point::identity();
     let compressed_id = identity.serialize_compressed();
-    let decompressed_id = Point::deserialize_compressed(&compressed_id).unwrap();
-    assert!(decompressed_id.is_identity());
+    assert!(Point::deserialize_compressed(&compressed_id).is_err());
 
     // Test multiple scalar multiples to cover even/odd y cases
     let scalar_2 = p256::Scalar::new([
@@ -79,13 +78,13 @@ fn test_point_format_detection() {
         PointFormat::Compressed
     );
 
-    // Test identity format
-    let identity = Point::identity();
-    let id_bytes = identity.serialize_uncompressed();
+    // SEC 1 encodes the identity as the single byte 0x00.  Fixed-width
+    // all-zero sentinels are deliberately not accepted as wire encodings.
     assert_eq!(
-        Point::detect_format(&id_bytes).unwrap(),
+        Point::detect_format(&[0x00]).unwrap(),
         PointFormat::Identity
     );
+    assert!(Point::detect_format(&[0u8; P256_POINT_UNCOMPRESSED_SIZE]).is_err());
 
     // Test invalid formats
     assert!(Point::detect_format(&[]).is_err());
@@ -804,15 +803,10 @@ mod point_validation_vectors {
             "Point serialization/deserialization failed"
         );
 
-        // Test with identity point
+        // Fixed-width all-zero identity sentinels are non-canonical SEC 1.
         let identity = Point::identity();
         let serialized_identity = identity.serialize_uncompressed();
-        let deserialized_identity = Point::deserialize_uncompressed(&serialized_identity)?;
-
-        assert_eq!(
-            identity, deserialized_identity,
-            "Identity point serialization failed"
-        );
+        assert!(Point::deserialize_uncompressed(&serialized_identity).is_err());
 
         Ok(())
     }

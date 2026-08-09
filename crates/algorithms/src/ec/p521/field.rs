@@ -116,7 +116,11 @@ impl FieldElement {
     /// Check if the field element represents zero
     #[inline(always)]
     pub fn is_zero(&self) -> bool {
-        self.0.iter().all(|&w| w == 0)
+        let mut any = 0u32;
+        for &limb in &self.0 {
+            any |= limb;
+        }
+        any == 0
     }
 
     /// Return `true` if the field element is odd (least-significant bit set)
@@ -196,81 +200,38 @@ impl FieldElement {
     /// Reduce a 34-limb value (little-endian u32) modulo
     /// p = 2²⁵²¹ − 1.  Runs in constant time.
     fn reduce_wide(t: [u32; 34]) -> Self {
-        // --------------------------------------------------------------------- //
-        // 1.  Split the input in two halves:  L = t[ 0..17],  H = t[17..34]     //
-        //     and add       L  +  (H << 23).                                    //
-        //     While doing so we fold the overflow of each limb straight away,   //
-        //     so we never need more than an 18-limb scratch buffer.             //
-        // --------------------------------------------------------------------- //
-        let mut acc = [0u64; 18]; // 17 limbs  + a possible final carry
-        let mut c: u64 = 0;
-
-        for i in 0..17 {
-            let l = t[i] as u64;
-            let h = t[17 + i] as u64;
-
-            // low   32 bits of (h << 23)
-            let lo = (h << 23) & 0xFFFF_FFFF;
-            // overflow  (high bits of the same shift)
-            let hi = h >> 9; // (32 − 23) = 9
-
-            let tmp = l + lo + c;
-            acc[i] = tmp & 0xFFFF_FFFF;
-            c = (tmp >> 32) + hi; // propagate both the normal carry
+        // Split exactly at bit 521 and use 2^521 == 1 (mod p).  The high
+        // half spans 18 limbs because the product is at most 1088 bits.
+        let mut first = [0u32; 18];
+        let mut carry = 0u64;
+        for i in 0..16 {
+            let high = ((t[i + 16] >> 9) | (t[i + 17] << 23)) as u64;
+            let value = t[i] as u64 + high + carry;
+            first[i] = value as u32;
+            carry = value >> 32;
         }
-        acc[17] = c; // (can be up to 2³³ − 2)
+        let high_16 = ((t[32] >> 9) | (t[33] << 23)) as u64;
+        let value_16 = (t[16] & 0x1ff) as u64 + high_16 + carry;
+        first[16] = value_16 as u32;
+        carry = value_16 >> 32;
 
-        // --------------------------------------------------------------------- //
-        // 2.  Fold the 18-th limb (bit-position 544) once more:                  //
-        //         2²⁵⁴⁴  ≡  2²³   (mod p)                                        //
-        // --------------------------------------------------------------------- //
-        let top = acc[17];
-        if top != 0 {
-            // add (top << 23) to limb-0   … overflow will bubble to the right
-            let tmp = acc[0] + ((top << 23) & 0xFFFF_FFFF);
-            acc[0] = tmp & 0xFFFF_FFFF;
-            let mut c = (tmp >> 32) + (top >> 9); // carry to propagate
+        let value_17 = ((t[33] as u64) >> 9) + carry;
+        first[17] = value_17 as u32;
 
-            // propagate through all 17 limbs, *wrapping* when we fall off the end
-            for i in 1..=17 {
-                let idx = i % 17;
-                let tmp = acc[idx] + c;
-                acc[idx] = tmp & 0xFFFF_FFFF;
-                c = tmp >> 32;
-                if c == 0 {
-                    break;
-                }
-            }
-            acc[17] = 0; // completely folded away
+        // Fold the at-most-47-bit remainder above bit 521 back into the low
+        // limbs.  Carry propagation always traverses every limb.
+        let extra = ((first[16] >> 9) as u64) | ((first[17] as u64) << 23);
+        let mut limbs = [0u32; P521_LIMBS];
+        carry = extra;
+        for i in 0..P521_LIMBS {
+            let low = if i == 16 { first[i] & 0x1ff } else { first[i] };
+            let value = low as u64 + carry;
+            limbs[i] = value as u32;
+            carry = value >> 32;
         }
 
-        // --------------------------------------------------------------------- //
-        // 3.  Limb-16 must only keep its lowest 9 bits.  Everything above that   //
-        //     again represents   k · 2²⁵²¹  and is folded back into limb-0.     //
-        // --------------------------------------------------------------------- //
-        let extra = acc[16] >> 9; // at most 23 bits
-        acc[16] &= 0x1FF;
-        if extra != 0 {
-            let mut i = 0;
-            let mut c = extra;
-            loop {
-                let tmp = acc[i] + c;
-                acc[i] = tmp & 0xFFFF_FFFF;
-                c = tmp >> 32;
-                if c == 0 {
-                    break;
-                }
-                i = (i + 1) % 17;
-            }
-        }
-
-        // --------------------------------------------------------------------- //
-        // 4.  Conditional subtraction of the modulus.                           //
-        // --------------------------------------------------------------------- //
-        let mut limbs = [0u32; 17];
-        for i in 0..17 {
-            limbs[i] = acc[i] as u32;
-        }
+        // The previous fold yields a value below 2^521 + 2.  One conditional
+        // subtraction therefore produces the unique canonical representative.
 
         let (sub, borrow) = Self::sbb_n(limbs, Self::MOD_LIMBS);
         Self::conditional_select(&limbs, &sub, Choice::from((borrow ^ 1) as u8))
@@ -317,25 +278,9 @@ impl FieldElement {
             limbs[i] = (v & 0xFFFF_FFFF) as u32;
             carry = v >> 32;
         }
-        // `carry` may be non-zero (at most 2^32−1) – push it as limb 34 if so
-        if carry != 0 {
-            // This is equivalent to a limb 34 that will be folded anyway.
-            let extra = carry as u32;
-            let (new, of) = limbs[0].overflowing_add(extra);
-            limbs[0] = new;
-            if of {
-                // propagate one more carry (rare)
-                let mut k = 1;
-                while k < 17 {
-                    let (n, o) = limbs[k].overflowing_add(1);
-                    limbs[k] = n;
-                    if !o {
-                        break;
-                    }
-                    k += 1;
-                }
-            }
-        }
+        // Index 33 is an explicit empty carry limb (the largest product term
+        // is at index 32), so the final carry is zero by construction.
+        let _ = carry;
 
         // ── 3. Reduce back to 17 limbs -------------------------------------
         Self::reduce_wide(limbs)

@@ -21,13 +21,6 @@ pub trait KemDimensions: Kem {
 }
 
 // --- ECDH Implementations ---
-impl KemDimensions for ecdh::EcdhP192 {
-    const SUITE_ID: &'static [u8] = b"ECDH-P192";
-    const PUBLIC_KEY_LEN: usize = 25;
-    const SECRET_KEY_LEN: usize = 24;
-    const CIPHERTEXT_LEN: usize = 25;
-    const SHARED_SECRET_LEN: usize = 32;
-}
 impl KemDimensions for ecdh::EcdhP224 {
     const SUITE_ID: &'static [u8] = b"ECDH-P224";
     const PUBLIC_KEY_LEN: usize = 29;
@@ -63,14 +56,6 @@ impl KemDimensions for ecdh::EcdhK256 {
     const CIPHERTEXT_LEN: usize = 33;
     const SHARED_SECRET_LEN: usize = 32;
 }
-impl KemDimensions for ecdh::EcdhB283k {
-    const SUITE_ID: &'static [u8] = b"ECDH-B283K";
-    const PUBLIC_KEY_LEN: usize = 37;
-    const SECRET_KEY_LEN: usize = 36;
-    const CIPHERTEXT_LEN: usize = 37;
-    const SHARED_SECRET_LEN: usize = 48;
-}
-
 // --- ML-KEM implementations ---
 impl KemDimensions for ml_kem::MlKem512 {
     const SUITE_ID: &'static [u8] = b"ML-KEM-512";

@@ -102,7 +102,11 @@ impl Scalar {
     /// Constant-time check to determine if the scalar is the
     /// additive identity (which is invalid for most cryptographic operations).
     pub fn is_zero(&self) -> bool {
-        self.0.as_ref().iter().all(|&b| b == 0)
+        let mut any = 0u8;
+        for &byte in self.0.as_ref() {
+            any |= byte;
+        }
+        any == 0
     }
 
     /// Convert big-endian bytes to little-endian limbs
@@ -266,34 +270,27 @@ impl Scalar {
     /// Returns -self mod n, which is equivalent to n - self when self != 0
     /// Returns 0 when self is 0
     pub fn negate(&self) -> Self {
-        // If self is zero, return zero
-        if self.is_zero() {
-            return Self::from_bytes_unchecked([0u8; P256_SCALAR_SIZE]);
-        }
-
-        // Otherwise compute n - self
+        // Compute n - self, then select zero for the zero input.
         let n_limbs = Self::N_LIMBS;
         let self_limbs = Self::to_le_limbs(&self.serialize());
         let mut res = [0u32; 8];
 
         // Subtract self from n
-        let mut borrow = 0i64;
+        let mut borrow = 0u64;
         #[allow(clippy::needless_range_loop)] // Index used for multiple arrays
         for i in 0..8 {
-            let tmp = n_limbs[i] as i64 - self_limbs[i] as i64 - borrow;
-            if tmp < 0 {
-                res[i] = (tmp + (1i64 << 32)) as u32;
-                borrow = 1;
-            } else {
-                res[i] = tmp as u32;
-                borrow = 0;
-            }
+            let tmp = (n_limbs[i] as u64)
+                .wrapping_sub(self_limbs[i] as u64)
+                .wrapping_sub(borrow);
+            res[i] = tmp as u32;
+            borrow = (tmp >> 63) & 1;
         }
-
-        // No borrow should occur since self < n
-        debug_assert_eq!(borrow, 0);
-
-        Self::from_bytes_unchecked(Self::limbs_to_be(&res))
+        let negated = Self::from_bytes_unchecked(Self::limbs_to_be(&res));
+        Self::conditional_select(
+            &negated,
+            &Self::from_bytes_unchecked([0u8; P256_SCALAR_SIZE]),
+            Choice::from(self.is_zero() as u8),
+        )
     }
 
     // Private helper methods
@@ -306,39 +303,25 @@ impl Scalar {
     /// The input is at most 2^256-1 and the order is greater than 2^255,
     /// so at most one subtraction is required. Zero is intentionally allowed.
     fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P256_SCALAR_SIZE]) {
-        let order = &NIST_P256.n;
-
-        // Constant-time comparison with curve order
-        // We want to check: is bytes >= order?
-        let mut gt = 0u8; // set if bytes > order
-        let mut lt = 0u8; // set if bytes < order
-
+        let original = *bytes;
+        let (candidate, borrow) = Self::subtract_order(&original);
+        let reduce = Choice::from(borrow ^ 1);
         for i in 0..P256_SCALAR_SIZE {
-            let x = bytes[i];
-            let y = order[i];
-            gt |= ((x > y) as u8) & (!lt);
-            lt |= ((x < y) as u8) & (!gt);
+            bytes[i] = u8::conditional_select(&original[i], &candidate[i], reduce);
         }
-        let ge = gt | ((!lt) & 1); // ge = gt || eq (if not less, then greater or equal)
+    }
 
-        if ge == 1 {
-            // If scalar >= order, perform modular reduction
-            let mut borrow = 0u16;
-            let mut temp_bytes = *bytes;
-
-            for i in (0..P256_SCALAR_SIZE).rev() {
-                let diff = (temp_bytes[i] as i16) - (order[i] as i16) - (borrow as i16);
-                if diff < 0 {
-                    temp_bytes[i] = (diff + 256) as u8;
-                    borrow = 1;
-                } else {
-                    temp_bytes[i] = diff as u8;
-                    borrow = 0;
-                }
-            }
-
-            *bytes = temp_bytes;
+    #[inline(always)]
+    fn subtract_order(bytes: &[u8; P256_SCALAR_SIZE]) -> ([u8; P256_SCALAR_SIZE], u8) {
+        let mut result = [0u8; P256_SCALAR_SIZE];
+        let mut borrow = 0u8;
+        for i in (0..P256_SCALAR_SIZE).rev() {
+            let (difference, borrow_order) = bytes[i].overflowing_sub(NIST_P256.n[i]);
+            let (difference, borrow_previous) = difference.overflowing_sub(borrow);
+            result[i] = difference;
+            borrow = (borrow_order | borrow_previous) as u8;
         }
+        (result, borrow)
     }
 
     fn validate_canonical_nonzero(bytes: &[u8; P256_SCALAR_SIZE]) -> Result<()> {
@@ -346,17 +329,9 @@ impl Scalar {
             return Err(Error::param("P-256 Scalar", "Scalar cannot be zero"));
         }
 
-        let order = &NIST_P256.n;
-        for (&byte, &order_byte) in bytes.iter().zip(order) {
-            if byte < order_byte {
-                return Ok(());
-            }
-            if byte > order_byte {
-                return Err(Error::param(
-                    "P-256 Scalar",
-                    "Scalar must be less than the group order",
-                ));
-            }
+        let (_, borrow) = Self::subtract_order(bytes);
+        if borrow == 1 {
+            return Ok(());
         }
 
         Err(Error::param(
@@ -386,20 +361,6 @@ impl Scalar {
             out[i] = u8::conditional_select(&a_bytes[i], &b_bytes[i], choice);
         }
         Self::from_bytes_unchecked(out)
-    }
-
-    /// Compare two limb arrays for greater-than-or-equal
-    #[inline(always)]
-    fn geq(a: &[u32; 8], b: &[u32; 8]) -> bool {
-        for i in (0..8).rev() {
-            if a[i] > b[i] {
-                return true;
-            }
-            if a[i] < b[i] {
-                return false;
-            }
-        }
-        true // equal
     }
 
     /// Subtract b from a in-place

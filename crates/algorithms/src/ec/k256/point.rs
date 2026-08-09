@@ -104,6 +104,11 @@ impl Point {
     }
 
     /// Serialize this point in uncompressed format.
+    ///
+    /// For the identity this fixed-width API returns an all-zero internal
+    /// sentinel. SEC 1 encodes identity as the single byte `0x00`, so the
+    /// sentinel is deliberately rejected by the deserializer and must not be
+    /// placed on the wire.
     pub fn serialize_uncompressed(&self) -> [u8; K256_POINT_UNCOMPRESSED_SIZE] {
         let mut out = [0u8; K256_POINT_UNCOMPRESSED_SIZE];
         if self.is_identity() {
@@ -125,10 +130,6 @@ impl Point {
             K256_POINT_UNCOMPRESSED_SIZE,
         )?;
 
-        if bytes.iter().all(|&b| b == 0) {
-            return Ok(Self::identity());
-        }
-
         if bytes[0] != 0x04 {
             return Err(Error::param(
                 "K256 Point",
@@ -145,6 +146,10 @@ impl Point {
     }
 
     /// Serialize this point in compressed format.
+    ///
+    /// For the identity this fixed-width API returns an all-zero internal
+    /// sentinel, which is not a canonical SEC 1 encoding and is rejected by
+    /// the deserializer.
     pub fn serialize_compressed(&self) -> [u8; K256_POINT_COMPRESSED_SIZE] {
         let mut out = [0u8; K256_POINT_COMPRESSED_SIZE];
         if self.is_identity() {
@@ -164,9 +169,6 @@ impl Point {
             bytes.len(),
             K256_POINT_COMPRESSED_SIZE,
         )?;
-        if bytes.iter().all(|&b| b == 0) {
-            return Ok(Self::identity());
-        }
         let tag = bytes[0];
         if tag != 0x02 && tag != 0x03 {
             return Err(Error::param(
@@ -215,9 +217,6 @@ impl Point {
     ///
     /// Uses constant-time double-and-add algorithm.
     pub fn mul(&self, scalar: &Scalar) -> Result<Self> {
-        if scalar.is_zero() {
-            return Ok(Self::identity());
-        }
         let scalar_bytes = scalar.as_secret_buffer().as_ref();
         let base = self.to_projective();
         let mut result = ProjectivePoint::identity();
@@ -375,18 +374,17 @@ impl ProjectivePoint {
     }
 
     pub fn to_affine(&self) -> Point {
-        if self.is_identity.into() {
-            return Point::identity();
-        }
-        let z_inv = self.z.invert().expect("Nonzero Z should be invertible");
+        let safe_z =
+            FieldElement::conditional_select(&self.z, &FieldElement::one(), self.is_identity);
+        let z_inv = safe_z.invert().expect("Nonzero Z should be invertible");
         let z_inv_sq = z_inv.square();
         let z_inv_cu = z_inv_sq.mul(&z_inv);
         let x_aff = self.x.mul(&z_inv_sq);
         let y_aff = self.y.mul(&z_inv_cu);
         Point {
-            is_identity: Choice::from(0),
-            x: x_aff,
-            y: y_aff,
+            is_identity: self.is_identity,
+            x: FieldElement::conditional_select(&x_aff, &FieldElement::zero(), self.is_identity),
+            y: FieldElement::conditional_select(&y_aff, &FieldElement::zero(), self.is_identity),
         }
     }
 }

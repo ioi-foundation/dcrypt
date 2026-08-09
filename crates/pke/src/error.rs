@@ -1,15 +1,7 @@
 //! Error handling for PKE operations.
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use core::fmt;
 use dcrypt_algorithms::error::Error as PrimitiveError;
 use dcrypt_api::error::Error as CoreError;
-
-// Ensure String and format! are available for no_std + alloc
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-use alloc::format;
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-use alloc::string::{String, ToString};
 
 /// Error type for PKE operations.
 #[derive(Debug)]
@@ -74,16 +66,24 @@ impl From<Error> for CoreError {
         match err {
             Error::Primitive(e) => e.into(),
             Error::Api(e) => e,
-            Error::InvalidCiphertextFormat(reason) => CoreError::InvalidCiphertext {
-                context: "ECIES",
-                #[cfg(feature = "std")]
-                message: reason.to_string(),
-            },
-            Error::EncryptionFailed(reason) => CoreError::Other {
-                context: "ECIES Encryption",
-                #[cfg(feature = "std")]
-                message: reason.to_string(),
-            },
+            Error::InvalidCiphertextFormat(reason) => {
+                #[cfg(not(feature = "std"))]
+                let _ = reason;
+                CoreError::InvalidCiphertext {
+                    context: "ECIES",
+                    #[cfg(feature = "std")]
+                    message: reason.to_string(),
+                }
+            }
+            Error::EncryptionFailed(reason) => {
+                #[cfg(not(feature = "std"))]
+                let _ = reason;
+                CoreError::Other {
+                    context: "ECIES Encryption",
+                    #[cfg(feature = "std")]
+                    message: reason.to_string(),
+                }
+            }
             Error::DecryptionFailed(reason) => {
                 // Provide more specific context for the AEAD-auth failure that
                 // the unit-tests look for, while keeping the generic string for
@@ -99,17 +99,25 @@ impl From<Error> for CoreError {
                     message: reason.to_string(),
                 }
             }
-            Error::KeyDerivationFailed(reason) => CoreError::Other {
-                context: "ECIES KDF",
-                #[cfg(feature = "std")]
-                message: reason.to_string(),
-            },
+            Error::KeyDerivationFailed(reason) => {
+                #[cfg(not(feature = "std"))]
+                let _ = reason;
+                CoreError::Other {
+                    context: "ECIES KDF",
+                    #[cfg(feature = "std")]
+                    message: reason.to_string(),
+                }
+            }
             Error::UnsupportedOperation(op) => CoreError::NotImplemented { feature: op },
-            Error::SerializationError(reason) => CoreError::SerializationError {
-                context: "ECIES Internal",
-                #[cfg(feature = "std")]
-                message: reason.to_string(),
-            },
+            Error::SerializationError(reason) => {
+                #[cfg(not(feature = "std"))]
+                let _ = reason;
+                CoreError::SerializationError {
+                    context: "ECIES Internal",
+                    #[cfg(feature = "std")]
+                    message: reason.to_string(),
+                }
+            }
         }
     }
 }

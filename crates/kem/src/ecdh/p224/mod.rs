@@ -24,6 +24,12 @@ use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroizing;
 
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
+const KDF_INFO: &[u8] = b"dcrypt-v3/ECDH-P224-KEM/shared-secret";
+const CONFIRMATION_LABEL: &[u8] = b"dcrypt-v3/ECDH-P224-KEM/confirmation";
+
 /// ECDH KEM with P-224 curve
 pub struct EcdhP224;
 
@@ -146,6 +152,13 @@ impl EcdhP224SharedSecret {
 
 impl SerializeSecret for EcdhP224SharedSecret {
     fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        if bytes.len() != ec::P224_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE {
+            return Err(ApiError::InvalidLength {
+                context: "EcdhP224SharedSecret::from_bytes",
+                expected: ec::P224_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE,
+                actual: bytes.len(),
+            });
+        }
         Ok(Self(ApiKey::new(bytes)))
     }
     fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
@@ -209,11 +222,8 @@ impl Serialize for EcdhP224Ciphertext {
 /// Uses truncated HMAC-SHA256 to create a 16-byte tag that proves
 /// the sender and receiver computed the same shared secret.
 fn calc_auth_tag(shared_secret: &[u8]) -> Result<[u8; ec::P224_TAG_SIZE], KemError> {
-    // Create HMAC-SHA256 instance with fixed key
-    let mut hmac = Hmac::<Sha256>::new(b"ECDH-P224-KEM tag").map_err(KemError::from)?;
-
-    // Update with shared secret
-    hmac.update(shared_secret).map_err(KemError::from)?;
+    let mut hmac = Hmac::<Sha256>::new(shared_secret).map_err(KemError::from)?;
+    hmac.update(CONFIRMATION_LABEL).map_err(KemError::from)?;
 
     // Finalize and get tag (SHA256 produces 32-byte tags)
     let tag_vec: Vec<u8> = hmac.finalize().map_err(KemError::from)?;
@@ -288,7 +298,7 @@ impl Kem for EcdhP224 {
         kdf_ikm.extend_from_slice(&public_key_recipient.0);
 
         let ss_bytes = Zeroizing::new(
-            ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(&b"ECDH-P224-KEM"[..]))
+            ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,
         );
 
@@ -351,7 +361,7 @@ impl Kem for EcdhP224 {
         kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
 
         let ss_bytes = Zeroizing::new(
-            ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(&b"ECDH-P224-KEM"[..]))
+            ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
                 .map_err(|e| ApiError::from(KemError::from(e)))?,
         );
 

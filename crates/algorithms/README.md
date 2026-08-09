@@ -59,9 +59,10 @@ The crate provides a broad range of cryptographic primitives, categorized as fol
 *   **Modes of Operation:** Cipher Block Chaining (CBC) and Counter (CTR) mode.
 
 ### Elliptic Curve Cryptography
-*   **NIST Prime Curves:** P-256, P-384, P-521, P-224, and P-192.
+*   **NIST Prime Curves:** P-224, P-256, P-384, and P-521. P-224 provides
+    approximately 112-bit security and is retained for transition and
+    interoperability, not as the preferred choice for new high-security uses.
 *   **Koblitz Curve:** `secp256k1`.
-*   **Binary Curve:** `sect283k1`.
 *   **Pairing-Friendly Curve:** BLS12-381, including G1/G2 operations and optimal Ate pairing.
 
 ### Post-Quantum Primitives

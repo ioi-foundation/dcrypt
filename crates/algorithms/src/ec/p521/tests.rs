@@ -1,6 +1,6 @@
 //! P-521 elliptic curve tests
 
-use crate::ec::p521::{self, FieldElement, Point, Scalar, P521_SCALAR_SIZE};
+use crate::ec::p521::{self, FieldElement, Point, PointFormat, Scalar, P521_SCALAR_SIZE};
 use crate::error::Result;
 use dcrypt_internal::random::ChaCha20Rng;
 use dcrypt_params::traditional::ecdsa::NIST_P521;
@@ -236,12 +236,9 @@ fn test_scalar_validation() -> Result<()> {
     let invalid_scalar_bytes = [0xFF; 66]; // All 0xFF is definitely > n
     let result = Scalar::new(invalid_scalar_bytes);
 
-    // Should succeed but reduce the scalar mod order
-    assert!(result.is_ok());
-    let reduced_scalar = result.unwrap();
-
-    // The reduced scalar should be valid and different from the original
-    assert_ne!(reduced_scalar.serialize(), invalid_scalar_bytes);
+    // Private scalar decoding is canonical and never reduces attacker input.
+    assert!(result.is_err());
+    assert!(Scalar::new(NIST_P521.n).is_err());
 
     // Test zero scalar which should be rejected
     let zero_scalar_bytes = [0; 66];
@@ -333,9 +330,12 @@ fn test_point_serialization() -> Result<()> {
     let identity = Point::identity();
     let id_uncompressed = identity.serialize_uncompressed();
     assert!(id_uncompressed.iter().all(|&b| b == 0));
+    assert!(Point::deserialize_uncompressed(&id_uncompressed).is_err());
 
     let id_compressed = identity.serialize_compressed();
     assert!(id_compressed.iter().all(|&b| b == 0));
+    assert!(Point::deserialize_compressed(&id_compressed).is_err());
+    assert_eq!(Point::detect_format(&[0x00])?, PointFormat::Identity);
 
     Ok(())
 }

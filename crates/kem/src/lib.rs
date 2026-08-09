@@ -59,6 +59,6 @@ pub mod error;
 pub mod ml_kem;
 
 // Re-exports
-pub use ecdh::{EcdhP192, EcdhP224, EcdhP256, EcdhP384, EcdhP521}; // Added EcdhP192
+pub use ecdh::{EcdhK256, EcdhP224, EcdhP256, EcdhP384, EcdhP521};
 #[cfg(feature = "alloc")]
 pub use ml_kem::{MlKem1024, MlKem512, MlKem768};

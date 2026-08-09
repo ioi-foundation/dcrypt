@@ -22,11 +22,14 @@ The crate provides the following ECIES configurations, each corresponding to a s
 
 | Struct | Elliptic Curve | Key Derivation Function | AEAD Cipher |
 | :--- | :--- | :--- | :--- |
-| `EciesP192` | NIST P-192 | HKDF-SHA256 | ChaCha20Poly1305 |
 | `EciesP224` | NIST P-224 | HKDF-SHA256 | ChaCha20Poly1305 |
 | `EciesP256` | NIST P-256 | HKDF-SHA256 | ChaCha20Poly1305 |
 | `EciesP384` | NIST P-384 | HKDF-SHA384 | AES-256-GCM |
 | `EciesP521` | NIST P-521 | HKDF-SHA512 | AES-256-GCM |
+
+P-224 is retained for transition and interoperability at approximately
+112-bit security; P-256 or stronger is preferred for new deployments. P-192
+was removed for v3 because NIST SP 800-186 limits it to legacy use.
 
 ## Installation
 

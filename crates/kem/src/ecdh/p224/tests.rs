@@ -2,6 +2,17 @@ use super::*;
 use crate::test_rng::TestRng;
 use dcrypt_api::Kem as KemTrait; // Use the trait from api
 
+#[test]
+fn shared_secret_deserialization_requires_exact_length() {
+    type Secret = EcdhP224SharedSecret;
+    use dcrypt_api::traits::serialize::SerializeSecret;
+
+    let len = ec::P224_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE;
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len]).is_ok());
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len - 1]).is_err());
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len + 1]).is_err());
+}
+
 #[cfg(test)]
 mod test_utils {
     use dcrypt_common::security::SecretBuffer;

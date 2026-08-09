@@ -156,3 +156,10 @@ fn test_ghash_rejects_bit_length_overflow() {
     assert!(ghash.update_lengths(u64::MAX / 8 + 1, 0).is_err());
     assert!(ghash.update_lengths(0, u64::MAX / 8 + 1).is_err());
 }
+
+#[test]
+fn test_ghash_rejects_inconsistent_block_length() {
+    let mut ghash = GHash::new(&[0x42; 16]);
+    assert!(ghash.update_block(&[0u8; 15], 16).is_err());
+    assert!(ghash.update_block(&[0u8; 17], 17).is_err());
+}

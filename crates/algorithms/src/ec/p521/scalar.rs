@@ -29,12 +29,12 @@ impl Drop for Scalar {
 impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
-    /// Create a scalar from raw bytes with modular reduction.
-    /// Ensures the scalar is in the valid range [1, n-1] where n is the curve order.
-    /// Performs modular reduction if the input is >= n.
-    /// Returns an error if the result would be zero (invalid for cryptographic use).
-    pub fn new(mut data: [u8; P521_SCALAR_SIZE]) -> Result<Self> {
-        Self::reduce_scalar_bytes(&mut data)?;
+    /// Create a canonical non-zero scalar from raw bytes.
+    ///
+    /// Private keys, nonces, and serialized signature components must be in
+    /// `1..n`. Non-canonical 528-bit encodings are rejected rather than reduced.
+    pub fn new(data: [u8; P521_SCALAR_SIZE]) -> Result<Self> {
+        Self::validate_canonical_nonzero(&data)?;
         Ok(Scalar(SecretBuffer::new(data)))
     }
 
@@ -57,14 +57,13 @@ impl Scalar {
     }
 
     /// Create a scalar from an existing SecretBuffer.
-    /// Performs the same validation and reduction as `new()` but starts
+    /// Performs the same canonical validation as `new()` but starts
     /// from a SecretBuffer instead of a raw byte array.
     pub fn from_secret_buffer(buffer: SecretBuffer<P521_SCALAR_SIZE>) -> Result<Self> {
         let mut bytes = [0u8; P521_SCALAR_SIZE];
         bytes.copy_from_slice(buffer.as_ref());
 
-        Self::reduce_scalar_bytes(&mut bytes)?;
-        Ok(Scalar(SecretBuffer::new(bytes)))
+        Self::new(bytes)
     }
 
     /// Access the underlying SecretBuffer containing the scalar value
@@ -97,7 +96,11 @@ impl Scalar {
     /// Constant-time check to determine if the scalar is the
     /// additive identity (which is invalid for most cryptographic operations).
     pub fn is_zero(&self) -> bool {
-        self.0.as_ref().iter().all(|&b| b == 0)
+        let mut any = 0u8;
+        for &byte in self.0.as_ref() {
+            any |= byte;
+        }
+        any == 0
     }
 
     /// Convert big-endian 66-byte array to 17 little-endian u32 limbs
@@ -217,33 +220,26 @@ impl Scalar {
     /// Returns -self mod n, which is equivalent to n - self when self != 0
     /// Returns 0 when self is 0
     pub fn negate(&self) -> Self {
-        // If self is zero, return zero
-        if self.is_zero() {
-            return Self::from_bytes_unchecked([0u8; P521_SCALAR_SIZE]);
-        }
-
-        // Otherwise compute n - self
+        // Compute n - self, then select zero for the zero input.
         let n_limbs = Self::N_LIMBS;
         let self_limbs = Self::to_le_limbs(&self.serialize());
         let mut res = [0u32; 17];
 
         // Subtract self from n
-        let mut borrow = 0i64;
+        let mut borrow = 0u64;
         for i in 0..17 {
-            let tmp = n_limbs[i] as i64 - self_limbs[i] as i64 - borrow;
-            if tmp < 0 {
-                res[i] = (tmp + (1i64 << 32)) as u32;
-                borrow = 1;
-            } else {
-                res[i] = tmp as u32;
-                borrow = 0;
-            }
+            let tmp = (n_limbs[i] as u64)
+                .wrapping_sub(self_limbs[i] as u64)
+                .wrapping_sub(borrow);
+            res[i] = tmp as u32;
+            borrow = (tmp >> 63) & 1;
         }
-
-        // No borrow should occur since self < n
-        debug_assert_eq!(borrow, 0);
-
-        Self::from_bytes_unchecked(Self::limbs_to_be(&res))
+        let negated = Self::from_bytes_unchecked(Self::limbs_to_be(&res));
+        Self::conditional_select(
+            &negated,
+            &Self::from_bytes_unchecked([0u8; P521_SCALAR_SIZE]),
+            Choice::from(self.is_zero() as u8),
+        )
     }
 
     // Private helper methods
@@ -252,18 +248,21 @@ impl Scalar {
     /// The curve order n for P-521 is:
     /// n = 0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409
     ///
-    /// Algorithm:
-    /// 1. Check if input is zero (invalid)
-    /// 2. Compare with curve order using constant-time comparison
-    /// 3. Conditionally subtract n if input >= n
-    /// 4. Verify result is still non-zero
-    ///
-    /// Constant-time "a ≥ b" test on 66-byte big-endian values
-    fn reduce_scalar_bytes(bytes: &mut [u8; P521_SCALAR_SIZE]) -> Result<()> {
-        Self::reduce_scalar_bytes_allow_zero(bytes);
-
-        if bytes.iter().all(|&b| b == 0) {
+    fn validate_canonical_nonzero(bytes: &[u8; P521_SCALAR_SIZE]) -> Result<()> {
+        let mut any = 0u8;
+        for &byte in bytes {
+            any |= byte;
+        }
+        if any == 0 {
             return Err(Error::param("P-521 Scalar", "Scalar cannot be zero"));
+        }
+
+        let (_, borrow) = Self::subtract_order(bytes);
+        if borrow == 0 {
+            return Err(Error::param(
+                "P-521 Scalar",
+                "Scalar must be less than the group order",
+            ));
         }
 
         Ok(())
@@ -271,22 +270,9 @@ impl Scalar {
 
     /// Reduce an arbitrary 528-bit encoding modulo the group order.
     fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P521_SCALAR_SIZE]) {
-        let order = &NIST_P521.n;
-
         let mut reduced = *bytes;
         for _ in 0..128 {
-            let mut candidate = reduced;
-            let mut borrow = 0u16;
-            for i in (0..P521_SCALAR_SIZE).rev() {
-                let diff = candidate[i] as i16 - order[i] as i16 - borrow as i16;
-                if diff < 0 {
-                    candidate[i] = (diff + 256) as u8;
-                    borrow = 1;
-                } else {
-                    candidate[i] = diff as u8;
-                    borrow = 0;
-                }
-            }
+            let (candidate, borrow) = Self::subtract_order(&reduced);
 
             let choice = Choice::from((borrow ^ 1) as u8);
             for i in 0..P521_SCALAR_SIZE {
@@ -295,6 +281,19 @@ impl Scalar {
         }
 
         *bytes = reduced;
+    }
+
+    #[inline(always)]
+    fn subtract_order(bytes: &[u8; P521_SCALAR_SIZE]) -> ([u8; P521_SCALAR_SIZE], u8) {
+        let mut result = [0u8; P521_SCALAR_SIZE];
+        let mut borrow = 0u8;
+        for i in (0..P521_SCALAR_SIZE).rev() {
+            let (difference, borrow_order) = bytes[i].overflowing_sub(NIST_P521.n[i]);
+            let (difference, borrow_previous) = difference.overflowing_sub(borrow);
+            result[i] = difference;
+            borrow = (borrow_order | borrow_previous) as u8;
+        }
+        (result, borrow)
     }
 
     /// n (group order) in 17 little-endian 32-bit limbs
@@ -317,31 +316,6 @@ impl Scalar {
         0xFFFF_FFFF, // limb 15
         0x0000_01FF, // limb 16 – most-significant 9 bits
     ];
-
-    /// Compare two limb arrays for greater-than-or-equal
-    #[inline(always)]
-    fn geq(a: &[u32; 17], b: &[u32; 17]) -> bool {
-        for i in (0..17).rev() {
-            if a[i] > b[i] {
-                return true;
-            }
-            if a[i] < b[i] {
-                return false;
-            }
-        }
-        true // equal
-    }
-
-    /// Subtract b from a in-place
-    #[inline(always)]
-    fn sub_in_place(a: &mut [u32; 17], b: &[u32; 17]) {
-        let mut borrow = 0u64;
-        for i in 0..17 {
-            let tmp = (a[i] as u64).wrapping_sub(b[i] as u64).wrapping_sub(borrow);
-            a[i] = tmp as u32;
-            borrow = (tmp >> 63) & 1; // 1 if we wrapped
-        }
-    }
 
     #[inline(always)]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {

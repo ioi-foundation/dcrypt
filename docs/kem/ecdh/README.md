@@ -9,15 +9,13 @@ and side-channel properties must be assessed separately.
 
 ## Supported Elliptic Curves
 
-The module includes support for NIST prime curves, a Koblitz curve (used in Bitcoin), and a binary curve, offering a wide range of security levels and performance characteristics.
+The module supports four NIST prime curves and secp256k1.
 
 | Curve Name | Struct Name | Approx. Security | Key Derivation | Point Format |
 | :--- | :--- | :--- | :--- | :--- |
-| NIST P-192 | `EcdhP192` | ~80-bit | HKDF-SHA256 | Compressed |
 | NIST P-224 | `EcdhP224` | ~112-bit | HKDF-SHA256 | Compressed |
 | NIST P-256 | `EcdhP256` | ~128-bit | HKDF-SHA256 | Compressed |
 | secp256k1 | `EcdhK256` | ~128-bit | HKDF-SHA256 | Compressed |
-| sect283k1 | `EcdhB283k` | ~142-bit | HKDF-SHA384 | Compressed |
 | NIST P-384 | `EcdhP384` | ~192-bit | HKDF-SHA384 | Compressed |
 | NIST P-521 | `EcdhP521` | ~256-bit | HKDF-SHA512 | Compressed |
 
@@ -27,7 +25,11 @@ This module prioritizes cryptographic correctness and resilience against common 
 
 -   **Type Safety:** Each curve has its own set of distinct, strongly-typed structs for public keys, secret keys, and ciphertexts (e.g., `EcdhP256PublicKey`, `EcdhP384SecretKey`). This prevents accidental mixing of keys from different algorithms at compile time.
 
--   **Key Derivation:** Shared points are processed with the listed HKDF. This custom transcript is not an assertion of RFC 9180 compatibility or a proof against unknown-key-share attacks in every surrounding protocol.
+-   **Key Derivation:** The versioned, curve-specific HKDF transcript binds the
+    shared x-coordinate, the ephemeral encoded point, and the recipient encoded
+    public key. This custom transcript is not an assertion of RFC 9180
+    compatibility or a proof against unknown-key-share attacks in every
+    surrounding protocol.
 
 -   **Memory hygiene:** Owned secret-key/shared-secret storage uses zeroization where implemented. This cannot erase caller copies, registers, compiler temporaries, backend-internal copies, or previously freed allocator storage.
 
@@ -36,6 +38,11 @@ This module prioritizes cryptographic correctness and resilience against common 
 -   **Point Validation:** Public-key and ciphertext decoders perform the curve-specific checks implemented by their backends. This is tested with negative inputs but is not a blanket proof for every curve.
 
 -   **Bandwidth Efficiency:** All implementations use compressed elliptic curve points for public keys and ciphertexts, significantly reducing their size compared to uncompressed or hybrid formats.
+
+P-224 is retained for transition and interoperability at approximately
+112-bit security; P-256 or stronger is preferred for new deployments. P-192
+and sect283k1 were removed for v3. See the
+[traditional-EC removal notice](../../security/V3-TRADITIONAL-EC-REMOVALS.md).
 
 ## Usage Example
 

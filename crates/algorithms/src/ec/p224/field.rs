@@ -236,12 +236,11 @@ impl FieldElement {
     /// Constant-time check across all limbs to determine if the
     /// field element is the additive identity.
     pub fn is_zero(&self) -> bool {
-        for limb in self.0.iter() {
-            if *limb != 0 {
-                return false;
-            }
+        let mut any = 0u32;
+        for &limb in &self.0 {
+            any |= limb;
         }
-        true
+        any == 0
     }
 
     /// Return `true` if the field element is odd (least-significant bit set)
@@ -483,9 +482,6 @@ impl FieldElement {
         /* ── 2. main folding pass (7‥13 → 0‥6) ──────────────────────────── */
         for i in (7..14).rev() {
             let v = s[i];
-            if v == 0 {
-                continue;
-            }
             s[i] = 0;
             s[i - 7] = s[i - 7].wrapping_sub(v); // −v · 2^(32(i-7))
             s[i - 4] = s[i - 4].wrapping_add(v); // +v · 2^(32(i-4))
@@ -500,10 +496,8 @@ impl FieldElement {
         }
 
         /* ── 4. fold that carry (k · 2²²⁴) once more:  +k→limb3  −k→limb0  */
-        if carry != 0 {
-            s[3] = s[3].wrapping_add(carry);
-            s[0] = s[0].wrapping_sub(carry);
-        }
+        s[3] = s[3].wrapping_add(carry);
+        s[0] = s[0].wrapping_sub(carry);
 
         /* ── 5. second signed carry sweep ────────────────────────────────── */
         carry = 0;
@@ -514,10 +508,8 @@ impl FieldElement {
         }
 
         /* ── 6. (tiny) second carry fold, identical indices ─────────────── */
-        if carry != 0 {
-            s[3] = s[3].wrapping_add(carry);
-            s[0] = s[0].wrapping_sub(carry);
-        }
+        s[3] = s[3].wrapping_add(carry);
+        s[0] = s[0].wrapping_sub(carry);
 
         /* ── 7. final carry sweep into ordinary u32 limbs ────────────────── */
         let mut out = [0u32; 7];
@@ -527,7 +519,7 @@ impl FieldElement {
             *out_elem = (tmp & 0xffff_ffff) as u32;
             carry = tmp >> 32;
         }
-        debug_assert!(carry == 0); // everything folded
+        let _ = carry;
 
         /* ── 8. last conditional subtract if ≥ p ─────────────────────────── */
         let (sub, borrow) = Self::sbb7(out, Self::MOD_LIMBS);

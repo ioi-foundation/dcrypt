@@ -19,8 +19,13 @@ dcrypt-internal = { path = "../crates/internal" }
 dcrypt-sign = { path = "../crates/sign" }
 chacha20poly1305 = { version = "=0.10.1", default-features = false, features = ["alloc"] }
 fips204 = { version = "=0.4.6", default-features = false, features = ["ml-dsa-44", "ml-dsa-65", "ml-dsa-87"] }
+k256 = { version = "=0.13.4", default-features = false, features = ["arithmetic", "ecdh"] }
 libcrux-ml-dsa = { version = "=0.0.10", default-features = false, features = ["acvp", "mldsa44", "mldsa65", "mldsa87"] }
 ml-dsa = { version = "=0.1.1", default-features = false }
+p224 = { version = "=0.13.2", default-features = false, features = ["arithmetic", "ecdh"] }
+p256 = { version = "=0.13.2", default-features = false, features = ["arithmetic", "ecdh"] }
+p384 = { version = "=0.13.1", default-features = false, features = ["arithmetic", "ecdh"] }
+p521 = { version = "=0.13.3", default-features = false, features = ["arithmetic", "ecdh"] }
 rand = { version = "=0.8.6", default-features = false }
 rand_chacha = "=0.3.1"
 sha2 = "=0.9.9"

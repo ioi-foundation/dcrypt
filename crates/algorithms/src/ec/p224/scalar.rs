@@ -29,13 +29,12 @@ impl Drop for Scalar {
 impl ZeroizeOnDrop for Scalar {}
 
 impl Scalar {
-    /// Create a scalar from raw bytes with modular reduction
+    /// Create a canonical non-zero scalar from raw bytes.
     ///
-    /// Ensures the scalar is in the valid range [1, n-1] where n is the curve order.
-    /// Performs modular reduction if the input is >= n.
-    /// Returns an error if the result would be zero (invalid for cryptographic use).
-    pub fn new(mut data: [u8; P224_SCALAR_SIZE]) -> Result<Self> {
-        Self::reduce_scalar_bytes(&mut data)?;
+    /// Private keys, nonces, and serialized signature components must be in
+    /// `1..n`. Non-canonical inputs are rejected rather than reduced.
+    pub fn new(data: [u8; P224_SCALAR_SIZE]) -> Result<Self> {
+        Self::validate_canonical_nonzero(&data)?;
         Ok(Scalar(SecretBuffer::new(data)))
     }
 
@@ -60,14 +59,13 @@ impl Scalar {
 
     /// Create a scalar from an existing SecretBuffer
     ///
-    /// Performs the same validation and reduction as `new()` but starts
+    /// Performs the same canonical validation as `new()` but starts
     /// from a SecretBuffer instead of a raw byte array.
     pub fn from_secret_buffer(buffer: SecretBuffer<P224_SCALAR_SIZE>) -> Result<Self> {
         let mut bytes = [0u8; P224_SCALAR_SIZE];
         bytes.copy_from_slice(buffer.as_ref());
 
-        Self::reduce_scalar_bytes(&mut bytes)?;
-        Ok(Scalar(SecretBuffer::new(bytes)))
+        Self::new(bytes)
     }
 
     /// Access the underlying SecretBuffer containing the scalar value
@@ -103,7 +101,11 @@ impl Scalar {
     /// Constant-time check to determine if the scalar is the
     /// additive identity (which is invalid for most cryptographic operations).
     pub fn is_zero(&self) -> bool {
-        self.0.as_ref().iter().all(|&b| b == 0)
+        let mut any = 0u8;
+        for &byte in self.0.as_ref() {
+            any |= byte;
+        }
+        any == 0
     }
 
     /// Convert big-endian bytes to little-endian limbs
@@ -282,52 +284,45 @@ impl Scalar {
     /// Returns -self mod n, which is equivalent to n - self when self != 0
     /// Returns 0 when self is 0
     pub fn negate(&self) -> Self {
-        // If self is zero, return zero
-        if self.is_zero() {
-            return Self::from_bytes_unchecked([0u8; P224_SCALAR_SIZE]);
-        }
-
-        // Otherwise compute n - self
+        // Compute n - self, then select zero for the zero input.
         let n_limbs = Self::N_LIMBS;
         let self_limbs = Self::to_le_limbs(&self.serialize());
         let mut res = [0u32; 7];
 
         // Subtract self from n
-        let mut borrow = 0i64;
+        let mut borrow = 0u64;
         for (i, result) in res.iter_mut().enumerate() {
-            let tmp = n_limbs[i] as i64 - self_limbs[i] as i64 - borrow;
-            if tmp < 0 {
-                *result = (tmp + (1i64 << 32)) as u32;
-                borrow = 1;
-            } else {
-                *result = tmp as u32;
-                borrow = 0;
-            }
+            let tmp = (n_limbs[i] as u64)
+                .wrapping_sub(self_limbs[i] as u64)
+                .wrapping_sub(borrow);
+            *result = tmp as u32;
+            borrow = (tmp >> 63) & 1;
         }
-
-        // No borrow should occur since self < n
-        debug_assert_eq!(borrow, 0);
-
-        Self::from_bytes_unchecked(Self::limbs_to_be(&res))
+        let negated = Self::from_bytes_unchecked(Self::limbs_to_be(&res));
+        Self::conditional_select(
+            &negated,
+            &Self::from_bytes_unchecked([0u8; P224_SCALAR_SIZE]),
+            Choice::from(self.is_zero() as u8),
+        )
     }
 
     // Private helper methods
 
-    /// Reduce scalar modulo the curve order n using constant-time arithmetic
-    ///
-    /// The curve order n for P-224 is:
-    /// n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D
-    ///
-    /// Algorithm:
-    /// 1. Check if input is zero (invalid)
-    /// 2. Compare with curve order using constant-time comparison
-    /// 3. Conditionally subtract n if input >= n
-    /// 4. Verify result is still non-zero
-    fn reduce_scalar_bytes(bytes: &mut [u8; P224_SCALAR_SIZE]) -> Result<()> {
-        Self::reduce_scalar_bytes_allow_zero(bytes);
-
-        if bytes.iter().all(|&b| b == 0) {
+    fn validate_canonical_nonzero(bytes: &[u8; P224_SCALAR_SIZE]) -> Result<()> {
+        let mut any = 0u8;
+        for &byte in bytes {
+            any |= byte;
+        }
+        if any == 0 {
             return Err(Error::param("P-224 Scalar", "Scalar cannot be zero"));
+        }
+
+        let (_, borrow) = Self::subtract_order(bytes);
+        if borrow == 0 {
+            return Err(Error::param(
+                "P-224 Scalar",
+                "Scalar must be less than the group order",
+            ));
         }
 
         Ok(())
@@ -335,39 +330,25 @@ impl Scalar {
 
     /// Reduce an arbitrary 224-bit integer modulo the group order.
     fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P224_SCALAR_SIZE]) {
-        let order = &NIST_P224.n;
-
-        // Constant-time comparison with curve order
-        // We want to check: is bytes >= order?
-        let mut gt = 0u8; // set if bytes > order
-        let mut lt = 0u8; // set if bytes < order
-
+        let original = *bytes;
+        let (candidate, borrow) = Self::subtract_order(&original);
+        let reduce = Choice::from(borrow ^ 1);
         for i in 0..P224_SCALAR_SIZE {
-            let x = bytes[i];
-            let y = order[i];
-            gt |= ((x > y) as u8) & (!lt);
-            lt |= ((x < y) as u8) & (!gt);
+            bytes[i] = u8::conditional_select(&original[i], &candidate[i], reduce);
         }
-        let ge = gt | ((!lt) & 1); // ge = gt || eq (if not less, then greater or equal)
+    }
 
-        if ge == 1 {
-            // If scalar >= order, perform modular reduction
-            let mut borrow = 0u16;
-            let mut temp_bytes = *bytes;
-
-            for i in (0..P224_SCALAR_SIZE).rev() {
-                let diff = (temp_bytes[i] as i16) - (order[i] as i16) - (borrow as i16);
-                if diff < 0 {
-                    temp_bytes[i] = (diff + 256) as u8;
-                    borrow = 1;
-                } else {
-                    temp_bytes[i] = diff as u8;
-                    borrow = 0;
-                }
-            }
-
-            *bytes = temp_bytes;
+    #[inline(always)]
+    fn subtract_order(bytes: &[u8; P224_SCALAR_SIZE]) -> ([u8; P224_SCALAR_SIZE], u8) {
+        let mut result = [0u8; P224_SCALAR_SIZE];
+        let mut borrow = 0u8;
+        for i in (0..P224_SCALAR_SIZE).rev() {
+            let (difference, borrow_order) = bytes[i].overflowing_sub(NIST_P224.n[i]);
+            let (difference, borrow_previous) = difference.overflowing_sub(borrow);
+            result[i] = difference;
+            borrow = (borrow_order | borrow_previous) as u8;
         }
+        (result, borrow)
     }
 
     // Helper constants - stored in little-endian limb order
@@ -390,20 +371,6 @@ impl Scalar {
             out[i] = u8::conditional_select(&a_bytes[i], &b_bytes[i], choice);
         }
         Self::from_bytes_unchecked(out)
-    }
-
-    /// Compare two limb arrays for greater-than-or-equal
-    #[inline(always)]
-    fn geq(a: &[u32; 7], b: &[u32; 7]) -> bool {
-        for i in (0..7).rev() {
-            if a[i] > b[i] {
-                return true;
-            }
-            if a[i] < b[i] {
-                return false;
-            }
-        }
-        true // equal
     }
 
     /// Subtract b from a in-place

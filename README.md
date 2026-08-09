@@ -141,14 +141,14 @@ dcrypt provides a unified API for classical, post-quantum, and hybrid operations
 | Category | Algorithms |
 | :--- | :--- |
 | **Symmetric Encryption (AEAD)** | `AES-128/256-GCM`, `ChaCha20-Poly1305`, `XChaCha20-Poly1305` |
-| **Public Key Encryption (PKE)** | `ECIES` (P-192, P-224, P-256, P-384, P-521) |
+| **Public Key Encryption (PKE)** | `ECIES` (P-224, P-256, P-384, P-521) |
 | **Hash Functions** | `SHA-2` (224, 256, 384, 512), `SHA-3`, `BLAKE2b/s` |
 | **XOFs** | `SHAKE-128/256`, `BLAKE3` |
 | **Password Hashing** | `Argon2id` (default), `Argon2i`, `Argon2d`, `PBKDF2` |
 | **Key Derivation** | `HKDF`, `PBKDF2` |
-| **Digital Signatures** | `ECDSA` (P-192 to P-521), `Ed25519` |
+| **Digital Signatures** | `ECDSA` (P-224, P-256, P-384, P-521), `Ed25519` |
 | **Post-Quantum Signatures** | `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87` (final FIPS 204) |
-| **Key Exchange / KEM** | `ECDH` (P-Curves, K-256, B-283) |
+| **Key Exchange / KEM** | `ECDH` (P-224, P-256, P-384, P-521, K-256) |
 | **Pairing-Friendly Curves** | `BLS12-381` (G1, G2, Gt, Pairings, Hash-to-Curve) |
 | **Post-Quantum KEMs**| `ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024` (final FIPS 203) |
 | **Hybrid Schemes** | `EcdhP256MlKem768`, `EcdhP384MlKem1024`, `EcdsaMlDsa65Hybrid` |

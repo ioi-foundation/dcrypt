@@ -10,3 +10,15 @@ Run the XChaCha20-Poly1305 differential checks with:
 ```bash
 cargo test --manifest-path verification/Cargo.toml --test xchacha20poly1305
 ```
+
+Run the independent traditional-EC scalar multiplication and ECDH checks with:
+
+```bash
+cargo test --manifest-path verification/Cargo.toml --test traditional_ec_interop
+```
+
+Reproduce the removed sect283k1 subgroup/serializer advisory proof with:
+
+```bash
+cargo test --manifest-path verification/Cargo.toml --test legacy_b283_advisory
+```

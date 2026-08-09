@@ -9,18 +9,21 @@ use dcrypt_api::traits::Pke;
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::Zeroize;
 
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-use alloc::format;
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 use super::{
     derive_symmetric_key_hkdf_sha512, // Needs to be created or made generic in ecies/mod.rs
+    invalid_ephemeral_public_key,
+    invalid_recipient_public_key,
     EciesCiphertextComponents,
+    AEAD_TAG_LEN,
     AES256GCM_KEY_LEN,   // 32 bytes
     AES256GCM_NONCE_LEN, // 12 bytes
 };
 use crate::error::Error as PkeError;
+
+const KDF_INFO: &[u8] = b"dcrypt-v3/ECIES-P521/HKDF-SHA512/AES-256-GCM";
 
 /// Public key for ECIES P-521. Stores serialized uncompressed point (133 bytes).
 #[derive(Clone, Debug)]
@@ -73,11 +76,9 @@ impl Pke for EciesP521 {
         rng: &mut R,
     ) -> dcrypt_api::error::Result<Self::Ciphertext> {
         let pk_recipient_point = ec::Point::deserialize_uncompressed(&pk_recipient.0)
-            .map_err(|e| ApiError::from(PkeError::from(e)))?;
+            .map_err(|_| invalid_recipient_public_key())?;
         if pk_recipient_point.is_identity() {
-            return Err(ApiError::from(PkeError::EncryptionFailed(
-                "Recipient PK is point at infinity",
-            )));
+            return Err(invalid_recipient_public_key());
         }
 
         let (ephemeral_sk_scalar, ephemeral_pk_point) =
@@ -93,13 +94,12 @@ impl Pke for EciesP521 {
         }
         let mut z_bytes = shared_point.x_coordinate_bytes();
 
-        let info_str = format!("{}-KeyMaterial", Self::name());
-        let mut derived_key_material = derive_symmetric_key_hkdf_sha512(
-            // Use SHA512 KDF
+        let derived_key_material = derive_symmetric_key_hkdf_sha512(
             &z_bytes,
             &r_bytes_uncompressed,
+            &pk_recipient.0,
             AES256GCM_KEY_LEN,
-            Some(info_str.as_bytes()),
+            KDF_INFO,
         )
         .map_err(ApiError::from)?;
 
@@ -108,7 +108,6 @@ impl Pke for EciesP521 {
 
         drop(ephemeral_sk_scalar);
         z_bytes.zeroize();
-        derived_key_material.zeroize();
 
         let aes_core_key = AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes);
         let aes_core = Aes256::new(&aes_core_key); // Assuming Aes256::new takes AlgoSecretBytes
@@ -142,16 +141,27 @@ impl Pke for EciesP521 {
             aead_ciphertext_tag,
         } = EciesCiphertextComponents::deserialize(ciphertext_bytes).map_err(ApiError::from)?;
 
-        let r_point = ec::Point::deserialize_uncompressed(&ephemeral_public_key)
+        let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::from_slice(&aead_nonce)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
+        if aead_ciphertext_tag.len() < AEAD_TAG_LEN {
+            return Err(ApiError::InvalidCiphertext {
+                context: "ECIES AEAD payload",
+                #[cfg(feature = "std")]
+                message: "AEAD payload is shorter than its authentication tag".to_string(),
+            });
+        }
+
+        let r_point = ec::Point::deserialize_uncompressed(&ephemeral_public_key)
+            .map_err(|_| invalid_ephemeral_public_key())?;
         if r_point.is_identity() {
-            return Err(ApiError::from(PkeError::DecryptionFailed(
-                "Ephemeral PK is point at infinity",
-            )));
+            return Err(invalid_ephemeral_public_key());
         }
 
         let sk_recipient_scalar = ec::Scalar::deserialize(&sk_recipient.0)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
+        let pk_recipient_bytes = ec::scalar_mult_base_g(&sk_recipient_scalar)
+            .map_err(|e| ApiError::from(PkeError::from(e)))?
+            .serialize_uncompressed();
 
         let shared_point = ec::scalar_mult(&sk_recipient_scalar, &r_point)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
@@ -162,13 +172,12 @@ impl Pke for EciesP521 {
         }
         let mut z_bytes = shared_point.x_coordinate_bytes();
 
-        let info_str = format!("{}-KeyMaterial", Self::name());
-        let mut derived_key_material = derive_symmetric_key_hkdf_sha512(
-            // Use SHA512 KDF
+        let derived_key_material = derive_symmetric_key_hkdf_sha512(
             &z_bytes,
             &ephemeral_public_key,
+            &pk_recipient_bytes,
             AES256GCM_KEY_LEN,
-            Some(info_str.as_bytes()),
+            KDF_INFO,
         )
         .map_err(ApiError::from)?;
 
@@ -176,10 +185,6 @@ impl Pke for EciesP521 {
         encryption_key_arr_aes.copy_from_slice(&derived_key_material);
 
         z_bytes.zeroize();
-        derived_key_material.zeroize();
-
-        let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::from_slice(&aead_nonce)
-            .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aes_core_key = AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes);
         let aes_core = Aes256::new(&aes_core_key);

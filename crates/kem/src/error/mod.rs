@@ -137,36 +137,60 @@ impl From<Error> for CoreError {
     fn from(err: Error) -> Self {
         match err {
             Error::Primitive(e) => e.into(),
-            Error::KeyGeneration { algorithm, details } => CoreError::Other {
-                context: algorithm,
-                #[cfg(feature = "std")]
-                message: format!("key generation failed: {}", details),
-            },
-            Error::Encapsulation { algorithm, details } => CoreError::Other {
-                context: algorithm,
-                #[cfg(feature = "std")]
-                message: format!("encapsulation failed: {}", details),
-            },
-            Error::Decapsulation { algorithm, details } => CoreError::DecryptionFailed {
-                context: algorithm,
-                #[cfg(feature = "std")]
-                message: format!("decapsulation failed: {}", details),
-            },
-            Error::InvalidKey { key_type, reason } => CoreError::InvalidKey {
-                context: key_type,
-                #[cfg(feature = "std")]
-                message: reason.to_string(),
-            },
-            Error::InvalidCiphertext { algorithm, reason } => CoreError::InvalidCiphertext {
-                context: algorithm,
-                #[cfg(feature = "std")]
-                message: reason.to_string(),
-            },
-            Error::Serialization { context, details } => CoreError::SerializationError {
-                context,
-                #[cfg(feature = "std")]
-                message: details.to_string(),
-            },
+            Error::KeyGeneration { algorithm, details } => {
+                #[cfg(not(feature = "std"))]
+                let _ = details;
+                CoreError::Other {
+                    context: algorithm,
+                    #[cfg(feature = "std")]
+                    message: format!("key generation failed: {}", details),
+                }
+            }
+            Error::Encapsulation { algorithm, details } => {
+                #[cfg(not(feature = "std"))]
+                let _ = details;
+                CoreError::Other {
+                    context: algorithm,
+                    #[cfg(feature = "std")]
+                    message: format!("encapsulation failed: {}", details),
+                }
+            }
+            Error::Decapsulation { algorithm, details } => {
+                #[cfg(not(feature = "std"))]
+                let _ = details;
+                CoreError::DecryptionFailed {
+                    context: algorithm,
+                    #[cfg(feature = "std")]
+                    message: format!("decapsulation failed: {}", details),
+                }
+            }
+            Error::InvalidKey { key_type, reason } => {
+                #[cfg(not(feature = "std"))]
+                let _ = reason;
+                CoreError::InvalidKey {
+                    context: key_type,
+                    #[cfg(feature = "std")]
+                    message: reason.to_string(),
+                }
+            }
+            Error::InvalidCiphertext { algorithm, reason } => {
+                #[cfg(not(feature = "std"))]
+                let _ = reason;
+                CoreError::InvalidCiphertext {
+                    context: algorithm,
+                    #[cfg(feature = "std")]
+                    message: reason.to_string(),
+                }
+            }
+            Error::Serialization { context, details } => {
+                #[cfg(not(feature = "std"))]
+                let _ = details;
+                CoreError::SerializationError {
+                    context,
+                    #[cfg(feature = "std")]
+                    message: details.to_string(),
+                }
+            }
             #[cfg(feature = "std")]
             Error::Io(e) => CoreError::Other {
                 context: "I/O operation",

@@ -96,10 +96,6 @@ name = "p521"
 harness = false
 
 [[bench]]
-name = "b283k"
-harness = false
-
-[[bench]]
 name = "argon2"
 harness = false
 

@@ -2,8 +2,20 @@
 use super::*;
 use crate::test_rng::TestRng;
 use dcrypt_algorithms::ec::p256 as ec_p256;
+use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::Kem;
 use dcrypt_internal::random::{CryptoRng, Error as RandomError, RngCore};
+
+#[test]
+fn shared_secret_deserialization_requires_exact_length() {
+    type Secret = EcdhP256SharedSecret;
+    use dcrypt_api::traits::serialize::SerializeSecret;
+
+    let len = ec_p256::P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE;
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len]).is_ok());
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len - 1]).is_err());
+    assert!(<Secret as SerializeSecret>::from_bytes(&vec![0x42; len + 1]).is_err());
+}
 
 #[cfg(test)]
 mod test_utils {
@@ -441,6 +453,30 @@ impl RngCore for ZeroThenOneRng {
 }
 
 impl CryptoRng for ZeroThenOneRng {}
+
+struct FailingRng;
+
+impl RngCore for FailingRng {
+    fn try_fill_bytes(&mut self, _: &mut [u8]) -> Result<(), RandomError> {
+        Err(RandomError)
+    }
+}
+
+impl CryptoRng for FailingRng {}
+
+#[test]
+fn caller_rng_failure_is_preserved() {
+    assert!(matches!(
+        EcdhP256::keypair(&mut FailingRng),
+        Err(ApiError::RandomGenerationError { .. })
+    ));
+
+    let (public_key, _) = EcdhP256::keypair(&mut TestRng).unwrap();
+    assert!(matches!(
+        EcdhP256::encapsulate(&mut FailingRng, &public_key),
+        Err(ApiError::RandomGenerationError { .. })
+    ));
+}
 
 #[test]
 fn encapsulation_rejection_samples_invalid_ephemeral_scalar() {

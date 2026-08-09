@@ -131,11 +131,10 @@ fn test_compression_roundtrip() -> Result<()> {
     let decompressed = Point::deserialize_compressed(&compressed)?;
     assert_eq!(g, decompressed);
 
-    // Test identity point
+    // Fixed-width encodings cannot represent SEC 1's one-byte identity.
     let identity = Point::identity();
     let compressed_id = identity.serialize_compressed();
-    let decompressed_id = Point::deserialize_compressed(&compressed_id)?;
-    assert!(decompressed_id.is_identity());
+    assert!(Point::deserialize_compressed(&compressed_id).is_err());
 
     // Test multiple scalar multiples to cover even/odd y cases
     let scalar_2 = p224::Scalar::new([
@@ -183,12 +182,10 @@ fn test_scalar_validation() -> Result<()> {
     let invalid_scalar_bytes = [0xFF; 28];
     let result = Scalar::new(invalid_scalar_bytes);
 
-    // Should succeed but reduce the scalar mod order
-    assert!(result.is_ok());
-    let reduced_scalar = result.unwrap();
+    // Private scalar decoding is canonical and never reduces attacker input.
+    assert!(result.is_err());
 
-    // The reduced scalar should be valid and different from the original
-    assert_ne!(reduced_scalar.serialize(), invalid_scalar_bytes);
+    assert!(Scalar::new(NIST_P224.n).is_err());
 
     // Test zero scalar which should be rejected
     let zero_scalar_bytes = [0; 28];

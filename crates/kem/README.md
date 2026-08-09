@@ -19,7 +19,6 @@ This crate is part of the `dcrypt` cryptographic library.
     -   **Validation:** Incoming keys and ciphertexts are validated to prevent common attacks, such as those involving invalid curve points.
 -   **`no_std` Compatibility:** Fully operational in `no_std` environments with the `alloc` feature for heap-allocated types.
 -   **Extensive Testing:** Comes with a comprehensive test suite and performance benchmarks for all implemented algorithms.
--   **Optional Serde Support:** Provides `serde` integration for key serialization and deserialization when the `serde` feature is enabled.
 
 ## Implemented Algorithms
 
@@ -27,16 +26,19 @@ The crate provides implementations for the following KEMs, accessible via the `d
 
 | Category | Algorithm | Struct Name | Security Level | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Elliptic Curve** | ECDH over NIST P-192 | `EcdhP192` | ~80-bit | **Implemented** |
 | **Elliptic Curve** | ECDH over NIST P-224 | `EcdhP224` | ~112-bit | **Implemented** |
 | **Elliptic Curve** | ECDH over NIST P-256 | `EcdhP256` | ~128-bit | **Implemented** |
 | **Elliptic Curve** | ECDH over NIST P-384 | `EcdhP384` | ~192-bit | **Implemented** |
 | **Elliptic Curve** | ECDH over NIST P-521 | `EcdhP521` | ~256-bit | **Implemented** |
 | **Elliptic Curve** | ECDH over secp256k1 | `EcdhK256` | ~128-bit | **Implemented** |
-| **Elliptic Curve**| ECDH over sect283k1 | `EcdhB283k` | ~142-bit | **Implemented** |
 | **Post-Quantum** | FIPS 203 ML-KEM-512 | `MlKem512` | NIST Level 1 | **Implemented** |
 | **Post-Quantum** | FIPS 203 ML-KEM-768 | `MlKem768` | NIST Level 3 | **Implemented** |
 | **Post-Quantum** | FIPS 203 ML-KEM-1024 | `MlKem1024` | NIST Level 5 | **Implemented** |
+
+P-224 is retained for transition and interoperability at approximately
+112-bit security. Prefer P-256 or stronger for new deployments. The P-192 and
+sect283k1 surfaces were removed for v3; see the
+[traditional-EC removal notice](../../docs/security/V3-TRADITIONAL-EC-REMOVALS.md).
 
 ## Installation
 

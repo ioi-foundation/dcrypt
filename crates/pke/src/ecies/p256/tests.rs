@@ -2,6 +2,51 @@
 use super::*;
 use crate::test_rng::TestRng;
 use dcrypt_api::error::Error as ApiError; // Alias for clarity
+use dcrypt_internal::random::{CryptoRng, Error as RandomError, RngCore};
+
+struct FailingRng;
+
+impl RngCore for FailingRng {
+    fn try_fill_bytes(&mut self, _: &mut [u8]) -> Result<(), RandomError> {
+        Err(RandomError)
+    }
+}
+
+impl CryptoRng for FailingRng {}
+
+struct ScalarThenFailRng {
+    calls: usize,
+}
+
+impl RngCore for ScalarThenFailRng {
+    fn try_fill_bytes(&mut self, destination: &mut [u8]) -> Result<(), RandomError> {
+        if self.calls != 0 {
+            return Err(RandomError);
+        }
+        destination.fill(0);
+        *destination.last_mut().expect("scalar buffer is non-empty") = 1;
+        self.calls += 1;
+        Ok(())
+    }
+}
+
+impl CryptoRng for ScalarThenFailRng {}
+
+#[test]
+fn caller_rng_failures_are_preserved() {
+    assert!(matches!(
+        EciesP256::keypair(&mut FailingRng),
+        Err(ApiError::RandomGenerationError { .. })
+    ));
+
+    let (public_key, _) = EciesP256::keypair(&mut TestRng).unwrap();
+    let mut rng = ScalarThenFailRng { calls: 0 };
+    assert!(matches!(
+        EciesP256::encrypt(&public_key, b"message", None, &mut rng),
+        Err(ApiError::RandomGenerationError { .. })
+    ));
+    assert_eq!(rng.calls, 1, "nonce generation must be the failing call");
+}
 
 #[test]
 fn test_ecies_p256_keypair_generation() {

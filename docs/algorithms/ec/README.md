@@ -15,15 +15,13 @@ for new deployments.
 The `ec` module offers a wide range of standard curves to suit different security and performance requirements:
 
 *   **NIST Prime Curves:**
-    *   `p192` (sect192r1)
-    *   `p224` (sect224r1)
-    *   `p256` (sect256r1 or prime256v1)
-    *   `p384` (sect384r1)
-    *   `p521` (sect521r1)
+    *   `p224` (`secp224r1`), retained for transition/interoperability at
+        approximately 112-bit security
+    *   `p256` (`secp256r1` or `prime256v1`)
+    *   `p384` (`secp384r1`)
+    *   `p521` (`secp521r1`)
 *   **Koblitz Curve:**
     *   `k256` (secp256k1) - Widely used in cryptocurrencies like Bitcoin and Ethereum.
-*   **Binary Curve:**
-    *   `b283k` (sect283k1) - A Koblitz curve over a binary field.
 *   **Pairing-Friendly Curve:**
     *   `bls12_381` - A modern curve designed for efficient cryptographic pairings, enabling advanced schemes like aggregate signatures.
 
