@@ -1,26 +1,32 @@
-//! Ed25519 signatures backed by `ed25519-dalek`.
+//! Dcrypt-owned Ed25519 signing and strict verification.
 //!
-//! The previous in-tree Edwards arithmetic accepted weak public keys and used
-//! secret-dependent branches during scalar multiplication. Keeping dcrypt's
-//! byte-oriented API while delegating the primitive to dalek provides strict
-//! point/scalar decoding and a backend designed for constant-time secret
-//! arithmetic. Compiler-, target-, and operation-specific review is still
-//! required for a concrete side-channel claim.
+//! The implementation follows RFC 8032 and keeps all arithmetic in safe Rust.
+//! Point encodings are canonical, public keys and signature commitments must
+//! be non-identity prime-order points, and signature scalars must be below the
+//! subgroup order.  Secret scalar multiplication uses a fixed 256-iteration
+//! schedule with constant-time point selection.  Compiler- and target-specific
+//! validation is still required for a concrete side-channel claim.
+
+#![forbid(unsafe_code)]
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-use super::constants::{ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE};
-use curve25519_dalek::edwards::CompressedEdwardsY;
+use dcrypt_algorithms::hash::sha2::Sha512;
+use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
-use ed25519_dalek::{Signature as DalekSignature, Signer, SigningKey, VerifyingKey};
 use rand::{CryptoRng, RngCore};
+use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, Zeroizing};
+
+use super::constants::{ED25519_PUBLIC_KEY_SIZE, ED25519_SECRET_KEY_SIZE, ED25519_SIGNATURE_SIZE};
+use super::point::EdwardsPoint;
+use super::scalar::Scalar;
 
 /// Ed25519 signature scheme.
 pub struct Ed25519;
 
-/// Canonically encoded, non-weak Ed25519 public key.
+/// Canonically encoded, non-identity, prime-order Ed25519 public key.
 #[derive(Clone, Zeroize)]
 pub struct Ed25519PublicKey(pub [u8; ED25519_PUBLIC_KEY_SIZE]);
 
@@ -58,7 +64,7 @@ impl core::fmt::Debug for Ed25519SecretKey {
     }
 }
 
-/// Ed25519 signature bytes (`R || S`).
+/// Canonically encoded Ed25519 signature bytes (`R || S`).
 #[derive(Clone, Zeroize)]
 pub struct Ed25519Signature(pub [u8; ED25519_SIGNATURE_SIZE]);
 
@@ -86,24 +92,32 @@ fn invalid_signature(context: &'static str, message: &'static str) -> ApiError {
     }
 }
 
-fn validate_canonical_prime_order_point(bytes: &[u8; 32], context: &'static str) -> ApiResult<()> {
-    let point = CompressedEdwardsY(*bytes)
-        .decompress()
-        .ok_or_else(|| invalid_key(context, "point encoding does not decompress"))?;
-    if point.compress().to_bytes() != *bytes {
-        return Err(invalid_key(context, "point encoding is non-canonical"));
-    }
-    if point.is_small_order() || !point.is_torsion_free() {
+fn decode_prime_order_point(bytes: &[u8; 32], context: &'static str) -> ApiResult<EdwardsPoint> {
+    let point = EdwardsPoint::decompress(bytes)
+        .ok_or_else(|| invalid_key(context, "point encoding is invalid or non-canonical"))?;
+    if !point.is_strict_prime_order() {
         return Err(invalid_key(
             context,
-            "point is not in the prime-order subgroup",
+            "point is identity, small-order, or not torsion-free",
         ));
     }
-    Ok(())
+    Ok(point)
+}
+
+fn hash_parts(parts: &[&[u8]]) -> ApiResult<Zeroizing<[u8; 64]>> {
+    let mut hasher = Sha512::new();
+    for part in parts {
+        hasher.update(part).map_err(ApiError::from)?;
+    }
+    let mut digest = hasher.finalize().map_err(ApiError::from)?;
+    let mut output = Zeroizing::new([0u8; 64]);
+    output.copy_from_slice(digest.as_ref());
+    digest.zeroize();
+    Ok(output)
 }
 
 impl Ed25519PublicKey {
-    /// Parse a canonical public key and reject every small-order key.
+    /// Parse a canonical, non-identity point in the prime-order subgroup.
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         let key_bytes: [u8; ED25519_PUBLIC_KEY_SIZE] =
             bytes.try_into().map_err(|_| ApiError::InvalidLength {
@@ -111,13 +125,7 @@ impl Ed25519PublicKey {
                 expected: ED25519_PUBLIC_KEY_SIZE,
                 actual: bytes.len(),
             })?;
-        validate_canonical_prime_order_point(&key_bytes, "Ed25519PublicKey::from_bytes")?;
-        VerifyingKey::from_bytes(&key_bytes).map_err(|_| {
-            invalid_key(
-                "Ed25519PublicKey::from_bytes",
-                "public key is not a canonical Edwards point",
-            )
-        })?;
+        decode_prime_order_point(&key_bytes, "Ed25519PublicKey::from_bytes")?;
         Ok(Self(key_bytes))
     }
 
@@ -125,15 +133,13 @@ impl Ed25519PublicKey {
         self.0
     }
 
-    fn verifying_key(&self) -> ApiResult<VerifyingKey> {
-        validate_canonical_prime_order_point(&self.0, "Ed25519 verify")?;
-        let key = VerifyingKey::from_bytes(&self.0)
-            .map_err(|_| invalid_key("Ed25519 verify", "public key encoding is invalid"))?;
-        Ok(key)
+    fn point(&self) -> ApiResult<EdwardsPoint> {
+        decode_prime_order_point(&self.0, "Ed25519 verify")
     }
 }
 
 impl Ed25519SecretKey {
+    /// Construct a secret key from the RFC 8032 32-byte seed.
     pub fn from_seed(seed: &[u8; ED25519_SECRET_KEY_SIZE]) -> ApiResult<Self> {
         Ok(Self { seed: *seed })
     }
@@ -150,12 +156,17 @@ impl Ed25519SecretKey {
         Ed25519::derive_public_from_secret(self)
     }
 
-    fn signing_key(&self) -> SigningKey {
-        SigningKey::from_bytes(&self.seed)
+    fn expanded(&self) -> ApiResult<Zeroizing<[u8; 64]>> {
+        let mut expanded = hash_parts(&[&self.seed])?;
+        expanded[0] &= 248;
+        expanded[31] &= 127;
+        expanded[31] |= 64;
+        Ok(expanded)
     }
 }
 
 impl Ed25519Signature {
+    /// Parse a signature with a canonical prime-order `R` and canonical `S`.
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         let signature: [u8; ED25519_SIGNATURE_SIZE] =
             bytes.try_into().map_err(|_| ApiError::InvalidLength {
@@ -163,6 +174,17 @@ impl Ed25519Signature {
                 expected: ED25519_SIGNATURE_SIZE,
                 actual: bytes.len(),
             })?;
+        let r_bytes: [u8; 32] = signature[..32]
+            .try_into()
+            .map_err(|_| invalid_signature("Ed25519Signature::from_bytes", "invalid R length"))?;
+        decode_prime_order_point(&r_bytes, "Ed25519Signature::from_bytes")
+            .map_err(|_| invalid_signature("Ed25519Signature::from_bytes", "invalid R point"))?;
+        let s_bytes: [u8; 32] = signature[32..]
+            .try_into()
+            .map_err(|_| invalid_signature("Ed25519Signature::from_bytes", "invalid S length"))?;
+        Scalar::from_canonical_bytes(&s_bytes).ok_or_else(|| {
+            invalid_signature("Ed25519Signature::from_bytes", "S is not below group order")
+        })?;
         Ok(Self(signature))
     }
 
@@ -181,6 +203,7 @@ impl SignatureTrait for Ed25519 {
         "Ed25519"
     }
 
+    /// Generate a key from caller-provided cryptographic randomness.
     fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> ApiResult<Self::KeyPair> {
         let mut seed = [0u8; ED25519_SECRET_KEY_SIZE];
         rng.fill_bytes(&mut seed);
@@ -199,8 +222,33 @@ impl SignatureTrait for Ed25519 {
     }
 
     fn sign(message: &[u8], secret_key: &Self::SecretKey) -> ApiResult<Self::SignatureData> {
-        let signature: DalekSignature = secret_key.signing_key().sign(message);
-        Ok(Ed25519Signature(signature.to_bytes()))
+        let expanded = secret_key.expanded()?;
+        let mut secret_scalar_bytes = Zeroizing::new([0u8; 32]);
+        secret_scalar_bytes.copy_from_slice(&expanded[..32]);
+        let secret_scalar = Scalar::reduce_32(&secret_scalar_bytes);
+
+        let nonce_digest = hash_parts(&[&expanded[32..], message])?;
+        let nonce = Scalar::reduce_64(&nonce_digest);
+        let commitment = EdwardsPoint::basepoint().scalar_mult(&nonce);
+        if bool::from(commitment.is_identity()) {
+            return Err(invalid_signature(
+                "Ed25519 sign",
+                "derived commitment is the identity",
+            ));
+        }
+        let r_bytes = commitment.compress();
+        let public_bytes = EdwardsPoint::basepoint()
+            .scalar_mult(&secret_scalar)
+            .compress();
+
+        let challenge_digest = hash_parts(&[&r_bytes, &public_bytes, message])?;
+        let challenge = Scalar::reduce_64(&challenge_digest);
+        let response = nonce.add(&challenge.mul(&secret_scalar));
+
+        let mut signature = [0u8; ED25519_SIGNATURE_SIZE];
+        signature[..32].copy_from_slice(&r_bytes);
+        signature[32..].copy_from_slice(&response.to_bytes());
+        Ok(Ed25519Signature(signature))
     }
 
     fn verify(
@@ -208,22 +256,43 @@ impl SignatureTrait for Ed25519 {
         signature: &Self::SignatureData,
         public_key: &Self::PublicKey,
     ) -> ApiResult<()> {
-        let verifying_key = public_key.verifying_key()?;
+        // Revalidate tuple-struct values so direct construction cannot bypass
+        // canonical and subgroup checks.
+        let public_point = public_key.point()?;
         let r_bytes: [u8; 32] = signature.0[..32]
             .try_into()
-            .map_err(|_| invalid_signature("Ed25519 verify", "invalid R encoding"))?;
-        validate_canonical_prime_order_point(&r_bytes, "Ed25519 signature R")
-            .map_err(|_| invalid_signature("Ed25519 verify", "R is non-canonical or torsion"))?;
-        let signature = DalekSignature::from_bytes(&signature.0);
-        verifying_key
-            .verify_strict(message, &signature)
-            .map_err(|_| invalid_signature("Ed25519 verify", "strict verification failed"))
+            .map_err(|_| invalid_signature("Ed25519 verify", "invalid R length"))?;
+        let r_point = decode_prime_order_point(&r_bytes, "Ed25519 signature R")
+            .map_err(|_| invalid_signature("Ed25519 verify", "invalid R point"))?;
+        let s_bytes: [u8; 32] = signature.0[32..]
+            .try_into()
+            .map_err(|_| invalid_signature("Ed25519 verify", "invalid S length"))?;
+        let response = Scalar::from_canonical_bytes(&s_bytes)
+            .ok_or_else(|| invalid_signature("Ed25519 verify", "S is not below group order"))?;
+
+        let challenge_digest = hash_parts(&[&r_bytes, &public_key.0, message])?;
+        let challenge = Scalar::reduce_64(&challenge_digest);
+        let left = EdwardsPoint::basepoint().scalar_mult(&response);
+        let right = r_point.add(&public_point.scalar_mult(&challenge));
+
+        if bool::from(left.ct_eq(&right)) {
+            Ok(())
+        } else {
+            Err(invalid_signature(
+                "Ed25519 verify",
+                "strict signature equation failed",
+            ))
+        }
     }
 }
 
 impl Ed25519 {
     pub fn derive_public_from_secret(secret_key: &Ed25519SecretKey) -> ApiResult<Ed25519PublicKey> {
-        let bytes = secret_key.signing_key().verifying_key().to_bytes();
+        let expanded = secret_key.expanded()?;
+        let mut scalar_bytes = Zeroizing::new([0u8; 32]);
+        scalar_bytes.copy_from_slice(&expanded[..32]);
+        let scalar = Scalar::reduce_32(&scalar_bytes);
+        let bytes = EdwardsPoint::basepoint().scalar_mult(&scalar).compress();
         Ed25519PublicKey::from_bytes(&bytes)
     }
 }

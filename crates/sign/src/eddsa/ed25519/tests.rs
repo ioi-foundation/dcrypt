@@ -1,9 +1,14 @@
 use super::*;
-use rand::rngs::OsRng;
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
+
+fn test_rng() -> ChaCha20Rng {
+    ChaCha20Rng::from_seed([0x42; 32])
+}
 
 #[test]
 fn test_ed25519_keypair_generation() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let result = Ed25519::keypair(&mut rng);
     assert!(
         result.is_ok(),
@@ -18,7 +23,7 @@ fn test_ed25519_keypair_generation() {
 
 #[test]
 fn test_ed25519_sign() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret_key) = Ed25519::keypair(&mut rng).unwrap();
 
     let message = b"Test message for signing";
@@ -37,7 +42,7 @@ fn test_ed25519_sign() {
 
 #[test]
 fn test_ed25519_sign_verify_cycle() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = Ed25519::keypair(&mut rng).unwrap();
 
     let message = b"Complete test message for Ed25519 sign/verify cycle";
@@ -52,7 +57,7 @@ fn test_ed25519_sign_verify_cycle() {
 
 #[test]
 fn test_ed25519_deterministic_signatures() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret_key) = Ed25519::keypair(&mut rng).unwrap();
 
     let message = b"Test for deterministic signatures";
@@ -67,7 +72,7 @@ fn test_ed25519_deterministic_signatures() {
 
 #[test]
 fn test_ed25519_different_messages_different_signatures() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = Ed25519::keypair(&mut rng).unwrap();
 
     let msg1 = b"First message";
@@ -99,7 +104,7 @@ fn test_ed25519_different_messages_different_signatures() {
 
 #[test]
 fn test_ed25519_wrong_public_key_fails() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret_key1) = Ed25519::keypair(&mut rng).unwrap();
     let (public_key2, _) = Ed25519::keypair(&mut rng).unwrap();
 
@@ -116,7 +121,7 @@ fn test_ed25519_wrong_public_key_fails() {
 
 #[test]
 fn test_ed25519_empty_message() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = Ed25519::keypair(&mut rng).unwrap();
 
     let message = b"";
@@ -130,7 +135,7 @@ fn test_ed25519_empty_message() {
 
 #[test]
 fn test_ed25519_invalid_signatures() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, _) = Ed25519::keypair(&mut rng).unwrap();
 
     let message = b"Test message";
@@ -163,7 +168,7 @@ fn test_ed25519_invalid_signatures() {
 
 #[test]
 fn test_ed25519_signature_malleability_resistance() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public_key, secret_key) = Ed25519::keypair(&mut rng).unwrap();
 
     let message = b"Test malleability";
@@ -182,7 +187,7 @@ fn test_ed25519_signature_malleability_resistance() {
 
 #[test]
 fn test_derive_public_from_secret() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (original_public, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Derive public key from secret
@@ -198,7 +203,7 @@ fn test_derive_public_from_secret() {
 
 #[test]
 fn test_secret_key_public_key_method() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (original_public, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Use the convenience method on SecretKey
@@ -212,7 +217,7 @@ fn test_secret_key_public_key_method() {
 
 #[test]
 fn test_derived_public_key_can_verify() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Derive public key
@@ -231,7 +236,7 @@ fn test_derived_public_key_can_verify() {
 
 #[test]
 fn test_multiple_derivations_are_identical() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Derive multiple times
@@ -246,7 +251,7 @@ fn test_multiple_derivations_are_identical() {
 
 #[test]
 fn test_key_serialization_round_trip() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (original_public, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Simulate saving/loading just the secret key
@@ -268,7 +273,7 @@ fn test_key_serialization_round_trip() {
 #[test]
 fn test_from_seed_matches_keypair() {
     // Generate a keypair
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public1, secret1) = Ed25519::keypair(&mut rng).unwrap();
 
     // Reconstruct secret key from seed
@@ -300,7 +305,7 @@ fn test_sign_with_from_seed() {
 // Security-focused tests
 #[test]
 fn test_secret_key_immutability() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Secret keys no longer implement AsRef/AsMut, so we can't test those
@@ -317,7 +322,7 @@ fn test_secret_key_immutability() {
 
 #[test]
 fn test_zeroization_on_drop() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
 
     // Create a secret key in a limited scope
     let seed_copy = {
@@ -327,7 +332,7 @@ fn test_zeroization_on_drop() {
         // secret is dropped and zeroized here
     };
 
-    // We can't test the actual memory was cleared (would need unsafe),
+    // We can't test the actual memory was cleared without raw-pointer access,
     // but we can verify the type implements Drop + Zeroize
     let _secret = Ed25519SecretKey::from_seed(&seed_copy).unwrap();
 
@@ -337,7 +342,7 @@ fn test_zeroization_on_drop() {
 #[test]
 fn test_seed_validation() {
     // Test that from_seed properly validates and processes seeds
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public1, secret1) = Ed25519::keypair(&mut rng).unwrap();
 
     // Get the seed
@@ -357,7 +362,7 @@ fn test_seed_validation() {
 
 #[test]
 fn test_no_key_material_in_debug() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public, _secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Debug output should not contain key material
@@ -379,7 +384,7 @@ fn test_type_safety() {
         // This function only accepts secret keys
     }
 
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // These should compile
@@ -393,7 +398,7 @@ fn test_type_safety() {
 
 #[test]
 fn test_secure_comparison() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_, secret1) = Ed25519::keypair(&mut rng).unwrap();
     let (_, secret2) = Ed25519::keypair(&mut rng).unwrap();
 
@@ -414,7 +419,7 @@ fn example_secure_seed_handling() {
     use zeroize::Zeroize;
 
     // Generate a keypair
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (_public, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Get seed for storage
@@ -446,7 +451,7 @@ fn example_secure_seed_handling() {
 // Test the new explicit serialization methods
 #[test]
 fn test_explicit_serialization() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public, secret) = Ed25519::keypair(&mut rng).unwrap();
 
     // Test public key serialization
@@ -506,7 +511,7 @@ fn rejects_identity_public_key_and_universal_forgery() {
 
 #[test]
 fn strict_verification_rejects_small_order_r() {
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public, _) = Ed25519::keypair(&mut rng).unwrap();
     let mut signature = [0u8; 64];
     signature[0] = 1; // compressed Edwards identity R
@@ -520,7 +525,7 @@ fn strict_verification_rejects_s_plus_group_order() {
         0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde,
         0x14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x10,
     ];
-    let mut rng = OsRng;
+    let mut rng = test_rng();
     let (public, secret) = Ed25519::keypair(&mut rng).unwrap();
     let mut signature = Ed25519::sign(b"malleability", &secret).unwrap();
     let mut carry = 0u16;
@@ -563,4 +568,115 @@ fn rfc8032_test_vector_one() {
     assert_eq!(public.to_bytes(), expected_public);
     assert_eq!(signature.to_bytes(), expected_signature);
     assert!(Ed25519::verify(b"", &signature, &public).is_ok());
+}
+
+#[test]
+fn rfc8032_test_vector_two() {
+    let seed: [u8; 32] =
+        hex::decode("4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let expected_public: [u8; 32] =
+        hex::decode("3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let expected_signature: [u8; 64] = hex::decode(concat!(
+        "92a009a9f0d4cab8720e820b5f642540a2b27b5416503f8fb3762223ebdb69da",
+        "085ac1e43e15996e458f3613d0f11d8c387b2eaeb4302aeeb00d291612bb0c00",
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+
+    let secret = Ed25519SecretKey::from_seed(&seed).unwrap();
+    let public = secret.public_key().unwrap();
+    let signature = Ed25519::sign(&[0x72], &secret).unwrap();
+    assert_eq!(public.to_bytes(), expected_public);
+    assert_eq!(signature.to_bytes(), expected_signature);
+    assert!(Ed25519::verify(&[0x72], &signature, &public).is_ok());
+}
+
+#[test]
+fn rfc8032_test_vector_three() {
+    let seed: [u8; 32] =
+        hex::decode("c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let expected_public: [u8; 32] =
+        hex::decode("fc51cd8e6218a1a38da47ed00230f0580816ed13ba3303ac5deb911548908025")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let expected_signature: [u8; 64] = hex::decode(concat!(
+        "6291d657deec24024827e69c3abe01a30ce548a284743a445e3680d7db5ac3ac",
+        "18ff9b538d16f290ae67f760984dc6594a7c15e9716ed28dc027beceea1ec40a",
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+
+    let secret = Ed25519SecretKey::from_seed(&seed).unwrap();
+    let public = secret.public_key().unwrap();
+    let signature = Ed25519::sign(&[0xaf, 0x82], &secret).unwrap();
+    assert_eq!(public.to_bytes(), expected_public);
+    assert_eq!(signature.to_bytes(), expected_signature);
+    assert!(Ed25519::verify(&[0xaf, 0x82], &signature, &public).is_ok());
+}
+
+#[test]
+fn rejects_every_strict_encoding_boundary() {
+    const P: [u8; 32] = [
+        0xed, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x7f,
+    ];
+    const L: [u8; 32] = [
+        0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde,
+        0x14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x10,
+    ];
+
+    assert!(Ed25519PublicKey::from_bytes(&P).is_err());
+
+    let mut negative_zero = [0u8; 32];
+    negative_zero[0] = 1;
+    negative_zero[31] = 0x80;
+    assert!(Ed25519PublicKey::from_bytes(&negative_zero).is_err());
+
+    // y=0 encodes an order-four point.
+    assert!(Ed25519PublicKey::from_bytes(&[0u8; 32]).is_err());
+
+    let mut signature = [0u8; 64];
+    signature[..32].copy_from_slice(&P);
+    signature[32] = 1;
+    assert!(Ed25519Signature::from_bytes(&signature).is_err());
+
+    let mut basepoint = [0x66u8; 32];
+    basepoint[0] = 0x58;
+    signature[..32].copy_from_slice(&basepoint);
+    signature[32..].copy_from_slice(&L);
+    assert!(Ed25519Signature::from_bytes(&signature).is_err());
+}
+
+#[test]
+fn rejects_non_torsion_free_public_key_and_commitment() {
+    let torsion = EdwardsPoint::decompress(&[0u8; 32]).unwrap();
+    let mixed = EdwardsPoint::basepoint().add(&torsion).compress();
+    assert!(Ed25519PublicKey::from_bytes(&mixed).is_err());
+
+    let mut signature = [0u8; 64];
+    signature[..32].copy_from_slice(&mixed);
+    signature[32] = 1;
+    assert!(Ed25519Signature::from_bytes(&signature).is_err());
+
+    let mut basepoint = [0x66u8; 32];
+    basepoint[0] = 0x58;
+    assert!(Ed25519::verify(
+        b"strict subgroup check",
+        &Ed25519Signature(signature),
+        &Ed25519PublicKey(basepoint),
+    )
+    .is_err());
 }

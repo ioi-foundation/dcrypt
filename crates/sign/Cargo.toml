@@ -42,8 +42,6 @@ zeroize = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true, optional = true }
 subtle = "2.5"
-ed25519-dalek = { version = "3.0.0", default-features = false, features = ["fast", "zeroize"] }
-curve25519-dalek = { version = "5.0.0", default-features = false }
 
 [dev-dependencies]
 rand_chacha = { workspace = true }

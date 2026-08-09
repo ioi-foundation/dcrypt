@@ -1,16 +1,16 @@
 //! EdDSA (Edwards-curve Digital Signature Algorithm) implementations
 //!
-//! This module provides an Ed25519 adapter backed by `ed25519-dalek`, with
-//! strict verification and additional canonical/subgroup input validation.
-//! This description is not an independent audit or production-safety claim.
+//! This module provides a dcrypt-owned, safe-Rust Ed25519 implementation with
+//! strict canonical and prime-subgroup validation. This description is not an
+//! independent audit or production-safety claim.
 //!
 //! # Security Features
 //!
 //! - **Immutable secret keys**: Prevents accidental key corruption
 //! - **Automatic zeroization**: Clears sensitive data from memory
 //! - **Secure API design**: Minimal surface area, maximum safety
-//! - **Maintained arithmetic backend**: Secret scalar operations are delegated
-//!   to `ed25519-dalek`/`curve25519-dalek`
+//! - **Fixed-schedule secret arithmetic**: Secret scalar multiplication uses
+//!   constant-time selection rather than secret-dependent branches
 //! - **Type safety**: Strong typing prevents key confusion
 //!
 //! # Features
@@ -23,7 +23,8 @@
 //!
 //! # Security Guidelines
 //!
-//! 1. **Always use a CSPRNG**: Use `rand::rngs::OsRng` for key generation
+//! 1. **Supply a CSPRNG**: Key generation uses only the caller-provided RNG;
+//!    this crate does not obtain entropy from the operating system
 //! 2. **Protect seeds**: Encrypt before storage, decrypt only when needed
 //! 3. **Verify public keys**: Confirm authenticity through secure channels
 //! 4. **Clear sensitive data**: Automatic for secret keys, manual for seeds
@@ -33,13 +34,12 @@
 //! ```
 //! use dcrypt_sign::eddsa::{Ed25519, Ed25519SecretKey};
 //! use dcrypt_api::Signature;
-//! use rand::rngs::OsRng;
 //!
 //! # fn main() -> dcrypt_api::Result<()> {
-//! let mut rng = OsRng;
-//!
-//! // Generate a new keypair
-//! let (public_key, secret_key) = Ed25519::keypair(&mut rng)?;
+//! // Load a seed supplied by the application's key-management boundary.
+//! let seed = [42u8; 32];
+//! let secret_key = Ed25519SecretKey::from_seed(&seed)?;
+//! let public_key = secret_key.public_key()?;
 //!
 //! // Sign a message
 //! let message = b"Hello, Ed25519!";
@@ -63,6 +63,9 @@
 
 mod constants;
 mod ed25519;
+mod field;
+mod point;
+mod scalar;
 
 // Re-export Ed25519 types
 pub use ed25519::{Ed25519, Ed25519PublicKey, Ed25519SecretKey, Ed25519Signature};
