@@ -312,10 +312,6 @@ dependencies = [
  "dcrypt-internal",
  "dcrypt-params",
  "hex",
- "rand 0.8.7",
- "rand_chacha 0.3.1",
- "subtle",
- "zeroize",
 ]
 
 [[package]]

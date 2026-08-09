@@ -3,6 +3,6 @@
 //! This module provides hybrid signature schemes that combine traditional and
 //! post-quantum algorithms.
 
-mod ecdsa_dilithium;
+mod ecdsa_ml_dsa;
 
-pub use ecdsa_dilithium::{EcdsaDilithiumHybrid, EcdsaMlDsa65Hybrid};
+pub use ecdsa_ml_dsa::EcdsaMlDsa65Hybrid;

@@ -1,4 +1,4 @@
-// File: crates/hybrid/src/sign/ecdsa_dilithium.rs
+// File: crates/hybrid/src/sign/ecdsa_ml_dsa.rs
 //! ECDSA P-384 + ML-DSA-65 hybrid signature scheme.
 //!
 //! Version 2 uses final FIPS 204 encodings. The historical version-1 framing,
@@ -11,14 +11,11 @@ use dcrypt_api::{
 };
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
-use dcrypt_sign::dilithium::{MlDsa65, MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature};
 use dcrypt_sign::ecdsa::{EcdsaP384, EcdsaP384PublicKey, EcdsaP384SecretKey, EcdsaP384Signature};
+use dcrypt_sign::mldsa::{MlDsa65, MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature};
 
 /// Hybrid signature scheme combining ECDSA P-384 and FIPS 204 ML-DSA-65.
 pub struct EcdsaMlDsa65Hybrid;
-
-/// Source-compatible name for [`EcdsaMlDsa65Hybrid`].
-pub type EcdsaDilithiumHybrid = EcdsaMlDsa65Hybrid;
 
 const HYBRID_PUBLIC_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/public/v2";
 const HYBRID_SECRET_KEY_LABEL: &[u8] = b"dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/secret/v2";
@@ -28,13 +25,6 @@ const HYBRID_SIGNATURE_LABEL: &[u8] = b"dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/s
 pub struct HybridPublicKey {
     ecdsa_pk: <EcdsaP384 as SignatureTrait>::PublicKey,
     ml_dsa_pk: <MlDsa65 as SignatureTrait>::PublicKey,
-}
-
-impl Zeroize for HybridPublicKey {
-    fn zeroize(&mut self) {
-        self.ecdsa_pk.zeroize();
-        self.ml_dsa_pk.zeroize();
-    }
 }
 
 #[derive(Clone)]
@@ -84,10 +74,10 @@ impl HybridSignature {
 
 impl Serialize for HybridPublicKey {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let (ecdsa_bytes, dilithium_bytes) = decode_framed(bytes, HYBRID_PUBLIC_KEY_LABEL)?;
+        let (ecdsa_bytes, ml_dsa_bytes) = decode_framed(bytes, HYBRID_PUBLIC_KEY_LABEL)?;
         Ok(Self {
             ecdsa_pk: EcdsaP384PublicKey::from_bytes(ecdsa_bytes)?,
-            ml_dsa_pk: MlDsaPublicKey::from_bytes(dilithium_bytes).map_err(Error::from)?,
+            ml_dsa_pk: MlDsaPublicKey::from_bytes(ml_dsa_bytes).map_err(Error::from)?,
         })
     }
 
@@ -102,30 +92,30 @@ impl Serialize for HybridPublicKey {
 
 impl SerializeSecret for HybridSecretKey {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let (ecdsa_bytes, dilithium_bytes) = decode_framed(bytes, HYBRID_SECRET_KEY_LABEL)?;
+        let (ecdsa_bytes, ml_dsa_bytes) = decode_framed(bytes, HYBRID_SECRET_KEY_LABEL)?;
         Ok(Self {
             ecdsa_sk: EcdsaP384SecretKey::from_bytes(ecdsa_bytes)?,
-            ml_dsa_sk: MlDsaSecretKey::from_bytes(dilithium_bytes).map_err(Error::from)?,
+            ml_dsa_sk: MlDsaSecretKey::from_bytes(ml_dsa_bytes).map_err(Error::from)?,
         })
     }
 
     fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
         let ecdsa_bytes = self.ecdsa_sk.to_bytes_zeroizing();
-        let dilithium_bytes = Zeroizing::new(self.ml_dsa_sk.to_bytes().to_vec());
+        let ml_dsa_bytes = Zeroizing::new(self.ml_dsa_sk.to_bytes().to_vec());
         Zeroizing::new(encode_framed(
             HYBRID_SECRET_KEY_LABEL,
             &ecdsa_bytes,
-            &dilithium_bytes,
+            &ml_dsa_bytes,
         ))
     }
 }
 
 impl Serialize for HybridSignature {
     fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let (ecdsa_bytes, dilithium_bytes) = decode_framed(bytes, HYBRID_SIGNATURE_LABEL)?;
+        let (ecdsa_bytes, ml_dsa_bytes) = decode_framed(bytes, HYBRID_SIGNATURE_LABEL)?;
         Ok(Self {
             ecdsa_sig: EcdsaP384Signature::from_bytes(ecdsa_bytes)?,
-            ml_dsa_sig: MlDsaSignature::from_bytes(dilithium_bytes).map_err(Error::from)?,
+            ml_dsa_sig: MlDsaSignature::from_bytes(ml_dsa_bytes).map_err(Error::from)?,
         })
     }
 
@@ -311,8 +301,8 @@ mod tests {
     fn hybrid_signature_roundtrip_preserves_both_components() {
         let mut rng = TestRng;
         let message = b"hybrid signature framing test";
-        let (pk, sk) = EcdsaDilithiumHybrid::keypair(&mut rng).unwrap();
-        let sig = EcdsaDilithiumHybrid::sign(message, &sk).unwrap();
+        let (pk, sk) = EcdsaMlDsa65Hybrid::keypair(&mut rng).unwrap();
+        let sig = EcdsaMlDsa65Hybrid::sign(message, &sk).unwrap();
 
         let pk_bytes = pk.to_bytes();
         let sig_bytes = sig.to_bytes();
@@ -322,9 +312,9 @@ mod tests {
         let decoded_sig = HybridSignature::from_bytes(&sig_bytes).unwrap();
         let decoded_sk = HybridSecretKey::from_bytes(&sk_bytes).unwrap();
 
-        EcdsaDilithiumHybrid::verify(message, &decoded_sig, &decoded_pk).unwrap();
-        let resigned = EcdsaDilithiumHybrid::sign(message, &decoded_sk).unwrap();
-        EcdsaDilithiumHybrid::verify(message, &resigned, &decoded_pk).unwrap();
+        EcdsaMlDsa65Hybrid::verify(message, &decoded_sig, &decoded_pk).unwrap();
+        let resigned = EcdsaMlDsa65Hybrid::sign(message, &decoded_sk).unwrap();
+        EcdsaMlDsa65Hybrid::verify(message, &resigned, &decoded_pk).unwrap();
 
         assert!(pk_bytes.len() > pk.components().0.as_ref().len());
         assert!(sig_bytes.len() > sig.components().0.to_bytes().len());
