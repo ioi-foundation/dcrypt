@@ -575,7 +575,49 @@ release_self_test() {
     grep -Fq 'RELEASE_BRANCH = "master"' \
         "$SCRIPT_DIR/verify-remote-release-ready.py" \
         || die "self-test: shell and remote gate release branches differ"
+    self_test_ambiguous_publish_resolution
     info "release-dcrypt self-test passed"
+}
+
+self_test_ambiguous_publish_resolution() {
+    local fixture_root
+    fixture_root=$(mktemp -d "${TMPDIR:-/tmp}/dcrypt-publish-self-test.XXXXXX")
+    local publish_seen="$fixture_root/publish-seen"
+    local duplicate_publish="$fixture_root/duplicate-publish"
+    local registry_queries=0
+
+    cargo() {
+        if [[ "$1" == "publish" && " $* " != *" --dry-run "* ]]; then
+            if ! mkdir "$publish_seen" 2>/dev/null; then
+                mkdir "$duplicate_publish"
+            fi
+            printf 'simulated ambiguous cargo publish failure\n' >&2
+            return 1
+        fi
+        return 0
+    }
+    verify_reviewed_archive() {
+        return 0
+    }
+    crate_version_exists() {
+        registry_queries=$((registry_queries + 1))
+        ((registry_queries >= 2))
+    }
+    sleep() {
+        return 0
+    }
+
+    if ! publish_crate "." "dcrypt-self-test" >/dev/null 2>&1; then
+        die "self-test: ambiguous publish was not resolved from registry truth"
+    fi
+    [[ -d "$publish_seen" ]] \
+        || die "self-test: mock publish command was not exercised"
+    [[ ! -e "$duplicate_publish" ]] \
+        || die "self-test: ambiguous publish was retried before registry resolution"
+    [[ "$registry_queries" == 2 ]] \
+        || die "self-test: registry was not queried before and after propagation wait"
+
+    rmdir "$publish_seen" "$fixture_root"
 }
 
 run_remote_release_gate() {
@@ -696,6 +738,12 @@ publish_crate() {
         log_file=$(mktemp "${TMPDIR:-/tmp}/dcrypt-publish-${crate_name}.XXXXXX")
         ACTIVE_LOG=$log_file
         info "Publishing $crate_name (attempt $attempt/5)"
+        if ((attempt > 1)) && crate_version_exists "$crate_name" "$VERSION"; then
+            rm -f "$log_file"
+            ACTIVE_LOG=""
+            warn "$crate_name@$VERSION became visible before the retry; using registry truth"
+            return 0
+        fi
         if (cd "$PROJECT_ROOT/$relative_path" && \
             cargo publish --locked >"$log_file" 2>&1); then
             cat "$log_file"
@@ -705,10 +753,10 @@ publish_crate() {
         fi
 
         cat "$log_file" >&2
-        if grep -qi "already uploaded" "$log_file" && \
-            crate_version_exists "$crate_name" "$VERSION"; then
+        if crate_version_exists "$crate_name" "$VERSION"; then
             rm -f "$log_file"
             ACTIVE_LOG=""
+            warn "$crate_name@$VERSION exists after the failed publish command; using registry truth"
             return 0
         fi
 
@@ -724,8 +772,12 @@ publish_crate() {
         ACTIVE_LOG=""
 
         if ((attempt < 5)); then
-            warn "publish failed; retrying after 15 seconds"
+            warn "publish failed and the exact registry record is absent; rechecking after 15 seconds before any retry"
             sleep 15
+            if crate_version_exists "$crate_name" "$VERSION"; then
+                warn "$crate_name@$VERSION became visible during the propagation wait; using registry truth"
+                return 0
+            fi
         fi
     done
     return 1
