@@ -1,6 +1,6 @@
 //! Common functionality for ChaCha20-Poly1305 ciphers.
 
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use core::fmt;
 use dcrypt_algorithms::{
@@ -8,7 +8,8 @@ use dcrypt_algorithms::{
     hash::Sha256,
     kdf::Pbkdf2,
 };
-use dcrypt_internal::{CryptoRng, Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_api::ZeroizingBytes;
+use dcrypt_internal::{boxed_bytes_zeroed, CryptoRng, Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use crate::error::{
     fill_random, from_primitive_error, validate, validate_format, validate_key_derivation, Result,
@@ -26,9 +27,9 @@ impl ChaCha20Poly1305Key {
 
     /// Creates a key using caller-owned cryptographic randomness.
     pub fn generate<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self> {
-        let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-        fill_random(rng, &mut key, "ChaCha20-Poly1305 key generation")?;
-        Ok(Self(key))
+        let mut key = Zeroizing::new([0u8; CHACHA20POLY1305_KEY_SIZE]);
+        fill_random(rng, &mut key[..], "ChaCha20-Poly1305 key generation")?;
+        Ok(Self(key.into_inner()))
     }
 
     /// Returns the raw key bytes.
@@ -36,37 +37,46 @@ impl ChaCha20Poly1305Key {
         &self.0
     }
 
-    /// Serializes the key for storage.
-    pub fn to_secure_string(&self) -> String {
-        format!(
-            "dcrypt-CHACHA20POLY1305-KEY:{}",
-            STANDARD.encode(self.as_bytes())
-        )
+    /// Serializes the key into exact-size ASCII storage whose initialized
+    /// bytes are explicitly cleared on drop.
+    pub fn to_secure_bytes(&self) -> ZeroizingBytes {
+        const PREFIX: &[u8] = b"dcrypt-CHACHA20POLY1305-KEY:";
+        let encoded_len = base64::encoded_len(self.0.len(), true)
+            .expect("fixed-size ChaCha20-Poly1305 key encoding length cannot overflow");
+        let mut serialized = Zeroizing::new(boxed_bytes_zeroed(PREFIX.len() + encoded_len));
+        serialized[..PREFIX.len()].copy_from_slice(PREFIX);
+        let written = STANDARD
+            .encode_slice(self.as_bytes(), &mut serialized[PREFIX.len()..])
+            .expect("exact base64 output allocation must be sufficient");
+        debug_assert_eq!(written, encoded_len);
+        serialized
     }
 
-    /// Loads a key from its serialized format.
-    pub fn from_secure_string(serialized: &str) -> Result<Self> {
+    /// Loads a key from its serialized byte format.
+    pub fn from_secure_bytes(serialized: &[u8]) -> Result<Self> {
+        const PREFIX: &[u8] = b"dcrypt-CHACHA20POLY1305-KEY:";
         validate_format(
-            serialized.starts_with("dcrypt-CHACHA20POLY1305-KEY:"),
+            serialized.starts_with(PREFIX),
             "key deserialization",
             "invalid key format",
         )?;
 
-        let encoded = &serialized["dcrypt-CHACHA20POLY1305-KEY:".len()..];
-        let key_bytes = Zeroizing::new(
-            STANDARD
-                .decode(encoded)
-                .map_err(|_| serialization_error("base64 decode"))?,
-        );
+        let encoded = &serialized[PREFIX.len()..];
+        let mut key = Zeroizing::new([0u8; CHACHA20POLY1305_KEY_SIZE]);
+        let decoded_len = STANDARD
+            .decode_slice(encoded, &mut key[..])
+            .map_err(|_| serialization_error("base64 decode"))?;
         validate::length(
             "ChaCha20Poly1305 key",
-            key_bytes.len(),
+            decoded_len,
             CHACHA20POLY1305_KEY_SIZE,
         )?;
+        Ok(Self(key.into_inner()))
+    }
 
-        let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
-        key.copy_from_slice(&key_bytes);
-        Ok(Self(key))
+    /// Loads a key from the legacy caller-owned string representation.
+    pub fn from_secure_string(serialized: &str) -> Result<Self> {
+        Self::from_secure_bytes(serialized.as_bytes())
     }
 }
 
@@ -203,9 +213,9 @@ pub fn derive_chacha20poly1305_key(
 
     let derived = Pbkdf2::<Sha256>::pbkdf2(password, salt, iterations, CHACHA20POLY1305_KEY_SIZE)
         .map_err(from_primitive_error)?;
-    let mut key = [0u8; CHACHA20POLY1305_KEY_SIZE];
+    let mut key = Zeroizing::new([0u8; CHACHA20POLY1305_KEY_SIZE]);
     key.copy_from_slice(&derived);
-    Ok(ChaCha20Poly1305Key(key))
+    Ok(ChaCha20Poly1305Key(key.into_inner()))
 }
 
 /// Generates a salt using caller-owned cryptographic randomness.
@@ -235,5 +245,22 @@ mod tests {
         let left = ChaCha20Poly1305Nonce::generate(&mut left_rng).unwrap();
         let right = ChaCha20Poly1305Nonce::generate(&mut right_rng).unwrap();
         assert_eq!(left, right);
+    }
+
+    #[test]
+    fn secure_key_bytes_round_trip_uses_exact_storage() {
+        let key = ChaCha20Poly1305Key::new([0xa5; CHACHA20POLY1305_KEY_SIZE]);
+        let serialized = key.to_secure_bytes();
+        assert_eq!(serialized.capacity(), serialized.len());
+        assert_eq!(
+            &serialized[..],
+            b"dcrypt-CHACHA20POLY1305-KEY:paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU="
+        );
+        assert_eq!(
+            ChaCha20Poly1305Key::from_secure_bytes(&serialized)
+                .unwrap()
+                .as_bytes(),
+            key.as_bytes()
+        );
     }
 }

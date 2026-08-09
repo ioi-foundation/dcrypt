@@ -15,7 +15,7 @@ use dcrypt_algorithms::poly::serialize::{
     CoefficientPacker, CoefficientUnpacker, DefaultCoefficientSerde,
 };
 use dcrypt_api::SecretVec;
-use dcrypt_internal::{boxed_bytes_zeroed, Zeroizing};
+use dcrypt_internal::{boxed_bytes_zeroed, Zeroizing, ZeroizingBytes};
 use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N, ML_DSA_Q};
 
 #[inline]
@@ -40,9 +40,9 @@ fn signed_to_mod_q(value: i32) -> u32 {
 /// Packs the hint vector *h* using the final FIPS‑204 "HintBitPack" layout
 fn pack_hints_bitpacked<P: MlDsaSchemeParams>(
     h_hint_poly: &PolyVecK<P>,
-) -> Result<Vec<u8>, SignError> {
+) -> Result<ZeroizingBytes, SignError> {
     let omega = P::OMEGA_PARAM as usize;
-    let mut packed = vec![0u8; omega + P::K_DIM];
+    let mut packed = Zeroizing::new(boxed_bytes_zeroed(omega + P::K_DIM));
     let mut index = 0usize;
 
     for (row, poly) in h_hint_poly.polys.iter().enumerate() {
@@ -390,12 +390,15 @@ pub fn pack_signature<P: MlDsaSchemeParams>(
         )));
     }
 
-    let mut sig_bytes = Vec::with_capacity(P::SIGNATURE_SIZE);
+    let mut sig_bytes = Zeroizing::new(boxed_bytes_zeroed(P::SIGNATURE_SIZE));
+    let mut offset = 0usize;
 
     // Pack c̃ (variable size: 32/48/64 bytes)
-    sig_bytes.extend_from_slice(c_tilde_seed);
+    sig_bytes[..c_tilde_seed.len()].copy_from_slice(c_tilde_seed);
+    offset += c_tilde_seed.len();
 
     // Algorithm 17 encodes b - w with a = gamma1-1 and b = gamma1.
+    let bytes_per_z_poly = ML_DSA_N * P::Z_BITS / 8;
     for i in 0..P::L_DIM {
         let mut temp_poly = z_vec.polys[i].clone();
         for c in temp_poly.coeffs.iter_mut() {
@@ -409,35 +412,63 @@ pub fn pack_signature<P: MlDsaSchemeParams>(
             }
             *c = (P::GAMMA1_PARAM as i32 - centered) as u32;
         }
-        // Use Z_BITS instead of GAMMA1_BITS
-        let packed = DefaultCoefficientSerde::pack_coeffs(&temp_poly, P::Z_BITS)
-            .map_err(SignError::from_algo)?;
-        sig_bytes.extend_from_slice(&packed);
+        let end = offset
+            .checked_add(bytes_per_z_poly)
+            .ok_or_else(|| SignError::Serialization("signature length overflow".into()))?;
+        if end > sig_bytes.len() {
+            return Err(SignError::Serialization(
+                "signature components exceed the standardized size".into(),
+            ));
+        }
+        DefaultCoefficientSerde::pack_coeffs_into(
+            &temp_poly,
+            P::Z_BITS,
+            &mut sig_bytes[offset..end],
+        )
+        .map_err(SignError::from_algo)?;
+        offset = end;
     }
 
     // Pack h using HintBitPack encoding (FIPS 204 Algorithm 24)
     let hint_bytes = pack_hints_bitpacked::<P>(h_hint_poly)?;
-    sig_bytes.extend_from_slice(&hint_bytes);
+    let end = offset
+        .checked_add(hint_bytes.len())
+        .ok_or_else(|| SignError::Serialization("signature length overflow".into()))?;
+    if end > sig_bytes.len() {
+        return Err(SignError::Serialization(
+            "signature components exceed the standardized size".into(),
+        ));
+    }
+    sig_bytes[offset..end].copy_from_slice(&hint_bytes);
+    offset = end;
 
     // Final length check (no manual padding)
-    if sig_bytes.len() != P::SIGNATURE_SIZE {
+    if offset != P::SIGNATURE_SIZE {
         return Err(SignError::Serialization(format!(
             "Signature size mismatch: expected {}, got {}",
             P::SIGNATURE_SIZE,
-            sig_bytes.len(),
+            offset,
         )));
     }
 
-    Ok(sig_bytes)
+    // A successfully encoded signature is public. Transfer the exact
+    // allocation without copying; every error path above keeps it protected.
+    Ok(sig_bytes.into_inner().into_vec())
 }
 
 /// Packs w1 for computing challenge hash using FIPS 204 final w1Encode.
 /// Packs full gamma-bucket indices: 6 bits for ML-DSA-44, 4 bits for ML-DSA-65/87.
-pub fn pack_polyveck_w1<P: MlDsaSchemeParams>(w1_vec: &PolyVecK<P>) -> Result<Vec<u8>, SignError> {
+pub fn pack_polyveck_w1<P: MlDsaSchemeParams>(
+    w1_vec: &PolyVecK<P>,
+) -> Result<ZeroizingBytes, SignError> {
     let bits_per_coeff = w1_bits_needed::<P>();
     let maximum = (ML_DSA_Q - 1) / (2 * P::GAMMA2_PARAM) - 1;
-    let mut packed = Vec::with_capacity(P::K_DIM * ML_DSA_N * bits_per_coeff as usize / 8);
-    for poly in &w1_vec.polys {
+    let bytes_per_poly = ML_DSA_N * bits_per_coeff as usize / 8;
+    let total_len = P::K_DIM
+        .checked_mul(bytes_per_poly)
+        .ok_or_else(|| SignError::Serialization("w1 encoding length overflow".into()))?;
+    let mut packed = Zeroizing::new(boxed_bytes_zeroed(total_len));
+    for (index, poly) in w1_vec.polys.iter().enumerate() {
         for &coeff in &poly.coeffs {
             if coeff > maximum {
                 return Err(SignError::Serialization(
@@ -445,9 +476,13 @@ pub fn pack_polyveck_w1<P: MlDsaSchemeParams>(w1_vec: &PolyVecK<P>) -> Result<Ve
                 ));
             }
         }
-        let encoded = DefaultCoefficientSerde::pack_coeffs(poly, bits_per_coeff as usize)
-            .map_err(SignError::from_algo)?;
-        packed.extend_from_slice(&encoded);
+        let start = index * bytes_per_poly;
+        DefaultCoefficientSerde::pack_coeffs_into(
+            poly,
+            bits_per_coeff as usize,
+            &mut packed[start..start + bytes_per_poly],
+        )
+        .map_err(SignError::from_algo)?;
     }
 
     Ok(packed)
@@ -538,5 +573,22 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn signing_encodings_use_exact_sized_storage() {
+        let w1 = PolyVecK::<MlDsa44Params>::zero();
+        let packed_w1 = pack_polyveck_w1::<MlDsa44Params>(&w1).unwrap();
+        assert_eq!(packed_w1.capacity(), packed_w1.len());
+
+        let hints = PolyVecK::<MlDsa44Params>::zero();
+        let packed_hints = pack_hints_bitpacked::<MlDsa44Params>(&hints).unwrap();
+        assert_eq!(packed_hints.capacity(), packed_hints.len());
+
+        let z = PolyVecL::<MlDsa44Params>::zero();
+        let challenge = [0u8; MlDsa44Params::CHALLENGE_BYTES];
+        let signature = pack_signature::<MlDsa44Params>(&challenge, &z, &hints).unwrap();
+        assert_eq!(signature.len(), MlDsa44Params::SIGNATURE_SIZE);
+        assert_eq!(signature.capacity(), signature.len());
     }
 }

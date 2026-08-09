@@ -11,7 +11,7 @@ use dcrypt_algorithms::{
     error::Error as PrimitiveError,
     types::Nonce,
 };
-use dcrypt_internal::CryptoRng;
+use dcrypt_internal::{CryptoRng, ZeroizingBytes};
 
 use super::common::{
     ChaCha20Poly1305CiphertextPackage, ChaCha20Poly1305Key, ChaCha20Poly1305Nonce,
@@ -81,6 +81,22 @@ impl Aead for ChaCha20Poly1305Cipher {
 }
 
 impl ChaCha20Poly1305Cipher {
+    pub(crate) fn decrypt_protected(
+        &self,
+        nonce: &[u8; 12],
+        ciphertext: &[u8],
+        aad: Option<&[u8]>,
+    ) -> Result<ZeroizingBytes> {
+        validate::min_length(
+            "ChaCha20Poly1305 ciphertext",
+            ciphertext.len(),
+            CHACHA20POLY1305_TAG_SIZE,
+        )?;
+        self.cipher
+            .decrypt_with_nonce_protected(nonce, ciphertext, aad)
+            .map_err(|error| map_authentication_error(error, "ChaCha20Poly1305"))
+    }
+
     /// Generates a cipher and key using caller-owned randomness.
     pub fn generate<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<(Self, ChaCha20Poly1305Key)> {
         let key = ChaCha20Poly1305Key::generate(rng)?;

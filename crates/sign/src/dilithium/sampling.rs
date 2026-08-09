@@ -175,14 +175,14 @@ pub fn sample_challenge_c<P: MlDsaSchemeParams>(
     let mut xof = ShakeXof256::new();
     xof.update(c_tilde_seed).map_err(SignError::from_algo)?;
 
-    let mut signs = [0u8; 8];
-    xof.squeeze(&mut signs).map_err(SignError::from_algo)?;
+    let mut signs = Zeroizing::new([0u8; 8]);
+    xof.squeeze(&mut *signs).map_err(SignError::from_algo)?;
 
     let tau = tau as usize;
     for i in (MlDsaParams::N - tau)..MlDsaParams::N {
-        let mut byte = [0u8; 1];
+        let mut byte = Zeroizing::new([0u8; 1]);
         loop {
-            xof.squeeze(&mut byte).map_err(SignError::from_algo)?;
+            xof.squeeze(&mut *byte).map_err(SignError::from_algo)?;
             if usize::from(byte[0]) <= i {
                 break;
             }

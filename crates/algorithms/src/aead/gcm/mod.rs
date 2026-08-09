@@ -152,7 +152,10 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
     }
 
     /// Generate initial counter value J0
-    fn generate_j0<const N: usize>(&self, nonce: &Nonce<N>) -> Result<[u8; GCM_BLOCK_SIZE]>
+    fn generate_j0<const N: usize>(
+        &self,
+        nonce: &Nonce<N>,
+    ) -> Result<Zeroizing<[u8; GCM_BLOCK_SIZE]>>
     where
         Nonce<N>: AesGcmCompatible,
     {
@@ -161,7 +164,7 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
             "nonce_length",
             "GCM nonce must be between 1 and 16 bytes",
         )?;
-        let mut j0 = [0u8; GCM_BLOCK_SIZE];
+        let mut j0 = Zeroizing::new([0u8; GCM_BLOCK_SIZE]);
         if nonce.len() == 12 {
             j0[..12].copy_from_slice(nonce.as_ref());
             j0[15] = 1;
@@ -178,7 +181,7 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
             // second explicit padding update here produced a non-standard J0.
             g.update(nonce.as_ref())?;
             g.update_lengths(0, nonce.len() as u64)?;
-            j0 = g.finalize();
+            j0 = g.finalize_protected();
         }
         Ok(j0)
     }
@@ -195,13 +198,13 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
         let mut keystream = Zeroizing::new(boxed_bytes_zeroed(num_blocks * GCM_BLOCK_SIZE));
         let mut keystream_offset = 0usize;
 
-        let mut counter = *j0;
+        let mut counter = Zeroizing::new(*j0);
         let mut ctr_val =
             u32::from_be_bytes(counter[12..16].try_into().expect("four bytes")).wrapping_add(1);
         counter[12..16].copy_from_slice(&ctr_val.to_be_bytes());
 
         for _ in 0..num_blocks {
-            let mut block = Zeroizing::new(counter);
+            let mut block = Zeroizing::new(*counter);
             self.cipher.encrypt_block(block.as_mut())?;
             keystream[keystream_offset..keystream_offset + GCM_BLOCK_SIZE]
                 .copy_from_slice(block.as_ref());
@@ -258,7 +261,7 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
         let keystream = if plaintext.is_empty() {
             None
         } else {
-            Some(self.generate_keystream(&j0, plaintext.len())?)
+            Some(self.generate_keystream(&*j0, plaintext.len())?)
         };
         let output_len = plaintext
             .len()
@@ -274,7 +277,7 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
             }
         }
 
-        let full_tag = self.generate_tag(&j0, aad, &ciphertext)?;
+        let full_tag = self.generate_tag(&*j0, aad, &ciphertext)?;
         ciphertext.extend_from_slice(&full_tag[..self.tag_len]);
         Ok(ciphertext)
     }
@@ -289,6 +292,24 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
     where
         Nonce<N>: AesGcmCompatible,
     {
+        Ok(self
+            .internal_decrypt_protected(nonce, ciphertext, associated_data)?
+            .into_inner()
+            .into_vec())
+    }
+
+    /// Decrypt into exact-size storage that clears itself on all internal
+    /// error and drop paths. Callers should use this for intermediate
+    /// plaintext that has not yet crossed a public output boundary.
+    pub fn internal_decrypt_protected<const N: usize>(
+        &self,
+        nonce: &Nonce<N>,
+        ciphertext: &[u8],
+        associated_data: Option<&[u8]>,
+    ) -> Result<ZeroizingBytes>
+    where
+        Nonce<N>: AesGcmCompatible,
+    {
         // Length check is not a secret-dependent branch
         validate::min_length("GCM ciphertext", ciphertext.len(), self.tag_len)?;
 
@@ -298,11 +319,11 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
 
         // Generate initial counter and expected tag
         let j0 = self.generate_j0(nonce)?;
-        let full_expected = self.generate_tag(&j0, aad, ciphertext_data)?;
+        let full_expected = self.generate_tag(&*j0, aad, ciphertext_data)?;
         let expected_tag = &full_expected[..self.tag_len];
 
         // Generate keystream and decrypt data
-        let keystream = self.generate_keystream(&j0, ciphertext_len)?;
+        let keystream = self.generate_keystream(&*j0, ciphertext_len)?;
         let mut plaintext = Zeroizing::new(boxed_bytes_zeroed(ciphertext_len));
         for i in 0..ciphertext_len {
             plaintext[i] = ciphertext_data[i] ^ keystream[i];
@@ -317,7 +338,7 @@ impl<B: BlockCipher + Zeroize + ZeroizeOnDrop> Gcm<B> {
         if tag_matches.unwrap_u8() == 0 {
             Err(Error::Authentication { algorithm: "GCM" })
         } else {
-            Ok(plaintext.into_inner().into_vec())
+            Ok(plaintext)
         }
     }
 }

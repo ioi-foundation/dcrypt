@@ -7,7 +7,7 @@ use dcrypt_api::traits::symmetric::{DecryptOperation, EncryptOperation}; // Impo
 use dcrypt_api::traits::Pke;
 use dcrypt_api::traits::SymmetricCipher as ApiSymmetricCipherTrait;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::Zeroizing;
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -87,10 +87,10 @@ impl Pke for EciesP256 {
                 "ECDH resulted in point at infinity",
             )));
         }
-        let mut z_bytes = shared_point.x_coordinate_bytes();
+        let z_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
 
         let derived_key_material = derive_symmetric_key_hkdf_sha256(
-            &z_bytes,
+            &z_bytes[..],
             &r_bytes_uncompressed,
             &pk_recipient.0,
             CHACHA20POLY1305_KEY_LEN,
@@ -98,14 +98,12 @@ impl Pke for EciesP256 {
         )
         .map_err(ApiError::from)?;
 
-        let mut encryption_key_arr = [0u8; CHACHA20POLY1305_KEY_LEN];
+        let mut encryption_key_arr = Zeroizing::new([0u8; CHACHA20POLY1305_KEY_LEN]);
         encryption_key_arr.copy_from_slice(&derived_key_material);
 
         drop(ephemeral_sk_scalar);
-        z_bytes.zeroize();
 
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
-        encryption_key_arr.zeroize();
         let aead_nonce = Nonce::<CHACHA20POLY1305_NONCE_LEN>::random(rng)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
@@ -165,10 +163,10 @@ impl Pke for EciesP256 {
                 "ECDH resulted in point at infinity",
             )));
         }
-        let mut z_bytes = shared_point.x_coordinate_bytes();
+        let z_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
 
         let derived_key_material = derive_symmetric_key_hkdf_sha256(
-            &z_bytes,
+            &z_bytes[..],
             &ephemeral_public_key,
             &pk_recipient_bytes,
             CHACHA20POLY1305_KEY_LEN,
@@ -176,13 +174,10 @@ impl Pke for EciesP256 {
         )
         .map_err(ApiError::from)?;
 
-        let mut encryption_key_arr = [0u8; CHACHA20POLY1305_KEY_LEN];
+        let mut encryption_key_arr = Zeroizing::new([0u8; CHACHA20POLY1305_KEY_LEN]);
         encryption_key_arr.copy_from_slice(&derived_key_material);
 
-        z_bytes.zeroize();
-
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
-        encryption_key_arr.zeroize();
 
         // Zero-copy optimization: Move the vector into Ciphertext
         let aead_ct_api_obj = dcrypt_api::Ciphertext::new(aead_ciphertext_tag);

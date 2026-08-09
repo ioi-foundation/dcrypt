@@ -14,6 +14,7 @@ use dcrypt_api::{
 };
 use dcrypt_internal::{
     constant_time::ct_eq, zeroizing_bytes_from_slice, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
+    Zeroizing,
 };
 use dcrypt_params::traditional::ecdsa::NIST_P256;
 
@@ -123,11 +124,11 @@ impl EcdsaP256SecretKey {
     /// Parse a canonical, nonzero P-256 secret scalar.
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         let raw = ec::Scalar::deserialize(bytes).map_err(ApiError::from)?;
-        let mut serialized = [0u8; ec::P256_SCALAR_SIZE];
+        let mut serialized = Zeroizing::new([0u8; ec::P256_SCALAR_SIZE]);
         serialized.copy_from_slice(bytes);
         Ok(Self {
             raw,
-            bytes: serialized,
+            bytes: serialized.into_inner(),
         })
     }
 
@@ -171,7 +172,7 @@ impl SignatureTrait for EcdsaP256 {
         let (sk_scalar, pk_point) = ec::generate_keypair(rng).map_err(ApiError::from)?;
 
         // Serialize the private key scalar
-        let sk_bytes: [u8; ec::P256_SCALAR_SIZE] = sk_scalar.serialize();
+        let sk_bytes = Zeroizing::new(sk_scalar.serialize());
 
         // Verify the private key is non-zero (should never happen with proper generation)
         if sk_bytes.iter().all(|&b| b == 0) {
@@ -185,7 +186,7 @@ impl SignatureTrait for EcdsaP256 {
         // Create the secret key structure
         let secret_key = EcdsaP256SecretKey {
             raw: sk_scalar,
-            bytes: sk_bytes,
+            bytes: sk_bytes.into_inner(),
         };
 
         // Serialize public key in uncompressed format

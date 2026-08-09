@@ -55,7 +55,7 @@ A key design goal of this module is to provide type-safe and convenient ways to 
 -   **Key Types** (e.g., `ChaCha20Poly1305Key`, `Aes128Key`):
     *   Fixed-size arrays wrapped in structs that implement `Zeroize` and `ZeroizeOnDrop`.
     *   Provide fallible `generate(rng)` methods using caller-owned randomness.
-    *   Offer `to_secure_string()` and `from_secure_string()` for a simple, somewhat protected way to serialize/deserialize keys (primarily for illustrative or specific storage scenarios, not a replacement for robust key management systems).
+    *   Offer `to_secure_bytes()` and `from_secure_bytes()` for the prefixed base64 key wire format. Exported ASCII is held in exact-size storage whose initialized bytes are explicitly cleared on drop rather than a capacity-bearing, non-clearing `String`; `from_secure_string()` is retained only to parse caller-owned legacy input. Base64 does not encrypt or otherwise protect a key, and the project-wide compiler/register-copy limitations still apply.
 -   **Nonce Types** (e.g., `ChaCha20Poly1305Nonce`, `GcmNonce`):
     *   Fixed-size arrays ensuring correct nonce length for the algorithm.
     *   Provide fallible `generate(rng)` methods.

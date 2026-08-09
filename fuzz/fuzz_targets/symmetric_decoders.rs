@@ -2,7 +2,7 @@
 #![forbid(unsafe_code)]
 
 use dcrypt_symmetric::{
-    Aead, Aes128Gcm, Aes128Key, AesCiphertextPackage, ChaCha20Poly1305Cipher,
+    Aead, Aes128Gcm, Aes128Key, Aes256Key, AesCiphertextPackage, ChaCha20Poly1305Cipher,
     ChaCha20Poly1305CiphertextPackage, ChaCha20Poly1305Key, ChaCha20Poly1305Nonce, GcmNonce,
     SymmetricCipher, XChaCha20Poly1305Cipher, XChaCha20Poly1305Nonce,
 };
@@ -24,8 +24,13 @@ fn fixed<const N: usize>(input: &[u8], offset: usize) -> [u8; N] {
 fuzz_target!(|input: &[u8]| {
     let input = &input[..input.len().min(INPUT_MAX)];
 
+    let _ = Aes128Key::from_secure_bytes(input);
+    let _ = Aes256Key::from_secure_bytes(input);
+    let _ = ChaCha20Poly1305Key::from_secure_bytes(input);
+
     if let Ok(serialized) = core::str::from_utf8(input) {
         let _ = Aes128Key::from_secure_string(serialized);
+        let _ = Aes256Key::from_secure_string(serialized);
         let _ = ChaCha20Poly1305Key::from_secure_string(serialized);
         let _ = GcmNonce::from_string(serialized);
         let _ = ChaCha20Poly1305Nonce::from_string(serialized);

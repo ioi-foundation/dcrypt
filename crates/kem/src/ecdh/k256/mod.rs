@@ -279,10 +279,8 @@ impl Kem for EcdhK256 {
             &ephemeral_point.serialize_compressed(),
             &public_key_recipient.0,
         );
-        let ss_bytes = Zeroizing::new(
-            ec_k256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
-                .map_err(|e| ApiError::from(KemError::from(e)))?,
-        );
+        let ss_bytes = ec_k256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         let shared_secret = EcdhK256SharedSecret(ApiKey::new(&ss_bytes[..]));
         drop(ephemeral_scalar);
         Ok((ciphertext, shared_secret))
@@ -320,10 +318,8 @@ impl Kem for EcdhK256 {
             &ciphertext_ephemeral_pk.0,
             &q_r_point.serialize_compressed(),
         );
-        let ss_bytes = Zeroizing::new(
-            ec_k256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
-                .map_err(|e| ApiError::from(KemError::from(e)))?,
-        );
+        let ss_bytes = ec_k256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
         let shared_secret = EcdhK256SharedSecret(ApiKey::new(&ss_bytes[..]));
         Ok(shared_secret)
     }

@@ -6,7 +6,7 @@
 
 #![forbid(unsafe_code)]
 
-use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq, Zeroize, Zeroizing};
 
 const LIMB_BITS: u32 = 51;
 const LIMB_MASK: u64 = (1u64 << LIMB_BITS) - 1;
@@ -29,6 +29,18 @@ const P_PLUS_THREE_OVER_EIGHT: [u8; 32] = [
 /// A field element modulo `2^255 - 19`.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct FieldElement([u64; 5]);
+
+impl Default for FieldElement {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl Zeroize for FieldElement {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
 
 impl FieldElement {
     pub(crate) const fn zero() -> Self {
@@ -58,21 +70,21 @@ impl FieldElement {
     }
 
     pub(crate) fn add(&self, rhs: &Self) -> Self {
-        let mut limbs = [0u128; 5];
+        let mut limbs = Zeroizing::new([0u128; 5]);
         for (index, limb) in limbs.iter_mut().enumerate() {
             *limb = u128::from(self.0[index]) + u128::from(rhs.0[index]);
         }
-        Self(reduce_limbs(limbs))
+        Self(reduce_limbs(limbs).into_inner())
     }
 
     pub(crate) fn sub(&self, rhs: &Self) -> Self {
         // Adding 2p before subtracting keeps every unsigned limb non-negative.
-        let mut limbs = [0u128; 5];
+        let mut limbs = Zeroizing::new([0u128; 5]);
         for (index, limb) in limbs.iter_mut().enumerate() {
             *limb = u128::from(self.0[index]) + 2 * u128::from(MODULUS_LIMBS[index])
                 - u128::from(rhs.0[index]);
         }
-        Self(reduce_limbs(limbs))
+        Self(reduce_limbs(limbs).into_inner())
     }
 
     pub(crate) fn neg(&self) -> Self {
@@ -84,19 +96,23 @@ impl FieldElement {
     }
 
     pub(crate) fn mul(&self, rhs: &Self) -> Self {
-        let a = self.0.map(u128::from);
-        let b = rhs.0.map(u128::from);
+        let mut a = Zeroizing::new([0u128; 5]);
+        let mut b = Zeroizing::new([0u128; 5]);
+        for index in 0..5 {
+            a[index] = u128::from(self.0[index]);
+            b[index] = u128::from(rhs.0[index]);
+        }
 
         // Terms whose limb index wraps past 255 bits acquire a factor of 19,
         // since 2^255 == 19 (mod p).
-        let limbs = [
+        let limbs = Zeroizing::new([
             a[0] * b[0] + 19 * (a[1] * b[4] + a[2] * b[3] + a[3] * b[2] + a[4] * b[1]),
             a[0] * b[1] + a[1] * b[0] + 19 * (a[2] * b[4] + a[3] * b[3] + a[4] * b[2]),
             a[0] * b[2] + a[1] * b[1] + a[2] * b[0] + 19 * (a[3] * b[4] + a[4] * b[3]),
             a[0] * b[3] + a[1] * b[2] + a[2] * b[1] + a[3] * b[0] + 19 * a[4] * b[4],
             a[0] * b[4] + a[1] * b[3] + a[2] * b[2] + a[3] * b[1] + a[4] * b[0],
-        ];
-        Self(reduce_limbs(limbs))
+        ]);
+        Self(reduce_limbs(limbs).into_inner())
     }
 
     pub(crate) fn square(&self) -> Self {
@@ -121,16 +137,17 @@ impl FieldElement {
     }
 
     pub(crate) fn is_zero(&self) -> Choice {
-        self.to_bytes().ct_eq(&[0u8; 32])
+        let bytes = self.to_bytes();
+        bytes[..].ct_eq(&[0u8; 32])
     }
 
     pub(crate) fn is_negative(&self) -> Choice {
         Choice::from(self.to_bytes()[0] & 1)
     }
 
-    pub(crate) fn to_bytes(self) -> [u8; 32] {
-        let limbs = canonical_limbs(self.0);
-        let mut bytes = [0u8; 32];
+    pub(crate) fn to_bytes(&self) -> Zeroizing<[u8; 32]> {
+        let limbs = canonical_limbs(&self.0);
+        let mut bytes = Zeroizing::new([0u8; 32]);
         for bit in 0..255 {
             let value = ((limbs[bit / LIMB_BITS as usize] >> (bit % LIMB_BITS as usize)) & 1) as u8;
             bytes[bit / 8] |= value << (bit % 8);
@@ -139,14 +156,16 @@ impl FieldElement {
     }
 
     fn pow(&self, exponent: &[u8; 32]) -> Self {
-        let mut accumulator = Self::one();
+        let mut accumulator = Zeroizing::new(Self::one());
         for bit in (0..256).rev() {
-            let squared = accumulator.square();
-            let multiplied = squared.mul(self);
+            let squared = Zeroizing::new(accumulator.square());
+            let multiplied = Zeroizing::new(squared.mul(self));
             let choice = Choice::from((exponent[bit / 8] >> (bit % 8)) & 1);
-            accumulator = Self::conditional_select(&squared, &multiplied, choice);
+            let selected = Zeroizing::new(Self::conditional_select(&squared, &multiplied, choice));
+            accumulator.zeroize();
+            *accumulator = *selected;
         }
-        accumulator
+        accumulator.into_inner()
     }
 }
 
@@ -162,11 +181,13 @@ impl ConditionallySelectable for FieldElement {
 
 impl ConstantTimeEq for FieldElement {
     fn ct_eq(&self, other: &Self) -> Choice {
-        (*self).to_bytes().ct_eq(&(*other).to_bytes())
+        let left = self.to_bytes();
+        let right = other.to_bytes();
+        left[..].ct_eq(&right[..])
     }
 }
 
-fn reduce_limbs(mut limbs: [u128; 5]) -> [u64; 5] {
+fn reduce_limbs(mut limbs: Zeroizing<[u128; 5]>) -> Zeroizing<[u64; 5]> {
     // Three fixed carry rounds are sufficient for the multiplication bounds
     // above and avoid any data-dependent reduction loop.
     for _ in 0..3 {
@@ -180,16 +201,20 @@ fn reduce_limbs(mut limbs: [u128; 5]) -> [u64; 5] {
         limbs[0] += carry * 19;
     }
 
-    let mut result = [0u64; 5];
-    for (destination, source) in result.iter_mut().zip(limbs) {
+    let mut result = Zeroizing::new([0u64; 5]);
+    for (destination, source) in result.iter_mut().zip(limbs.iter().copied()) {
         *destination = source as u64;
     }
     result
 }
 
-fn canonical_limbs(limbs: [u64; 5]) -> [u64; 5] {
-    let reduced = reduce_limbs(limbs.map(u128::from));
-    let mut difference = [0u64; 5];
+fn canonical_limbs(limbs: &[u64; 5]) -> Zeroizing<[u64; 5]> {
+    let mut widened = Zeroizing::new([0u128; 5]);
+    for (destination, source) in widened.iter_mut().zip(limbs) {
+        *destination = u128::from(*source);
+    }
+    let reduced = reduce_limbs(widened);
+    let mut difference = Zeroizing::new([0u64; 5]);
     let mut borrow = 0u64;
     const RADIX: u64 = 1u64 << LIMB_BITS;
 
@@ -201,7 +226,7 @@ fn canonical_limbs(limbs: [u64; 5]) -> [u64; 5] {
 
     // No final borrow means the original value was at least p.
     let subtract = Choice::from((borrow ^ 1) as u8);
-    let mut result = [0u64; 5];
+    let mut result = Zeroizing::new([0u64; 5]);
     for index in 0..5 {
         result[index] = u64::conditional_select(&reduced[index], &difference[index], subtract);
     }
@@ -245,7 +270,7 @@ mod tests {
         let mut p_minus_one = MODULUS_BYTES;
         p_minus_one[0] -= 1;
         let field = FieldElement::from_canonical_bytes(&p_minus_one).unwrap();
-        assert_eq!(field.to_bytes(), p_minus_one);
+        assert_eq!(&*field.to_bytes(), &p_minus_one);
     }
 
     #[test]
@@ -271,7 +296,7 @@ mod tests {
             a.mul(&b).to_bytes(),
             field("83ebb0050ff2d3d928e636402711238253bce1e8f630bcbd5ab8fb49c89be956").to_bytes()
         );
-        assert_eq!(a.add(&b).to_bytes(), [0x1f; 32]);
+        assert_eq!(&*a.add(&b).to_bytes(), &[0x1f; 32]);
         assert_eq!(
             a.sub(&b).to_bytes(),
             field("e1e2e4e6e8eaeceef0f2f4f6f8fafcfe00030507090b0d0f11131517191b1d1f").to_bytes()

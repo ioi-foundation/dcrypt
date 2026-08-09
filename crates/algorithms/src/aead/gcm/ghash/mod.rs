@@ -29,7 +29,7 @@
 //! the public input lengths, as permitted by the GCM interface.
 
 use crate::error::{validate, Error, Result};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 const GCM_BLOCK_SIZE: usize = 16;
 
@@ -64,12 +64,13 @@ impl GHash {
     /// # Returns
     /// A new `GHash` instance with `y` initialized to zero.
     pub fn new(h: &[u8; GCM_BLOCK_SIZE]) -> Self {
-        let mut h_copy = [0u8; GCM_BLOCK_SIZE];
+        let mut h_copy = Zeroizing::new([0u8; GCM_BLOCK_SIZE]);
         h_copy.copy_from_slice(h);
         let y = [0u8; GCM_BLOCK_SIZE];
-        let instance = Self { h: h_copy, y };
-        h_copy.zeroize();
-        instance
+        Self {
+            h: h_copy.into_inner(),
+            y,
+        }
     }
 
     /// Updates the hash with input data, processing it in 16-byte blocks.
@@ -135,7 +136,8 @@ impl GHash {
         }
 
         // Multiply by H in GF(2^128)
-        self.y = Self::gf_multiply(&self.y, &self.h);
+        let product = Self::gf_multiply(&self.y, &self.h);
+        self.y.copy_from_slice(&*product);
 
         Ok(())
     }
@@ -173,6 +175,11 @@ impl GHash {
         self.y
     }
 
+    /// Returns the final hash value in wiping storage for internal keyed use.
+    pub(crate) fn finalize_protected(&self) -> Zeroizing<[u8; GCM_BLOCK_SIZE]> {
+        Zeroizing::new(self.y)
+    }
+
     /// Performs multiplication in GF(2^128) according to the NIST SP 800-38D specification.
     ///
     /// This implements GHASH's specific bit ordering convention where:
@@ -187,9 +194,9 @@ impl GHash {
     ///
     /// # Returns
     /// A 16-byte array representing the product in GF(2^128).
-    fn gf_multiply(x: &[u8; 16], y: &[u8; 16]) -> [u8; 16] {
-        let mut z = [0u8; 16];
-        let mut v = *y;
+    fn gf_multiply(x: &[u8; 16], y: &[u8; 16]) -> Zeroizing<[u8; 16]> {
+        let mut z = Zeroizing::new([0u8; 16]);
+        let mut v = Zeroizing::new(*y);
 
         // Process each byte of x
         for x_byte in x.iter() {
@@ -214,7 +221,7 @@ impl GHash {
 
                 // Right shift V by 1 bit (in big-endian representation)
                 let mut carry = 0;
-                for v_byte in &mut v {
+                for v_byte in v.iter_mut() {
                     let next_carry = *v_byte & 1;
                     *v_byte = (*v_byte >> 1) | (carry << 7);
                     carry = next_carry;

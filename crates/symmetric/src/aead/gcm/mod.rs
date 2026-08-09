@@ -32,7 +32,7 @@ use dcrypt_algorithms::{
     types::Nonce,
 };
 use dcrypt_api::types::SecretBytes;
-use dcrypt_internal::CryptoRng;
+use dcrypt_internal::{CryptoRng, ZeroizingBytes};
 
 use crate::{
     aes::keys::{Aes128Key, Aes256Key},
@@ -56,6 +56,36 @@ pub struct Aes128Gcm {
 /// AES-256-GCM implementation.
 pub struct Aes256Gcm {
     pub(crate) key: Aes256Key,
+}
+
+impl Aes128Gcm {
+    pub(crate) fn decrypt_protected(
+        &self,
+        nonce: &[u8; 12],
+        ciphertext: &[u8],
+        aad: Option<&[u8]>,
+    ) -> Result<ZeroizingBytes> {
+        let key_bytes = SecretBytes::<16>::from_slice(self.key.as_bytes())?;
+        let primitive_nonce = Nonce::<12>::new(*nonce);
+        let gcm = Gcm::new(Aes128::new(&key_bytes))?;
+        gcm.internal_decrypt_protected(&primitive_nonce, ciphertext, aad)
+            .map_err(|error| map_authentication_error(error, "AES-128-GCM"))
+    }
+}
+
+impl Aes256Gcm {
+    pub(crate) fn decrypt_protected(
+        &self,
+        nonce: &[u8; 12],
+        ciphertext: &[u8],
+        aad: Option<&[u8]>,
+    ) -> Result<ZeroizingBytes> {
+        let key_bytes = SecretBytes::<32>::from_slice(self.key.as_bytes())?;
+        let primitive_nonce = Nonce::<12>::new(*nonce);
+        let gcm = Gcm::new(Aes256::new(&key_bytes))?;
+        gcm.internal_decrypt_protected(&primitive_nonce, ciphertext, aad)
+            .map_err(|error| map_authentication_error(error, "AES-256-GCM"))
+    }
 }
 
 impl SymmetricCipher for Aes128Gcm {

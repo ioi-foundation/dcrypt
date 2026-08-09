@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use crate::types::nonce::ChaCha20Compatible;
 use crate::types::Nonce;
 use dcrypt_common::security::{EphemeralSecret, SecretBuffer};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 /// Size of ChaCha20 key in bytes
 pub const CHACHA20_KEY_SIZE: usize = 32;
@@ -291,8 +291,8 @@ impl ChaCha20 {
 pub(crate) fn hchacha20(
     key: &[u8; CHACHA20_KEY_SIZE],
     nonce: &[u8; 16],
-) -> [u8; CHACHA20_KEY_SIZE] {
-    let mut state = [0u32; 16];
+) -> Zeroizing<[u8; CHACHA20_KEY_SIZE]> {
+    let mut state = Zeroizing::new([0u32; 16]);
     state[0] = 0x6170_7865;
     state[1] = 0x3320_646e;
     state[2] = 0x7962_2d32;
@@ -305,25 +305,26 @@ pub(crate) fn hchacha20(
     }
 
     for _ in 0..10 {
-        ChaCha20::quarter_round(&mut state, 0, 4, 8, 12);
-        ChaCha20::quarter_round(&mut state, 1, 5, 9, 13);
-        ChaCha20::quarter_round(&mut state, 2, 6, 10, 14);
-        ChaCha20::quarter_round(&mut state, 3, 7, 11, 15);
-        ChaCha20::quarter_round(&mut state, 0, 5, 10, 15);
-        ChaCha20::quarter_round(&mut state, 1, 6, 11, 12);
-        ChaCha20::quarter_round(&mut state, 2, 7, 8, 13);
-        ChaCha20::quarter_round(&mut state, 3, 4, 9, 14);
+        ChaCha20::quarter_round(&mut state[..], 0, 4, 8, 12);
+        ChaCha20::quarter_round(&mut state[..], 1, 5, 9, 13);
+        ChaCha20::quarter_round(&mut state[..], 2, 6, 10, 14);
+        ChaCha20::quarter_round(&mut state[..], 3, 7, 11, 15);
+        ChaCha20::quarter_round(&mut state[..], 0, 5, 10, 15);
+        ChaCha20::quarter_round(&mut state[..], 1, 6, 11, 12);
+        ChaCha20::quarter_round(&mut state[..], 2, 7, 8, 13);
+        ChaCha20::quarter_round(&mut state[..], 3, 4, 9, 14);
     }
 
-    let mut words = [
+    let words = Zeroizing::new([
         state[0], state[1], state[2], state[3], state[12], state[13], state[14], state[15],
-    ];
-    let mut out = [0u8; CHACHA20_KEY_SIZE];
+    ]);
+    let mut out = Zeroizing::new([0u8; CHACHA20_KEY_SIZE]);
     for (chunk, word) in out.chunks_exact_mut(4).zip(words.iter().copied()) {
-        chunk.copy_from_slice(&word.to_le_bytes());
+        chunk[0] = word as u8;
+        chunk[1] = (word >> 8) as u8;
+        chunk[2] = (word >> 16) as u8;
+        chunk[3] = (word >> 24) as u8;
     }
-    words.zeroize();
-    state.zeroize();
     out
 }
 

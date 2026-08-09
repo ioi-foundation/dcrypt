@@ -121,6 +121,17 @@ impl<T: Zeroize> Zeroizing<T> {
     }
 }
 
+impl<const N: usize> Zeroizing<[u8; N]> {
+    /// Move a protected byte array out while leaving an all-zero replacement.
+    ///
+    /// This is the fixed-array counterpart to [`Self::into_inner`] for array
+    /// lengths whose standard-library `Default` implementation is unavailable
+    /// on the supported compiler baseline.
+    pub fn into_inner_array(mut self) -> [u8; N] {
+        core::mem::replace(&mut self.0, [0u8; N])
+    }
+}
+
 impl<T: Zeroize> Deref for Zeroizing<T> {
     type Target = T;
 
@@ -276,7 +287,8 @@ impl Drop for ZeroGuard<'_> {
 #[cfg(all(test, any(feature = "alloc", feature = "std")))]
 mod tests {
     use super::{
-        boxed_bytes_from_slice, boxed_bytes_zeroed, secure_clone_and_zero, Zeroize, ZeroizingBytes,
+        boxed_bytes_from_slice, boxed_bytes_zeroed, secure_clone_and_zero, Zeroize, Zeroizing,
+        ZeroizingBytes,
     };
 
     #[cfg(not(feature = "std"))]
@@ -313,5 +325,11 @@ mod tests {
         let bytes = ZeroizingBytes::new(boxed_bytes_from_slice(&[1, 2, 3]));
         let inner = bytes.into_inner();
         assert_eq!(&*inner, &[1, 2, 3]);
+    }
+
+    #[test]
+    fn arbitrary_length_byte_array_can_be_moved_out_safely() {
+        let bytes = Zeroizing::new([0x5a; 66]);
+        assert_eq!(bytes.into_inner_array(), [0x5a; 66]);
     }
 }

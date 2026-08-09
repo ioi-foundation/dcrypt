@@ -7,7 +7,7 @@ use super::framed::{FramedDecryptStream, FramedEncryptStream};
 use super::{StreamingDecrypt, StreamingEncrypt};
 use crate::aead::chacha20poly1305::{ChaCha20Poly1305Cipher, ChaCha20Poly1305Key};
 use crate::error::{Result, SymmetricResultExt};
-use dcrypt_internal::CryptoRng;
+use dcrypt_internal::{CryptoRng, Zeroizing};
 use std::io::{Read, Write};
 
 /// ChaCha20-Poly1305 writer using authenticated version-2 frames.
@@ -24,9 +24,9 @@ pub fn encrypt_file<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     rng: &mut Rng,
 ) -> Result<()> {
     let mut stream = ChaCha20Poly1305EncryptStream::new(writer, key, aad, rng)?;
-    let mut buffer = [0u8; 8192];
+    let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = reader.read(&mut buffer).map_io_err()?;
+        let read = reader.read(&mut buffer[..]).map_io_err()?;
         if read == 0 {
             break;
         }
@@ -44,9 +44,9 @@ pub fn decrypt_file<R: Read, W: Write>(
     aad: Option<&[u8]>,
 ) -> Result<()> {
     let mut stream = ChaCha20Poly1305DecryptStream::new(reader, key, aad)?;
-    let mut buffer = [0u8; 8192];
+    let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = stream.read(&mut buffer)?;
+        let read = stream.read(&mut buffer[..])?;
         if read == 0 {
             break;
         }

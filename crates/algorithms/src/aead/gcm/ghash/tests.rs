@@ -61,7 +61,7 @@ fn test_gf_multiply_zero() {
 
     let result = GHash::gf_multiply(&x, &zero);
 
-    assert_eq!(result, zero);
+    assert_eq!(&*result, &zero);
 }
 
 #[test]

@@ -172,10 +172,10 @@ impl AeadCipher for ChaCha20Poly1305Cipher {
     type Key = SecretBytes<32>;
 
     fn new(key: &Self::Key) -> Result<Self> {
-        let mut key_array = [0u8; 32];
+        let mut key_array = Zeroizing::new([0u8; 32]);
         key_array.copy_from_slice(key.as_ref());
 
-        let inner = chacha20poly1305::ChaCha20Poly1305::new(&key_array);
+        let inner = chacha20poly1305::ChaCha20Poly1305::new(&*key_array);
 
         Ok(Self { inner })
     }

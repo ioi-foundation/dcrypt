@@ -89,7 +89,7 @@ impl XChaCha20Poly1305 {
             .as_ref()
             .try_into()
             .expect("SecretBuffer has the declared XChaCha20 key size");
-        let subkey = Zeroizing::new(hchacha20(key, &hchacha_nonce));
+        let subkey = hchacha20(key, &hchacha_nonce);
 
         // XChaCha20's IETF ChaCha20 nonce is 32 zero bits followed by the
         // final 64 bits of the extended nonce.

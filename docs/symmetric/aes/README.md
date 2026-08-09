@@ -8,7 +8,7 @@ This module within the `dcrypt-symmetric` crate focuses on providing high-level 
     *   **`Aes128Key`**: A type-safe wrapper for 128-bit (16-byte) AES keys.
         *   Implements `Clone`, `Zeroize`, and `ZeroizeOnDrop`.
         *   Provides `new([u8; 16])`, fallible `generate(rng)` using caller-owned randomness, and `as_bytes()`.
-        *   Includes `to_secure_string()` and `from_secure_string()` for a basic, somewhat protected string serialization (base64 encoded with a prefix).
+        *   Includes `to_secure_bytes()` and `from_secure_bytes()` for the prefixed base64 wire format. The exporter returns exact-size storage whose initialized bytes are explicitly cleared on drop instead of a non-clearing `String`; `from_secure_string()` remains only as an input compatibility parser for caller-owned legacy strings. Base64 is an encoding, not key protection, and the project-wide compiler/register-copy limitations still apply.
     *   **`Aes256Key`**: A type-safe wrapper for 256-bit (32-byte) AES keys.
         *   Similar features and security properties as `Aes128Key`.
     *   **Key Derivation**:

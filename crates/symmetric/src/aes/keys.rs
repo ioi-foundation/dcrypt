@@ -1,10 +1,11 @@
 //! Key types for AES-based ciphers.
 
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use core::fmt;
 use dcrypt_algorithms::{hash::Sha256, kdf::Pbkdf2};
-use dcrypt_internal::{CryptoRng, Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_api::ZeroizingBytes;
+use dcrypt_internal::{boxed_bytes_zeroed, CryptoRng, Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_params::utils::symmetric::{AES128_KEY_SIZE, AES256_KEY_SIZE};
 
 use crate::error::{
@@ -23,9 +24,9 @@ impl Aes128Key {
 
     /// Creates a key using caller-owned cryptographic randomness.
     pub fn generate<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self> {
-        let mut key = [0u8; AES128_KEY_SIZE];
-        fill_random(rng, &mut key, "AES-128 key generation")?;
-        Ok(Self(key))
+        let mut key = Zeroizing::new([0u8; AES128_KEY_SIZE]);
+        fill_random(rng, &mut key[..], "AES-128 key generation")?;
+        Ok(Self(key.into_inner()))
     }
 
     /// Returns the raw key bytes.
@@ -33,30 +34,33 @@ impl Aes128Key {
         &self.0
     }
 
-    /// Serializes the key for storage.
-    pub fn to_secure_string(&self) -> String {
-        format!("dcrypt-AES128-KEY:{}", STANDARD.encode(self.as_bytes()))
+    /// Serializes the key into exact-size ASCII storage whose initialized
+    /// bytes are explicitly cleared on drop.
+    pub fn to_secure_bytes(&self) -> ZeroizingBytes {
+        encode_secure_key(b"dcrypt-AES128-KEY:", self.as_bytes())
     }
 
-    /// Loads a key from its serialized format.
-    pub fn from_secure_string(serialized: &str) -> Result<Self> {
+    /// Loads a key from its serialized byte format.
+    pub fn from_secure_bytes(serialized: &[u8]) -> Result<Self> {
+        const PREFIX: &[u8] = b"dcrypt-AES128-KEY:";
         validate_format(
-            serialized.starts_with("dcrypt-AES128-KEY:"),
+            serialized.starts_with(PREFIX),
             "key deserialization",
             "invalid key format",
         )?;
 
-        let encoded = &serialized["dcrypt-AES128-KEY:".len()..];
-        let key_bytes = Zeroizing::new(
-            STANDARD
-                .decode(encoded)
-                .map_err(|_| serialization_error("base64 decode"))?,
-        );
-        validate::length("AES-128 key", key_bytes.len(), AES128_KEY_SIZE)?;
+        let encoded = &serialized[PREFIX.len()..];
+        let mut key = Zeroizing::new([0u8; AES128_KEY_SIZE]);
+        let decoded_len = STANDARD
+            .decode_slice(encoded, &mut key[..])
+            .map_err(|_| serialization_error("base64 decode"))?;
+        validate::length("AES-128 key", decoded_len, AES128_KEY_SIZE)?;
+        Ok(Self(key.into_inner()))
+    }
 
-        let mut key = [0u8; AES128_KEY_SIZE];
-        key.copy_from_slice(&key_bytes);
-        Ok(Self(key))
+    /// Loads a key from the legacy caller-owned string representation.
+    pub fn from_secure_string(serialized: &str) -> Result<Self> {
+        Self::from_secure_bytes(serialized.as_bytes())
     }
 }
 
@@ -92,9 +96,9 @@ impl Aes256Key {
 
     /// Creates a key using caller-owned cryptographic randomness.
     pub fn generate<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self> {
-        let mut key = [0u8; AES256_KEY_SIZE];
-        fill_random(rng, &mut key, "AES-256 key generation")?;
-        Ok(Self(key))
+        let mut key = Zeroizing::new([0u8; AES256_KEY_SIZE]);
+        fill_random(rng, &mut key[..], "AES-256 key generation")?;
+        Ok(Self(key.into_inner()))
     }
 
     /// Returns the raw key bytes.
@@ -102,30 +106,33 @@ impl Aes256Key {
         &self.0
     }
 
-    /// Serializes the key for storage.
-    pub fn to_secure_string(&self) -> String {
-        format!("dcrypt-AES256-KEY:{}", STANDARD.encode(self.as_bytes()))
+    /// Serializes the key into exact-size ASCII storage whose initialized
+    /// bytes are explicitly cleared on drop.
+    pub fn to_secure_bytes(&self) -> ZeroizingBytes {
+        encode_secure_key(b"dcrypt-AES256-KEY:", self.as_bytes())
     }
 
-    /// Loads a key from its serialized format.
-    pub fn from_secure_string(serialized: &str) -> Result<Self> {
+    /// Loads a key from its serialized byte format.
+    pub fn from_secure_bytes(serialized: &[u8]) -> Result<Self> {
+        const PREFIX: &[u8] = b"dcrypt-AES256-KEY:";
         validate_format(
-            serialized.starts_with("dcrypt-AES256-KEY:"),
+            serialized.starts_with(PREFIX),
             "key deserialization",
             "invalid key format",
         )?;
 
-        let encoded = &serialized["dcrypt-AES256-KEY:".len()..];
-        let key_bytes = Zeroizing::new(
-            STANDARD
-                .decode(encoded)
-                .map_err(|_| serialization_error("base64 decode"))?,
-        );
-        validate::length("AES-256 key", key_bytes.len(), AES256_KEY_SIZE)?;
+        let encoded = &serialized[PREFIX.len()..];
+        let mut key = Zeroizing::new([0u8; AES256_KEY_SIZE]);
+        let decoded_len = STANDARD
+            .decode_slice(encoded, &mut key[..])
+            .map_err(|_| serialization_error("base64 decode"))?;
+        validate::length("AES-256 key", decoded_len, AES256_KEY_SIZE)?;
+        Ok(Self(key.into_inner()))
+    }
 
-        let mut key = [0u8; AES256_KEY_SIZE];
-        key.copy_from_slice(&key_bytes);
-        Ok(Self(key))
+    /// Loads a key from the legacy caller-owned string representation.
+    pub fn from_secure_string(serialized: &str) -> Result<Self> {
+        Self::from_secure_bytes(serialized.as_bytes())
     }
 }
 
@@ -149,14 +156,26 @@ impl fmt::Debug for Aes256Key {
     }
 }
 
+fn encode_secure_key(prefix: &[u8], key: &[u8]) -> ZeroizingBytes {
+    let encoded_len = base64::encoded_len(key.len(), true)
+        .expect("fixed-size AES key encoding length cannot overflow");
+    let mut serialized = Zeroizing::new(boxed_bytes_zeroed(prefix.len() + encoded_len));
+    serialized[..prefix.len()].copy_from_slice(prefix);
+    let written = STANDARD
+        .encode_slice(key, &mut serialized[prefix.len()..])
+        .expect("exact base64 output allocation must be sufficient");
+    debug_assert_eq!(written, encoded_len);
+    serialized
+}
+
 /// Derives an AES-128 key with PBKDF2-HMAC-SHA-256.
 pub fn derive_aes128_key(password: &[u8], salt: &[u8], iterations: u32) -> Result<Aes128Key> {
     validate_derivation_inputs(password, salt, iterations)?;
     let derived = Pbkdf2::<Sha256>::pbkdf2(password, salt, iterations, AES128_KEY_SIZE)
         .map_err(from_primitive_error)?;
-    let mut key = [0u8; AES128_KEY_SIZE];
+    let mut key = Zeroizing::new([0u8; AES128_KEY_SIZE]);
     key.copy_from_slice(&derived);
-    Ok(Aes128Key(key))
+    Ok(Aes128Key(key.into_inner()))
 }
 
 /// Derives an AES-256 key with PBKDF2-HMAC-SHA-256.
@@ -164,9 +183,9 @@ pub fn derive_aes256_key(password: &[u8], salt: &[u8], iterations: u32) -> Resul
     validate_derivation_inputs(password, salt, iterations)?;
     let derived = Pbkdf2::<Sha256>::pbkdf2(password, salt, iterations, AES256_KEY_SIZE)
         .map_err(from_primitive_error)?;
-    let mut key = [0u8; AES256_KEY_SIZE];
+    let mut key = Zeroizing::new([0u8; AES256_KEY_SIZE]);
     key.copy_from_slice(&derived);
-    Ok(Aes256Key(key))
+    Ok(Aes256Key(key.into_inner()))
 }
 
 /// Generates a salt using caller-owned cryptographic randomness.
@@ -209,13 +228,33 @@ mod tests {
     }
 
     #[test]
-    fn secure_string_round_trip() {
-        let key = Aes128Key::new([0x42; AES128_KEY_SIZE]);
+    fn secure_bytes_round_trip_uses_exact_storage() {
+        let key128 = Aes128Key::new([0x42; AES128_KEY_SIZE]);
+        let serialized128 = key128.to_secure_bytes();
+        assert_eq!(serialized128.capacity(), serialized128.len());
         assert_eq!(
-            Aes128Key::from_secure_string(&key.to_secure_string())
+            &serialized128[..],
+            b"dcrypt-AES128-KEY:QkJCQkJCQkJCQkJCQkJCQg=="
+        );
+        assert_eq!(
+            Aes128Key::from_secure_bytes(&serialized128)
                 .unwrap()
                 .as_bytes(),
-            key.as_bytes()
+            key128.as_bytes()
+        );
+
+        let key256 = Aes256Key::new([0x24; AES256_KEY_SIZE]);
+        let serialized256 = key256.to_secure_bytes();
+        assert_eq!(serialized256.capacity(), serialized256.len());
+        assert_eq!(
+            &serialized256[..],
+            b"dcrypt-AES256-KEY:JCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQ="
+        );
+        assert_eq!(
+            Aes256Key::from_secure_bytes(&serialized256)
+                .unwrap()
+                .as_bytes(),
+            key256.as_bytes()
         );
     }
 }

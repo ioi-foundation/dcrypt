@@ -28,7 +28,9 @@ use dcrypt_api::types::Ciphertext;
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::constant_time::ConstantTimeEq;
 use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::{
+    boxed_bytes_zeroed, Zeroize, ZeroizeOnDrop, Zeroizing, ZeroizingBytes,
+};
 
 /// Size constants
 pub const CHACHA20POLY1305_KEY_SIZE: usize = CHACHA20_KEY_SIZE;
@@ -205,6 +207,21 @@ impl ChaCha20Poly1305 {
         ciphertext: &[u8],
         aad: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
+        Ok(self
+            .decrypt_with_nonce_protected(nonce, ciphertext, aad)?
+            .into_inner()
+            .into_vec())
+    }
+
+    /// Decrypt into exact-size storage that clears itself on all internal
+    /// error and drop paths. Callers should use this for intermediate
+    /// plaintext that has not yet crossed a public output boundary.
+    pub fn decrypt_with_nonce_protected(
+        &self,
+        nonce: &[u8; CHACHA20POLY1305_NONCE_SIZE],
+        ciphertext: &[u8],
+        aad: Option<&[u8]>,
+    ) -> Result<ZeroizingBytes> {
         // Length validation using utility
         validate::min_length(
             "ChaCha20Poly1305 ciphertext",
@@ -254,7 +271,7 @@ impl ChaCha20Poly1305 {
         drop(burn);
 
         if bool::from(tag_ok) {
-            Ok(m.into_inner().into_vec()) // ownership transfers on success
+            Ok(m)
         } else {
             Err(Error::Authentication {
                 algorithm: "ChaCha20Poly1305",
@@ -393,9 +410,9 @@ impl SymmetricCipher for ChaCha20Poly1305 {
             });
         }
 
-        let mut key_data = [0u8; CHACHA20POLY1305_KEY_SIZE];
+        let mut key_data = Zeroizing::new([0u8; CHACHA20POLY1305_KEY_SIZE]);
         key_data.copy_from_slice(&bytes[..CHACHA20POLY1305_KEY_SIZE]);
-        Ok(SecretBytes::new(key_data))
+        Ok(SecretBytes::new(key_data.into_inner()))
     }
 }
 

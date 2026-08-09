@@ -107,7 +107,7 @@ pub fn scalar_mult(scalar: &Scalar, point: &Point) -> Result<Point> {
 pub fn kdf_hkdf_sha256_for_ecdh_kem(
     ikm: &[u8],
     info: Option<&[u8]>,
-) -> Result<[u8; P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE]> {
+) -> Result<Zeroizing<[u8; P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE]>> {
     let hkdf_instance = <Hkdf<Sha256, 16> as KdfTrait>::new();
 
     // Perform HKDF key derivation
@@ -119,7 +119,7 @@ pub fn kdf_hkdf_sha256_for_ecdh_kem(
     )?;
 
     // Convert to fixed-size array
-    let mut output_array = [0u8; P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE];
+    let mut output_array = Zeroizing::new([0u8; P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE]);
     if derived_key_vec.len() == P256_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE {
         output_array.copy_from_slice(&derived_key_vec);
         Ok(output_array)

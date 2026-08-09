@@ -16,6 +16,7 @@ use dcrypt_api::{
 };
 use dcrypt_internal::{
     constant_time::ct_eq, zeroizing_bytes_from_slice, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
+    Zeroizing,
 };
 use dcrypt_params::traditional::ecdsa::NIST_P224;
 
@@ -105,11 +106,11 @@ impl EcdsaP224SecretKey {
     /// Parse a canonical, nonzero P-224 secret scalar.
     pub fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
         let raw = ec::Scalar::deserialize(bytes).map_err(ApiError::from)?;
-        let mut serialized = [0u8; ec::P224_SCALAR_SIZE];
+        let mut serialized = Zeroizing::new([0u8; ec::P224_SCALAR_SIZE]);
         serialized.copy_from_slice(bytes);
         Ok(Self {
             raw,
-            bytes: serialized,
+            bytes: serialized.into_inner(),
         })
     }
 
@@ -145,7 +146,7 @@ impl SignatureTrait for EcdsaP224 {
     fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> ApiResult<Self::KeyPair> {
         let (sk_scalar, pk_point) = ec::generate_keypair(rng).map_err(ApiError::from)?;
 
-        let sk_bytes: [u8; ec::P224_SCALAR_SIZE] = sk_scalar.serialize();
+        let sk_bytes = Zeroizing::new(sk_scalar.serialize());
 
         if sk_scalar.is_zero() {
             return Err(ApiError::InvalidParameter {
@@ -157,7 +158,7 @@ impl SignatureTrait for EcdsaP224 {
 
         let secret_key = EcdsaP224SecretKey {
             raw: sk_scalar,
-            bytes: sk_bytes,
+            bytes: sk_bytes.into_inner(),
         };
         let public_key = EcdsaP224PublicKey(pk_point.serialize_uncompressed());
         Ok((public_key, secret_key))

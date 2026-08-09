@@ -294,10 +294,8 @@ impl Kem for EcdhP224 {
             &public_key_recipient.0,
         );
 
-        let ss_bytes = Zeroizing::new(
-            ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
-                .map_err(|e| ApiError::from(KemError::from(e)))?,
-        );
+        let ss_bytes = ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
 
         let shared_secret = EcdhP224SharedSecret(ApiKey::new(&ss_bytes[..]));
 
@@ -356,10 +354,8 @@ impl Kem for EcdhP224 {
             &q_r_point.serialize_compressed(),
         );
 
-        let ss_bytes = Zeroizing::new(
-            ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
-                .map_err(|e| ApiError::from(KemError::from(e)))?,
-        );
+        let ss_bytes = ec::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, Some(KDF_INFO))
+            .map_err(|e| ApiError::from(KemError::from(e)))?;
 
         // Verify authentication tag
         let expected_tag = calc_auth_tag(&ss_bytes[..]).map_err(ApiError::from)?;

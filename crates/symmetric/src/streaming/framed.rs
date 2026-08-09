@@ -9,7 +9,7 @@ use crate::cipher::{Aead, SymmetricCipher};
 use crate::error::{fill_random, validate_stream_state, Result, SymmetricResultExt};
 use crate::streaming::{StreamingDecrypt, StreamingEncrypt};
 use dcrypt_api::SecretVec;
-use dcrypt_internal::{CryptoRng, Zeroize};
+use dcrypt_internal::CryptoRng;
 use std::io::{Read, Write};
 
 pub(crate) const MAGIC: &[u8; 8] = b"DCRSTRM2";
@@ -36,7 +36,7 @@ pub trait FramedAead: Sized {
 
     fn from_key(key: &Self::Key) -> Result<Self>;
     fn seal(&self, nonce: &[u8; NONCE_SIZE], plaintext: &[u8], aad: &[u8]) -> Result<Vec<u8>>;
-    fn open(&self, nonce: &[u8; NONCE_SIZE], ciphertext: &[u8], aad: &[u8]) -> Result<Vec<u8>>;
+    fn open(&self, nonce: &[u8; NONCE_SIZE], ciphertext: &[u8], aad: &[u8]) -> Result<SecretVec>;
 }
 
 macro_rules! impl_gcm_framed_aead {
@@ -63,8 +63,11 @@ macro_rules! impl_gcm_framed_aead {
                 nonce: &[u8; NONCE_SIZE],
                 ciphertext: &[u8],
                 aad: &[u8],
-            ) -> Result<Vec<u8>> {
-                <Self as Aead>::decrypt(self, &GcmNonce::new(*nonce), ciphertext, Some(aad))
+            ) -> Result<SecretVec> {
+                Ok(SecretVec::new(
+                    self.decrypt_protected(nonce, ciphertext, Some(aad))?
+                        .into_inner(),
+                ))
             }
         }
     };
@@ -90,13 +93,11 @@ impl FramedAead for ChaCha20Poly1305Cipher {
         )
     }
 
-    fn open(&self, nonce: &[u8; NONCE_SIZE], ciphertext: &[u8], aad: &[u8]) -> Result<Vec<u8>> {
-        <Self as Aead>::decrypt(
-            self,
-            &ChaCha20Poly1305Nonce::new(*nonce),
-            ciphertext,
-            Some(aad),
-        )
+    fn open(&self, nonce: &[u8; NONCE_SIZE], ciphertext: &[u8], aad: &[u8]) -> Result<SecretVec> {
+        Ok(SecretVec::new(
+            self.decrypt_protected(nonce, ciphertext, Some(aad))?
+                .into_inner(),
+        ))
     }
 }
 
@@ -418,9 +419,7 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
             ciphertext_len,
             &self.user_aad,
         )?;
-        let mut plaintext = self.cipher.open(&nonce, &ciphertext, &aad)?;
-        let pending = SecretVec::from_slice(&plaintext);
-        plaintext.zeroize();
+        let pending = self.cipher.open(&nonce, &ciphertext, &aad)?;
         validate_stream_state(
             pending.len() == plaintext_len as usize,
             "stream cipher",

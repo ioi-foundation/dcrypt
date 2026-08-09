@@ -8,7 +8,7 @@ use dcrypt_api::error::Error as ApiError;
 use dcrypt_api::traits::Pke;
 // Removed unused import: use dcrypt_api::SymmetricCipher as ApiSymmetricCipherTrait;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::Zeroize;
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
@@ -88,10 +88,10 @@ impl Pke for EciesP384 {
                 "ECDH resulted in point at infinity",
             )));
         }
-        let mut z_bytes = shared_point.x_coordinate_bytes();
+        let mut z_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
 
         let derived_key_material = derive_symmetric_key_hkdf_sha384(
-            &z_bytes,
+            &z_bytes[..],
             &r_bytes_uncompressed,
             &pk_recipient.0,
             AES256GCM_KEY_LEN,
@@ -99,13 +99,14 @@ impl Pke for EciesP384 {
         )
         .map_err(ApiError::from)?;
 
-        let mut encryption_key_arr_aes = [0u8; AES256GCM_KEY_LEN];
+        let mut encryption_key_arr_aes = Zeroizing::new([0u8; AES256GCM_KEY_LEN]);
         encryption_key_arr_aes.copy_from_slice(&derived_key_material);
 
         drop(ephemeral_sk_scalar);
         z_bytes.zeroize();
 
-        let aes_core_key = AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes);
+        let aes_core_key =
+            AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes.into_inner());
         let aes_core = Aes256::new(&aes_core_key);
         let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::random(rng)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
@@ -167,10 +168,10 @@ impl Pke for EciesP384 {
                 "ECDH resulted in point at infinity",
             )));
         }
-        let mut z_bytes = shared_point.x_coordinate_bytes();
+        let mut z_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
 
         let derived_key_material = derive_symmetric_key_hkdf_sha384(
-            &z_bytes,
+            &z_bytes[..],
             &ephemeral_public_key,
             &pk_recipient_bytes,
             AES256GCM_KEY_LEN,
@@ -178,12 +179,13 @@ impl Pke for EciesP384 {
         )
         .map_err(ApiError::from)?;
 
-        let mut encryption_key_arr_aes = [0u8; AES256GCM_KEY_LEN];
+        let mut encryption_key_arr_aes = Zeroizing::new([0u8; AES256GCM_KEY_LEN]);
         encryption_key_arr_aes.copy_from_slice(&derived_key_material);
 
         z_bytes.zeroize();
 
-        let aes_core_key = AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes);
+        let aes_core_key =
+            AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes.into_inner());
         let aes_core = Aes256::new(&aes_core_key);
         let gcm_cipher_impl =
             Gcm::<Aes256>::new(aes_core).map_err(|e| ApiError::from(PkeError::from(e)))?;

@@ -42,12 +42,12 @@ use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use dcrypt_api::SecretVec;
 use dcrypt_internal::{
     boxed_bytes_zeroed, try_fill_bytes_zeroing_on_error, Choice, ConditionallySelectable,
-    ConstantTimeEq, CryptoRng, RngCore, Zeroize, Zeroizing,
+    ConstantTimeEq, CryptoRng, RngCore, Zeroize, Zeroizing, ZeroizingBytes,
 };
 use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N};
 
 struct SigningAttempt<P: MlDsaSchemeParams> {
-    c_tilde_seed: Vec<u8>,
+    c_tilde_seed: ZeroizingBytes,
     z_vec: PolyVecL<P>,
     h_hint_poly: PolyVecK<P>,
     candidate_valid: Choice,
@@ -165,7 +165,7 @@ where
     xof_c.update(mu).map_err(SignError::from_algo)?;
     xof_c.update(&w1_packed).map_err(SignError::from_algo)?;
 
-    let mut c_tilde_seed = vec![0u8; P::CHALLENGE_BYTES];
+    let mut c_tilde_seed = Zeroizing::new(boxed_bytes_zeroed(P::CHALLENGE_BYTES));
     xof_c
         .squeeze(&mut c_tilde_seed)
         .map_err(SignError::from_algo)?;
@@ -372,7 +372,7 @@ where
     let (rho_double_prime, matrix_a_hat, mu, s1_hat_vec, s2_hat_vec, t0_hat_vec) =
         prepare_signing_inputs::<P>(formatted_message, sk_bytes, randomizer, supplied_mu)?;
 
-    let mut selected_c_tilde = vec![0u8; P::CHALLENGE_BYTES];
+    let mut selected_c_tilde = Zeroizing::new(boxed_bytes_zeroed(P::CHALLENGE_BYTES));
     let mut selected_z = PolyVecL::<P>::zero();
     let mut selected_h = PolyVecK::<P>::zero();
     let mut found_valid = Choice::from(0u8);

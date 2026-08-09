@@ -8,7 +8,7 @@ use super::{StreamingDecrypt, StreamingEncrypt};
 use crate::aead::gcm::{Aes128Gcm, Aes256Gcm};
 use crate::aes::keys::{Aes128Key, Aes256Key};
 use crate::error::{Result, SymmetricResultExt};
-use dcrypt_internal::CryptoRng;
+use dcrypt_internal::{CryptoRng, Zeroizing};
 use std::io::{Read, Write};
 
 /// AES-128-GCM writer using authenticated version-2 frames.
@@ -29,9 +29,9 @@ pub fn encrypt_file_aes128<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     rng: &mut Rng,
 ) -> Result<()> {
     let mut stream = Aes128GcmEncryptStream::new(writer, key, aad, rng)?;
-    let mut buffer = [0u8; 8192];
+    let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = reader.read(&mut buffer).map_io_err()?;
+        let read = reader.read(&mut buffer[..]).map_io_err()?;
         if read == 0 {
             break;
         }
@@ -49,9 +49,9 @@ pub fn decrypt_file_aes128<R: Read, W: Write>(
     aad: Option<&[u8]>,
 ) -> Result<()> {
     let mut stream = Aes128GcmDecryptStream::new(reader, key, aad)?;
-    let mut buffer = [0u8; 8192];
+    let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = stream.read(&mut buffer)?;
+        let read = stream.read(&mut buffer[..])?;
         if read == 0 {
             break;
         }
@@ -69,9 +69,9 @@ pub fn encrypt_file_aes256<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     rng: &mut Rng,
 ) -> Result<()> {
     let mut stream = Aes256GcmEncryptStream::new(writer, key, aad, rng)?;
-    let mut buffer = [0u8; 8192];
+    let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = reader.read(&mut buffer).map_io_err()?;
+        let read = reader.read(&mut buffer[..]).map_io_err()?;
         if read == 0 {
             break;
         }
@@ -89,9 +89,9 @@ pub fn decrypt_file_aes256<R: Read, W: Write>(
     aad: Option<&[u8]>,
 ) -> Result<()> {
     let mut stream = Aes256GcmDecryptStream::new(reader, key, aad)?;
-    let mut buffer = [0u8; 8192];
+    let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = stream.read(&mut buffer)?;
+        let read = stream.read(&mut buffer[..])?;
         if read == 0 {
             break;
         }

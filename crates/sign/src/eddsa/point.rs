@@ -2,7 +2,7 @@
 
 #![forbid(unsafe_code)]
 
-use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq};
+use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq, Zeroize, Zeroizing};
 
 use super::field::FieldElement;
 use super::scalar::{Scalar, GROUP_ORDER_BYTES};
@@ -32,6 +32,21 @@ pub(crate) struct EdwardsPoint {
     t: FieldElement,
 }
 
+impl Default for EdwardsPoint {
+    fn default() -> Self {
+        Self::identity()
+    }
+}
+
+impl Zeroize for EdwardsPoint {
+    fn zeroize(&mut self) {
+        self.x.zeroize();
+        self.y.zeroize();
+        self.z.zeroize();
+        self.t.zeroize();
+    }
+}
+
 impl EdwardsPoint {
     pub(crate) fn identity() -> Self {
         Self {
@@ -55,14 +70,20 @@ impl EdwardsPoint {
 
     /// Complete extended-coordinate addition for the `a=-1` Edwards curve.
     pub(crate) fn add(&self, rhs: &Self) -> Self {
-        let a = self.y.sub(&self.x).mul(&rhs.y.sub(&rhs.x));
-        let b = self.y.add(&self.x).mul(&rhs.y.add(&rhs.x));
-        let c = self.t.mul(&rhs.t).mul(&curve_d().double());
-        let d = self.z.mul(&rhs.z).double();
-        let e = b.sub(&a);
-        let f = d.sub(&c);
-        let g = d.add(&c);
-        let h = b.add(&a);
+        let self_y_minus_x = Zeroizing::new(self.y.sub(&self.x));
+        let rhs_y_minus_x = Zeroizing::new(rhs.y.sub(&rhs.x));
+        let a = Zeroizing::new(self_y_minus_x.mul(&rhs_y_minus_x));
+        let self_y_plus_x = Zeroizing::new(self.y.add(&self.x));
+        let rhs_y_plus_x = Zeroizing::new(rhs.y.add(&rhs.x));
+        let b = Zeroizing::new(self_y_plus_x.mul(&rhs_y_plus_x));
+        let t_product = Zeroizing::new(self.t.mul(&rhs.t));
+        let c = Zeroizing::new(t_product.mul(&curve_d().double()));
+        let z_product = Zeroizing::new(self.z.mul(&rhs.z));
+        let d = Zeroizing::new(z_product.double());
+        let e = Zeroizing::new(b.sub(&a));
+        let f = Zeroizing::new(d.sub(&c));
+        let g = Zeroizing::new(d.add(&c));
+        let h = Zeroizing::new(b.add(&a));
         Self {
             x: e.mul(&f),
             y: g.mul(&h),
@@ -72,14 +93,18 @@ impl EdwardsPoint {
     }
 
     pub(crate) fn double(&self) -> Self {
-        let a = self.x.square();
-        let b = self.y.square();
-        let c = self.z.square().double();
-        let d = a.neg();
-        let e = self.x.add(&self.y).square().sub(&a).sub(&b);
-        let g = d.add(&b);
-        let f = g.sub(&c);
-        let h = d.sub(&b);
+        let a = Zeroizing::new(self.x.square());
+        let b = Zeroizing::new(self.y.square());
+        let z_squared = Zeroizing::new(self.z.square());
+        let c = Zeroizing::new(z_squared.double());
+        let d = Zeroizing::new(a.neg());
+        let x_plus_y = Zeroizing::new(self.x.add(&self.y));
+        let x_plus_y_squared = Zeroizing::new(x_plus_y.square());
+        let x_plus_y_squared_minus_a = Zeroizing::new(x_plus_y_squared.sub(&a));
+        let e = Zeroizing::new(x_plus_y_squared_minus_a.sub(&b));
+        let g = Zeroizing::new(d.add(&b));
+        let f = Zeroizing::new(g.sub(&c));
+        let h = Zeroizing::new(d.sub(&b));
         Self {
             x: e.mul(&f),
             y: g.mul(&h),
@@ -90,13 +115,16 @@ impl EdwardsPoint {
 
     /// Fixed-iteration, branch-free scalar multiplication.
     pub(crate) fn scalar_mult(&self, scalar: &Scalar) -> Self {
-        let mut accumulator = Self::identity();
+        let mut accumulator = Zeroizing::new(Self::identity());
         for bit in (0..256).rev() {
-            let doubled = accumulator.double();
-            let added = doubled.add(self);
-            accumulator = Self::conditional_select(&doubled, &added, scalar.bit(bit));
+            let doubled = Zeroizing::new(accumulator.double());
+            let added = Zeroizing::new(doubled.add(self));
+            let selected =
+                Zeroizing::new(Self::conditional_select(&doubled, &added, scalar.bit(bit)));
+            accumulator.zeroize();
+            *accumulator = *selected;
         }
-        accumulator
+        accumulator.into_inner()
     }
 
     fn scalar_mult_public_bytes(&self, scalar: &[u8; 32]) -> Self {
@@ -111,12 +139,12 @@ impl EdwardsPoint {
     }
 
     pub(crate) fn compress(&self) -> [u8; 32] {
-        let inverse_z = self.z.invert();
-        let x = self.x.mul(&inverse_z);
-        let y = self.y.mul(&inverse_z);
+        let inverse_z = Zeroizing::new(self.z.invert());
+        let x = Zeroizing::new(self.x.mul(&inverse_z));
+        let y = Zeroizing::new(self.y.mul(&inverse_z));
         let mut bytes = y.to_bytes();
         bytes[31] |= x.is_negative().unwrap_u8() << 7;
-        bytes
+        bytes.into_inner()
     }
 
     /// Decode one and only one canonical RFC 8032 point encoding.
@@ -185,8 +213,12 @@ impl ConditionallySelectable for EdwardsPoint {
 
 impl ConstantTimeEq for EdwardsPoint {
     fn ct_eq(&self, other: &Self) -> Choice {
-        let x_equal = self.x.mul(&other.z).ct_eq(&other.x.mul(&self.z));
-        let y_equal = self.y.mul(&other.z).ct_eq(&other.y.mul(&self.z));
+        let left_x = Zeroizing::new(self.x.mul(&other.z));
+        let right_x = Zeroizing::new(other.x.mul(&self.z));
+        let left_y = Zeroizing::new(self.y.mul(&other.z));
+        let right_y = Zeroizing::new(other.y.mul(&self.z));
+        let x_equal = left_x.ct_eq(&right_x);
+        let y_equal = left_y.ct_eq(&right_y);
         x_equal & y_equal
     }
 }
