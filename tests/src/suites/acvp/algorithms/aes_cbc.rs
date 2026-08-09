@@ -26,7 +26,7 @@ fn make_nonce(iv: &[u8]) -> Result<dcrypt_algorithms::types::Nonce<16>> {
 pub(crate) fn aes_cbc_encrypt(_group: &TestGroup, case: &TestCase) -> Result<()> {
     use dcrypt_algorithms::block::aes::{Aes128, Aes192, Aes256};
     use dcrypt_algorithms::block::modes::cbc::Cbc;
-    use dcrypt_algorithms::types::{Nonce, SecretBytes};
+    use dcrypt_algorithms::types::SecretBytes;
 
     // Get inputs - ACVP uses short field names
     let key_hex = case
@@ -115,7 +115,7 @@ pub(crate) fn aes_cbc_encrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
 pub(crate) fn aes_cbc_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()> {
     use dcrypt_algorithms::block::aes::{Aes128, Aes192, Aes256};
     use dcrypt_algorithms::block::modes::cbc::Cbc;
-    use dcrypt_algorithms::types::{Nonce, SecretBytes};
+    use dcrypt_algorithms::types::SecretBytes;
 
     // Get inputs - ACVP uses short field names
     let key_hex = case
@@ -204,7 +204,7 @@ pub(crate) fn aes_cbc_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
 pub(crate) fn aes_cbc_mct_encrypt_optimized(_group: &TestGroup, case: &TestCase) -> Result<()> {
     use dcrypt_algorithms::block::aes::{Aes128, Aes192, Aes256};
     use dcrypt_algorithms::block::modes::cbc::Cbc;
-    use dcrypt_algorithms::types::{Nonce, SecretBytes};
+    use dcrypt_algorithms::types::SecretBytes;
 
     // Parse inputs with proper error handling
     let mut key = hex::decode(
@@ -313,7 +313,7 @@ pub(crate) fn aes_cbc_mct_encrypt_optimized(_group: &TestGroup, case: &TestCase)
 pub(crate) fn aes_cbc_mct_decrypt_optimized(_group: &TestGroup, case: &TestCase) -> Result<()> {
     use dcrypt_algorithms::block::aes::{Aes128, Aes192, Aes256};
     use dcrypt_algorithms::block::modes::cbc::Cbc;
-    use dcrypt_algorithms::types::{Nonce, SecretBytes};
+    use dcrypt_algorithms::types::SecretBytes;
 
     // Parse inputs with proper error handling
     let mut key = hex::decode(

@@ -13,7 +13,3 @@ pub mod mac_tests;
 pub mod ml_dsa;
 pub mod stream_tests;
 pub mod xof_tests;
-
-// Re-export common modules used by tests
-pub use dcrypt_tests::suites::constant_time::config::TestConfig;
-pub use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};

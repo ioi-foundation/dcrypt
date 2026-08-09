@@ -3,7 +3,6 @@
 use crate::suites::constant_time::config::TestConfig;
 use crate::suites::constant_time::profile::ProfileStore;
 use crate::suites::constant_time::stats;
-use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use std::sync::Mutex;
 use std::time::Instant;

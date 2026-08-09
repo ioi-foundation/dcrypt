@@ -541,10 +541,6 @@ fn test_ml_dsa_sigver_acvp() {
 
 #[test]
 fn full_stack_sha256_suite() {
-    let engine = DcryptEngine;
-    let suites = loader::load_all_suites();
-    let r = Runner::new(&engine);
-
     // SHA-256 tests would need to be loaded separately
     // For now, this test is disabled as we're focusing on AES-CBC
 
