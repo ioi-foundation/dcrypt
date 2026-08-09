@@ -23,12 +23,6 @@ no_std = [
     "alloc"
 ]
 alloc = []
-serde = [
-    "dep:serde", 
-    "dcrypt-api/serde", 
-    "dcrypt-common/serde"
-]
-
 traditional = []  # Feature flag for traditional KEMs (ECDH, RSA, etc.)
 post-quantum = [] # Feature flag for post-quantum KEMs (Kyber, McEliece, etc.)
 
@@ -40,7 +34,6 @@ dcrypt-params = { path = "../params", version = "=2.0.0" }
 dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0" }
 zeroize = { workspace = true }
 rand = { workspace = true }
-serde = { workspace = true, optional = true }
 subtle = { version = "2.6.1", default-features = false }
 
 [dev-dependencies]

@@ -11,25 +11,16 @@ publish = true
 [features]
 default = ["std"]
 std = [
-    "dcrypt-api/std", 
-    "dcrypt-common/std", 
-    "dcrypt-internal/std"
+    "alloc",
+    "hex/std",
+    "base64/std"
 ]
-no_std = ["alloc",  # no_std typically needs alloc for Vec, String, etc.
-    "dcrypt-api/no_std", 
-    "dcrypt-common/no_std", 
-    "dcrypt-internal/no_std"
-]
+no_std = ["alloc"]
 alloc = []  # Feature for allocation support in no_std environments
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=2.0.0" }
-dcrypt-common = { path = "../common", version = "=2.0.0" }
-dcrypt-internal = { path = "../internal", version = "=2.0.0" }
-zeroize = { workspace = true }
-rand = { workspace = true }
-hex = "0.4.3"
-base64 = "0.22.1" 
+hex = { version = "=0.4.3", default-features = false, features = ["alloc"] }
+base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
 
 [package.metadata.release]
 publish = true

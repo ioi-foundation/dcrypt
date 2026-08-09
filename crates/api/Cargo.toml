@@ -18,7 +18,6 @@ no_std = []
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
-rand = { version = "0.8.6" }
 loom = "0.7.2"
 
 [package.metadata.release]

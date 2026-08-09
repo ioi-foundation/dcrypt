@@ -23,13 +23,6 @@ no_std = [
     "dcrypt-internal/no_std",
     "alloc"
 ]
-serde = [
-    "dep:serde", 
-    "dcrypt-api/serde", 
-    "dcrypt-common/serde"
-]
-
-
 [dependencies]
 dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false }
 dcrypt-common = { path = "../common", version = "=2.0.0", default-features = false }
@@ -40,7 +33,6 @@ dcrypt-kem = { path = "../kem", version = "=2.0.0" }
 dcrypt-sign = { path = "../sign", version = "=2.0.0" }
 zeroize = { workspace = true }
 rand = { workspace = true }
-serde = { workspace = true, optional = true }
 
 [dev-dependencies]
 rand_chacha = { workspace = true }

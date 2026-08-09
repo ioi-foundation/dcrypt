@@ -12,25 +12,18 @@ keywords.workspace = true
 
 [dependencies]
 # Core dependencies (always included)
-dcrypt-api = { version = "=2.0.0", path = "crates/api" }
-dcrypt-common = { version = "=2.0.0", path = "crates/common" }
-dcrypt-internal = { version = "=2.0.0", path = "crates/internal" }
+dcrypt-api = { version = "=2.0.0", path = "crates/api", default-features = false }
+dcrypt-common = { version = "=2.0.0", path = "crates/common", default-features = false }
+dcrypt-internal = { version = "=2.0.0", path = "crates/internal", default-features = false }
 dcrypt-params = { version = "=2.0.0", path = "crates/params" }
 
 # Optional algorithm crates
-dcrypt-algorithms = { version = "=2.0.0", path = "crates/algorithms", optional = true }
-dcrypt-symmetric = { version = "=2.0.0", path = "crates/symmetric", optional = true }
-dcrypt-kem = { version = "=2.0.0", path = "crates/kem", optional = true }
-dcrypt-sign = { version = "=2.0.0", path = "crates/sign", optional = true }
-dcrypt-pke = { version = "=2.0.0", path = "crates/pke", optional = true }
-dcrypt-hybrid = { version = "=2.0.0", path = "crates/hybrid", optional = true }
-
-# Re-export workspace dependencies that users might need
-rand = { workspace = true, optional = true }
-zeroize = { workspace = true }
-subtle = { workspace = true }
-serde = { workspace = true, optional = true }
-thiserror = { workspace = true, optional = true }
+dcrypt-algorithms = { version = "=2.0.0", path = "crates/algorithms", optional = true, default-features = false }
+dcrypt-symmetric = { version = "=2.0.0", path = "crates/symmetric", optional = true, default-features = false }
+dcrypt-kem = { version = "=2.0.0", path = "crates/kem", optional = true, default-features = false }
+dcrypt-sign = { version = "=2.0.0", path = "crates/sign", optional = true, default-features = false }
+dcrypt-pke = { version = "=2.0.0", path = "crates/pke", optional = true, default-features = false }
+dcrypt-hybrid = { version = "=2.0.0", path = "crates/hybrid", optional = true, default-features = false }
 
 [features]
 # Default includes common traditional algorithms
@@ -38,7 +31,6 @@ default = ["std", "traditional"]
 
 # Standard library support
 std = [
-    "rand?/std",
     "dcrypt-api/std",
     "dcrypt-common/std",
     "dcrypt-internal/std",
@@ -63,9 +55,18 @@ sign = ["dep:dcrypt-sign"]
 pke = ["dep:dcrypt-pke"]
 
 # Other features
-alloc = []
-serde = ["dep:serde", "dep:thiserror"]
-full = ["std", "alloc", "serde", "traditional", "post-quantum", "hybrid", "algorithms", "symmetric", "kem", "sign", "pke"]
+alloc = [
+    "dcrypt-api/alloc",
+    "dcrypt-common/alloc",
+    "dcrypt-internal/alloc",
+    "dcrypt-algorithms?/alloc",
+    "dcrypt-symmetric?/alloc",
+    "dcrypt-kem?/alloc",
+    "dcrypt-sign?/alloc",
+    "dcrypt-pke?/alloc",
+    "dcrypt-hybrid?/alloc",
+]
+full = ["std", "alloc", "traditional", "post-quantum", "hybrid", "algorithms", "symmetric", "kem", "sign", "pke"]
 
 # Workspace configuration
 [workspace]
@@ -104,11 +105,6 @@ zeroize     = { version = "1.8.1", features = ["zeroize_derive"] }
 subtle      = { version = "2.6.1", default-features = false }
 serde       = { version = "1.0.219", features = ["derive"] }
 thiserror   = { version = "1.0.69" }
-
-# Dev dependencies for tests
-[dev-dependencies]
-criterion = "0.5"
-proptest = "1.0"
 
 [workspace.metadata.release]
 # All crates share the same version

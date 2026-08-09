@@ -13,21 +13,18 @@ publish = true
 trace = []
 default = ["std"]
 std = [
+    "alloc",
     "dcrypt-api/std", 
     "dcrypt-common/std", 
     "dcrypt-internal/std"
 ]
 no_std = [
+    "alloc",
     "dcrypt-api/no_std", 
     "dcrypt-common/no_std", 
     "dcrypt-internal/no_std"
 ]
-serde = [
-    "dep:serde", 
-    "dcrypt-api/serde", 
-    "dcrypt-common/serde"
-]
-
+alloc = ["dcrypt-api/alloc", "dcrypt-common/alloc", "dcrypt-internal/alloc", "dcrypt-algorithms/alloc"]
 traditional = []  # Feature flag for traditional signatures (ECDSA, EdDSA, RSA, etc.)
 post-quantum = [] # Feature flag for post-quantum signatures (Dilithium, Falcon, etc.)
 
@@ -40,7 +37,6 @@ dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0" }
 libcrux-ml-dsa = { version = "=0.0.10", default-features = false, features = ["mldsa44", "mldsa65", "mldsa87"] }
 zeroize = { workspace = true }
 rand = { workspace = true }
-serde = { workspace = true, optional = true }
 subtle = "2.5"
 
 [dev-dependencies]
