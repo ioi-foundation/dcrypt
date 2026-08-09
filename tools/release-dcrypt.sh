@@ -216,8 +216,9 @@ save_state() {
 
 run_publish_verifier() {
     local version=$1
+    local require_unpublished=${2:-false}
     local -a args=(--version "$version")
-    if [[ "$MODE" == "prepare" ]]; then
+    if [[ "$require_unpublished" == true ]]; then
         args+=(--require-unpublished)
     fi
     "$SCRIPT_DIR/verify-publish-ready.sh" "${args[@]}"
@@ -501,7 +502,7 @@ prepare_release() {
 
     [[ "$(current_version)" == "$VERSION" ]] || die "version update did not produce $VERSION"
     assert_clean_tree
-    run_publish_verifier "$VERSION"
+    run_publish_verifier "$VERSION" true
     check_package_contents
 
     local tag="v$VERSION"
