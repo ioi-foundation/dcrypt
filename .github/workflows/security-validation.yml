@@ -73,8 +73,10 @@ jobs:
         with:
           toolchain: stable
       - name: Run workspace library and integration tests
-        # dcrypt-tests contains the heavyweight suites gated in dedicated jobs below.
-        run: cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
+        # dcrypt-tests integration targets are heavyweight and gated in dedicated jobs below.
+        run: |
+          cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
+          cargo test -p dcrypt-tests --lib --all-features
 
   acvp-and-aes-cbc-properties:
     name: Complete ACVP and AES-CBC property gates

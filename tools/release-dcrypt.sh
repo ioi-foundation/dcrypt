@@ -236,6 +236,9 @@ run_test_gates() {
     info "Running workspace tests"
     cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
 
+    info "Running dcrypt-tests library unit tests"
+    cargo test -p dcrypt-tests --lib --all-features
+
     info "Running the complete ACVP suite, including exact ML-DSA and ML-KEM outputs"
     cargo test --release -p dcrypt-tests --test acvp_tests -- \
         --test-threads=1 --nocapture

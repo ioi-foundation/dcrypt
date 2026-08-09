@@ -1285,6 +1285,23 @@ class GateSelfTests(unittest.TestCase):
     def test_clean_absent_state_passes(self) -> None:
         verify_release_gate(_mock_provider(), "3.0.0", report=None)
 
+    def test_local_and_ci_workspace_gates_run_test_harness_unit_tests(self) -> None:
+        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        workflow = (
+            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
+        ).read_text()
+
+        release_section = release_script.split("run_test_gates() {", 1)[1].split(
+            "require_security_subcommand() {", 1
+        )[0]
+        workflow_section = workflow.split("  workspace-tests:", 1)[1].split(
+            "\n  acvp-and-aes-cbc-properties:", 1
+        )[0]
+        required = "cargo test -p dcrypt-tests --lib --all-features"
+
+        self.assertEqual(re.sub(r"\s+", " ", release_section).count(required), 1)
+        self.assertEqual(re.sub(r"\s+", " ", workflow_section).count(required), 1)
+
     def test_api_feature_map_preserves_modern_feature_syntax(self) -> None:
         record = {
             "features": {
