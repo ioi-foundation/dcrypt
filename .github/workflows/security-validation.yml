@@ -223,3 +223,5 @@ jobs:
           cargo fuzz build hybrid_decoders
           cargo fuzz build symmetric_decoders
           cargo fuzz build stream_frames
+          cargo fuzz build kem_decoders
+          cargo fuzz build bls12_381_decoders

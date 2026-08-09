@@ -1,9 +1,9 @@
 #![no_main]
 
 use dcrypt_api::Signature;
-use dcrypt_sign::mldsa::{MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature};
 use dcrypt_sign::ecdsa::{common::SignatureComponents, EcdsaP384PublicKey, EcdsaP384Signature};
 use dcrypt_sign::eddsa::{Ed25519, Ed25519PublicKey, Ed25519Signature};
+use dcrypt_sign::mldsa::{MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature};
 use libfuzzer_sys::fuzz_target;
 
 const INPUT_MAX: usize = 16 * 1024;

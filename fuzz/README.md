@@ -11,6 +11,10 @@ public entry points that accept attacker-controlled encodings:
   decryption inputs.
 - `stream_frames`: raw and normalized version-2 stream headers and adversarial
   frame lengths for both AES-GCM and ChaCha20-Poly1305 readers.
+- `kem_decoders`: canonical and malformed FIPS 203 ML-KEM key/ciphertext
+  encodings plus the retained P-224/P-256/P-384/P-521/K-256 ECDH-KEM types.
+- `bls12_381_decoders`: compressed and uncompressed G1/G2 encodings, strict
+  subgroup/identity validation, and canonical or wide scalar inputs.
 
 Build all targets with `cargo +nightly fuzz build`. Run an individual target,
 for example, with `cargo +nightly fuzz run stream_frames`.
