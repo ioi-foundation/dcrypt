@@ -10,18 +10,12 @@ publish = true
 
 [features]
 default = ["std"]
-std = ["thiserror", "zeroize/std", "alloc"]
+std = ["alloc"]
 alloc = []
 no_std = []
 simd = []
 
 [dependencies]
-zeroize = { version = "1.5.7", features = ["zeroize_derive"] }
-thiserror = { version = "1.0.37", optional = true }
-subtle = { version = "2.4.1" }
-
-[dev-dependencies]
-rand = { version = "0.8.6" }
 
 [package.metadata.release]
 publish = true
