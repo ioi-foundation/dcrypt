@@ -4,7 +4,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 STATE_FILE="$PROJECT_ROOT/.release-state.json"
-USER_AGENT="dcrypt-release-tool/2.0 (+https://github.com/ioi-foundation/dcrypt)"
+USER_AGENT="dcrypt-release-tool/3.0 (+https://github.com/ioi-foundation/dcrypt)"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -63,9 +63,11 @@ Modes (choose at most one):
 Options:
   --update-benchmarks  Refresh BENCHMARKS.md during --prepare. This must leave
                        a clean tree before versioning continues.
-  --skip-tests         Skip workspace, ACVP, and isolated timing tests.
-  --skip-checks        Skip format/check, audit/deny, Miri, and fuzz builds.
-                       The implementation-boundary gate cannot be skipped.
+  --skip-tests         Development rehearsal only: skip workspace, vector,
+                       interoperability, and isolated timing tests.
+  --skip-checks        Development rehearsal only: skip format/check,
+                       audit/deny, Miri, and fuzz builds. The implementation-
+                       boundary gate cannot be skipped.
   --resume CRATE       Resume a partial --execute at CRATE, or use "auto" to
                        trust crates.io as the source of truth.
   --registry-wait SEC  Maximum registry propagation wait per crate (default 300).
@@ -472,6 +474,15 @@ publish_crate() {
             ACTIVE_LOG=""
             return 0
         fi
+
+        if grep -Eqi \
+            'status (401 Unauthorized|403 Forbidden)|authentication failed|invalid (api )?token|token.*(expired|revoked)|not (an )?owner|insufficient permission|permission denied' \
+            "$log_file"; then
+            rm -f "$log_file"
+            ACTIVE_LOG=""
+            warn "publication was rejected permanently; refresh the crates.io token or its publish scope before resuming"
+            return 2
+        fi
         rm -f "$log_file"
         ACTIVE_LOG=""
 
@@ -531,8 +542,14 @@ execute_release() {
             continue
         fi
 
-        if ! publish_crate "$relative_path" "$crate_name"; then
+        if publish_crate "$relative_path" "$crate_name"; then
+            :
+        else
+            local publish_status=$?
             save_state "${published[@]}"
+            if [[ $publish_status -eq 2 ]]; then
+                die "crates.io authentication or authorization failed for $crate_name; correct credentials, then resume with --execute --resume auto"
+            fi
             die "failed to publish $crate_name; resume with --execute --resume auto"
         fi
         published+=("$crate_name")
@@ -615,6 +632,9 @@ is_valid_semver "$VERSION" || die "invalid semantic version: $VERSION"
     || die "--resume is valid only with --execute"
 [[ "$MODE" == "prepare" || "$UPDATE_BENCHMARKS" == false ]] \
     || die "--update-benchmarks is valid only with --prepare"
+if [[ "$MODE" != "dry-run" && ("$SKIP_TESTS" == true || "$SKIP_CHECKS" == true) ]]; then
+    die "--skip-tests and --skip-checks are development-rehearsal options; prepare and execute must run every release gate"
+fi
 
 cd "$PROJECT_ROOT"
 require_command cargo
