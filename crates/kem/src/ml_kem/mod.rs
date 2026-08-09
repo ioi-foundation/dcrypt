@@ -1,9 +1,9 @@
 //! FIPS 203 Module-Lattice-Based Key-Encapsulation Mechanism (ML-KEM).
 //!
 //! This module implements the final FIPS 203 algorithms and parameter sets. It
-//! uses caller-supplied fallible randomness only, validates canonical key
-//! encodings, and performs implicit rejection for every exactly-sized modified
-//! ciphertext.
+//! uses caller-supplied fallible randomness only, validates canonical
+//! encapsulation keys and the required decapsulation-key hash, and performs
+//! implicit rejection for every exactly-sized modified ciphertext.
 
 mod kem;
 mod params;

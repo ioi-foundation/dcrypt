@@ -14,7 +14,9 @@ use dcrypt_internal::zeroing::Zeroizing;
 use super::params::{
     compressed_polyvec_bytes, pke_secret_key_bytes, MlKemParameterSet, N, POLY_BYTES, SYM_BYTES,
 };
-use super::poly::{compress, decode, decode_12_checked, decompress, encode, Poly, PolyVec};
+use super::poly::{
+    compress, decode, decode_12_checked, decode_12_mod_q, decompress, encode, Poly, PolyVec,
+};
 
 type Matrix = [[Poly; 4]; 4];
 
@@ -167,16 +169,22 @@ fn decode_polyvec_12_checked(input: &[u8], k: usize) -> Option<PolyVec> {
     Some(result)
 }
 
+fn decode_polyvec_12_mod_q(input: &[u8], k: usize) -> Option<PolyVec> {
+    if input.len() != k * POLY_BYTES {
+        return None;
+    }
+    let mut result = PolyVec::zero();
+    for (index, polynomial) in result.polys.iter_mut().enumerate().take(k) {
+        *polynomial = decode_12_mod_q(&input[index * POLY_BYTES..(index + 1) * POLY_BYTES]);
+    }
+    Some(result)
+}
+
 pub(crate) fn public_key_is_canonical<P: MlKemParameterSet>(public_key: &[u8]) -> bool {
     if public_key.len() != P::ENCAPSULATION_KEY_BYTES {
         return false;
     }
     decode_polyvec_12_checked(&public_key[..P::K * POLY_BYTES], P::K).is_some()
-}
-
-pub(crate) fn pke_secret_key_is_canonical<P: MlKemParameterSet>(secret_key: &[u8]) -> bool {
-    secret_key.len() == pke_secret_key_bytes::<P>()
-        && decode_polyvec_12_checked(secret_key, P::K).is_some()
 }
 
 pub(crate) fn keygen<P: MlKemParameterSet>(
@@ -218,8 +226,12 @@ pub(crate) fn encrypt<P: MlKemParameterSet>(
     message: &[u8; SYM_BYTES],
     randomness: &[u8; SYM_BYTES],
 ) -> Result<Zeroizing<Box<[u8]>>> {
-    debug_assert!(public_key_is_canonical::<P>(public_key));
-    let public_vector = decode_polyvec_12_checked(&public_key[..P::K * POLY_BYTES], P::K)
+    debug_assert_eq!(public_key.len(), P::ENCAPSULATION_KEY_BYTES);
+    // External encapsulation keys have already passed the FIPS modulus check.
+    // During decapsulation, however, Algorithm 18 re-encrypts with the embedded
+    // byte string after only the Section 7.3 hash check. ByteDecode_12 therefore
+    // has to reduce arbitrary 12-bit coefficients modulo q here.
+    let public_vector = decode_polyvec_12_mod_q(&public_key[..P::K * POLY_BYTES], P::K)
         .ok_or_else(|| primitive_error("ML-KEM K-PKE public-key decode"))?;
     let mut rho = [0u8; SYM_BYTES];
     rho.copy_from_slice(&public_key[P::K * POLY_BYTES..]);
@@ -265,10 +277,10 @@ pub(crate) fn decrypt<P: MlKemParameterSet>(
     pke_secret_key: &[u8],
     ciphertext: &[u8],
 ) -> Result<Zeroizing<[u8; SYM_BYTES]>> {
-    debug_assert!(pke_secret_key_is_canonical::<P>(pke_secret_key));
+    debug_assert_eq!(pke_secret_key.len(), pke_secret_key_bytes::<P>());
     debug_assert_eq!(ciphertext.len(), P::CIPHERTEXT_BYTES);
     let secret = Zeroizing::new(
-        decode_polyvec_12_checked(pke_secret_key, P::K)
+        decode_polyvec_12_mod_q(pke_secret_key, P::K)
             .ok_or_else(|| primitive_error("ML-KEM K-PKE secret-key decode"))?,
     );
 

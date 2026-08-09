@@ -13,7 +13,7 @@ use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use dcrypt_api::traits::serialize::{Serialize, SerializeSecret};
 use dcrypt_api::{Error, Kem, Result};
 use dcrypt_internal::constant_time::{ConditionallySelectable, ConstantTimeEq};
-use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::random::{try_fill_bytes_zeroing_on_error, CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 
 use super::params::{pke_secret_key_bytes, MlKemParameterSet, SYM_BYTES};
@@ -23,7 +23,7 @@ fn invalid_key(context: &'static str) -> Error {
     Error::InvalidKey {
         context,
         #[cfg(feature = "std")]
-        message: "non-canonical or incoherent FIPS 203 key encoding".into(),
+        message: "invalid or incoherent FIPS 203 key encoding".into(),
     }
 }
 
@@ -176,7 +176,7 @@ pub struct MlKemDecapsulationKey<P: MlKemParameterSet> {
 }
 
 impl<P: MlKemParameterSet> MlKemDecapsulationKey<P> {
-    /// Parse a decapsulation key and perform FIPS 203 modulus and hash checks.
+    /// Parse a decapsulation key and perform the FIPS 203 Section 7.3 hash check.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         if bytes.len() != P::DECAPSULATION_KEY_BYTES {
             return Err(invalid_key_length(
@@ -187,11 +187,6 @@ impl<P: MlKemParameterSet> MlKemDecapsulationKey<P> {
         }
         let pke_len = pke_secret_key_bytes::<P>();
         let public_end = pke_len + P::ENCAPSULATION_KEY_BYTES;
-        if !pke::pke_secret_key_is_canonical::<P>(&bytes[..pke_len])
-            || !pke::public_key_is_canonical::<P>(&bytes[pke_len..public_end])
-        {
-            return Err(invalid_key("ML-KEM decapsulation key"));
-        }
         let expected_hash = hash_h(&bytes[pke_len..public_end])?;
         let stored_hash = &bytes[public_end..public_end + SYM_BYTES];
         if expected_hash.as_slice().ct_eq(stored_hash).unwrap_u8() != 1 {
@@ -457,9 +452,12 @@ impl<P: MlKemParameterSet> MlKem<P> {
         })
     }
 
-    /// FIPS 203 `ML-KEM.Encaps_internal(ek, m)` for deterministic validation
-    /// and callers that explicitly own deterministic inputs.
-    pub fn encapsulate_deterministic(
+    /// FIPS 203 `ML-KEM.Encaps_internal(ek, m)`.
+    ///
+    /// This is deliberately restricted to the ML-KEM implementation.
+    /// Applications use [`Kem::encapsulate`], which obtains fresh bytes from
+    /// the caller-supplied RNG as required by FIPS 203 Section 3.3.
+    fn encapsulate_internal(
         public_key: &MlKemEncapsulationKey<P>,
         message: &[u8; SYM_BYTES],
     ) -> Result<(MlKemCiphertext<P>, MlKemSharedSecret)> {
@@ -491,7 +489,7 @@ impl<P: MlKemParameterSet> Kem for MlKem<P> {
 
     fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<Self::KeyPair> {
         let mut seeds = Zeroizing::new([0u8; 2 * SYM_BYTES]);
-        rng.try_fill_bytes(seeds.as_mut())
+        try_fill_bytes_zeroing_on_error(rng, seeds.as_mut())
             .map_err(|_| randomness_failure("ML-KEM key generation"))?;
         let mut d = Zeroizing::new([0u8; SYM_BYTES]);
         let mut z = Zeroizing::new([0u8; SYM_BYTES]);
@@ -513,9 +511,9 @@ impl<P: MlKemParameterSet> Kem for MlKem<P> {
         public_key: &Self::PublicKey,
     ) -> Result<(Self::Ciphertext, Self::SharedSecret)> {
         let mut message = Zeroizing::new([0u8; SYM_BYTES]);
-        rng.try_fill_bytes(message.as_mut())
+        try_fill_bytes_zeroing_on_error(rng, message.as_mut())
             .map_err(|_| randomness_failure("ML-KEM encapsulation"))?;
-        Self::encapsulate_deterministic(public_key, &message)
+        Self::encapsulate_internal(public_key, &message)
     }
 
     fn decapsulate(

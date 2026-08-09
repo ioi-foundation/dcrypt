@@ -1,7 +1,11 @@
 use alloc::boxed::Box;
 
+use dcrypt_algorithms::hash::sha3::Sha3_256;
+use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_api::{Error, Kem};
-use dcrypt_internal::random::{CryptoRng, Error as RngError, RngCore};
+use dcrypt_internal::random::{
+    try_fill_bytes_zeroing_on_error, CryptoRng, Error as RngError, RngCore,
+};
 use dcrypt_internal::zeroing::Zeroizing;
 
 use super::kem::{MlKemCiphertext, MlKemDecapsulationKey, MlKemEncapsulationKey};
@@ -9,15 +13,31 @@ use super::params::{MlKem1024Params, MlKem512Params, MlKem768Params, MlKemParame
 use super::poly::Poly;
 use super::{MlKem, MlKem1024, MlKem512, MlKem768};
 
-struct FailingRng;
+struct FixedRng([u8; 32]);
 
-impl RngCore for FailingRng {
-    fn try_fill_bytes(&mut self, _destination: &mut [u8]) -> core::result::Result<(), RngError> {
+impl RngCore for FixedRng {
+    fn try_fill_bytes(&mut self, destination: &mut [u8]) -> core::result::Result<(), RngError> {
+        if destination.len() != self.0.len() {
+            return Err(RngError);
+        }
+        destination.copy_from_slice(&self.0);
+        Ok(())
+    }
+}
+
+impl CryptoRng for FixedRng {}
+
+struct PartiallyFailingRng;
+
+impl RngCore for PartiallyFailingRng {
+    fn try_fill_bytes(&mut self, destination: &mut [u8]) -> core::result::Result<(), RngError> {
+        let written = destination.len() / 2;
+        destination[..written].fill(0xa5);
         Err(RngError)
     }
 }
 
-impl CryptoRng for FailingRng {}
+impl CryptoRng for PartiallyFailingRng {}
 
 fn deterministic_inputs() -> ([u8; 32], [u8; 32], [u8; 32]) {
     let mut d = [0u8; 32];
@@ -36,7 +56,7 @@ fn round_trip<P: MlKemParameterSet>() {
     let keypair = MlKem::<P>::keypair_deterministic(&d, &z).unwrap();
     let public_key = MlKem::<P>::public_key(&keypair);
     let secret_key = MlKem::<P>::secret_key(&keypair);
-    let (ciphertext, first) = MlKem::<P>::encapsulate_deterministic(&public_key, &m).unwrap();
+    let (ciphertext, first) = MlKem::<P>::encapsulate(&mut FixedRng(m), &public_key).unwrap();
     let second = MlKem::<P>::decapsulate(&secret_key, &ciphertext).unwrap();
     assert_eq!(
         &first.to_bytes_zeroizing()[..],
@@ -129,20 +149,59 @@ fn encapsulation_key_rejects_non_canonical_twelve_bit_coefficient() {
 }
 
 #[test]
-fn decapsulation_key_rejects_non_canonical_secret_and_incoherent_hash() {
-    let (d, z, _) = deterministic_inputs();
+fn decapsulation_key_accepts_mod_q_components_and_rejects_incoherent_hash() {
+    let (d, z, m) = deterministic_inputs();
     let keypair = MlKem512::keypair_deterministic(&d, &z).unwrap();
+    let public_key = MlKem512::public_key(&keypair);
     let secret = MlKem512::secret_key(&keypair).to_bytes_zeroizing();
+    let (ciphertext, _) = MlKem512::encapsulate(&mut FixedRng(m), &public_key).unwrap();
 
-    let mut noncanonical = secret.to_vec();
+    // FIPS ByteDecode_12 reduces both q and zero to the same field element.
+    // Section 7.3 does not impose a modulus check on dkPKE.
+    let mut secret_q = secret.to_vec();
+    let mut secret_zero = secret.to_vec();
     let q = Q as u16;
-    noncanonical[0] = q as u8;
-    noncanonical[1] = (noncanonical[1] & 0xf0) | ((q >> 8) as u8 & 0x0f);
-    assert!(MlKemDecapsulationKey::<MlKem512Params>::from_bytes(&noncanonical).is_err());
+    secret_q[0] = q as u8;
+    secret_q[1] = (secret_q[1] & 0xf0) | ((q >> 8) as u8 & 0x0f);
+    secret_zero[0] = 0;
+    secret_zero[1] &= 0xf0;
+    let parsed_q = MlKemDecapsulationKey::<MlKem512Params>::from_bytes(&secret_q).unwrap();
+    let parsed_zero = MlKemDecapsulationKey::<MlKem512Params>::from_bytes(&secret_zero).unwrap();
+    let shared_q = MlKem512::decapsulate(&parsed_q, &ciphertext).unwrap();
+    let shared_zero = MlKem512::decapsulate(&parsed_zero, &ciphertext).unwrap();
+    assert_eq!(
+        shared_q.to_bytes_zeroizing()[..],
+        shared_zero.to_bytes_zeroizing()[..]
+    );
+
+    // The same mod-q rule applies to the embedded ekPKE that Algorithm 18
+    // uses for re-encryption. Its raw bytes remain covered by the stored hash.
+    let pke_len = 2 * 384;
+    let public_end = pke_len + 800;
+    let mut embedded_q = secret.to_vec();
+    embedded_q[pke_len] = q as u8;
+    embedded_q[pke_len + 1] = (embedded_q[pke_len + 1] & 0xf0) | ((q >> 8) as u8 & 0x0f);
+    let mut hash = Sha3_256::new();
+    hash.update(&embedded_q[pke_len..public_end]).unwrap();
+    let digest = hash.finalize().unwrap();
+    embedded_q[public_end..public_end + 32].copy_from_slice(digest.as_ref());
+    let embedded_q = MlKemDecapsulationKey::<MlKem512Params>::from_bytes(&embedded_q).unwrap();
+    assert!(MlKem512::decapsulate(&embedded_q, &ciphertext).is_ok());
+
+    let mut public_q = public_key.to_bytes();
+    let mut public_zero = public_key.to_bytes();
+    public_q[0] = q as u8;
+    public_q[1] = (public_q[1] & 0xf0) | ((q >> 8) as u8 & 0x0f);
+    public_zero[0] = 0;
+    public_zero[1] &= 0xf0;
+    let randomness = [0x5a; 32];
+    assert_eq!(
+        super::pke::encrypt::<MlKem512Params>(&public_q, &m, &randomness).unwrap()[..],
+        super::pke::encrypt::<MlKem512Params>(&public_zero, &m, &randomness).unwrap()[..]
+    );
 
     let mut incoherent = secret.to_vec();
-    let hash_offset = 2 * 384 + 800;
-    incoherent[hash_offset] ^= 1;
+    incoherent[public_end] ^= 1;
     assert!(MlKemDecapsulationKey::<MlKem512Params>::from_bytes(&incoherent).is_err());
 }
 
@@ -153,7 +212,7 @@ fn modified_exact_length_ciphertext_uses_deterministic_implicit_rejection() {
     let public_key = MlKem768::public_key(&keypair);
     let secret_key = MlKem768::secret_key(&keypair);
     let (valid_ciphertext, valid_secret) =
-        MlKem768::encapsulate_deterministic(&public_key, &m).unwrap();
+        MlKem768::encapsulate(&mut FixedRng(m), &public_key).unwrap();
     let mut modified_bytes = valid_ciphertext.to_bytes();
     let middle = modified_bytes.len() / 2;
     modified_bytes[middle] ^= 0x80;
@@ -172,7 +231,11 @@ fn modified_exact_length_ciphertext_uses_deterministic_implicit_rejection() {
 
 #[test]
 fn caller_rng_failures_are_preserved() {
-    let mut failing = FailingRng;
+    let mut destination = [0x11; 64];
+    assert!(try_fill_bytes_zeroing_on_error(&mut PartiallyFailingRng, &mut destination).is_err());
+    assert_eq!(destination, [0u8; 64]);
+
+    let mut failing = PartiallyFailingRng;
     assert!(matches!(
         MlKem512::keypair(&mut failing),
         Err(Error::RandomGenerationError { .. })

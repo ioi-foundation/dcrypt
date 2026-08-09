@@ -224,6 +224,25 @@ pub(crate) fn decode(input: &[u8], bits: usize) -> Poly {
     result
 }
 
+/// FIPS 203 `ByteDecode_12`, including the required reduction modulo q.
+///
+/// A 12-bit input is at most 4095, so one branchless conditional subtraction
+/// of q=3329 is sufficient.
+pub(crate) fn decode_12_mod_q(input: &[u8]) -> Poly {
+    debug_assert_eq!(input.len(), POLY_BYTES);
+    let mut poly = decode(input, 12);
+    for coefficient in &mut poly.coeffs {
+        let value = *coefficient as u16;
+        let reduced = value.wrapping_sub(Q as u16);
+        // `reduced` has its high bit set exactly when `value < q` for the
+        // 12-bit input range. Add q back under that mask.
+        let underflow = reduced >> 15;
+        let mask = 0u16.wrapping_sub(underflow);
+        *coefficient = reduced.wrapping_add((Q as u16) & mask) as i16;
+    }
+    poly
+}
+
 pub(crate) fn decode_12_checked(input: &[u8]) -> Option<Poly> {
     if input.len() != POLY_BYTES {
         return None;
@@ -269,7 +288,9 @@ pub(crate) fn decompress(poly: &Poly, bits: usize) -> Poly {
 
 #[cfg(test)]
 mod tests {
-    use super::{compress, decode, decode_12_checked, encode, Poly, N, POLY_BYTES, Q};
+    use super::{
+        compress, decode, decode_12_checked, decode_12_mod_q, encode, Poly, N, POLY_BYTES, Q,
+    };
 
     #[test]
     fn compression_reciprocal_matches_exact_reference_for_all_inputs() {
@@ -296,6 +317,23 @@ mod tests {
         encode(&polynomial, 12, &mut bytes);
         assert_eq!(decode(&bytes, 12), polynomial);
         assert_eq!(decode_12_checked(&bytes), Some(polynomial));
+    }
+
+    #[test]
+    fn twelve_bit_decoder_reduces_every_raw_value_modulo_q() {
+        for value in 0u16..=0x0fff {
+            let mut bytes = [0u8; POLY_BYTES];
+            for pair in bytes.chunks_exact_mut(3) {
+                pair[0] = value as u8;
+                pair[1] = ((value >> 8) as u8 & 0x0f) | ((value as u8 & 0x0f) << 4);
+                pair[2] = (value >> 4) as u8;
+            }
+            let decoded = decode_12_mod_q(&bytes);
+            assert!(decoded
+                .coeffs
+                .iter()
+                .all(|&coefficient| coefficient == (value % Q as u16) as i16));
+        }
     }
 
     #[test]

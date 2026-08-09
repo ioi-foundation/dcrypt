@@ -1,8 +1,8 @@
 //! Official FIPS 203 ML-KEM ACVP handlers.
 //!
-//! Deterministic vectors call the standard's internal interfaces directly:
-//! key generation consumes `(d, z)` in that order and encapsulation consumes
-//! `m`. Expected results are joined by `(tgId, tcId)` in the loader.
+//! Deterministic key-generation vectors exercise the standard's permitted seed
+//! import interface. Encapsulation vectors feed `m` through a test-only caller
+//! RNG so the application-facing API never exposes `Encaps_internal`.
 
 use crate::suites::acvp::dispatcher::{insert, DispatchKey, HandlerFn};
 use crate::suites::acvp::error::{EngineError, Result};
@@ -10,10 +10,25 @@ use crate::suites::acvp::model::{TestCase, TestGroup};
 
 use dcrypt_api::Kem;
 use dcrypt_internal::constant_time::ConstantTimeEq;
+use dcrypt_internal::random::{CryptoRng, Error as RandomError, RngCore};
 use dcrypt_kem::ml_kem::{
     MlKem, MlKem1024Params, MlKem512Params, MlKem768Params, MlKemCiphertext, MlKemDecapsulationKey,
     MlKemEncapsulationKey, MlKemParameterSet,
 };
+
+struct VectorRng([u8; 32]);
+
+impl RngCore for VectorRng {
+    fn try_fill_bytes(&mut self, destination: &mut [u8]) -> core::result::Result<(), RandomError> {
+        if destination.len() != self.0.len() {
+            return Err(RandomError);
+        }
+        destination.copy_from_slice(&self.0);
+        Ok(())
+    }
+}
+
+impl CryptoRng for VectorRng {}
 
 fn parameter_set(group: &TestGroup) -> Result<String> {
     group
@@ -89,7 +104,8 @@ fn encapsulate_for<P: MlKemParameterSet>(case: &TestCase) -> Result<()> {
     let public_bytes = hex_field(case, "ek")?;
     let public_key = MlKemEncapsulationKey::<P>::from_bytes(&public_bytes)?;
     let message = array_32(case, "m")?;
-    let (ciphertext, shared_secret) = MlKem::<P>::encapsulate_deterministic(&public_key, &message)?;
+    let (ciphertext, shared_secret) =
+        MlKem::<P>::encapsulate(&mut VectorRng(message), &public_key)?;
     verify_hex(case, "c", ciphertext.as_bytes())?;
     let secret_bytes = shared_secret.to_bytes_zeroizing();
     verify_hex(case, "k", &secret_bytes[..])
