@@ -4,7 +4,7 @@ use kem::ecdh::{
     EcdhP256, EcdhP256PublicKey, EcdhP256SecretKey, EcdhP256SharedSecret, EcdhP256Ciphertext,
     EcdhP384, EcdhP384PublicKey, EcdhP384SecretKey, EcdhP384SharedSecret, EcdhP384Ciphertext
 };
-use rand::rngs::OsRng;
+use dcrypt_tests::test_rng::OsRng;
 
 #[test]
 fn test_p256_encapsulate_decapsulate_roundtrip() -> ApiResult<()> {

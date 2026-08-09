@@ -1,7 +1,8 @@
 // File: crates/tests/src/kem/ecdh_fuzzing.rs
 use dcrypt_api::{Kem, Result as ApiResult};
 use kem::ecdh::{EcdhP256, EcdhP384};
-use rand::{rngs::OsRng, RngCore};
+use dcrypt_internal::random::RngCore;
+use dcrypt_tests::test_rng::OsRng;
 
 #[test]
 fn test_p256_multiple_encapsulations() -> ApiResult<()> {

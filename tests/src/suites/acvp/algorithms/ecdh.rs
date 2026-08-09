@@ -2,10 +2,10 @@
 
 use crate::suites::acvp::error::{EngineError, Result};
 use crate::suites::acvp::model::{TestCase, TestGroup};
+use crate::test_rng::OsRng;
 use dcrypt_algorithms::ec::{b283k, k256, p192, p224, p256, p384, p521};
 use dcrypt_common::security::SecretBuffer;
 use hex;
-use rand::rngs::OsRng;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
 

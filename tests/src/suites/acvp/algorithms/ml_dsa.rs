@@ -15,11 +15,11 @@ use dcrypt_algorithms::hash::{
 };
 use dcrypt_algorithms::xof::{ExtendableOutputFunction, ShakeXof128, ShakeXof256};
 use dcrypt_api::Signature;
+use dcrypt_internal::random::{CryptoRng, Error as RngError, RngCore};
 use dcrypt_sign::dilithium::{
     DilithiumPublicKey, DilithiumSecretKey, DilithiumSignatureData, MlDsa44, MlDsa65, MlDsa87,
 };
 use once_cell::sync::Lazy;
-use rand::{CryptoRng, Error as RngError, RngCore};
 use std::{collections::HashMap, fs, path::Path};
 
 #[derive(Clone, Copy)]

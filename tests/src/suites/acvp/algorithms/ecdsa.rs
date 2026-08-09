@@ -2,6 +2,7 @@
 
 use crate::suites::acvp::error::{EngineError, Result};
 use crate::suites::acvp::model::{TestCase, TestGroup};
+use crate::test_rng::ChaCha20Rng;
 use dcrypt_api::Signature;
 use dcrypt_sign::ecdsa::{
     EcdsaP192,
@@ -21,8 +22,6 @@ use dcrypt_sign::ecdsa::{
     EcdsaP521Signature,
 };
 use hex;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
 // Import P-192 constants
 use dcrypt_algorithms::ec::p192 as ec_p192;
 

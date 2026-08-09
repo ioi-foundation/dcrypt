@@ -3,8 +3,7 @@ use dcrypt_api::Kem;
 use dcrypt_kem::kyber::Kyber768;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+use dcrypt_tests::test_rng::ChaCha20Rng;
 
 fn create_kyber_config() -> TestConfig {
     let mut config = TestConfig::for_pqc_kem();

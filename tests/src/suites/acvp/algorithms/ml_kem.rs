@@ -8,10 +8,10 @@ use crate::suites::acvp::error::{EngineError, Result};
 use crate::suites::acvp::model::{TestCase, TestGroup};
 
 use dcrypt_api::Kem; // Use the Kem trait from api crate
+use dcrypt_internal::random::{CryptoRng, Error as RngError, RngCore};
 use dcrypt_kem::kyber::{
     Kyber1024, Kyber512, Kyber768, KyberCiphertext, KyberPublicKey, KyberSecretKey,
 };
-use rand::{CryptoRng, RngCore};
 use subtle::ConstantTimeEq;
 
 // Define the constant here since we can't access the private params module
@@ -55,7 +55,7 @@ impl RngCore for FixedRng {
         }
     }
 
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> std::result::Result<(), rand::Error> {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> std::result::Result<(), RngError> {
         self.fill_bytes(dest);
         Ok(())
     }

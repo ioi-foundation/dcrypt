@@ -2,11 +2,10 @@
 
 use crate::suites::acvp::error::{EngineError, Result};
 use crate::suites::acvp::model::{TestCase, TestGroup};
+use crate::test_rng::ChaCha20Rng;
 use dcrypt_api::Signature;
 use dcrypt_sign::eddsa::{Ed25519, Ed25519PublicKey, Ed25519Signature};
 use hex;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
 

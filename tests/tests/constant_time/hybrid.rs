@@ -4,8 +4,7 @@ use dcrypt_api::{Kem, Serialize};
 use dcrypt_hybrid::kem::EcdhP256Kyber768;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+use dcrypt_tests::test_rng::ChaCha20Rng;
 
 fn create_hybrid_config() -> TestConfig {
     let mut config = TestConfig::for_pqc_kem();
