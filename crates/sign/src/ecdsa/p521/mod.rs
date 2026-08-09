@@ -15,6 +15,7 @@ use dcrypt_api::{
 use dcrypt_common::SecretBuffer;
 use dcrypt_internal::{
     constant_time::ct_eq, zeroizing_bytes_from_slice, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
+    Zeroizing,
 };
 use dcrypt_params::traditional::ecdsa::NIST_P521;
 
@@ -256,7 +257,7 @@ impl SignatureTrait for EcdsaP521 {
 
             // Step 4: Compute (x₁, y₁) = k·G
             let kg = ec::scalar_mult_base_g(&k).map_err(ApiError::from)?;
-            let r_bytes = kg.x_coordinate_bytes();
+            let r_bytes = Zeroizing::new(kg.x_coordinate_bytes());
 
             // Step 5: Compute r = x₁ mod n
             let r = reduce_bytes_to_scalar(&r_bytes)?;

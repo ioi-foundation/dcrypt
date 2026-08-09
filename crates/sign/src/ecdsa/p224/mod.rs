@@ -17,6 +17,7 @@ use dcrypt_api::{
 use dcrypt_common::SecretBuffer;
 use dcrypt_internal::{
     constant_time::ct_eq, zeroizing_bytes_from_slice, CryptoRng, RngCore, Zeroize, ZeroizeOnDrop,
+    Zeroizing,
 };
 use dcrypt_params::traditional::ecdsa::NIST_P224;
 
@@ -213,7 +214,7 @@ impl SignatureTrait for EcdsaP224 {
             if kg.is_identity() {
                 continue;
             }
-            let r_bytes = kg.x_coordinate_bytes();
+            let r_bytes = Zeroizing::new(kg.x_coordinate_bytes());
 
             let r = match reduce_bytes_to_scalar_p224(&r_bytes) {
                 Ok(scalar) if !scalar.is_zero() => scalar,

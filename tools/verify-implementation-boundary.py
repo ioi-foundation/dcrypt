@@ -132,6 +132,14 @@ UNPROTECTED_HIGH_LEVEL_KEY_COPY = re.compile(
     r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;)",
     re.DOTALL,
 )
+UNPROTECTED_ECDSA_CANDIDATE_X = re.compile(
+    r"\blet\s+(?:mut\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=\s*"
+    r"kg\s*\.\s*x_coordinate_bytes\s*\(\s*\)"
+)
+ECDSA_PROTECTED_CANDIDATE_X = re.compile(
+    r"\blet\s+r_bytes\s*=\s*Zeroizing\s*::\s*new\s*\(\s*"
+    r"kg\s*\.\s*x_coordinate_bytes\s*\(\s*\)\s*\)"
+)
 BLS_SECRET_CAPABLE_MSM = re.compile(r"\bpub\s+fn\s+msm\s*\(")
 ARGON2_BLOCK_GUARDED_ZEROIZE = re.compile(
     r"impl\s+Zeroize\s+for\s+Block\s*\{[^{}]*"
@@ -289,6 +297,10 @@ TARGETED_LIFECYCLE_REQUIREMENTS = {
         re.compile(r"doubled\s*=\s*Zeroizing\s*::\s*new"),
         re.compile(r"added\s*=\s*Zeroizing\s*::\s*new"),
     ),
+    "src/ecdsa/p224/mod.rs": (ECDSA_PROTECTED_CANDIDATE_X,),
+    "src/ecdsa/p256/mod.rs": (ECDSA_PROTECTED_CANDIDATE_X,),
+    "src/ecdsa/p384/mod.rs": (ECDSA_PROTECTED_CANDIDATE_X,),
+    "src/ecdsa/p521/mod.rs": (ECDSA_PROTECTED_CANDIDATE_X,),
     "src/ec/bls12_381/g1.rs": (
         re.compile(r"pub\s+fn\s+msm_vartime\s*\("),
         re.compile(r"fn\s+pippenger_vartime\s*\("),
@@ -2176,6 +2188,11 @@ def audit_source_tree(
                         code_only,
                     ),
                     (
+                        "unprotected ECDSA nonce-point coordinate",
+                        UNPROTECTED_ECDSA_CANDIDATE_X,
+                        code_only,
+                    ),
+                    (
                         "misleading manual secret-cleanup abstraction",
                         MISLEADING_SECURE_OPERATION_API,
                         code_only,
@@ -2219,6 +2236,10 @@ def audit_source_tree(
                     "src/eddsa/scalar.rs",
                     "src/eddsa/point.rs",
                     "src/eddsa/ed25519/mod.rs",
+                    "src/ecdsa/p224/mod.rs",
+                    "src/ecdsa/p256/mod.rs",
+                    "src/ecdsa/p384/mod.rs",
+                    "src/ecdsa/p521/mod.rs",
                 }
             )
         )
@@ -2316,6 +2337,7 @@ fn hchacha20(key: &[u8; 32]) -> [u8; 32] { todo!() }
 fn generate_j0() -> Result<[u8; 16]> { todo!() }
 let mut signs = [0u8; 8];
 let mut key_data = [0u8; 32];
+let candidate_x = kg.x_coordinate_bytes();
 pub struct SecureOperationBuilder<T>(T);
 pub fn ct_xor<const N: usize>(a: &[u8; N], b: &[u8; N]) -> [u8; N] { *a }
 fn derive_key(input: &[u8]) -> Result<Vec<u8>> { todo!() }
@@ -2363,6 +2385,13 @@ println!("cargo:rustc-link-lib=native");
         "let mut encryption_key_arr = [0u8; CHACHA20POLY1305_KEY_LEN];"
     )
     assert UNPROTECTED_HIGH_LEVEL_KEY_COPY.search("let mut buffer_bytes = [0u8; 32];")
+    assert len(UNPROTECTED_ECDSA_CANDIDATE_X.findall(code_only)) == 1
+    assert ECDSA_PROTECTED_CANDIDATE_X.search(
+        "let r_bytes = Zeroizing::new(kg.x_coordinate_bytes());"
+    )
+    assert not UNPROTECTED_ECDSA_CANDIDATE_X.search(
+        "let r_bytes = Zeroizing::new(kg.x_coordinate_bytes());"
+    )
     assert len(MISLEADING_SECURE_OPERATION_API.findall(code_only)) == 1
     assert len(REMOVED_CONSTANT_TIME_CONVENIENCE.findall(code_only)) == 1
     assert ARGON2_BLOCK_GUARDED_ZEROIZE.search(
