@@ -254,15 +254,15 @@ impl Kem for EcdhP256 {
         // private scalar. A CSPRNG output outside [1, n-1] is expected input,
         // not an operation failure.
         let ephemeral_scalar = loop {
-            let mut ephemeral_bytes = [0u8; ec_p256::P256_SCALAR_SIZE];
-            rng.try_fill_bytes(&mut ephemeral_bytes).map_err(|_| {
+            let mut ephemeral_bytes = Zeroizing::new([0u8; ec_p256::P256_SCALAR_SIZE]);
+            rng.try_fill_bytes(ephemeral_bytes.as_mut()).map_err(|_| {
                 ApiError::RandomGenerationError {
                     context: "ECDH-P256 encapsulate",
                     #[cfg(feature = "std")]
                     message: "caller-provided randomness source failed".to_string(),
                 }
             })?;
-            let ephemeral_buffer = SecretBuffer::new(ephemeral_bytes);
+            let ephemeral_buffer = SecretBuffer::new(*ephemeral_bytes);
             if let Ok(scalar) = ec_p256::Scalar::from_secret_buffer(ephemeral_buffer) {
                 break scalar;
             }
@@ -279,17 +279,19 @@ impl Kem for EcdhP256 {
                 message: "Shared point is the identity".to_string(),
             });
         }
-        let x_coord_bytes = shared_point.x_coordinate_bytes();
-        let mut kdf_ikm = Vec::with_capacity(
+        let x_coord_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
+        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec_p256::P256_FIELD_ELEMENT_SIZE + 2 * ec_p256::P256_POINT_COMPRESSED_SIZE,
-        );
+        ));
         kdf_ikm.extend_from_slice(&x_coord_bytes);
         kdf_ikm.extend_from_slice(&ephemeral_point.serialize_compressed());
         kdf_ikm.extend_from_slice(&public_key_recipient.0);
         let info: Option<&[u8]> = Some(b"ECDH-P256-KEM");
-        let ss_bytes = ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, info)
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
-        let shared_secret = EcdhP256SharedSecret(ApiKey::new(&ss_bytes));
+        let ss_bytes = Zeroizing::new(
+            ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, info)
+                .map_err(|e| ApiError::from(KemError::from(e)))?,
+        );
+        let shared_secret = EcdhP256SharedSecret(ApiKey::new(&ss_bytes[..]));
         drop(ephemeral_scalar);
         Ok((ciphertext, shared_secret))
     }
@@ -321,19 +323,21 @@ impl Kem for EcdhP256 {
                 message: "Shared point is the identity".to_string(),
             });
         }
-        let x_coord_bytes = shared_point.x_coordinate_bytes();
+        let x_coord_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
         let q_r_point = ec_p256::scalar_mult_base_g(&sk_r_scalar)
             .map_err(|e| ApiError::from(KemError::from(e)))?;
-        let mut kdf_ikm = Vec::with_capacity(
+        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec_p256::P256_FIELD_ELEMENT_SIZE + 2 * ec_p256::P256_POINT_COMPRESSED_SIZE,
-        );
+        ));
         kdf_ikm.extend_from_slice(&x_coord_bytes);
         kdf_ikm.extend_from_slice(&ciphertext_ephemeral_pk.0);
         kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
         let info: Option<&[u8]> = Some(b"ECDH-P256-KEM");
-        let ss_bytes = ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, info)
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
-        let shared_secret = EcdhP256SharedSecret(ApiKey::new(&ss_bytes));
+        let ss_bytes = Zeroizing::new(
+            ec_p256::kdf_hkdf_sha256_for_ecdh_kem(&kdf_ikm, info)
+                .map_err(|e| ApiError::from(KemError::from(e)))?,
+        );
+        let shared_secret = EcdhP256SharedSecret(ApiKey::new(&ss_bytes[..]));
         Ok(shared_secret)
     }
 }

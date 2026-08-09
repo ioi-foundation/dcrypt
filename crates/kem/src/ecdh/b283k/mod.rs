@@ -259,17 +259,19 @@ impl Kem for EcdhB283k {
                 message: "Shared point is the identity".to_string(),
             });
         }
-        let x_coord_bytes = shared_point.x_coordinate_bytes();
-        let mut kdf_ikm = Vec::with_capacity(
+        let x_coord_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
+        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec_b283k::B283K_FIELD_ELEMENT_SIZE + 2 * ec_b283k::B283K_POINT_COMPRESSED_SIZE,
-        );
+        ));
         kdf_ikm.extend_from_slice(&x_coord_bytes);
         kdf_ikm.extend_from_slice(&ephemeral_point.serialize_compressed());
         kdf_ikm.extend_from_slice(&public_key_recipient.0);
         let info: Option<&[u8]> = Some(b"ECDH-B283k-KEM");
-        let ss_bytes = ec_b283k::kdf_hkdf_sha384_for_ecdh_kem(&kdf_ikm, info)
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
-        let shared_secret = EcdhB283kSharedSecret(ApiKey::new(&ss_bytes));
+        let ss_bytes = Zeroizing::new(
+            ec_b283k::kdf_hkdf_sha384_for_ecdh_kem(&kdf_ikm, info)
+                .map_err(|e| ApiError::from(KemError::from(e)))?,
+        );
+        let shared_secret = EcdhB283kSharedSecret(ApiKey::new(&ss_bytes[..]));
         drop(ephemeral_scalar);
         Ok((ciphertext, shared_secret))
     }
@@ -298,19 +300,21 @@ impl Kem for EcdhB283k {
                 message: "Shared point is the identity".to_string(),
             });
         }
-        let x_coord_bytes = shared_point.x_coordinate_bytes();
+        let x_coord_bytes = Zeroizing::new(shared_point.x_coordinate_bytes());
         let q_r_point = ec_b283k::scalar_mult_base_g(&sk_r_scalar)
             .map_err(|e| ApiError::from(KemError::from(e)))?;
-        let mut kdf_ikm = Vec::with_capacity(
+        let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec_b283k::B283K_FIELD_ELEMENT_SIZE + 2 * ec_b283k::B283K_POINT_COMPRESSED_SIZE,
-        );
+        ));
         kdf_ikm.extend_from_slice(&x_coord_bytes);
         kdf_ikm.extend_from_slice(&ciphertext_ephemeral_pk.0);
         kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
         let info: Option<&[u8]> = Some(b"ECDH-B283k-KEM");
-        let ss_bytes = ec_b283k::kdf_hkdf_sha384_for_ecdh_kem(&kdf_ikm, info)
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
-        let shared_secret = EcdhB283kSharedSecret(ApiKey::new(&ss_bytes));
+        let ss_bytes = Zeroizing::new(
+            ec_b283k::kdf_hkdf_sha384_for_ecdh_kem(&kdf_ikm, info)
+                .map_err(|e| ApiError::from(KemError::from(e)))?,
+        );
+        let shared_secret = EcdhB283kSharedSecret(ApiKey::new(&ss_bytes[..]));
         Ok(shared_secret)
     }
 }
