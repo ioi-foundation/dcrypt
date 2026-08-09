@@ -91,6 +91,17 @@ fn test_field_zero_one() {
 }
 
 #[test]
+fn field_decoding_rejects_noncanonical_high_bits() {
+    let mut noncanonical = NIST_P521.g_x;
+    noncanonical[0] |= 0x80;
+    assert!(FieldElement::from_bytes(&noncanonical).is_err());
+
+    let mut compressed = p521::base_point_g().serialize_compressed();
+    compressed[1] |= 0x80;
+    assert!(Point::deserialize_compressed(&compressed).is_err());
+}
+
+#[test]
 fn test_field_subtraction_edge_cases() {
     // 0 − 0 = 0
     assert_eq!(
@@ -482,5 +493,71 @@ mod scalar_multiplication_vectors {
         // or can generate them from a reference implementation
 
         Ok(())
+    }
+}
+
+#[test]
+fn field_and_point_lifecycle_policy_is_source_enforced() {
+    use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+
+    fn assert_zeroize<T: Zeroize>() {}
+    fn assert_zeroize_on_drop<T: ZeroizeOnDrop>() {}
+
+    assert_zeroize::<FieldElement>();
+    assert_zeroize::<super::point::ProjectivePoint>();
+    assert_zeroize::<Point>();
+    assert_zeroize_on_drop::<Point>();
+
+    let mut point = p521::base_point_g();
+    point.zeroize();
+    assert!(point.x.is_zero());
+    assert!(point.y.is_zero());
+
+    let field_source = include_str!("field.rs");
+    let point_source = include_str!("point.rs");
+    for required in [
+        "impl Zeroize for FieldElement",
+        "fn select_limbs",
+        "Zeroizing::new([0u128; 34])",
+        "Zeroizing::new([0u32; 34])",
+    ] {
+        assert!(
+            field_source.contains(required),
+            "P-521 field lifecycle invariant missing: {required}"
+        );
+    }
+    for required in [
+        "impl Zeroize for Point",
+        "impl Drop for Point",
+        "impl ZeroizeOnDrop for Point",
+        "impl Zeroize for ProjectivePoint",
+        "let mut r0 = Zeroizing::new(ProjectivePoint::identity())",
+        "let mut r1 = Zeroizing::new(self.to_projective())",
+        "let t0 = Zeroizing::new(r0.add(&r1))",
+        "let t1 = Zeroizing::new(r0.double())",
+    ] {
+        assert!(
+            point_source.contains(required),
+            "P-521 point lifecycle invariant missing: {required}"
+        );
+    }
+
+    for forbidden in [
+        "let mut limbs = [0u32",
+        "let mut wide = [0u128",
+        "let mut first = [0u32",
+        "let mut out = [0u32",
+        "let mut x_bytes = [0u8",
+        "let mut y_bytes = [0u8",
+        "let mut r0 = ProjectivePoint",
+        "let mut r1 = self.to_projective()",
+        "let t0 = r0.add(&r1)",
+        "let t1 = r0.double()",
+        "fn select_field",
+    ] {
+        assert!(
+            !field_source.contains(forbidden) && !point_source.contains(forbidden),
+            "P-521 raw secret scratch reintroduced: {forbidden}"
+        );
     }
 }

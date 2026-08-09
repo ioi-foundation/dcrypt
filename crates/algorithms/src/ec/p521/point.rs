@@ -2,14 +2,14 @@
 
 use crate::ec::p521::{
     constants::{
-        P521_FIELD_ELEMENT_SIZE, P521_LIMBS, P521_POINT_COMPRESSED_SIZE,
-        P521_POINT_UNCOMPRESSED_SIZE,
+        P521_FIELD_ELEMENT_SIZE, P521_POINT_COMPRESSED_SIZE, P521_POINT_UNCOMPRESSED_SIZE,
     },
     field::FieldElement,
     scalar::Scalar,
 };
 use crate::error::{validate, Error, Result};
 use dcrypt_internal::constant_time::{Choice, ConditionallySelectable};
+use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
 use dcrypt_params::traditional::ecdsa::NIST_P521;
 
 /// Format of a serialized elliptic curve point
@@ -37,6 +37,22 @@ pub struct Point {
     pub(crate) y: FieldElement,
 }
 
+impl Zeroize for Point {
+    fn zeroize(&mut self) {
+        self.is_identity.zeroize();
+        self.x.zeroize();
+        self.y.zeroize();
+    }
+}
+
+impl Drop for Point {
+    fn drop(&mut self) {
+        self.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for Point {}
+
 /// P-521 point in Jacobian projective coordinates (X:Y:Z) for efficient arithmetic
 ///
 /// Jacobian coordinates represent affine point (x,y) as (X:Y:Z) where:
@@ -56,6 +72,21 @@ pub(crate) struct ProjectivePoint {
     y: FieldElement,
     /// Z coordinate (projective factor)
     z: FieldElement,
+}
+
+impl Default for ProjectivePoint {
+    fn default() -> Self {
+        Self::identity()
+    }
+}
+
+impl Zeroize for ProjectivePoint {
+    fn zeroize(&mut self) {
+        self.is_identity.zeroize();
+        self.x.zeroize();
+        self.y.zeroize();
+        self.z.zeroize();
+    }
 }
 
 impl PartialEq for Point {
@@ -88,8 +119,8 @@ impl Point {
         x: &[u8; P521_FIELD_ELEMENT_SIZE],
         y: &[u8; P521_FIELD_ELEMENT_SIZE],
     ) -> Result<Self> {
-        let x_fe = FieldElement::from_bytes(x)?;
-        let y_fe = FieldElement::from_bytes(y)?;
+        let x_fe = Zeroizing::new(FieldElement::from_bytes(x)?);
+        let y_fe = Zeroizing::new(FieldElement::from_bytes(y)?);
 
         // Validate that the point lies on the curve
         if !Self::is_on_curve(&x_fe, &y_fe) {
@@ -101,8 +132,8 @@ impl Point {
 
         Ok(Point {
             is_identity: Choice::from(0),
-            x: x_fe,
-            y: y_fe,
+            x: x_fe.into_inner(),
+            y: y_fe.into_inner(),
         })
     }
 
@@ -178,8 +209,8 @@ impl Point {
 
         // Standard uncompressed format: 0x04 || x || y
         result[0] = 0x04;
-        result[1..67].copy_from_slice(&self.x.to_bytes());
-        result[67..133].copy_from_slice(&self.y.to_bytes());
+        self.x.write_bytes(&mut result[1..67]);
+        self.y.write_bytes(&mut result[67..133]);
 
         result
     }
@@ -200,8 +231,8 @@ impl Point {
         }
 
         // Extract and validate coordinates
-        let mut x_bytes = [0u8; P521_FIELD_ELEMENT_SIZE];
-        let mut y_bytes = [0u8; P521_FIELD_ELEMENT_SIZE];
+        let mut x_bytes = Zeroizing::new([0u8; P521_FIELD_ELEMENT_SIZE]);
+        let mut y_bytes = Zeroizing::new([0u8; P521_FIELD_ELEMENT_SIZE]);
 
         x_bytes.copy_from_slice(&bytes[1..67]);
         y_bytes.copy_from_slice(&bytes[67..133]);
@@ -232,7 +263,7 @@ impl Point {
 
         // Determine prefix based on y-coordinate parity
         out[0] = if self.y.is_odd() { 0x03 } else { 0x02 };
-        out[1..].copy_from_slice(&self.x.to_bytes());
+        self.x.write_bytes(&mut out[1..]);
         out
     }
 
@@ -265,45 +296,47 @@ impl Point {
         }
 
         // Extract x-coordinate
-        let mut x_bytes = [0u8; P521_FIELD_ELEMENT_SIZE];
+        let mut x_bytes = Zeroizing::new([0u8; P521_FIELD_ELEMENT_SIZE]);
         x_bytes.copy_from_slice(&bytes[1..]);
 
-        let x_fe = FieldElement::from_bytes(&x_bytes).map_err(|_| {
+        let x_fe = Zeroizing::new(FieldElement::from_bytes(&x_bytes).map_err(|_| {
             Error::param(
                 "P-521 Point",
                 "Invalid compressed point: x-coordinate yields quadratic non-residue",
             )
-        })?;
+        })?);
 
         // Compute right-hand side: y² = x³ - 3x + b
-        let rhs = {
-            let x2 = x_fe.square();
-            let x3 = x2.mul(&x_fe);
-            let a = FieldElement(FieldElement::A_M3); // a = -3
-            let b = FieldElement::from_bytes(&NIST_P521.b).unwrap();
-            x3.add(&a.mul(&x_fe)).add(&b)
-        };
+        let x2 = Zeroizing::new(x_fe.square());
+        let x3 = Zeroizing::new(x2.mul(&x_fe));
+        let a = Zeroizing::new(FieldElement(FieldElement::A_M3)); // a = -3
+        let b = Zeroizing::new(FieldElement::from_bytes(&NIST_P521.b).unwrap());
+        let ax = Zeroizing::new(a.mul(&x_fe));
+        let x3_plus_ax = Zeroizing::new(x3.add(&ax));
+        let rhs = Zeroizing::new(x3_plus_ax.add(&b));
 
         // Attempt to find square root
-        let y_fe = rhs.sqrt().ok_or_else(|| {
+        let y_fe = Zeroizing::new(rhs.sqrt().ok_or_else(|| {
             Error::param(
                 "P-521 Point",
                 "Invalid compressed point: x-coordinate yields quadratic non-residue",
             )
-        })?;
+        })?);
 
         // Select the correct root based on parity
-        let y_final = if (y_fe.is_odd() && tag == 0x03) || (!y_fe.is_odd() && tag == 0x02) {
-            y_fe
+        let y_matches = (y_fe.is_odd() && tag == 0x03) || (!y_fe.is_odd() && tag == 0x02);
+        let y_final = if y_matches {
+            Zeroizing::new(y_fe.into_inner())
         } else {
             // Use the negative root (p - y)
-            FieldElement::get_modulus().sub(&y_fe)
+            let modulus = Zeroizing::new(FieldElement::get_modulus());
+            Zeroizing::new(modulus.sub(&y_fe))
         };
 
         Ok(Point {
             is_identity: Choice::from(0),
-            x: x_fe,
-            y: y_final,
+            x: x_fe.into_inner(),
+            y: y_final.into_inner(),
         })
     }
 
@@ -313,9 +346,9 @@ impl Point {
     /// Converts to projective coordinates for efficient computation,
     /// then converts back to affine form.
     pub fn add(&self, other: &Self) -> Self {
-        let p1 = self.to_projective();
-        let p2 = other.to_projective();
-        let result = p1.add(&p2);
+        let p1 = Zeroizing::new(self.to_projective());
+        let p2 = Zeroizing::new(other.to_projective());
+        let result = Zeroizing::new(p1.add(&p2));
         result.to_affine()
     }
 
@@ -324,8 +357,8 @@ impl Point {
     /// Computes the sum of a point with itself, which has a more
     /// efficient formula than general point addition.
     pub fn double(&self) -> Self {
-        let p = self.to_projective();
-        let result = p.double();
+        let p = Zeroizing::new(self.to_projective());
+        let result = Zeroizing::new(p.double());
         result.to_affine()
     }
 
@@ -336,26 +369,24 @@ impl Point {
     ///
     /// Returns the identity element if scalar is zero.
     pub fn mul(&self, scalar: &Scalar) -> Result<Self> {
-        let mut r0 = ProjectivePoint {
-            is_identity: Choice::from(1), // ∞
-            x: FieldElement::zero(),
-            y: FieldElement::one(), // (0:1:0)
-            z: FieldElement::zero(),
-        };
-        let mut r1 = self.to_projective(); // P
+        let mut r0 = Zeroizing::new(ProjectivePoint::identity());
+        let mut r1 = Zeroizing::new(self.to_projective()); // P
 
         // Montgomery ladder — MSB→LSB
         for byte in scalar.as_secret_buffer().as_ref() {
             for bit in (0..8).rev() {
-                let choice = Choice::from((byte >> bit) & 1);
+                let mut choice = Choice::from((byte >> bit) & 1);
 
                 ProjectivePoint::conditional_swap(&mut r0, &mut r1, choice);
                 // "ladder step"
-                let t0 = r0.add(&r1); // R0 + R1
-                let t1 = r0.double(); // 2·R0
-                r1 = t0;
-                r0 = t1;
+                let t0 = Zeroizing::new(r0.add(&r1)); // R0 + R1
+                let t1 = Zeroizing::new(r0.double()); // 2·R0
+                r1.zeroize();
+                *r1 = t0.into_inner();
+                r0.zeroize();
+                *r0 = t1.into_inner();
                 ProjectivePoint::conditional_swap(&mut r0, &mut r1, choice);
+                choice.zeroize();
             }
         }
 
@@ -372,19 +403,20 @@ impl Point {
     /// This is a critical security check to prevent invalid curve attacks.
     fn is_on_curve(x: &FieldElement, y: &FieldElement) -> bool {
         // Left-hand side: y²
-        let y_squared = y.square();
+        let y_squared = Zeroizing::new(y.square());
 
         // Right-hand side: x³ - 3x + b
-        let x_cubed = x.square().mul(x);
-        let a_coeff = FieldElement(FieldElement::A_M3); // a = -3 mod p
-        let ax = a_coeff.mul(x);
-        let b_coeff = FieldElement::from_bytes(&NIST_P521.b).unwrap();
+        let x_squared = Zeroizing::new(x.square());
+        let x_cubed = Zeroizing::new(x_squared.mul(x));
+        let a_coeff = Zeroizing::new(FieldElement(FieldElement::A_M3)); // a = -3 mod p
+        let ax = Zeroizing::new(a_coeff.mul(x));
+        let b_coeff = Zeroizing::new(FieldElement::from_bytes(&NIST_P521.b).unwrap());
 
         // Compute x³ - 3x + b
-        let x_cubed_plus_ax = x_cubed.add(&ax);
-        let rhs = x_cubed_plus_ax.add(&b_coeff);
+        let x_cubed_plus_ax = Zeroizing::new(x_cubed.add(&ax));
+        let rhs = Zeroizing::new(x_cubed_plus_ax.add(&b_coeff));
 
-        y_squared == rhs
+        *y_squared == *rhs
     }
 
     /// Convert affine point to Jacobian projective coordinates
@@ -392,21 +424,19 @@ impl Point {
     /// Affine (x, y) → Jacobian (X:Y:Z) where X=x, Y=y, Z=1
     /// Identity point maps to (0:1:0) following standard conventions.
     fn to_projective(&self) -> ProjectivePoint {
-        if self.is_identity() {
-            return ProjectivePoint {
-                is_identity: Choice::from(1),
-                x: FieldElement::zero(),
-                y: FieldElement::one(),
-                z: FieldElement::zero(),
-            };
-        }
-
-        ProjectivePoint {
+        let regular = Zeroizing::new(ProjectivePoint {
             is_identity: Choice::from(0),
             x: self.x.clone(),
             y: self.y.clone(),
             z: FieldElement::one(),
-        }
+        });
+        let identity = Zeroizing::new(ProjectivePoint::identity());
+        let selected = Zeroizing::new(ProjectivePoint::conditional_select(
+            &regular,
+            &identity,
+            self.is_identity,
+        ));
+        selected.into_inner()
     }
 }
 
@@ -431,10 +461,12 @@ impl ProjectivePoint {
         FieldElement::conditional_swap(&mut a.z, &mut b.z, choice);
 
         // swap the identity flag as well
-        let ai = a.is_identity;
-        let bi = b.is_identity;
+        let mut ai = a.is_identity;
+        let mut bi = b.is_identity;
         a.is_identity = Choice::conditional_select(&ai, &bi, choice);
         b.is_identity = Choice::conditional_select(&bi, &ai, choice);
+        ai.zeroize();
+        bi.zeroize();
     }
 
     /// Projective point addition using complete addition formulas
@@ -449,60 +481,73 @@ impl ProjectivePoint {
         // Reference: "Guide to Elliptic Curve Cryptography" Algorithm 3.22
 
         // Pre-compute commonly used values
-        let z1_squared = self.z.square();
-        let z2_squared = other.z.square();
-        let z1_cubed = z1_squared.mul(&self.z);
-        let z2_cubed = z2_squared.mul(&other.z);
+        let z1_squared = Zeroizing::new(self.z.square());
+        let z2_squared = Zeroizing::new(other.z.square());
+        let z1_cubed = Zeroizing::new(z1_squared.mul(&self.z));
+        let z2_cubed = Zeroizing::new(z2_squared.mul(&other.z));
 
         // Project coordinates to common denominator
-        let u1 = self.x.mul(&z2_squared); // X1 · Z2²
-        let u2 = other.x.mul(&z1_squared); // X2 · Z1²
-        let s1 = self.y.mul(&z2_cubed); // Y1 · Z2³
-        let s2 = other.y.mul(&z1_cubed); // Y2 · Z1³
+        let u1 = Zeroizing::new(self.x.mul(&z2_squared)); // X1 · Z2²
+        let u2 = Zeroizing::new(other.x.mul(&z1_squared)); // X2 · Z1²
+        let s1 = Zeroizing::new(self.y.mul(&z2_cubed)); // Y1 · Z2³
+        let s2 = Zeroizing::new(other.y.mul(&z1_cubed)); // Y2 · Z1³
 
         // Compute differences
-        let h = u2.sub(&u1); // X2·Z1² − X1·Z2²
-        let r = s2.sub(&s1); // Y2·Z1³ − Y1·Z2³
+        let h = Zeroizing::new(u2.sub(&u1)); // X2·Z1² − X1·Z2²
+        let r = Zeroizing::new(s2.sub(&s1)); // Y2·Z1³ − Y1·Z2³
 
         // General addition case
-        let h_squared = h.square();
-        let h_cubed = h_squared.mul(&h);
-        let v = u1.mul(&h_squared);
+        let h_squared = Zeroizing::new(h.square());
+        let h_cubed = Zeroizing::new(h_squared.mul(&h));
+        let v = Zeroizing::new(u1.mul(&h_squared));
 
         // X3 = r² − h³ − 2·v
-        let r_squared = r.square();
-        let two_v = v.add(&v);
-        let mut x3 = r_squared.sub(&h_cubed);
-        x3 = x3.sub(&two_v);
+        let r_squared = Zeroizing::new(r.square());
+        let two_v = Zeroizing::new(v.add(&v));
+        let x3_minus_h_cubed = Zeroizing::new(r_squared.sub(&h_cubed));
+        let x3 = Zeroizing::new(x3_minus_h_cubed.sub(&two_v));
 
         // Y3 = r·(v − X3) − s1·h³
-        let v_minus_x3 = v.sub(&x3);
-        let r_times_diff = r.mul(&v_minus_x3);
-        let s1_times_h_cubed = s1.mul(&h_cubed);
-        let y3 = r_times_diff.sub(&s1_times_h_cubed);
+        let v_minus_x3 = Zeroizing::new(v.sub(&x3));
+        let r_times_diff = Zeroizing::new(r.mul(&v_minus_x3));
+        let s1_times_h_cubed = Zeroizing::new(s1.mul(&h_cubed));
+        let y3 = Zeroizing::new(r_times_diff.sub(&s1_times_h_cubed));
 
         // Z3 = Z1 · Z2 · h
-        let z1_times_z2 = self.z.mul(&other.z);
-        let z3 = z1_times_z2.mul(&h);
+        let z1_times_z2 = Zeroizing::new(self.z.mul(&other.z));
+        let z3 = Zeroizing::new(z1_times_z2.mul(&h));
 
-        let generic = Self {
+        let generic = Zeroizing::new(Self {
             is_identity: Choice::from(0),
-            x: x3,
-            y: y3,
-            z: z3,
-        };
+            x: x3.into_inner(),
+            y: y3.into_inner(),
+            z: z3.into_inner(),
+        });
 
-        let double_point = self.double();
-        let h_is_zero = Choice::from(h.is_zero() as u8);
-        let r_is_zero = Choice::from(r.is_zero() as u8);
-        let p_eq_q = h_is_zero & r_is_zero;
-        let p_eq_neg_q = h_is_zero & !r_is_zero;
+        let double_point = Zeroizing::new(self.double());
+        let mut h_is_zero = Choice::from(h.is_zero() as u8);
+        let mut r_is_zero = Choice::from(r.is_zero() as u8);
+        let mut p_eq_q = h_is_zero & r_is_zero;
+        let mut p_eq_neg_q = h_is_zero & !r_is_zero;
 
-        let mut result = Self::conditional_select(&generic, &double_point, p_eq_q);
-        result = Self::conditional_select(&result, &Self::identity(), p_eq_neg_q);
-        result = Self::conditional_select(&result, other, self.is_identity);
-        result = Self::conditional_select(&result, self, other.is_identity);
-        result
+        let mut result = Zeroizing::new(Self::conditional_select(&generic, &double_point, p_eq_q));
+        let identity = Zeroizing::new(Self::identity());
+        let selected = Zeroizing::new(Self::conditional_select(&result, &identity, p_eq_neg_q));
+        result.zeroize();
+        *result = selected.into_inner();
+
+        let selected = Zeroizing::new(Self::conditional_select(&result, other, self.is_identity));
+        result.zeroize();
+        *result = selected.into_inner();
+        let selected = Zeroizing::new(Self::conditional_select(&result, self, other.is_identity));
+        result.zeroize();
+        *result = selected.into_inner();
+
+        h_is_zero.zeroize();
+        r_is_zero.zeroize();
+        p_eq_q.zeroize();
+        p_eq_neg_q.zeroize();
+        result.into_inner()
     }
 
     /// Projective point doubling using efficient doubling formulas
@@ -515,52 +560,61 @@ impl ProjectivePoint {
     pub fn double(&self) -> Self {
         // ── 1. Pre-computations ─────────────────────────────────
         // Δ = Z₁²
-        let delta = self.z.square();
+        let delta = Zeroizing::new(self.z.square());
 
         // Γ = Y₁²
-        let gamma = self.y.square();
+        let gamma = Zeroizing::new(self.y.square());
 
         // β = X₁·Γ
-        let beta = self.x.mul(&gamma);
+        let beta = Zeroizing::new(self.x.mul(&gamma));
 
         // α = 3·(X₁ − Δ)·(X₁ + Δ)       (valid because a = –3)
-        let x_plus_delta = self.x.add(&delta);
-        let x_minus_delta = self.x.sub(&delta);
-        let mut alpha = x_plus_delta.mul(&x_minus_delta);
-        alpha = alpha.add(&alpha).add(&alpha); // ×3
+        let x_plus_delta = Zeroizing::new(self.x.add(&delta));
+        let x_minus_delta = Zeroizing::new(self.x.sub(&delta));
+        let alpha_base = Zeroizing::new(x_plus_delta.mul(&x_minus_delta));
+        let two_alpha = Zeroizing::new(alpha_base.add(&alpha_base));
+        let alpha = Zeroizing::new(two_alpha.add(&alpha_base)); // ×3
 
         // ── 2. Output coordinates ──────────────────────────────
         // X₃ = α² − 8·β
-        let mut eight_beta = beta.add(&beta); // 2β
-        eight_beta = eight_beta.add(&eight_beta); // 4β
-        eight_beta = eight_beta.add(&eight_beta); // 8β
-        let x3 = alpha.square().sub(&eight_beta);
+        let two_beta = Zeroizing::new(beta.add(&beta));
+        let four_beta = Zeroizing::new(two_beta.add(&two_beta));
+        let eight_beta = Zeroizing::new(four_beta.add(&four_beta));
+        let alpha_squared = Zeroizing::new(alpha.square());
+        let x3 = Zeroizing::new(alpha_squared.sub(&eight_beta));
 
         // Z₃ = (Y₁ + Z₁)² − Γ − Δ
-        let y_plus_z = self.y.add(&self.z);
-        let z3 = y_plus_z.square().sub(&gamma).sub(&delta);
+        let y_plus_z = Zeroizing::new(self.y.add(&self.z));
+        let y_plus_z_squared = Zeroizing::new(y_plus_z.square());
+        let z3_minus_gamma = Zeroizing::new(y_plus_z_squared.sub(&gamma));
+        let z3 = Zeroizing::new(z3_minus_gamma.sub(&delta));
 
         // Y₃ = α·(4·β − X₃) − 8·Γ²
-        let mut four_beta = beta.add(&beta); // 2β
-        four_beta = four_beta.add(&four_beta); // 4β
-        let mut y3 = four_beta.sub(&x3);
-        y3 = alpha.mul(&y3);
+        let four_beta_minus_x3 = Zeroizing::new(four_beta.sub(&x3));
+        let alpha_times_difference = Zeroizing::new(alpha.mul(&four_beta_minus_x3));
 
-        let gamma_sq = gamma.square(); // Γ²
-        let mut eight_gamma_sq = gamma_sq.add(&gamma_sq); // 2Γ²
-        eight_gamma_sq = eight_gamma_sq.add(&eight_gamma_sq); // 4Γ²
-        eight_gamma_sq = eight_gamma_sq.add(&eight_gamma_sq); // 8Γ²
-        y3 = y3.sub(&eight_gamma_sq);
+        let gamma_sq = Zeroizing::new(gamma.square());
+        let two_gamma_sq = Zeroizing::new(gamma_sq.add(&gamma_sq));
+        let four_gamma_sq = Zeroizing::new(two_gamma_sq.add(&two_gamma_sq));
+        let eight_gamma_sq = Zeroizing::new(four_gamma_sq.add(&four_gamma_sq));
+        let y3 = Zeroizing::new(alpha_times_difference.sub(&eight_gamma_sq));
 
-        let result = Self {
+        let result = Zeroizing::new(Self {
             is_identity: Choice::from(0),
-            x: x3,
-            y: y3,
-            z: z3,
-        };
+            x: x3.into_inner(),
+            y: y3.into_inner(),
+            z: z3.into_inner(),
+        });
 
-        let return_identity = self.is_identity | Choice::from(self.y.is_zero() as u8);
-        Self::conditional_select(&result, &Self::identity(), return_identity)
+        let mut return_identity = self.is_identity | Choice::from(self.y.is_zero() as u8);
+        let identity = Zeroizing::new(Self::identity());
+        let selected = Zeroizing::new(Self::conditional_select(
+            &result,
+            &identity,
+            return_identity,
+        ));
+        return_identity.zeroize();
+        selected.into_inner()
     }
 
     /// Convert Jacobian projective coordinates back to affine coordinates
@@ -570,38 +624,49 @@ impl ProjectivePoint {
     pub fn to_affine(&self) -> Point {
         // Select a non-zero denominator for the identity so conversion does
         // not branch on a scalar-derived result.
-        let safe_z = Self::select_field(&self.z, &FieldElement::one(), self.is_identity);
-        let z_inv = safe_z
-            .invert()
-            .expect("Non-zero Z coordinate should be invertible");
-        let z_inv_squared = z_inv.square();
-        let z_inv_cubed = z_inv_squared.mul(&z_inv);
+        let one = Zeroizing::new(FieldElement::one());
+        let safe_z = Zeroizing::new(FieldElement::conditional_select(
+            &self.z,
+            &one,
+            self.is_identity,
+        ));
+        let z_inv = Zeroizing::new(
+            safe_z
+                .invert()
+                .expect("Non-zero Z coordinate should be invertible"),
+        );
+        let z_inv_squared = Zeroizing::new(z_inv.square());
+        let z_inv_cubed = Zeroizing::new(z_inv_squared.mul(&z_inv));
 
         // Convert to affine coordinates: (x, y) = (X/Z², Y/Z³)
-        let x_affine = self.x.mul(&z_inv_squared);
-        let y_affine = self.y.mul(&z_inv_cubed);
+        let x_affine = Zeroizing::new(self.x.mul(&z_inv_squared));
+        let y_affine = Zeroizing::new(self.y.mul(&z_inv_cubed));
+        let zero = Zeroizing::new(FieldElement::zero());
+        let x = Zeroizing::new(FieldElement::conditional_select(
+            &x_affine,
+            &zero,
+            self.is_identity,
+        ));
+        let y = Zeroizing::new(FieldElement::conditional_select(
+            &y_affine,
+            &zero,
+            self.is_identity,
+        ));
 
         Point {
             is_identity: self.is_identity,
-            x: Self::select_field(&x_affine, &FieldElement::zero(), self.is_identity),
-            y: Self::select_field(&y_affine, &FieldElement::zero(), self.is_identity),
+            x: x.into_inner(),
+            y: y.into_inner(),
         }
     }
 
-    fn select_field(a: &FieldElement, b: &FieldElement, choice: Choice) -> FieldElement {
-        let mut out = [0u32; P521_LIMBS];
-        for (i, limb) in out.iter_mut().enumerate() {
-            *limb = u32::conditional_select(&a.0[i], &b.0[i], choice);
-        }
-        FieldElement(out)
-    }
-
+    #[inline(never)]
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         Self {
             is_identity: Choice::conditional_select(&a.is_identity, &b.is_identity, choice),
-            x: Self::select_field(&a.x, &b.x, choice),
-            y: Self::select_field(&a.y, &b.y, choice),
-            z: Self::select_field(&a.z, &b.z, choice),
+            x: FieldElement::conditional_select(&a.x, &b.x, choice),
+            y: FieldElement::conditional_select(&a.y, &b.y, choice),
+            z: FieldElement::conditional_select(&a.z, &b.z, choice),
         }
     }
 }

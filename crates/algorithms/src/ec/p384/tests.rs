@@ -1040,3 +1040,67 @@ fn step_5_p384_reference_doubling() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn field_and_point_lifecycle_policy_is_source_enforced() {
+    use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+
+    fn assert_zeroize<T: Zeroize>() {}
+    fn assert_zeroize_on_drop<T: ZeroizeOnDrop>() {}
+
+    assert_zeroize::<FieldElement>();
+    assert_zeroize::<super::point::ProjectivePoint>();
+    assert_zeroize::<Point>();
+    assert_zeroize_on_drop::<Point>();
+
+    let mut point = p384::base_point_g();
+    point.zeroize();
+    assert!(point.x.is_zero());
+    assert!(point.y.is_zero());
+
+    let field_source = include_str!("field.rs");
+    let point_source = include_str!("point.rs");
+    for required in [
+        "impl Zeroize for FieldElement",
+        "fn select_limbs",
+        "Zeroizing::new([0u128; 24])",
+        "Zeroizing::new([0i128; 24])",
+    ] {
+        assert!(
+            field_source.contains(required),
+            "P-384 field lifecycle invariant missing: {required}"
+        );
+    }
+    for required in [
+        "impl Zeroize for Point",
+        "impl Drop for Point",
+        "impl ZeroizeOnDrop for Point",
+        "impl Zeroize for ProjectivePoint",
+        "let mut result = Zeroizing::new(ProjectivePoint::identity())",
+        "let doubled = Zeroizing::new(result.double())",
+        "let result_added = Zeroizing::new(doubled.add(&base))",
+    ] {
+        assert!(
+            point_source.contains(required),
+            "P-384 point lifecycle invariant missing: {required}"
+        );
+    }
+
+    for forbidden in [
+        "let mut limbs = [0u32",
+        "let mut t = [0u128",
+        "let mut prod = [0u32",
+        "let mut s = [0i128",
+        "let mut out = [0u32",
+        "let mut x_bytes = [0u8",
+        "let mut y_bytes = [0u8",
+        "let p1 = self.to_projective()",
+        "let p2 = other.to_projective()",
+        "let result_added = doubled.add(&base)",
+    ] {
+        assert!(
+            !field_source.contains(forbidden) && !point_source.contains(forbidden),
+            "P-384 raw secret scratch reintroduced: {forbidden}"
+        );
+    }
+}
