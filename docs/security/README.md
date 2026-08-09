@@ -12,7 +12,7 @@ policy. `v1.2.3` is critically affected and is not a safe fallback. No dcrypt
 release is currently supported.
 
 - [DCRYPT-2026-0001: error-registry memory unsafety](DCRYPT-2026-0001.md) — [GHSA-7hc7-h3f2-r4j6](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-7hc7-h3f2-r4j6)
-- [DCRYPT-2026-0002: Ed25519 identity-key forgery](DCRYPT-2026-0002.md) — [GHSA-7j32-2mpw-c784](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-7j32-2mpw-c784)
+- [DCRYPT-2026-0002: Ed25519 verification permits universal forgery](DCRYPT-2026-0002.md) — [GHSA-7j32-2mpw-c784](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-7j32-2mpw-c784)
 - [DCRYPT-2026-0003: GCM operation nonce ignored](DCRYPT-2026-0003.md) — [GHSA-h9f2-fgp8-vc4h](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-h9f2-fgp8-vc4h)
 - [DCRYPT-2026-0004: unauthenticated streaming framing](DCRYPT-2026-0004.md) — [GHSA-8cwp-4826-jg9f](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-8cwp-4826-jg9f)
 
