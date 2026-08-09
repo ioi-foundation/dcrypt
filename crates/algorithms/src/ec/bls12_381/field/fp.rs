@@ -116,54 +116,6 @@ impl Fp {
         Fp([r0, r1, r2, r3, r4, r5])
     }
 
-    /// Performs full multiplication of two field elements
-    #[inline]
-    const fn multiply_impl(&self, rhs: &Fp) -> ([u64; 12], u64) {
-        let (t0, carry) = mac(0, self.0[0], rhs.0[0], 0);
-        let (t1, carry) = mac(0, self.0[0], rhs.0[1], carry);
-        let (t2, carry) = mac(0, self.0[0], rhs.0[2], carry);
-        let (t3, carry) = mac(0, self.0[0], rhs.0[3], carry);
-        let (t4, carry) = mac(0, self.0[0], rhs.0[4], carry);
-        let (t5, t6) = mac(0, self.0[0], rhs.0[5], carry);
-
-        let (t1, carry) = mac(t1, self.0[1], rhs.0[0], 0);
-        let (t2, carry) = mac(t2, self.0[1], rhs.0[1], carry);
-        let (t3, carry) = mac(t3, self.0[1], rhs.0[2], carry);
-        let (t4, carry) = mac(t4, self.0[1], rhs.0[3], carry);
-        let (t5, carry) = mac(t5, self.0[1], rhs.0[4], carry);
-        let (t6, t7) = mac(t6, self.0[1], rhs.0[5], carry);
-
-        let (t2, carry) = mac(t2, self.0[2], rhs.0[0], 0);
-        let (t3, carry) = mac(t3, self.0[2], rhs.0[1], carry);
-        let (t4, carry) = mac(t4, self.0[2], rhs.0[2], carry);
-        let (t5, carry) = mac(t5, self.0[2], rhs.0[3], carry);
-        let (t6, carry) = mac(t6, self.0[2], rhs.0[4], carry);
-        let (t7, t8) = mac(t7, self.0[2], rhs.0[5], carry);
-
-        let (t3, carry) = mac(t3, self.0[3], rhs.0[0], 0);
-        let (t4, carry) = mac(t4, self.0[3], rhs.0[1], carry);
-        let (t5, carry) = mac(t5, self.0[3], rhs.0[2], carry);
-        let (t6, carry) = mac(t6, self.0[3], rhs.0[3], carry);
-        let (t7, carry) = mac(t7, self.0[3], rhs.0[4], carry);
-        let (t8, t9) = mac(t8, self.0[3], rhs.0[5], carry);
-
-        let (t4, carry) = mac(t4, self.0[4], rhs.0[0], 0);
-        let (t5, carry) = mac(t5, self.0[4], rhs.0[1], carry);
-        let (t6, carry) = mac(t6, self.0[4], rhs.0[2], carry);
-        let (t7, carry) = mac(t7, self.0[4], rhs.0[3], carry);
-        let (t8, carry) = mac(t8, self.0[4], rhs.0[4], carry);
-        let (t9, t10) = mac(t9, self.0[4], rhs.0[5], carry);
-
-        let (t5, carry) = mac(t5, self.0[5], rhs.0[0], 0);
-        let (t6, carry) = mac(t6, self.0[5], rhs.0[1], carry);
-        let (t7, carry) = mac(t7, self.0[5], rhs.0[2], carry);
-        let (t8, carry) = mac(t8, self.0[5], rhs.0[3], carry);
-        let (t9, carry) = mac(t9, self.0[5], rhs.0[4], carry);
-        let (t10, t11) = mac(t10, self.0[5], rhs.0[5], carry);
-
-        ([t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11], 0)
-    }
-
     /// Performs squaring using dedicated squaring algorithm
     #[inline]
     const fn square_impl(&self) -> ([u64; 12], u64) {

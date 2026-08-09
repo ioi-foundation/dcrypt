@@ -1,9 +1,7 @@
 // File: crates/kem/benches/ecdh_comparison.rs
 //! Comparison benchmarks for all ECDH-KEM implementations
 
-use criterion::{
-    criterion_group, criterion_main, AxisScale, BenchmarkId, Criterion, PlotConfiguration,
-};
+use criterion::{criterion_group, criterion_main, AxisScale, Criterion, PlotConfiguration};
 use dcrypt_api::Kem;
 mod support;
 use support::TestRng;

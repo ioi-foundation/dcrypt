@@ -310,8 +310,8 @@ fn bench_crypto_operations(c: &mut Criterion) {
         b.iter_batched(
             || {
                 let mut rng = bench_rng();
-                let (priv_a, pub_a) = p256::generate_keypair(&mut rng).unwrap();
-                let (priv_b, pub_b) = p256::generate_keypair(&mut rng).unwrap();
+                let (priv_a, _) = p256::generate_keypair(&mut rng).unwrap();
+                let (_, pub_b) = p256::generate_keypair(&mut rng).unwrap();
                 (priv_a, pub_b)
             },
             |(priv_key, pub_key)| black_box(p256::scalar_mult(&priv_key, &pub_key).unwrap()),

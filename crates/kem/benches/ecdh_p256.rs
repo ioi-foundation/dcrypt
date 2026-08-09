@@ -199,7 +199,7 @@ fn bench_error_cases(c: &mut Criterion) {
         b.iter(|| {
             let result = EcdhP256::decapsulate(&sk, &tampered_ct);
             // This might succeed but produce a different shared secret, or it might fail
-            black_box(result);
+            let _ = black_box(result);
         });
     });
 

@@ -103,26 +103,6 @@ impl Fp2 {
         }
     }
 
-    /// Complex squaring using algebraic reduction
-    ///
-    /// (a + b*u)^2 = a^2 + 2ab*u + b^2*u^2 = (a^2 - b^2) + 2ab*u
-    ///
-    /// Optimized using the identity:
-    /// - Real: (a + b)(a - b) = a^2 - b^2
-    /// - Imaginary: 2ab
-    #[inline]
-    fn square_impl(&self) -> Fp2 {
-        // Precompute commonly used values
-        let a_plus_b = (&self.c0).add(&self.c1);
-        let a_minus_b = (&self.c0).sub(&self.c1);
-        let two_a = (&self.c0).add(&self.c0);
-
-        Fp2 {
-            c0: (&a_plus_b).mul(&a_minus_b), // a^2 - b^2
-            c1: (&two_a).mul(&self.c1),      // 2ab
-        }
-    }
-
     /// Complex conjugation: (a + b*u) -> (a - b*u)
     #[inline]
     fn conjugate_impl(&self) -> Fp2 {

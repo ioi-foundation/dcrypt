@@ -3,7 +3,7 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use dcrypt_api::Kem;
-use dcrypt_kem::ecdh::p521::{EcdhP521, EcdhP521PublicKey, EcdhP521SecretKey};
+use dcrypt_kem::ecdh::p521::EcdhP521;
 mod support;
 use support::TestRng;
 

@@ -193,7 +193,7 @@ fn bench_key_operations(c: &mut Criterion) {
 
     group.bench_function("scalar_reduction", |bench| {
         // Use bytes that are guaranteed to need reduction
-        let mut bytes = [0xFF; K256_SCALAR_SIZE];
+        let bytes = [0xFF; K256_SCALAR_SIZE];
         bench.iter(|| Scalar::new(black_box(bytes)));
     });
 

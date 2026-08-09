@@ -236,8 +236,8 @@ fn bench_ecdh_operations(c: &mut Criterion) {
 
     // Generate two keypairs for ECDH
     let mut rng = bench_rng();
-    let (sk_a, pk_a) = p384::generate_keypair(&mut rng).unwrap();
-    let (sk_b, pk_b) = p384::generate_keypair(&mut rng).unwrap();
+    let (sk_a, _) = p384::generate_keypair(&mut rng).unwrap();
+    let (_, pk_b) = p384::generate_keypair(&mut rng).unwrap();
 
     group.bench_function("shared_secret", |bencher| {
         bencher.iter(|| black_box(pk_b.mul(&sk_a).unwrap()));

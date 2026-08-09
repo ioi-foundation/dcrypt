@@ -164,8 +164,8 @@ fn bench_ecdh_operations(c: &mut Criterion) {
     let mut rng = bench_rng();
 
     // Generate two keypairs for ECDH
-    let (private_a, public_a) = p521::generate_keypair(&mut rng).unwrap();
-    let (private_b, public_b) = p521::generate_keypair(&mut rng).unwrap();
+    let (private_a, _) = p521::generate_keypair(&mut rng).unwrap();
+    let (_, public_b) = p521::generate_keypair(&mut rng).unwrap();
 
     // Benchmark ECDH shared secret computation
     group.bench_function("shared_secret", |b| {
