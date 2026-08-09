@@ -242,12 +242,18 @@ pub(crate) fn decode_12_checked(input: &[u8]) -> Option<Poly> {
 }
 
 pub(crate) fn compress(poly: &Poly, bits: usize) -> Poly {
+    debug_assert!((1..=11).contains(&bits));
     let mut result = Poly::zero();
     let modulus = 1u32 << bits;
     for (output, &coefficient) in result.coeffs.iter_mut().zip(poly.coeffs.iter()) {
         let coefficient = u32::from(freeze(coefficient) as u16);
-        *output = ((((coefficient << bits) + u32::from(Q as u16) / 2) / u32::from(Q as u16))
-            & (modulus - 1)) as i16;
+        let numerator = (coefficient << bits) + u32::from(Q as u16) / 2;
+        // Exact division by q=3329 for every numerator reachable by the
+        // standard d<12 parameter sets. This is the reciprocal recommended by
+        // the Kyber/ML-KEM implementation guidance and avoids a secret-dependent
+        // hardware integer division in unoptimized builds.
+        let quotient = (20_642_679u64.wrapping_mul(u64::from(numerator)) >> 36) as u32;
+        *output = (quotient & (modulus - 1)) as i16;
     }
     result
 }
@@ -263,7 +269,22 @@ pub(crate) fn decompress(poly: &Poly, bits: usize) -> Poly {
 
 #[cfg(test)]
 mod tests {
-    use super::{decode, decode_12_checked, encode, Poly, POLY_BYTES, Q};
+    use super::{compress, decode, decode_12_checked, encode, Poly, N, POLY_BYTES, Q};
+
+    #[test]
+    fn compression_reciprocal_matches_exact_reference_for_all_inputs() {
+        for bits in [1usize, 4, 5, 10, 11] {
+            let mask = (1u32 << bits) - 1;
+            for coefficient in 0..Q {
+                let mut polynomial = Poly::zero();
+                polynomial.coeffs = [coefficient; N];
+                let compressed = compress(&polynomial, bits);
+                let numerator = (u32::from(coefficient as u16) << bits) + u32::from(Q as u16) / 2;
+                let expected = ((numerator / u32::from(Q as u16)) & mask) as i16;
+                assert_eq!(compressed.coeffs[0], expected);
+            }
+        }
+    }
 
     #[test]
     fn twelve_bit_codec_round_trips_canonical_coefficients() {

@@ -541,12 +541,16 @@ impl<P: MlKemParameterSet> Kem for MlKem<P> {
         let expected_ciphertext = pke::encrypt::<P>(public_key, &message, &randomness)
             .map_err(|_| primitive_failure("ML-KEM decapsulation"))?;
         let rejection_key = hash_j(&z, ciphertext.as_bytes())?;
-        let valid = expected_ciphertext[..].ct_eq(ciphertext.as_bytes());
+        let mut valid = expected_ciphertext[..].ct_eq(ciphertext.as_bytes());
         let mut shared_secret = Zeroizing::new([0u8; SYM_BYTES]);
         for index in 0..SYM_BYTES {
             shared_secret[index] =
                 u8::conditional_select(&rejection_key[index], &candidate_key[index], valid);
         }
+        // FIPS 203 requires destruction of implicit-rejection intermediates.
+        // All key/message/ciphertext candidates above are zeroizing owners;
+        // explicitly erase the one-bit validity selector as well.
+        valid.zeroize();
         Ok(MlKemSharedSecret::new(shared_secret))
     }
 }

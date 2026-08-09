@@ -5,6 +5,8 @@
 
 use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not};
 
+use crate::zeroing::Zeroize;
+
 /// A one-bit value used by constant-time operations.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Choice(u8);
@@ -42,6 +44,13 @@ impl From<Choice> for u8 {
     #[inline(always)]
     fn from(value: Choice) -> Self {
         value.0
+    }
+}
+
+impl Zeroize for Choice {
+    #[inline(never)]
+    fn zeroize(&mut self) {
+        self.0.zeroize();
     }
 }
 
