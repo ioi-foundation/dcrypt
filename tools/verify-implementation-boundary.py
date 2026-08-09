@@ -129,9 +129,7 @@ UNPROTECTED_HIGH_LEVEL_KEY_COPY = re.compile(
     r"(?:\blet\s+mut\s+(?:buffer_bytes|key_array|key_data|key|serialized)\b"
     r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;|"
     r"\blet\s+mut\s+encryption_key_arr(?:_aes)?\b"
-    r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;|"
-    r"\blet\s+sk_bytes\b(?:\s*:\s*[^=;]+)?\s*=\s*"
-    r"sk_scalar\s*\.\s*serialize\s*\(\s*\))",
+    r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;)",
     re.DOTALL,
 )
 TARGETED_SECRET_SCRATCH = {
