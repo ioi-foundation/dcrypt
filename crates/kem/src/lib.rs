@@ -6,6 +6,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(unsafe_code)]
 
+extern crate alloc;
+
 macro_rules! impl_zeroize_tuple {
     ($type:ty) => {
         impl dcrypt_internal::zeroing::Zeroize for $type {
@@ -53,8 +55,10 @@ pub(crate) mod test_rng {
 
 pub mod ecdh;
 pub mod error;
-pub mod kyber;
+#[cfg(feature = "alloc")]
+pub mod ml_kem;
 
 // Re-exports
 pub use ecdh::{EcdhP192, EcdhP224, EcdhP256, EcdhP384, EcdhP521}; // Added EcdhP192
-pub use kyber::{Kyber1024, Kyber512, Kyber768};
+#[cfg(feature = "alloc")]
+pub use ml_kem::{MlKem1024, MlKem512, MlKem768};

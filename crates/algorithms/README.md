@@ -65,7 +65,7 @@ The crate provides a broad range of cryptographic primitives, categorized as fol
 *   **Pairing-Friendly Curve:** BLS12-381, including G1/G2 operations and optimal Ate pairing.
 
 ### Post-Quantum Primitives
-*   **Lattice-Based Math:** Includes a generic polynomial engine with Number-Theoretic Transform (NTT) implementations for Dilithium (FIPS-204) and Kyber parameters.
+*   **Lattice-Based Math:** Includes generic polynomial support used by the owned final FIPS 204 ML-DSA implementation. ML-KEM uses its distinct seven-layer transform in `dcrypt-kem`.
 
 ## Security
 

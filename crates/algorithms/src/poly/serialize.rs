@@ -126,7 +126,7 @@ pub const fn bytes_required(bits_per_coeff: usize, n: usize) -> usize {
 
 /// Optimized packing for common bit widths
 impl DefaultCoefficientSerde {
-    /// Optimized packing for 10-bit coefficients (Kyber ciphertext)
+    /// Optimized packing for 10-bit coefficients.
     pub fn pack_10bit<M: Modulus>(poly: &Polynomial<M>) -> Result<Vec<u8>> {
         let n = M::N;
         let mut packed = vec![0u8; (n * 10) / 8];
@@ -254,8 +254,8 @@ mod tests {
 
     #[test]
     fn test_bytes_required() {
-        assert_eq!(bytes_required(10, 256), 320); // Kyber ciphertext
-        assert_eq!(bytes_required(12, 256), 384); // Kyber public key
+        assert_eq!(bytes_required(10, 256), 320);
+        assert_eq!(bytes_required(12, 256), 384);
         assert_eq!(bytes_required(13, 256), 416); // Dilithium
         assert_eq!(bytes_required(23, 256), 736); // Dilithium signature
     }

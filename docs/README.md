@@ -13,7 +13,7 @@ This documentation provides an overview of the dcrypt project structure, its cor
 ## Key Features
 
 -   **Rust-first Implementation**: Most code avoids FFI, improving portability without constituting a memory-safety guarantee.
--   **Comprehensive Algorithm Support**: Includes a wide range of traditional (AES, SHA, HMAC, RSA, ECDSA, etc.) and post-quantum cryptographic algorithms (Kyber, Dilithium, Falcon, etc.).
+-   **Cryptographic APIs**: Includes traditional primitives plus final FIPS 203 ML-KEM and FIPS 204 ML-DSA parameter sets.
 -   **Modular Architecture**: Organized as a Rust workspace with specialized crates, promoting maintainability and clear separation of concerns.
 -   **Strong Type Safety**: Leverages Rust's type system with const generics and marker traits to prevent misuse of cryptographic primitives and ensure correct API usage.
 -   **Memory Protection**: Prioritizes secure memory handling, including automatic zeroization of sensitive data (keys, intermediate values) using the `zeroize` crate and custom secure types.
@@ -91,40 +91,21 @@ fn main() -> dcrypt_symmetric::error::Result<()> {
 }
 ```
 
-### Example: Post-Quantum Key Encapsulation with Kyber
+### Example: Post-Quantum Key Encapsulation with ML-KEM
 
 ```rust
-// Note: This example assumes 'dcrypt-kem' and 'dcrypt-api' crates.
+use dcrypt_api::Kem;
+use dcrypt_internal::{CryptoRng, RngCore};
+use dcrypt_kem::ml_kem::MlKem768;
 
-use dcrypt_kem::kyber::{Kyber768, KyberPublicKey, KyberSecretKey, KyberCiphertext, KyberSharedSecret};
-use dcrypt_api::Kem; // Core KEM trait
-use rand::rngs::OsRng;
-
-fn main() -> dcrypt_api::error::Result<()> {
-    // Generate a Kyber768 keypair
-    // In a real scenario, Kyber768::keypair would be fully implemented.
-    // For this example, we'll assume placeholder keys for structure.
-    let mut pk_bytes = vec![0u8; dcrypt_params::pqc::kyber::KYBER768.public_key_size];
-    let mut sk_bytes = vec![0u8; dcrypt_params::pqc::kyber::KYBER768.secret_key_size];
-    OsRng.fill_bytes(&mut pk_bytes);
-    OsRng.fill_bytes(&mut sk_bytes);
-    
-    let public_key = KyberPublicKey(pk_bytes);
-    let secret_key = KyberSecretKey(sk_bytes);
-
-    // Encapsulate a shared secret
-    // Real encapsulation would use the public_key.
-    let mut rng = OsRng;
-    let (ciphertext, shared_secret_sender) = Kyber768::encapsulate(&mut rng, &public_key)?;
-
-    // Decapsulate the shared secret
-    // Real decapsulation would use the secret_key and ciphertext.
-    let shared_secret_receiver = Kyber768::decapsulate(&secret_key, &ciphertext)?;
-
-    // The shared secrets will be identical (in a real implementation)
-    assert_eq!(shared_secret_sender.as_ref(), shared_secret_receiver.as_ref());
-
-    println!("Kyber-768 KEM Encapsulation/Decapsulation successful!");
+fn exchange<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt_api::Result<()> {
+    let (public_key, secret_key) = MlKem768::keypair(rng)?;
+    let (ciphertext, sender_secret) = MlKem768::encapsulate(rng, &public_key)?;
+    let receiver_secret = MlKem768::decapsulate(&secret_key, &ciphertext)?;
+    assert_eq!(
+        sender_secret.to_bytes_zeroizing().as_slice(),
+        receiver_secret.to_bytes_zeroizing().as_slice(),
+    );
     Ok(())
 }
 ```
@@ -150,7 +131,7 @@ dcrypt utilizes feature flags to tailor the build for different environments and
 -   `no_std`: For environments without a standard library (e.g., embedded systems). Some functionalities requiring heap allocation might be disabled or require an allocator to be provided.
 -   `serde`: Enables serialization and deserialization capabilities for various types using the `serde` framework.
 -   `xof`: Includes Extendable Output Functions like SHAKE and BLAKE3.
--   Specific algorithm features (e.g., `aes`, `sha2`, `kyber`) may be available for fine-grained control over compiled code size. (Refer to individual crate `Cargo.toml` files for details).
+-   Crate features select broad primitive families; refer to each crate's `Cargo.toml` for the exact supported combinations.
 
 ## Contributing
 

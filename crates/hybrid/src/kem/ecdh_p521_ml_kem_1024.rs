@@ -1,33 +1,32 @@
-// File: crates/hybrid/src/kem/ecdh_k256_kyber_512.rs
+// File: crates/hybrid/src/kem/ecdh_p521_ml_kem_1024.rs
 
-//! Hybrid KEM combining ECDH on secp256k1 and Kyber-512.
+//! Hybrid KEM combining ECDH on P-521 and MlKem-1024.
 
-use super::engine::{HybridCiphertext, HybridKemEngine, HybridPublicKey, HybridSecretKey};
+use super::engine::{
+    HybridCiphertext, HybridKemEngine, HybridPublicKey, HybridSecretKey, HybridSharedSecret,
+};
 use dcrypt_api::{error::Result as ApiResult, Kem};
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_kem::{
-    ecdh::EcdhK256,
-    kyber::{Kyber512, KyberSharedSecret},
-};
+use dcrypt_kem::{ecdh::EcdhP521, ml_kem::MlKem1024};
 
-/// A concrete hybrid KEM struct for EcdhK256 + Kyber512.
-pub struct EcdhK256Kyber512;
+/// A concrete hybrid KEM struct for EcdhP521 + MlKem1024.
+pub struct EcdhP521MlKem1024;
 
-impl Kem for EcdhK256Kyber512 {
+impl Kem for EcdhP521MlKem1024 {
     // Define associated types using the generic building blocks
-    type PublicKey = HybridPublicKey<EcdhK256, Kyber512>;
-    type SecretKey = HybridSecretKey<EcdhK256, Kyber512>;
-    type SharedSecret = KyberSharedSecret;
-    type Ciphertext = HybridCiphertext<EcdhK256, Kyber512>;
+    type PublicKey = HybridPublicKey<EcdhP521, MlKem1024>;
+    type SecretKey = HybridSecretKey<EcdhP521, MlKem1024>;
+    type SharedSecret = HybridSharedSecret;
+    type Ciphertext = HybridCiphertext<EcdhP521, MlKem1024>;
     type KeyPair = (Self::PublicKey, Self::SecretKey);
 
     fn name() -> &'static str {
-        "EcdhK256-Kyber512"
+        "ECDH-P521-ML-KEM-1024"
     }
 
     // Delegate all logic to the generic engine
     fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> ApiResult<Self::KeyPair> {
-        HybridKemEngine::<EcdhK256, Kyber512>::keypair(rng)
+        HybridKemEngine::<EcdhP521, MlKem1024>::keypair(rng)
     }
 
     fn public_key(keypair: &Self::KeyPair) -> Self::PublicKey {
@@ -42,13 +41,13 @@ impl Kem for EcdhK256Kyber512 {
         rng: &mut R,
         public_key: &Self::PublicKey,
     ) -> ApiResult<(Self::Ciphertext, Self::SharedSecret)> {
-        HybridKemEngine::<EcdhK256, Kyber512>::encapsulate(rng, public_key)
+        HybridKemEngine::<EcdhP521, MlKem1024>::encapsulate(rng, public_key)
     }
 
     fn decapsulate(
         secret_key: &Self::SecretKey,
         ciphertext: &Self::Ciphertext,
     ) -> ApiResult<Self::SharedSecret> {
-        HybridKemEngine::<EcdhK256, Kyber512>::decapsulate(secret_key, ciphertext)
+        HybridKemEngine::<EcdhP521, MlKem1024>::decapsulate(secret_key, ciphertext)
     }
 }

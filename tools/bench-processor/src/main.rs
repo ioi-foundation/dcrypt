@@ -58,7 +58,8 @@ fn categorize(id: &str) -> Category {
     let id_lower = id.to_lowercase();
 
     // 1. Key Encapsulation
-    if id_lower.contains("kyber")
+    if id_lower.contains("ml_kem")
+        || id_lower.contains("ml-kem")
         || id_lower.contains("ecdh")
         || id_lower.contains("mceliece")
         || id_lower.contains("saber")

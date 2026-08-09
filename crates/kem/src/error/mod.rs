@@ -1,7 +1,5 @@
 //! Error handling for KEM operations
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 use core::fmt;
 use dcrypt_algorithms::error::Error as PrimitiveError;
 use dcrypt_api::error::Error as CoreError;

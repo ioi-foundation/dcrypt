@@ -1,6 +1,6 @@
 //! Essential tests for Number Theoretic Transform implementation
 
-use super::super::params::{DilithiumParams, Kyber256Params};
+use super::super::params::DilithiumParams;
 use super::super::polynomial::Polynomial;
 use super::*;
 
@@ -58,29 +58,6 @@ fn test_ntt_roundtrip_dilithium() {
     poly.from_ntt_inplace().unwrap();
 
     for i in 0..DilithiumParams::N {
-        assert_eq!(
-            poly.coeffs[i], original.coeffs[i],
-            "Roundtrip failed at coefficient {}",
-            i
-        );
-    }
-}
-
-/// Test NTT roundtrip for Kyber
-#[test]
-fn test_ntt_roundtrip_kyber() {
-    let mut poly = Polynomial::<Kyber256Params>::zero();
-    poly.coeffs[0] = 1000;
-    poly.coeffs[1] = 2000;
-    poly.coeffs[2] = 3000;
-    poly.coeffs[255] = 3328;
-
-    let original = poly.clone();
-
-    poly.ntt_inplace().unwrap();
-    poly.from_ntt_inplace().unwrap();
-
-    for i in 0..Kyber256Params::N {
         assert_eq!(
             poly.coeffs[i], original.coeffs[i],
             "Roundtrip failed at coefficient {}",
@@ -292,8 +269,8 @@ mod arithmetic_tests {
         const BARRETT_K: u32 = 55;
     }
 
-    struct KyberMod;
-    impl Modulus for KyberMod {
+    struct SmallMod;
+    impl Modulus for SmallMod {
         const Q: u32 = 3329;
         const N: usize = 256;
         const BARRETT_MU: u128 = 10_569_051_393;
@@ -319,21 +296,21 @@ mod arithmetic_tests {
             assert!(reduced < DilithiumMod::Q);
         }
 
-        let kyber_test_values = [
+        let small_modulus_test_values = [
             0,
             1,
-            KyberMod::Q - 1,
-            KyberMod::Q,
-            3 * KyberMod::Q,
-            8 * KyberMod::Q - 1,
+            SmallMod::Q - 1,
+            SmallMod::Q,
+            3 * SmallMod::Q,
+            8 * SmallMod::Q - 1,
             u32::MAX,
         ];
 
-        for &x in &kyber_test_values {
-            let reduced = reduce_to_q::<KyberMod>(x);
-            let expected = x % KyberMod::Q;
+        for &x in &small_modulus_test_values {
+            let reduced = reduce_to_q::<SmallMod>(x);
+            let expected = x % SmallMod::Q;
             assert_eq!(reduced, expected);
-            assert!(reduced < KyberMod::Q);
+            assert!(reduced < SmallMod::Q);
         }
     }
 
@@ -353,8 +330,8 @@ mod arithmetic_tests {
             assert_eq!(reduced, DilithiumMod::Q - 1);
         }
 
-        let x_kyber = 3 * KyberMod::Q;
-        let reduced_kyber = reduce_to_q::<KyberMod>(x_kyber);
-        assert_eq!(reduced_kyber, 0);
+        let x_small = 3 * SmallMod::Q;
+        let reduced_small = reduce_to_q::<SmallMod>(x_small);
+        assert_eq!(reduced_small, 0);
     }
 }

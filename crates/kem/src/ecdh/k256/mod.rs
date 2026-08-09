@@ -14,6 +14,7 @@
 //! implementation of that construction instead.
 
 use crate::error::Error as KemError;
+use alloc::vec::Vec;
 use dcrypt_algorithms::ec::k256 as ec_k256;
 use dcrypt_api::{
     error::Error as ApiError,

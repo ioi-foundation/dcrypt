@@ -127,7 +127,7 @@ impl TestConfig {
 
     pub fn for_pqc_kem() -> Self {
         Self {
-            // Kyber has higher variance; rely heavily on robust stats.
+            // MlKem has higher variance; rely heavily on robust stats.
             practical_significance_threshold: 1.0,
             num_warmup: 3000,
             ..Self::default()

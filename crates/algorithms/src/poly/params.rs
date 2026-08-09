@@ -25,7 +25,7 @@ pub trait Modulus {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum PostInvNtt {
     /// Strip the last Montgomery factor **R** → coefficients are in *standard*
-    /// domain (Kyber).
+    /// domain.
     Standard,
     /// Keep one Montgomery factor **R** → coefficients stay in Montgomery
     /// domain (Dilithium).
@@ -66,42 +66,8 @@ pub trait NttModulus: Modulus {
 
     /// How the coefficients should be post-processed after the inverse NTT.
     ///
-    /// * `Standard`   → Kyber / Saber style  
+    /// * `Standard`   → standard coefficient domain
     /// * `Montgomery` → Dilithium style (`invntt_tomont`)
-    const POST_INVNTT_MODE: PostInvNtt = PostInvNtt::Standard;
-}
-
-/// Example: Kyber-256 parameter set
-#[derive(Clone, Debug)]
-pub struct Kyber256Params;
-
-impl Modulus for Kyber256Params {
-    const Q: u32 = 3329;
-    const N: usize = 256;
-
-    // Barrett constants for Q = 3329
-    // k=45 (formula would give 12+32=44, but 45 provides extra margin)
-    // mu = floor(2^45 / 3329) = 10_569_051_393
-    const BARRETT_MU: u128 = 10_569_051_393;
-    const BARRETT_K: u32 = 45;
-}
-
-impl NttModulus for Kyber256Params {
-    const ZETA: u32 = 17; // primitive 512-th root of unity mod 3329
-                          // Pre-computed tables dropped; Cooley-Tukey now derives twiddles on demand
-    const ZETAS: &'static [u32] = &[];
-    /// (256⁻¹) in Montgomery form: (256⁻¹ · R₃₂) mod Q
-    const N_INV: u32 = 2385;
-    /// 2³² mod Q
-    const MONT_R: u32 = 1353;
-    /// -Q⁻¹ mod 2³² (0x94570CFF)
-    const NEG_QINV: u32 = 0x94570CFF;
-
-    // Kyber doesn't use twisting
-    const PSIS: &'static [u32] = &[];
-    const INV_PSIS: &'static [u32] = &[];
-
-    // Kyber wants standard-domain coefficients after InvNTT
     const POST_INVNTT_MODE: PostInvNtt = PostInvNtt::Standard;
 }
 
@@ -333,17 +299,6 @@ pub fn is_power_of_two(n: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_kyber_params() {
-        assert_eq!(Kyber256Params::Q, 3329);
-        assert_eq!(Kyber256Params::N, 256);
-        assert!(is_prime(Kyber256Params::Q));
-        assert!(is_power_of_two(Kyber256Params::N));
-        assert_eq!(Kyber256Params::POST_INVNTT_MODE, PostInvNtt::Standard);
-        assert_eq!(Kyber256Params::BARRETT_MU, 10_569_051_393);
-        assert_eq!(Kyber256Params::BARRETT_K, 45);
-    }
 
     #[test]
     fn test_dilithium_params() {

@@ -3,19 +3,83 @@
 //! A generic engine for creating hybrid KEMs.
 
 use super::traits::KemDimensions;
+use alloc::{boxed::Box, vec, vec::Vec};
 use core::marker::PhantomData;
 use dcrypt_algorithms::{hash::sha2::Sha256, kdf::hkdf::Hkdf};
 use dcrypt_api::{
     error::Error as ApiError,
     error::Result as ApiResult,
     traits::serialize::{Serialize, SerializeSecret},
-    Key as ApiKey,
 };
 use dcrypt_internal::random::{CryptoRng, RngCore};
 use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
-use dcrypt_kem::kyber::KyberSharedSecret;
 
 const HYBRID_KEM_INFO_LABEL: &[u8] = b"dcrypt-hybrid-kem/v2";
+
+/// A 256-bit shared secret produced by the hybrid combiner.
+pub struct HybridSharedSecret(Zeroizing<[u8; 32]>);
+
+impl HybridSharedSecret {
+    fn new(bytes: Zeroizing<[u8; 32]>) -> Self {
+        Self(bytes)
+    }
+
+    pub const fn len(&self) -> usize {
+        32
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        false
+    }
+
+    pub fn to_bytes_zeroizing(&self) -> Zeroizing<Box<[u8]>> {
+        Zeroizing::new(Box::from(&self.0[..]))
+    }
+}
+
+impl Clone for HybridSharedSecret {
+    fn clone(&self) -> Self {
+        Self(Zeroizing::new(*self.0))
+    }
+}
+
+impl Zeroize for HybridSharedSecret {
+    fn zeroize(&mut self) {
+        self.0.zeroize();
+    }
+}
+
+impl ZeroizeOnDrop for HybridSharedSecret {}
+
+impl core::fmt::Debug for HybridSharedSecret {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter
+            .debug_struct("HybridSharedSecret")
+            .field("length", &32)
+            .finish_non_exhaustive()
+    }
+}
+
+impl SerializeSecret for HybridSharedSecret {
+    fn from_bytes(bytes: &[u8]) -> ApiResult<Self> {
+        if bytes.len() != 32 {
+            return Err(ApiError::InvalidLength {
+                context: "hybrid shared secret",
+                expected: 32,
+                actual: bytes.len(),
+            });
+        }
+        let mut value = Zeroizing::new([0u8; 32]);
+        value.copy_from_slice(bytes);
+        Ok(Self(value))
+    }
+
+    fn to_bytes_zeroizing(&self) -> Zeroizing<Vec<u8>> {
+        // The workspace-wide trait currently fixes a `Vec<u8>` return type.
+        // Prefer the inherent exact-size boxed export above.
+        Zeroizing::new(self.0.to_vec())
+    }
+}
 
 // --- Generic Hybrid Data Structures ---
 
@@ -173,7 +237,7 @@ where
         ciphertext: &HybridCiphertext<C, P>,
         classical_ss_bytes: &[u8],
         post_quantum_ss_bytes: &[u8],
-    ) -> ApiResult<KyberSharedSecret> {
+    ) -> ApiResult<HybridSharedSecret> {
         let ciphertext_bytes = ciphertext.to_bytes();
 
         let mut ikm = Zeroizing::new(Vec::with_capacity(
@@ -196,21 +260,24 @@ where
         append_len_prefixed(&mut info, P::SUITE_ID);
         append_len_prefixed(&mut info, &ciphertext_bytes);
 
-        let okm =
+        let derived =
             Hkdf::<Sha256>::derive(None, &ikm, Some(&info), 32).map_err(|_| ApiError::Other {
                 context: "HKDF",
                 #[cfg(feature = "std")]
                 message: "HKDF derivation failed".to_string(),
             })?;
+        let okm = Zeroizing::new(Box::from(&derived[..]));
 
-        Ok(KyberSharedSecret::new(ApiKey::new(&okm[..])))
+        let mut shared_secret = Zeroizing::new([0u8; 32]);
+        shared_secret.copy_from_slice(&okm);
+        Ok(HybridSharedSecret::new(shared_secret))
     }
 
     fn derive_shared_secret(
         ciphertext: &HybridCiphertext<C, P>,
         classical_ss: &C::SharedSecret,
         post_quantum_ss: &P::SharedSecret,
-    ) -> ApiResult<KyberSharedSecret> {
+    ) -> ApiResult<HybridSharedSecret> {
         let classical_bytes = classical_ss.to_bytes_zeroizing();
         let post_quantum_bytes = post_quantum_ss.to_bytes_zeroizing();
         Self::derive_shared_secret_from_bytes(ciphertext, &classical_bytes, &post_quantum_bytes)
@@ -242,7 +309,7 @@ where
     pub fn encapsulate<R: CryptoRng + RngCore>(
         rng: &mut R,
         public_key: &HybridPublicKey<C, P>,
-    ) -> ApiResult<(HybridCiphertext<C, P>, KyberSharedSecret)> {
+    ) -> ApiResult<(HybridCiphertext<C, P>, HybridSharedSecret)> {
         let (classical_ct, classical_ss) = C::encapsulate(rng, &public_key.classical_pk)?;
         let (post_quantum_ct, post_quantum_ss) = P::encapsulate(rng, &public_key.post_quantum_pk)?;
 
@@ -258,7 +325,7 @@ where
     pub fn decapsulate(
         secret_key: &HybridSecretKey<C, P>,
         ciphertext: &HybridCiphertext<C, P>,
-    ) -> ApiResult<KyberSharedSecret> {
+    ) -> ApiResult<HybridSharedSecret> {
         let classical_result = C::decapsulate(&secret_key.classical_sk, &ciphertext.classical_ct);
         let post_quantum_result =
             P::decapsulate(&secret_key.post_quantum_sk, &ciphertext.post_quantum_ct);

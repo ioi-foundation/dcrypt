@@ -6,8 +6,8 @@ Having these parameters in a dedicated location ensures consistency and ease of 
 
 ## PQC Algorithm Parameter Sets
 
-1.  **Kyber (`kyber.rs`)**:
-    *   Defines `Kyber512Params`, `Kyber768Params`, `Kyber1024Params` structs and their corresponding `const` instances (`KYBER512`, `KYBER768`, `KYBER1024`).
+1.  **ML-KEM (`ml_kem.rs`)**:
+    *   Defines final FIPS 203 `MlKem512Params`, `MlKem768Params`, and `MlKem1024Params` structures and their `ML_KEM_512`, `ML_KEM_768`, and `ML_KEM_1024` constants.
     *   Parameters include polynomial degree (`n`), modulus (`q`), dimension (`k`), error distribution parameters (`eta1`, `eta2`), compression bits (`du`, `dv`), and sizes for public key, secret key, ciphertext, and shared secret.
 
 2.  **Dilithium (`dilithium.rs`)**:

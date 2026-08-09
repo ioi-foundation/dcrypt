@@ -3,7 +3,7 @@
 //! Defines traits for extending KEM functionality within the hybrid crate.
 
 use dcrypt_api::Kem;
-use dcrypt_kem::{ecdh, kyber};
+use dcrypt_kem::{ecdh, ml_kem};
 
 /// Extends the `dcrypt_api::Kem` trait with compile-time length constants.
 /// This is essential for generic serialization of hybrid data structures.
@@ -71,23 +71,23 @@ impl KemDimensions for ecdh::EcdhB283k {
     const SHARED_SECRET_LEN: usize = 48;
 }
 
-// --- Kyber Implementations ---
-impl KemDimensions for kyber::Kyber512 {
-    const SUITE_ID: &'static [u8] = b"Kyber512";
+// --- ML-KEM implementations ---
+impl KemDimensions for ml_kem::MlKem512 {
+    const SUITE_ID: &'static [u8] = b"ML-KEM-512";
     const PUBLIC_KEY_LEN: usize = 800;
     const SECRET_KEY_LEN: usize = 1632;
     const CIPHERTEXT_LEN: usize = 768;
     const SHARED_SECRET_LEN: usize = 32;
 }
-impl KemDimensions for kyber::Kyber768 {
-    const SUITE_ID: &'static [u8] = b"Kyber768";
+impl KemDimensions for ml_kem::MlKem768 {
+    const SUITE_ID: &'static [u8] = b"ML-KEM-768";
     const PUBLIC_KEY_LEN: usize = 1184;
     const SECRET_KEY_LEN: usize = 2400;
     const CIPHERTEXT_LEN: usize = 1088;
     const SHARED_SECRET_LEN: usize = 32;
 }
-impl KemDimensions for kyber::Kyber1024 {
-    const SUITE_ID: &'static [u8] = b"Kyber1024";
+impl KemDimensions for ml_kem::MlKem1024 {
+    const SUITE_ID: &'static [u8] = b"ML-KEM-1024";
     const PUBLIC_KEY_LEN: usize = 1568;
     const SECRET_KEY_LEN: usize = 3168;
     const CIPHERTEXT_LEN: usize = 1568;

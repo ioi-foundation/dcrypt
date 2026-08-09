@@ -976,7 +976,7 @@ impl G2Projective {
 
                     for b in 0..num_buckets {
                         let bucket_idx = b + 1;
-                        // Check if k == bucket_idx in constant time using subtle
+                        // Check whether k equals bucket_idx with the owned CT trait.
                         let choice = k.ct_eq(&bucket_idx);
 
                         let res = buckets[b].add_mixed(&points[i]);

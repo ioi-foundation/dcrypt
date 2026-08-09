@@ -11,9 +11,9 @@ This crate is part of the `dcrypt` cryptographic library.
 
 ## Features
 
--   **Broad Algorithm Support:** Includes classic ECDH-based KEMs over multiple standard curves and the NIST-standardized post-quantum KEM, CRYSTALS-Kyber.
+-   **Broad Algorithm Support:** Includes classic ECDH-based KEMs and final FIPS 203 ML-KEM.
 -   **Security-First Design:**
-    -   **Strongly-Typed Keys:** Utilizes distinct types for public keys, secret keys, and ciphertexts (e.g., `EcdhP256PublicKey`, `KyberSecretKey`) to prevent misuse.
+    -   **Strongly-Typed Keys:** Uses distinct, validated types for public keys, secret keys, and ciphertexts.
     -   **Zeroization:** Secret key and shared secret materials are automatically zeroized on drop to minimize their lifetime in memory.
     -   **Controlled Byte Access:** Deliberately avoids generic `AsRef<[u8]>` implementations on sensitive types, requiring explicit serialization calls.
     -   **Validation:** Incoming keys and ciphertexts are validated to prevent common attacks, such as those involving invalid curve points.
@@ -34,17 +34,9 @@ The crate provides implementations for the following KEMs, accessible via the `d
 | **Elliptic Curve** | ECDH over NIST P-521 | `EcdhP521` | ~256-bit | **Implemented** |
 | **Elliptic Curve** | ECDH over secp256k1 | `EcdhK256` | ~128-bit | **Implemented** |
 | **Elliptic Curve**| ECDH over sect283k1 | `EcdhB283k` | ~142-bit | **Implemented** |
-| **Post-Quantum** | CRYSTALS-Kyber-512 | `Kyber512` | NIST Level 1 | **Implemented** |
-| **Post-Quantum** | CRYSTALS-Kyber-768 | `Kyber768` | NIST Level 3 | **Implemented** |
-| **Post-Quantum** | CRYSTALS-Kyber-1024 | `Kyber1024` | NIST Level 5 | **Implemented** |
-| **Post-Quantum** | LightSaber | `LightSaber` | - | *Placeholder* |
-| **Post-Quantum** | Saber | `Saber` | - | *Placeholder* |
-| **Post-Quantum** | FireSaber | `FireSaber` | - | *Placeholder* |
-| **Post-Quantum** | Classic McEliece 348864| `McEliece348864`| NIST Level 1 | *Placeholder* |
-| **Post-Quantum** | Classic McEliece 6960119| `McEliece6960119`| NIST Level 5 | *Placeholder* |
-| **Traditional** | Diffie-Hellman (2048-bit) | `Dh2048` | - | *Placeholder* |
-
-> **Note:** Algorithms marked as *Placeholder* are exposed in the API but do not yet contain a full cryptographic implementation.
+| **Post-Quantum** | FIPS 203 ML-KEM-512 | `MlKem512` | NIST Level 1 | **Implemented** |
+| **Post-Quantum** | FIPS 203 ML-KEM-768 | `MlKem768` | NIST Level 3 | **Implemented** |
+| **Post-Quantum** | FIPS 203 ML-KEM-1024 | `MlKem1024` | NIST Level 5 | **Implemented** |
 
 ## Installation
 
@@ -53,7 +45,6 @@ Add the main `dcrypt` crate to your `Cargo.toml`:
 ```toml
 [dependencies]
 dcrypt = "0.12.0-beta.1"
-rand = "0.8"
 ```
 
 ## Usage Example
@@ -65,13 +56,10 @@ Here is an example using `EcdhP256`:
 ```rust
 use dcrypt::api::Kem;
 use dcrypt::kem::ecdh::EcdhP256;
-use rand::rngs::OsRng;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut rng = OsRng;
-
-    // 1. A recipient generates a key pair.
-    let (public_key, secret_key) = EcdhP256::keypair(&mut rng)?;
+fn establish<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
+    let (public_key, secret_key) = EcdhP256::keypair(rng)?;
 
     // The recipient can now share `public_key` with senders.
     // For example, by serializing it:
@@ -80,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 2. A sender uses the recipient's public key to generate a
     //    shared secret and a ciphertext for transport.
-    let (ciphertext, shared_secret_sender) = EcdhP256::encapsulate(&mut rng, &public_key)?;
+    let (ciphertext, shared_secret_sender) = EcdhP256::encapsulate(rng, &public_key)?;
 
     // The sender sends `ciphertext` to the recipient.
     let ct_bytes = ciphertext.to_bytes();
@@ -101,21 +89,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The same pattern applies to post-quantum algorithms like `Kyber768`:
+The same pattern applies to final FIPS 203 ML-KEM:
 
 ```rust
 use dcrypt::api::Kem;
-use dcrypt::kem::kyber::Kyber768;
-use rand::rngs::OsRng;
+use dcrypt::kem::ml_kem::MlKem768;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-// --- snip ---
-let mut rng = OsRng;
-let (pk, sk) = Kyber768::keypair(&mut rng)?;
-let (ct, ss1) = Kyber768::encapsulate(&mut rng, &pk)?;
-let ss2 = Kyber768::decapsulate(&sk, &ct)?;
-assert_eq!(ss1.to_bytes(), ss2.to_bytes());
-println!("Kyber-768 shared secret derived successfully!");
-// --- snip ---
+fn establish<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
+    let keypair = MlKem768::keypair(rng)?;
+    let pk = MlKem768::public_key(&keypair);
+    let sk = MlKem768::secret_key(&keypair);
+    let (ct, ss1) = MlKem768::encapsulate(rng, &pk)?;
+    let ss2 = MlKem768::decapsulate(&sk, &ct)?;
+    assert_eq!(&ss1.to_bytes_zeroizing()[..], &ss2.to_bytes_zeroizing()[..]);
+    Ok(())
+}
 ```
 
 ## Cargo Features
@@ -125,7 +114,7 @@ The `dcrypt-kem` crate provides the following features:
 -   `std` (default): Enables functionality that depends on the Rust standard library.
 -   `alloc`: Enables usage of heap-allocated types. This is required for `no_std` environments that have a heap allocator.
 -   `no_std`: Disables `std` support for use in bare-metal and embedded environments.
--   `serde`: Enables serialization and deserialization of public key types via the Serde framework.
+-   `post-quantum`: Enables the final FIPS 203 ML-KEM surface and forwards `alloc`.
 
 ## Benchmarks
 

@@ -8,8 +8,8 @@ pub mod ecdh;
 pub mod hash_tests;
 pub mod hybrid; // Added Hybrid tests
 pub mod kdf;
-pub mod kyber;
 pub mod mac_tests;
 pub mod ml_dsa;
+pub mod ml_kem;
 pub mod stream_tests;
 pub mod xof_tests;

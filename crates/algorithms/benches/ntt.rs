@@ -1,8 +1,7 @@
 //! Benchmarks for Number Theoretic Transform (NTT) operations
 //!
 //! This benchmark suite measures the performance of:
-//! - Forward NTT for Dilithium and Kyber
-//! - Inverse NTT for Dilithium and Kyber
+//! - Forward and inverse NTT across representative moduli
 //! - NTT-based polynomial multiplication
 //! - Montgomery arithmetic operations
 
@@ -11,10 +10,32 @@ use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "alloc")]
 mod ntt_benchmarks {
     use criterion::{black_box, BenchmarkId, Criterion};
-    use dcrypt_algorithms::poly::params::{DilithiumParams, Kyber256Params};
+    use dcrypt_algorithms::poly::params::DilithiumParams;
     use dcrypt_algorithms::poly::prelude::*;
     use dcrypt_algorithms::poly::sampling::{DefaultSamplers, UniformSampler};
     use dcrypt_internal::random::ChaCha20Rng;
+
+    /// A benchmark-only modulus for exercising the generic cyclic NTT path.
+    /// It is not an ML-KEM parameter set; ML-KEM uses its own seven-layer NTT.
+    #[derive(Clone, Debug)]
+    struct Benchmark3329Params;
+
+    impl Modulus for Benchmark3329Params {
+        const Q: u32 = 3_329;
+        const N: usize = 256;
+        const BARRETT_MU: u128 = 10_569_051_393;
+        const BARRETT_K: u32 = 45;
+    }
+
+    impl NttModulus for Benchmark3329Params {
+        const ZETA: u32 = 17;
+        const ZETAS: &'static [u32] = &[];
+        const N_INV: u32 = 2_385;
+        const MONT_R: u32 = 1_353;
+        const NEG_QINV: u32 = 0x9457_0cff;
+        const PSIS: &'static [u32] = &[];
+        const INV_PSIS: &'static [u32] = &[];
+    }
 
     /// Benchmark forward NTT for Dilithium
     pub fn bench_dilithium_forward_ntt(c: &mut Criterion) {
@@ -64,14 +85,15 @@ mod ntt_benchmarks {
         group.finish();
     }
 
-    /// Benchmark forward NTT for Kyber
-    pub fn bench_kyber_forward_ntt(c: &mut Criterion) {
-        let mut group = c.benchmark_group("kyber_ntt");
+    /// Benchmark forward NTT for generic q=3329 path
+    pub fn bench_generic_3329_forward_ntt(c: &mut Criterion) {
+        let mut group = c.benchmark_group("generic_3329_ntt");
         let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a random polynomial
-        let poly = <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
-            .expect("Failed to sample polynomial");
+        let poly =
+            <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
+                .expect("Failed to sample polynomial");
 
         group.bench_function("forward", |b| {
             b.iter_batched(
@@ -87,14 +109,14 @@ mod ntt_benchmarks {
         group.finish();
     }
 
-    /// Benchmark inverse NTT for Kyber
-    pub fn bench_kyber_inverse_ntt(c: &mut Criterion) {
-        let mut group = c.benchmark_group("kyber_ntt");
+    /// Benchmark inverse NTT for generic q=3329 path
+    pub fn bench_generic_3329_inverse_ntt(c: &mut Criterion) {
+        let mut group = c.benchmark_group("generic_3329_ntt");
         let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a polynomial in NTT domain
         let mut poly =
-            <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
+            <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
                 .expect("Failed to sample polynomial");
         poly.ntt_inplace().expect("NTT failed");
 
@@ -137,19 +159,19 @@ mod ntt_benchmarks {
             });
         }
 
-        // Kyber multiplication
+        // Generic q=3329 path multiplication
         {
             let mut poly_a =
-                <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
+                <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
                     .expect("Failed to sample polynomial");
             let mut poly_b =
-                <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
+                <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
                     .expect("Failed to sample polynomial");
 
             poly_a.ntt_inplace().expect("NTT failed");
             poly_b.ntt_inplace().expect("NTT failed");
 
-            group.bench_function("kyber_pointwise", |b| {
+            group.bench_function("generic_3329_pointwise", |b| {
                 b.iter(|| {
                     let result = poly_a.ntt_mul(&poly_b);
                     black_box(result)
@@ -200,16 +222,16 @@ mod ntt_benchmarks {
             });
         }
 
-        // Kyber
+        // Generic q=3329 path
         {
             let poly_a =
-                <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
+                <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
                     .expect("Failed to sample polynomial");
             let poly_b =
-                <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
+                <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
                     .expect("Failed to sample polynomial");
 
-            group.bench_function("kyber_ntt_based", |b| {
+            group.bench_function("generic_3329_ntt_based", |b| {
                 b.iter_batched(
                     || (poly_a.clone(), poly_b.clone()),
                     |(mut a, mut b)| {
@@ -223,7 +245,7 @@ mod ntt_benchmarks {
                 )
             });
 
-            group.bench_function("kyber_schoolbook", |b| {
+            group.bench_function("generic_3329_schoolbook", |b| {
                 b.iter_batched(
                     || (poly_a.clone(), poly_b.clone()),
                     |(a, b)| {
@@ -251,11 +273,11 @@ mod ntt_benchmarks {
             })
         });
 
-        // Kyber Montgomery reduction
-        group.bench_function("kyber_montgomery_reduce", |b| {
+        // Generic q=3329 path Montgomery reduction
+        group.bench_function("generic_3329_montgomery_reduce", |b| {
             let a: u64 = 0x12345678;
             b.iter(|| {
-                let result = montgomery_reduce::<Kyber256Params>(black_box(a));
+                let result = montgomery_reduce::<Benchmark3329Params>(black_box(a));
                 black_box(result)
             })
         });
@@ -288,12 +310,12 @@ mod ntt_benchmarks {
                 )
             });
 
-            // Kyber
+            // Generic q=3329 path
             let poly =
-                <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
+                <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
                     .expect("Failed to sample polynomial");
 
-            group.bench_with_input(BenchmarkId::new("kyber", label), &poly, |b, p| {
+            group.bench_with_input(BenchmarkId::new("generic_3329", label), &poly, |b, p| {
                 b.iter_batched(
                     || p.clone(),
                     |mut poly| {
@@ -330,14 +352,14 @@ mod ntt_benchmarks {
             )
         });
 
-        // Kyber roundtrip
-        let poly_kyber =
-            <DefaultSamplers as UniformSampler<Kyber256Params>>::sample_uniform(&mut rng)
+        // Generic q=3329 path roundtrip
+        let poly_generic_3329 =
+            <DefaultSamplers as UniformSampler<Benchmark3329Params>>::sample_uniform(&mut rng)
                 .expect("Failed to sample polynomial");
 
-        group.bench_function("kyber", |b| {
+        group.bench_function("generic_3329", |b| {
             b.iter_batched(
-                || poly_kyber.clone(),
+                || poly_generic_3329.clone(),
                 |mut p| {
                     p.ntt_inplace().expect("NTT failed");
                     p.from_ntt_inplace().expect("Inverse NTT failed");
@@ -356,8 +378,8 @@ mod ntt_benchmarks {
 fn run_ntt_benchmarks(c: &mut Criterion) {
     ntt_benchmarks::bench_dilithium_forward_ntt(c);
     ntt_benchmarks::bench_dilithium_inverse_ntt(c);
-    ntt_benchmarks::bench_kyber_forward_ntt(c);
-    ntt_benchmarks::bench_kyber_inverse_ntt(c);
+    ntt_benchmarks::bench_generic_3329_forward_ntt(c);
+    ntt_benchmarks::bench_generic_3329_inverse_ntt(c);
     ntt_benchmarks::bench_ntt_multiplication(c);
     ntt_benchmarks::bench_full_polynomial_multiplication(c);
     ntt_benchmarks::bench_montgomery_operations(c);

@@ -7,6 +7,75 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Join NIST's separate expected-results file onto prompt cases by `(tgId,
+/// tcId)`. ACVP files do not guarantee matching array order, so positional
+/// joins can silently compare a result with the wrong test case.
+fn merge_expected_results(suite_dir: &Path, suite: &mut TestSuite) -> Result<(), String> {
+    let expected_file = suite_dir.join("expectedResults.json");
+    if !expected_file.exists() {
+        return Ok(());
+    }
+    let json = fs::read_to_string(&expected_file)
+        .map_err(|error| format!("Failed to read {}: {}", expected_file.display(), error))?;
+    let expected: serde_json::Value = serde_json::from_str(&json)
+        .map_err(|error| format!("Failed to parse {}: {}", expected_file.display(), error))?;
+    let groups = expected
+        .get("testGroups")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| "expectedResults.json is missing testGroups".to_string())?;
+
+    for expected_group in groups {
+        let group_id = expected_group
+            .get("tgId")
+            .and_then(serde_json::Value::as_u64)
+            .ok_or_else(|| "expected result group is missing tgId".to_string())?;
+        let group = suite
+            .groups
+            .iter_mut()
+            .find(|group| group.group_name == group_id)
+            .ok_or_else(|| format!("expected result references unknown tgId {}", group_id))?;
+        let cases = expected_group
+            .get("tests")
+            .and_then(serde_json::Value::as_array)
+            .ok_or_else(|| format!("expected result tgId {} is missing tests", group_id))?;
+        for expected_case in cases {
+            let case_id = expected_case
+                .get("tcId")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or_else(|| format!("expected result tgId {} is missing tcId", group_id))?;
+            let case = group
+                .tests
+                .iter_mut()
+                .find(|case| case.test_id == case_id)
+                .ok_or_else(|| {
+                    format!(
+                        "expected result references unknown tgId {}/tcId {}",
+                        group_id, case_id
+                    )
+                })?;
+            let fields = expected_case.as_object().ok_or_else(|| {
+                format!(
+                    "expected result tgId {}/tcId {} is not an object",
+                    group_id, case_id
+                )
+            })?;
+            for (name, value) in fields {
+                if name == "tcId" {
+                    continue;
+                }
+                let value: FlexValue = serde_json::from_value(value.clone()).map_err(|error| {
+                    format!(
+                        "invalid expected field {} for tgId {}/tcId {}: {}",
+                        name, group_id, case_id, error
+                    )
+                })?;
+                case.inputs.insert(name.clone(), value);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// ----------------------------------------------------------------
 /// Get the path to ACVP JSON test vectors
 /// ----------------------------------------------------------------
@@ -83,6 +152,7 @@ pub fn load_suite_by_name(suite_name: &str) -> Result<TestSuite, String> {
 
     let mut suite: TestSuite =
         serde_json::from_str(&json).map_err(|e| format!("Failed to parse JSON: {}", e))?;
+    merge_expected_results(&suite_dir, &mut suite)?;
 
     // Normalize the suite-level algorithm (strip ACVP- prefix, trailing hyphens)
     let base_alg = normalize_algorithm(&suite.algorithm);

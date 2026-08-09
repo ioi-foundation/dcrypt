@@ -1,7 +1,7 @@
 //! Number Theoretic Transform Implementation
 //!
 //! Generic NTT/iNTT for polynomials over finite fields, with full
-//! FIPS-204 compliance for Dilithium and support for Kyber variants.
+//! FIPS-204 compliance for ML-DSA and a generic cyclic-transform fallback.
 //!
 //! ## Dilithium (FIPS-204)
 //! - Forward NTT: Algorithm 41 (DIF with standard domain I/O)
@@ -10,7 +10,7 @@
 //! - Butterfly differences: Kept in [0, 2Q) range as per spec
 //! - Pointwise multiplication: Standard domain multiplication
 //!
-//! ## Kyber
+//! ## Generic fallback
 //! - Cooley-Tukey NTT with on-the-fly twiddle computation
 //! - Full Montgomery domain processing
 //! - Pointwise multiplication: Montgomery domain multiplication
@@ -42,7 +42,7 @@ pub trait NttOperator<M: NttModulus> {
     /// - Input: coefficients in standard domain
     /// - Output: coefficients in standard domain
     ///
-    /// # Kyber
+    /// # Generic fallback
     /// - Implements Cooley-Tukey NTT
     /// - Converts to Montgomery domain internally
     fn ntt(poly: &mut Polynomial<M>) -> Result<()>;
@@ -57,7 +57,7 @@ pub trait InverseNttOperator<M: NttModulus> {
     /// - Input: coefficients in standard domain
     /// - Output: standard or Montgomery domain based on POST_INVNTT_MODE
     ///
-    /// # Kyber
+    /// # Generic fallback
     /// - Implements Cooley-Tukey inverse NTT
     /// - Scales by N^(-1) and converts back to standard domain
     fn inv_ntt(poly: &mut Polynomial<M>) -> Result<()>;
@@ -207,7 +207,7 @@ impl<M: NttModulus> NttOperator<M> for CooleyTukeyNtt {
                 *c = reduce_to_q::<M>(*c);
             }
         } else {
-            // Kyber NTT
+            // Generic cyclic NTT.
             for c in coeffs.iter_mut() {
                 *c = to_montgomery::<M>(*c);
             }
@@ -233,7 +233,7 @@ impl<M: NttModulus> NttOperator<M> for CooleyTukeyNtt {
                 }
                 len <<= 1;
             }
-            // Kyber: Do NOT reduce here - coefficients must stay in Montgomery form!
+            // Keep coefficients in Montgomery form for the inverse transform.
         }
 
         Ok(())
@@ -311,7 +311,7 @@ impl<M: NttModulus> InverseNttOperator<M> for CooleyTukeyNtt {
                 }
             }
         } else {
-            // Kyber Inverse NTT
+            // Generic cyclic inverse NTT.
             let root_inv_std = pow_mod::<M>(M::ZETA, M::Q - 2); // FIXED: Removed unnecessary cast
 
             let mut len = n >> 1;
@@ -369,7 +369,7 @@ impl<M: NttModulus> Polynomial<M> {
     ///
     /// Both polynomials must already be in NTT domain.
     /// For Dilithium: inputs/output in standard domain (post-NTT)
-    /// For Kyber: inputs/output in Montgomery domain
+    /// For the generic fallback: inputs/output in Montgomery domain
     pub fn ntt_mul(&self, other: &Self) -> Self {
         let mut result = Self::zero();
         let n = M::N;
@@ -383,7 +383,7 @@ impl<M: NttModulus> Polynomial<M> {
                     ((self.coeffs[i] as u64 * other.coeffs[i] as u64) % M::Q as u64) as u32;
             }
         } else {
-            // Kyber: coefficients are in Montgomery domain after NTT
+            // Generic coefficients are in Montgomery domain after NTT.
             // Use Montgomery multiplication to keep result in Montgomery domain
             for i in 0..n {
                 result.coeffs[i] = montgomery_mul::<M>(self.coeffs[i], other.coeffs[i]);

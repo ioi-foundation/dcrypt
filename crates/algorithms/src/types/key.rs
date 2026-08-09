@@ -165,7 +165,7 @@ impl<A: SymmetricAlgorithm, const N: usize> DerefMut for SymmetricKey<A, N> {
 
 impl<A: SymmetricAlgorithm, const N: usize> PartialEq for SymmetricKey<A, N> {
     fn eq(&self, other: &Self) -> bool {
-        // Use the subtle crate's ConstantTimeEq trait directly
+        // Use the workspace-owned constant-time equality trait directly.
         self.data.as_ref().ct_eq(other.data.as_ref()).into()
     }
 }
@@ -180,7 +180,7 @@ impl<A: SymmetricAlgorithm, const N: usize> fmt::Debug for SymmetricKey<A, N> {
 
 impl<A: SymmetricAlgorithm, const N: usize> LocalConstantEq for SymmetricKey<A, N> {
     fn ct_eq(&self, other: &Self) -> bool {
-        // Use the ConstantTimeEq trait from subtle for the inner data
+        // Use the workspace-owned constant-time equality trait for the data.
         self.data.as_ref().ct_eq(other.data.as_ref()).into()
     }
 }

@@ -30,20 +30,19 @@ alloc = [
     "dcrypt-algorithms/alloc",
 ]
 traditional = []  # Feature flag for traditional KEMs (ECDH, RSA, etc.)
-post-quantum = [] # Feature flag for post-quantum KEMs (Kyber, McEliece, etc.)
+post-quantum = ["alloc"] # FIPS 203 ML-KEM
 
 [dependencies]
 dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false }
 dcrypt-common = { path = "../common", version = "=2.0.0", default-features = false }
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
-dcrypt-params = { path = "../params", version = "=2.0.0" }
-dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["alloc", "ec", "hash", "kdf", "mac", "xof"] }
+dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["alloc", "ec", "hash", "mac", "xof"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
-name = "kyber"
+name = "ml_kem"
 harness = false
 
 [[bench]]

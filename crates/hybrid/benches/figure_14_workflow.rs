@@ -2,7 +2,7 @@
 //!
 //! This benchmark measures the end-to-end latency of a full ephemeral key exchange.
 //! It includes:
-//! 1. Keypair Generation (Classical ECC + Kyber)
+//! 1. Keypair Generation (Classical ECC + MlKem)
 //! 2. Encapsulation (Deriving Shared Secret + Ciphertext)
 //! 3. Decapsulation (Recovering Shared Secret)
 //!
@@ -11,11 +11,11 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dcrypt_api::Kem;
 use dcrypt_hybrid::kem::{
-    EcdhK256Kyber512,  // secp256k1 + Kyber512
-    EcdhP256Kyber512,  // NIST P-256 + Kyber512
-    EcdhP256Kyber768,  // NIST P-256 + Kyber768
-    EcdhP384Kyber1024, // NIST P-384 + Kyber1024
-    EcdhP521Kyber1024, // NIST P-521 + Kyber1024
+    EcdhK256MlKem512,  // secp256k1 + MlKem512
+    EcdhP256MlKem512,  // NIST P-256 + MlKem512
+    EcdhP256MlKem768,  // NIST P-256 + MlKem768
+    EcdhP384MlKem1024, // NIST P-384 + MlKem1024
+    EcdhP521MlKem1024, // NIST P-521 + MlKem1024
 };
 use dcrypt_internal::random::ChaCha20Rng;
 
@@ -50,15 +50,15 @@ fn bench_kem_workflow<K: Kem>(c: &mut Criterion, name: &str) {
 
 fn bench_full_workflow(c: &mut Criterion) {
     // 1. Security Level 1 equivalent (approximate)
-    bench_kem_workflow::<EcdhP256Kyber512>(c, "P256_Kyber512");
-    bench_kem_workflow::<EcdhK256Kyber512>(c, "K256_Kyber512");
+    bench_kem_workflow::<EcdhP256MlKem512>(c, "P256_MlKem512");
+    bench_kem_workflow::<EcdhK256MlKem512>(c, "K256_MlKem512");
 
     // 2. Security Level 3 equivalent (mixed)
-    bench_kem_workflow::<EcdhP256Kyber768>(c, "P256_Kyber768");
+    bench_kem_workflow::<EcdhP256MlKem768>(c, "P256_MlKem768");
 
     // 3. Security Level 5 equivalent
-    bench_kem_workflow::<EcdhP384Kyber1024>(c, "P384_Kyber1024");
-    bench_kem_workflow::<EcdhP521Kyber1024>(c, "P521_Kyber1024");
+    bench_kem_workflow::<EcdhP384MlKem1024>(c, "P384_MlKem1024");
+    bench_kem_workflow::<EcdhP521MlKem1024>(c, "P521_MlKem1024");
 }
 
 criterion_group!(

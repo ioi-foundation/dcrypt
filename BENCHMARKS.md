@@ -6,9 +6,9 @@
 This is an archival snapshot of benchmarks from dcrypt 1.0.0. It predates the
 security remediations released in `v2.0.0` and is not representative of the
 current implementation, a release qualification, or evidence of cryptographic
-security. Results for the removed custom Dilithium implementation and the
-nonfunctional RSA/Falcon placeholder have been omitted; this document does not
-benchmark the current ML-DSA backend or a usable RSA/Falcon hybrid.
+security. Results for removed pre-standard post-quantum implementations and
+nonfunctional placeholders have been omitted; this document does not benchmark
+the current ML-KEM or ML-DSA implementations.
 
 > **Note:** Specific results depend on hardware architecture (AVX2/AVX-512 support), available entropy, and system load.
 
@@ -24,21 +24,6 @@ benchmark the current ML-DSA backend or a usable RSA/Falcon hybrid.
 | `ECDH-P384_memory_shared_secret_lifecycle` | 12.36 ms |
 | `ECDH-P384_parallel_encapsulation` | 7.09 ms |
 | `ECDH-P384_parallel_keypair_generation` | 3.59 ms |
-| `K256_Kyber512` | 188.24 ms |
-| `Kyber1024` | 977.15 µs |
-| `Kyber1024_100_keypairs` | 31.47 ms |
-| `Kyber1024_10_sequential_encaps` | 6.42 ms |
-| `Kyber512` | 368.75 µs |
-| `Kyber512_100_keypairs` | 11.23 ms |
-| `Kyber512_10_sequential_encaps` | 2.42 ms |
-| `Kyber512_keygen_with_drop` | 115.27 µs |
-| `Kyber768` | 618.19 µs |
-| `Kyber768_100_keypairs` | 19.79 ms |
-| `Kyber768_10_sequential_encaps` | 4.19 ms |
-| `P256_Kyber512` | 7.21 ms |
-| `P256_Kyber768` | 2.33 ms |
-| `P384_Kyber1024` | 6.69 ms |
-| `P521_Kyber1024` | 47.93 ms |
 | `decapsulate` | 211.58 µs |
 | `decapsulate_with_validation` | 1.04 s |
 | `ecdh_raw` | 1.05 ms |
@@ -47,11 +32,6 @@ benchmark the current ML-DSA backend or a usable RSA/Falcon hybrid.
 | `encapsulation_kdf_overhead` | 2.22 ms |
 | `full_ecdh_exchange` | 1.51 ms |
 | `full_kem_flow` | 2.66 s |
-| `kyber` | 8.27 µs |
-| `kyber_montgomery_reduce` | 1.13 ns |
-| `kyber_ntt_based` | 12.71 µs |
-| `kyber_pointwise` | 179.03 ns |
-| `kyber_schoolbook` | 17.08 µs |
 | `parallel_encapsulations` | 878.02 ms |
 | `sequential_encapsulations` | 5.31 s |
 <!-- END: Key Encapsulation (KEM) -->

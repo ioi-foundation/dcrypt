@@ -9,7 +9,7 @@ use dcrypt_params::traditional::rsa::{RSA_MODULUS_2048, RSA_MODULUS_4096, RSA_PU
 
 // Post-quantum cryptography constants
 use dcrypt_params::pqc::dilithium::{DILITHIUM3, DILITHIUM_N, DILITHIUM_Q};
-use dcrypt_params::pqc::kyber::{KYBER768, KYBER_N, KYBER_Q};
+use dcrypt_params::pqc::ml_kem::{ML_KEM_768, ML_KEM_N, ML_KEM_Q};
 use dcrypt_params::pqc::ntru::NTRU_HPS_2048_509;
 
 // Utility constants
@@ -37,11 +37,11 @@ fn test_ecdsa_constants() {
 }
 
 #[test]
-fn test_kyber_constants() {
-    assert_eq!(KYBER_N, 256);
-    assert_eq!(KYBER_Q, 3329);
-    assert_eq!(KYBER768.k, 3);
-    assert_eq!(KYBER768.shared_secret_size, 32);
+fn test_ml_kem_constants() {
+    assert_eq!(ML_KEM_N, 256);
+    assert_eq!(ML_KEM_Q, 3329);
+    assert_eq!(ML_KEM_768.k, 3);
+    assert_eq!(ML_KEM_768.shared_secret_size, 32);
 }
 
 #[test]

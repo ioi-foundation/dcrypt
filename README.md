@@ -27,8 +27,8 @@ correctness, side-channel resistance, or suitability for production.
 dcrypt introduces capabilities critical for the transition to quantum-safe and decentralized computing:
 
 1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use dcrypt-owned safe-Rust key generation, signing, verification, sampling, arithmetic, and exact encodings. Public APIs support deterministic signing and hedged signing with caller-provided randomness and contexts. All 615 official ACVP cases pass exactly; independent implementations are confined to the excluded verification workspace. This is not a claim that dcrypt is formally verified, audited, or FIPS validated.
-2.  **FIPS 203 / ML-KEM API**: ML-KEM parameter sets are available for testing and integration; this project is not a FIPS-validated cryptographic module.
-3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + Kyber-768`) and hybrid Digital Signatures, designed to combine independent primitive families.
+2.  **Pure-Rust FIPS 203 (ML-KEM)**: Final-standard ML-KEM-512, ML-KEM-768, and ML-KEM-1024 use owned safe-Rust arithmetic, encoding, and SHA3/SHAKE primitives. All 240 official ACVP cases pass exactly; this project is not a FIPS-validated cryptographic module.
+3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + ML-KEM-768`) and hybrid Digital Signatures, designed to combine independent primitive families.
 4.  **BLS12-381 Pairing Engine**: A fully featured implementation of the pairing-friendly curve, including optimal Ate pairings and IETF-compliant **Hash-to-Curve**, essential for Zero-Knowledge Proofs and Signature Aggregation.
 
 ## 🛡️ Key Design Principles
@@ -50,28 +50,27 @@ not a recommendation to deploy any currently published release.
 
 ### Example 1: Hybrid Post-Quantum Key Exchange
 
-Securely exchange keys using a hybrid scheme (`EcdhP256` + `Kyber768`). This ensures security remains intact even if quantum computers break elliptic curve cryptography.
+Securely exchange keys using the `EcdhP256MlKem768` hybrid scheme.
 
 ```rust
-use dcrypt::hybrid::kem::EcdhP256Kyber768;
 use dcrypt::api::Kem;
-use rand::rngs::OsRng;
+use dcrypt::hybrid::kem::EcdhP256MlKem768;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut rng = OsRng;
-
-    // 1. Alice generates a Hybrid Keypair
-    // (Contains both a P-256 keypair and a Kyber-768 keypair)
-    let (alice_pk, alice_sk) = EcdhP256Kyber768::keypair(&mut rng)?;
+fn exchange<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
+    let (alice_pk, alice_sk) = EcdhP256MlKem768::keypair(rng)?;
 
     // 2. Bob encapsulates a shared secret against Alice's public key
-    let (ciphertext, shared_secret_bob) = EcdhP256Kyber768::encapsulate(&mut rng, &alice_pk)?;
+    let (ciphertext, shared_secret_bob) = EcdhP256MlKem768::encapsulate(rng, &alice_pk)?;
 
     // 3. Alice decapsulates the ciphertext to recover the shared secret
-    let shared_secret_alice = EcdhP256Kyber768::decapsulate(&alice_sk, &ciphertext)?;
+    let shared_secret_alice = EcdhP256MlKem768::decapsulate(&alice_sk, &ciphertext)?;
 
     // 4. Verify secrets match
-    assert_eq!(shared_secret_bob.as_ref(), shared_secret_alice.as_ref());
+    assert_eq!(
+        &shared_secret_bob.to_bytes_zeroizing()[..],
+        &shared_secret_alice.to_bytes_zeroizing()[..],
+    );
     println!("Hybrid Quantum-Safe Key Exchange successful!");
     
     Ok(())
@@ -151,8 +150,8 @@ dcrypt provides a unified API for classical, post-quantum, and hybrid operations
 | **Post-Quantum Signatures** | `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87` (final FIPS 204) |
 | **Key Exchange / KEM** | `ECDH` (P-Curves, K-256, B-283) |
 | **Pairing-Friendly Curves** | `BLS12-381` (G1, G2, Gt, Pairings, Hash-to-Curve) |
-| **Post-Quantum KEMs**| `Kyber` / `ML-KEM` (Levels 512, 768, 1024) |
-| **Hybrid Schemes** | `EcdhP256Kyber768`, `EcdhP384Kyber1024`, `EcdsaMlDsa65Hybrid` |
+| **Post-Quantum KEMs**| `ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024` (final FIPS 203) |
+| **Hybrid Schemes** | `EcdhP256MlKem768`, `EcdhP384MlKem1024`, `EcdsaMlDsa65Hybrid` |
 
 ## 🏗️ Architecture
 
@@ -163,7 +162,7 @@ The library is organized as a workspace of specialized crates to align type-safe
 *   **`dcrypt-common`**: Shared security primitives, including `SecretBuffer` (automatic zeroization) and `SecureCompare`.
 *   **`dcrypt-symmetric`**: High-level AEADs, stream ciphers, and secure key management wrappers.
 *   **`dcrypt-pke`**: Public Key Encryption schemes, specifically **ECIES** (Elliptic Curve Integrated Encryption Scheme) over standard NIST curves.
-*   **`dcrypt-kem`**: Implementations of Key Encapsulation Mechanisms (Kyber, ECDH, McEliece placeholders).
+*   **`dcrypt-kem`**: Owned implementations of final FIPS 203 ML-KEM and ECDH-based KEMs.
 *   **`dcrypt-sign`**: Implementations of Digital Signatures (Dilithium, ECDSA, Ed25519, SPHINCS+ placeholders).
 *   **`dcrypt-hybrid`**: Ready-to-use combiners for KEMs and Signatures ensuring crypto-agility.
 *   **`dcrypt-tests`**: Contains the ACVP test harness and Constant-Time Verification Suite.
@@ -176,7 +175,7 @@ Security is the primary driver for dcrypt. The library employs a rigorous testin
 The repository contains a custom statistical regression engine (`dcrypt-tests/src/suites/constant_time`). The security-validation workflow runs it serially as a regression gate and labels its scope explicitly. It is not dudect or ctgrind, and those stronger target-specific checks remain required before any production constant-time claim.
 *   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the combined signals.
 *   **Noise Gating**: Maintains a persistent noise profile and aborts inconclusive runs when the host environment is materially noisier than the historical baseline.
-*   **Coverage**: Exercises critical paths in Kyber, ML-DSA verification, hybrid constructions, ECDH, and AEAD implementations for timing regressions.
+*   **Coverage**: Exercises critical paths in ML-KEM, ML-DSA verification, hybrid constructions, ECDH, and AEAD implementations for timing regressions.
 
 ### Standards testing
 *   **ACVP Test Harness**: Includes an ACVP JSON test harness for supported parameter sets. Passing vectors is a correctness gate, not NIST validation or certification.

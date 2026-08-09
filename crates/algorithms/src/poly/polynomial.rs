@@ -300,7 +300,7 @@ mod tests {
     #[derive(Clone)]
     struct TestModulus;
     impl Modulus for TestModulus {
-        const Q: u32 = 3329; // Kyber's Q
+        const Q: u32 = 3329;
         const N: usize = 4; // Small for testing
     }
 

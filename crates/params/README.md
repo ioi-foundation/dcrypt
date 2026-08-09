@@ -19,7 +19,7 @@ The `params` crate is organized into sub-modules based on the category of algori
 
 2.  **Post-Quantum Cryptography (PQC) Algorithms (`dcrypt_docs/params/pqc/README.md`)**:
     Contains constants and parameter structures for post-quantum algorithms, often aligned with NIST PQC standardization efforts.
-    *   `kyber.rs`: Parameters for Kyber-512, Kyber-768, Kyber-1024 (polynomial degree, modulus, dimensions, key/ciphertext sizes).
+    *   `ml_kem.rs`: Final FIPS 203 parameters for ML-KEM-512, ML-KEM-768, and ML-KEM-1024.
     *   `dilithium.rs`: Parameters for Dilithium2, Dilithium3, Dilithium5 (polynomial degree, modulus, dimensions, key/signature sizes).
     *   `ntru.rs`: Parameters for NTRU-HPS and NTRU-HRSS variants (polynomial degree, modulus, key/ciphertext sizes).
     *   `saber.rs`: Parameters for LightSABER, SABER, FireSABER (polynomial degree, modulus, dimensions, key/ciphertext sizes).
@@ -38,8 +38,8 @@ The `params` crate is organized into sub-modules based on the category of algori
 For more complex algorithms, especially PQC schemes, this crate often defines `struct`s to hold a complete set of parameters for a specific variant. For example:
 
 ```rust
-// From params/src/pqc/kyber.rs
-pub struct Kyber768Params {
+// From params/src/pqc/ml_kem.rs
+pub struct MlKem768Params {
     pub n: usize, // Polynomial degree
     pub q: u16,   // Modulus
     pub k: usize,   // Number of polynomials (dimension)
@@ -50,9 +50,9 @@ pub struct Kyber768Params {
     pub shared_secret_size: usize,
 }
 
-pub const KYBER768: Kyber768Params = Kyber768Params {
-    n: KYBER_N, // KYBER_N = 256
-    q: KYBER_Q, // KYBER_Q = 3329
+pub const ML_KEM_768: MlKem768Params = MlKem768Params {
+    n: ML_KEM_N, // ML_KEM_N = 256
+    q: ML_KEM_Q, // ML_KEM_Q = 3329
     k: 3,
     // ...
     public_key_size: 1184,

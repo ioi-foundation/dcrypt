@@ -16,10 +16,3 @@ fn test_aes_against_openssl() {
     // For this skeleton, we just make it pass
     assert!(true);
 }
-
-#[test]
-fn test_kyber_against_pqclean() {
-    // This would test our Kyber implementation against PQClean's
-    // For this skeleton, we just make it pass
-    assert!(true);
-}

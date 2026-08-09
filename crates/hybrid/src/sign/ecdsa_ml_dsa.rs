@@ -4,6 +4,7 @@
 //! Version 2 uses final FIPS 204 encodings. The historical version-1 framing,
 //! which contained dcrypt's nonstandard pre-FIPS Dilithium objects, is rejected.
 
+use alloc::vec::Vec;
 use dcrypt_api::{
     error::Error,
     traits::{Serialize, SerializeSecret},

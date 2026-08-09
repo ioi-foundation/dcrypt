@@ -11,6 +11,7 @@
 //! constant-time or IND-CCA claim.
 
 use crate::error::Error as KemError;
+use alloc::vec::Vec;
 use dcrypt_algorithms::ec::p224 as ec; // Use P-224 algorithms
 use dcrypt_algorithms::hash::sha2::Sha256;
 use dcrypt_algorithms::mac::hmac::Hmac;

@@ -14,6 +14,7 @@
 //! caller/compiler/backend-copy limitations.
 
 use crate::error::Error as KemError;
+use alloc::vec::Vec;
 use dcrypt_algorithms::ec::p384 as ec_p384;
 use dcrypt_api::{
     error::Error as ApiError,

@@ -1,13 +1,13 @@
-//! Constants for Kyber key encapsulation mechanism
+//! Final FIPS 203 ML-KEM parameter constants.
 
-/// Kyber polynomial degree
-pub const KYBER_N: usize = 256;
+/// ML-KEM polynomial degree
+pub const ML_KEM_N: usize = 256;
 
-/// Kyber modulus
-pub const KYBER_Q: u16 = 3329;
+/// ML-KEM modulus
+pub const ML_KEM_Q: u16 = 3329;
 
-/// Structure containing Kyber-512 parameters
-pub struct Kyber512Params {
+/// Structure containing ML-KEM-512 parameters
+pub struct MlKem512Params {
     /// Polynomial degree
     pub n: usize,
 
@@ -42,10 +42,10 @@ pub struct Kyber512Params {
     pub shared_secret_size: usize,
 }
 
-/// Kyber-512 parameters
-pub const KYBER512: Kyber512Params = Kyber512Params {
-    n: KYBER_N,
-    q: KYBER_Q,
+/// ML-KEM-512 parameters
+pub const ML_KEM_512: MlKem512Params = MlKem512Params {
+    n: ML_KEM_N,
+    q: ML_KEM_Q,
     k: 2,
     eta1: 3,
     eta2: 2,
@@ -57,8 +57,8 @@ pub const KYBER512: Kyber512Params = Kyber512Params {
     shared_secret_size: 32,
 };
 
-/// Structure containing Kyber-768 parameters
-pub struct Kyber768Params {
+/// Structure containing ML-KEM-768 parameters
+pub struct MlKem768Params {
     /// Polynomial degree
     pub n: usize,
 
@@ -93,10 +93,10 @@ pub struct Kyber768Params {
     pub shared_secret_size: usize,
 }
 
-/// Kyber-768 parameters
-pub const KYBER768: Kyber768Params = Kyber768Params {
-    n: KYBER_N,
-    q: KYBER_Q,
+/// ML-KEM-768 parameters
+pub const ML_KEM_768: MlKem768Params = MlKem768Params {
+    n: ML_KEM_N,
+    q: ML_KEM_Q,
     k: 3,
     eta1: 2,
     eta2: 2,
@@ -108,8 +108,8 @@ pub const KYBER768: Kyber768Params = Kyber768Params {
     shared_secret_size: 32,
 };
 
-/// Structure containing Kyber-1024 parameters
-pub struct Kyber1024Params {
+/// Structure containing ML-KEM-1024 parameters
+pub struct MlKem1024Params {
     /// Polynomial degree
     pub n: usize,
 
@@ -144,10 +144,10 @@ pub struct Kyber1024Params {
     pub shared_secret_size: usize,
 }
 
-/// Kyber-1024 parameters
-pub const KYBER1024: Kyber1024Params = Kyber1024Params {
-    n: KYBER_N,
-    q: KYBER_Q,
+/// ML-KEM-1024 parameters
+pub const ML_KEM_1024: MlKem1024Params = MlKem1024Params {
+    n: ML_KEM_N,
+    q: ML_KEM_Q,
     k: 4,
     eta1: 2,
     eta2: 2,
