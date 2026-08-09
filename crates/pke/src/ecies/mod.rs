@@ -98,22 +98,40 @@ pub(crate) struct EciesCiphertextComponents {
 }
 
 impl EciesCiphertextComponents {
-    pub fn serialize(&self) -> Vec<u8> {
+    pub fn serialize(&self) -> PkeResult<Vec<u8>> {
         let r_len = self.ephemeral_public_key.len();
         let n_len = self.aead_nonce.len();
         let ct_t_len = self.aead_ciphertext_tag.len();
 
-        assert!(
-            r_len <= u8::MAX as usize,
-            "Ephemeral PK too long for 1-byte length prefix"
-        );
-        assert!(
-            n_len <= u8::MAX as usize,
-            "AEAD Nonce too long for 1-byte length prefix"
-        );
+        if r_len > u8::MAX as usize {
+            return Err(PkeError::SerializationError(
+                "ephemeral public key exceeds the wire-format limit",
+            ));
+        }
+        if n_len > u8::MAX as usize {
+            return Err(PkeError::SerializationError(
+                "AEAD nonce exceeds the wire-format limit",
+            ));
+        }
+        if ct_t_len > u32::MAX as usize {
+            return Err(PkeError::SerializationError(
+                "AEAD payload exceeds the wire-format limit",
+            ));
+        }
 
-        let total_len = 1 + r_len + 1 + n_len + 4 + ct_t_len;
-        let mut serialized = Vec::with_capacity(total_len);
+        let total_len = 1usize
+            .checked_add(r_len)
+            .and_then(|len| len.checked_add(1))
+            .and_then(|len| len.checked_add(n_len))
+            .and_then(|len| len.checked_add(4))
+            .and_then(|len| len.checked_add(ct_t_len))
+            .ok_or(PkeError::SerializationError(
+                "ECIES ciphertext length overflows the platform address space",
+            ))?;
+        let mut serialized = Vec::new();
+        serialized
+            .try_reserve_exact(total_len)
+            .map_err(|_| PkeError::SerializationError("unable to allocate ECIES ciphertext"))?;
 
         serialized.push(r_len as u8);
         serialized.extend_from_slice(&self.ephemeral_public_key);
@@ -123,7 +141,7 @@ impl EciesCiphertextComponents {
 
         serialized.extend_from_slice(&(ct_t_len as u32).to_be_bytes());
         serialized.extend_from_slice(&self.aead_ciphertext_tag);
-        serialized
+        Ok(serialized)
     }
 
     pub fn deserialize(bytes: &[u8]) -> PkeResult<Self> {
@@ -139,22 +157,32 @@ impl EciesCiphertextComponents {
         }
         let r_len = bytes[current_pos] as usize;
         current_pos += 1;
-        if bytes.len() < current_pos + r_len {
+        let r_end = current_pos
+            .checked_add(r_len)
+            .ok_or(PkeError::InvalidCiphertextFormat(
+                "R length overflows the platform address space",
+            ))?;
+        if bytes.len() < r_end {
             return Err(PkeError::InvalidCiphertextFormat("R data truncated"));
         }
-        let ephemeral_public_key = bytes[current_pos..current_pos + r_len].to_vec();
-        current_pos += r_len;
+        let ephemeral_public_key = bytes[current_pos..r_end].to_vec();
+        current_pos = r_end;
 
         if bytes.len() < current_pos + 1 {
             return Err(PkeError::InvalidCiphertextFormat("Nonce length truncated"));
         }
         let n_len = bytes[current_pos] as usize;
         current_pos += 1;
-        if bytes.len() < current_pos + n_len {
+        let nonce_end = current_pos
+            .checked_add(n_len)
+            .ok_or(PkeError::InvalidCiphertextFormat(
+                "nonce length overflows the platform address space",
+            ))?;
+        if bytes.len() < nonce_end {
             return Err(PkeError::InvalidCiphertextFormat("Nonce data truncated"));
         }
-        let aead_nonce = bytes[current_pos..current_pos + n_len].to_vec();
-        current_pos += n_len;
+        let aead_nonce = bytes[current_pos..nonce_end].to_vec();
+        current_pos = nonce_end;
 
         if bytes.len() < current_pos + 4 {
             return Err(PkeError::InvalidCiphertextFormat(
@@ -170,13 +198,19 @@ impl EciesCiphertextComponents {
         ) as usize;
         current_pos += 4;
 
-        if bytes.len() < current_pos + ct_t_len {
+        let payload_end =
+            current_pos
+                .checked_add(ct_t_len)
+                .ok_or(PkeError::InvalidCiphertextFormat(
+                    "AEAD payload length overflows the platform address space",
+                ))?;
+        if bytes.len() < payload_end {
             return Err(PkeError::InvalidCiphertextFormat(
                 "AEAD payload data truncated",
             ));
         }
-        let aead_ciphertext_tag = bytes[current_pos..current_pos + ct_t_len].to_vec();
-        current_pos += ct_t_len;
+        let aead_ciphertext_tag = bytes[current_pos..payload_end].to_vec();
+        current_pos = payload_end;
 
         if current_pos != bytes.len() {
             return Err(PkeError::InvalidCiphertextFormat(
@@ -189,5 +223,53 @@ impl EciesCiphertextComponents {
             aead_nonce,
             aead_ciphertext_tag,
         })
+    }
+}
+
+#[cfg(test)]
+mod framing_tests {
+    use super::EciesCiphertextComponents;
+
+    #[test]
+    fn framing_roundtrip_is_exact() {
+        let components = EciesCiphertextComponents {
+            ephemeral_public_key: vec![4, 1, 2, 3],
+            aead_nonce: vec![5; 12],
+            aead_ciphertext_tag: vec![6; 31],
+        };
+        let encoded = components.serialize().unwrap();
+        let decoded = EciesCiphertextComponents::deserialize(&encoded).unwrap();
+        assert_eq!(
+            decoded.ephemeral_public_key,
+            components.ephemeral_public_key
+        );
+        assert_eq!(decoded.aead_nonce, components.aead_nonce);
+        assert_eq!(decoded.aead_ciphertext_tag, components.aead_ciphertext_tag);
+    }
+
+    #[test]
+    fn serializer_rejects_unrepresentable_component_lengths() {
+        let oversized_key = EciesCiphertextComponents {
+            ephemeral_public_key: vec![0; u8::MAX as usize + 1],
+            aead_nonce: Vec::new(),
+            aead_ciphertext_tag: Vec::new(),
+        };
+        assert!(oversized_key.serialize().is_err());
+
+        let oversized_nonce = EciesCiphertextComponents {
+            ephemeral_public_key: Vec::new(),
+            aead_nonce: vec![0; u8::MAX as usize + 1],
+            aead_ciphertext_tag: Vec::new(),
+        };
+        assert!(oversized_nonce.serialize().is_err());
+    }
+
+    #[test]
+    fn decoder_rejects_truncation_and_trailing_data() {
+        let truncated_payload = [0, 0, 0, 0, 0, 1];
+        assert!(EciesCiphertextComponents::deserialize(&truncated_payload).is_err());
+
+        let trailing_data = [0, 0, 0, 0, 0, 0, 1];
+        assert!(EciesCiphertextComponents::deserialize(&trailing_data).is_err());
     }
 }

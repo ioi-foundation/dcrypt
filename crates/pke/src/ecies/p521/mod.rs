@@ -126,7 +126,7 @@ impl Pke for EciesP521 {
             aead_nonce: aead_nonce.as_ref().to_vec(),
             aead_ciphertext_tag: aead_ciphertext_and_tag_vec,
         };
-        Ok(ecies_components.serialize())
+        ecies_components.serialize().map_err(ApiError::from)
     }
 
     fn decrypt(

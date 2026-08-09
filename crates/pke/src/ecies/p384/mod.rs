@@ -125,7 +125,7 @@ impl Pke for EciesP384 {
             aead_ciphertext_tag: aead_ciphertext_and_tag_vec,
         };
 
-        Ok(ecies_components.serialize())
+        ecies_components.serialize().map_err(ApiError::from)
     }
 
     fn decrypt(

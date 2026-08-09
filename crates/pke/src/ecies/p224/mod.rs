@@ -110,6 +110,7 @@ impl Pke for EciesP224 {
         derived_key_material.zeroize();
 
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
+        encryption_key_arr.zeroize();
         let aead_nonce = Nonce::<CHACHA20POLY1305_NONCE_LEN>::random(rng);
 
         let aead_ciphertext_api_obj =
@@ -123,7 +124,7 @@ impl Pke for EciesP224 {
             aead_nonce: aead_nonce.as_ref().to_vec(),
             aead_ciphertext_tag: aead_ciphertext_api_obj.as_ref().to_vec(),
         };
-        Ok(ecies_components.serialize())
+        ecies_components.serialize().map_err(ApiError::from)
     }
 
     fn decrypt(
@@ -177,6 +178,7 @@ impl Pke for EciesP224 {
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aead_cipher_impl = ChaCha20Poly1305::new(&encryption_key_arr);
+        encryption_key_arr.zeroize();
 
         // Zero-copy optimization: Move the vector into Ciphertext
         let aead_ct_api_obj = dcrypt_api::Ciphertext::new(aead_ciphertext_tag);
