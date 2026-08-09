@@ -203,7 +203,16 @@ run_test_gates() {
     cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
 
     info "Running exact ML-DSA ACVP gates"
-    cargo test -p dcrypt-tests --test acvp_tests ml_dsa_ -- --nocapture
+    cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_ -- \
+        --test-threads=1 --nocapture
+
+    info "Running exact ML-KEM ACVP gates"
+    cargo test --release -p dcrypt-tests --test acvp_tests test_ml_kem_ -- \
+        --test-threads=1 --nocapture
+
+    info "Running excluded independent interoperability oracles"
+    cargo test --release --locked --manifest-path \
+        "$PROJECT_ROOT/verification/Cargo.toml"
 
     info "Running isolated statistical timing regressions"
     cargo test -p dcrypt-tests --test constant_time_tests -- \
@@ -248,6 +257,23 @@ run_check_gates() {
             cargo +nightly miri test -p dcrypt-api --lib --all-features
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
             cargo +nightly miri test -p dcrypt-common --lib --all-features
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-kem --lib --all-features miri_
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-sign --lib --all-features \
+                expanded_key_decoder_rejects_malformed_or_incoherent_components
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-sign --lib --all-features \
+                rejects_identity_public_key_and_universal_forgery
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+                rfc9380_g1_random_oracle_vectors
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+                rfc9380_g2_random_oracle_vectors
+        CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
+            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+                checked_decoders_reject_on_curve_non_subgroup_point
     elif [[ "$MODE" == "dry-run" ]]; then
         warn "nightly Miri is unavailable"
     else

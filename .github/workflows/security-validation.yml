@@ -82,6 +82,36 @@ jobs:
           cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_
           -- --test-threads=1 --nocapture
 
+  ml-kem-acvp:
+    name: Exact ML-KEM FIPS 203 ACVP outputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - name: Compare ML-KEM results with bundled official expectedResults
+        run: >-
+          cargo test --release -p dcrypt-tests --test acvp_tests test_ml_kem_
+          -- --test-threads=1 --nocapture
+
+  independent-oracles:
+    name: Excluded independent interoperability oracles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - name: Run the non-published differential verification workspace
+        run: cargo test --release --locked --manifest-path verification/Cargo.toml
+
   statistical-timing:
     name: Repository statistical timing regressions (not dudect or ctgrind)
     runs-on: ubuntu-24.04
@@ -143,6 +173,36 @@ jobs:
         # Keep the standalone Loom scheduler model in the stable test job;
         # Miri runs the real registry and secret-buffer unit tests directly.
         run: cargo miri test -p ${{ matrix.crate }} --lib --all-features
+
+  miri-crypto-boundaries:
+    name: Miri cryptographic parser and key boundaries
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install nightly Rust with Miri
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: nightly-2026-08-07
+          components: miri
+      - name: Prepare Miri's sysroot
+        run: cargo miri setup
+      - name: Exercise ML-KEM canonical decoder boundaries
+        run: cargo miri test -p dcrypt-kem --lib --all-features miri_
+      - name: Exercise ML-DSA expanded-key coherence checks
+        run: >-
+          cargo miri test -p dcrypt-sign --lib --all-features
+          expanded_key_decoder_rejects_malformed_or_incoherent_components
+      - name: Exercise Ed25519 strict verification
+        run: >-
+          cargo miri test -p dcrypt-sign --lib --all-features
+          rejects_identity_public_key_and_universal_forgery
+      - name: Exercise RFC 9380 and BLS subgroup rejection
+        run: |
+          cargo miri test -p dcrypt-algorithms --lib --all-features rfc9380_g1_random_oracle_vectors
+          cargo miri test -p dcrypt-algorithms --lib --all-features rfc9380_g2_random_oracle_vectors
+          cargo miri test -p dcrypt-algorithms --lib --all-features checked_decoders_reject_on_curve_non_subgroup_point
 
   fuzz-build:
     name: Build externally controlled decoder fuzz targets
