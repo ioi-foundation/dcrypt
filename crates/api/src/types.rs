@@ -1,9 +1,10 @@
 // File: crates/api/src/types.rs
 
-//! Core types with security guarantees for the dcrypt library
+//! Core types with explicit ownership and memory-hygiene behavior
 //!
-//! This module provides fundamental type definitions that enforce
-//! compile-time and runtime guarantees for cryptographic operations.
+//! Secret wrappers explicitly clear owned initialized bytes on drop. This is a
+//! best-effort safe-Rust behavior, not a physical-erasure guarantee for caller,
+//! compiler/register, freed-storage, swap, or crash-dump copies.
 
 use crate::{
     error::Error,
@@ -27,7 +28,7 @@ use alloc::{boxed::Box, vec::Vec};
 #[cfg(feature = "std")]
 use std::{boxed::Box, vec::Vec};
 
-/// A fixed-size array of bytes that is securely zeroed when dropped
+/// A fixed-size byte array that explicitly clears its owned storage on drop.
 #[derive(Clone)]
 pub struct SecretBytes<const N: usize> {
     data: [u8; N],
@@ -138,7 +139,10 @@ impl<const N: usize> SerializeSecret for SecretBytes<N> {
     }
 }
 
-/// A variable-length vector of bytes that is securely zeroed when dropped
+/// Exact-size owned bytes whose initialized storage is explicitly cleared on drop.
+///
+/// This is best-effort software memory hygiene, not a physical-erasure guarantee
+/// for caller, compiler/register, allocator, swap, or crash-dump copies.
 pub struct SecretVec {
     data: Box<[u8]>,
 }

@@ -22,7 +22,9 @@ side-channel guarantees.
         An RAII guard that invokes `zeroize` on a borrowed value when the guard
         is dropped.
     *   **`SecureZeroingType` Trait**:
-        A trait for types that can be securely zeroed and cloned while maintaining their security properties. Both `SecretBuffer` and `SecretVec` implement this.
+        A trait for owned values that invoke explicit clearing and preserve that
+        behavior when cloned. Each clone is a distinct copy that must be cleared
+        independently.
 
 2.  **Constant-Time Comparisons (`memory.rs`)**:
     Equal-length comparison uses dcrypt's owned constant-time equality

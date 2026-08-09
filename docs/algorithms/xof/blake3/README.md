@@ -9,7 +9,10 @@ This document provides detailed documentation for the BLAKE3 Extendable-Output F
 
 BLAKE3 is a state-of-the-art cryptographic hash function designed for exceptional performance, high security, and versatility. It is built upon the well-analyzed ChaCha stream cipher permutation and a Merkle tree structure, allowing for massive parallelism.
 
-This module provides a pure-Rust implementation of BLAKE3 in its native Extendable-Output Function (XOF) mode, which allows for generating an output of any desired length. The implementation prioritizes correctness and security through constant-time operations and secure memory handling.
+This module provides a safe-Rust implementation of BLAKE3 in its native
+Extendable-Output Function (XOF) mode. Keyed and derive-key state uses explicit
+clearing wrappers; source-level mask/flow properties remain subject to
+compiler- and target-specific validation.
 
 ## Modes of Operation
 
@@ -98,9 +101,14 @@ assert_eq!(derived_key.len(), 64);
 
 ## Security & Implementation Notes
 
-*   **Correctness and Security First**: This implementation prioritizes correctness and resistance to side-channel attacks over raw performance. It is validated against the official BLAKE3 test vectors.
+*   **Correctness First**: This implementation is checked against the published
+    BLAKE3 test vectors. That is not formal validation or a blanket
+    side-channel claim.
 *   **No SIMD Optimizations**: This is a pure Rust implementation and does not include platform-specific SIMD optimizations found in some other BLAKE3 libraries. It is intended for environments where security and portability are the primary concerns.
-*   **Secure Memory Handling**: All internal sensitive data, such as keys and chaining values, are stored in `SecretBuffer` wrappers. This ensures that cryptographic state is automatically and securely zeroed from memory when it goes out of scope, preventing data leakage.
+*   **Owned Memory Hygiene**: Keys, chaining values, and secret-derived scratch
+    use exact-size zeroizing wrappers and explicitly clear owned initialized
+    bytes on drop. This cannot guarantee physical erasure of compiler/register
+    copies, caller copies, freed storage, swap, or crash dumps.
 *   **State Management**: The API is designed to prevent misuse. For example, calling `update()` after `finalize()` or `squeeze()` will result in an error, ensuring the integrity of the hash computation.
 
 ## API Reference

@@ -13,7 +13,8 @@ Unlike traditional hash functions that produce a fixed-size digest, XOFs can gen
 *   Serving as a basis for building stream ciphers.
 *   Key derivation.
 
-The implementations in this module are designed with a strong focus on security, ensuring that the internal state is handled securely and automatically zeroized when no longer in use.
+The implementations use clearing wrappers for owned secret-bearing state. That
+is best-effort software memory hygiene, subject to the limits described below.
 
 ## Implemented Algorithms
 
@@ -106,14 +107,19 @@ println!("Next 64 bytes: {}", hex::encode(output2));
 
 ## Security and Implementation Details
 
-*   **Secure Memory Handling:** The internal Keccak state and any data held in the buffer are stored in secure, zeroizing memory wrappers (`SecretBuffer`, `SecureKeccakState`). This ensures that sensitive intermediate cryptographic state is automatically wiped from memory when it is no longer in use, protecting against cold boot attacks and other memory disclosures.
+*   **Owned Memory Hygiene:** The internal Keccak state and buffered data use
+    exact-size zeroizing wrappers. They explicitly clear owned initialized
+    bytes on drop, but cannot guarantee erasure of compiler/register copies,
+    caller copies, freed storage, swap, crash dumps, or cold-boot remnants.
 
 *   **State Management:** The implementation enforces a strict state machine to prevent misuse.
     *   Calling `update()` after the state has been finalized (either by an explicit call to `finalize()` or implicitly by the first call to `squeeze()`) will result in an error.
     *   This prevents accidental data injection after the absorption phase is complete.
     *   The `reset()` method must be called to reuse the instance for a new, independent computation.
 
-*   **Constant-Time Operations:** The underlying `keccak-f[1600]` permutation is implemented to be constant-time, protecting against timing-based side-channel attacks.
+*   **Timing-Aware Operations:** The underlying `keccak-f[1600]` permutation
+    avoids secret-indexed tables and secret-dependent control flow in source.
+    This is not a blanket compiler- or target-level constant-time proof.
 
 ## Relationship to `dcrypt::algorithms::hash::shake`
 

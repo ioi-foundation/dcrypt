@@ -1,8 +1,8 @@
 //! Secret data types that invoke zeroization for owned storage
 //!
-//! This module provides type-safe wrappers for sensitive data that ensure
-//! cleanup and zeroization when the data is no longer needed. Software
-//! zeroization cannot erase caller, compiler/register, or already-freed copies.
+//! This module provides type-safe wrappers that invoke explicit clearing for
+//! initialized storage they own. Software zeroization cannot erase caller,
+//! compiler/register, allocator, swap, crash-dump, or already-freed copies.
 
 use core::convert::{AsMut, AsRef};
 use core::fmt;
@@ -13,15 +13,15 @@ pub use dcrypt_api::types::SecretBytes as SecretBuffer;
 #[cfg(feature = "alloc")]
 pub use dcrypt_api::types::SecretVec;
 
-/// Trait for types that can be securely zeroed and cloned
+/// Trait for types that explicitly clear owned storage and preserve that
+/// behavior when cloned.
 pub trait SecureZeroingType: Zeroize + Clone {
     /// Create a zeroed instance
     fn zeroed() -> Self;
 
-    /// Create a secure clone that preserves security properties
+    /// Create a clone with the same owned-storage cleanup behavior.
     ///
-    /// This method ensures that cloned instances maintain the same
-    /// security guarantees as the original, including proper zeroization.
+    /// Each clone owns a separate copy and must be cleared independently.
     fn secure_clone(&self) -> Self {
         self.clone() // Default implementation uses regular clone
     }
@@ -48,10 +48,11 @@ impl SecureZeroingType for SecretVec {
     }
 }
 
-/// Ephemeral secret that is automatically zeroized after use
+/// Ephemeral secret that invokes explicit clearing on drop.
 ///
-/// This type wraps any type T and ensures it is zeroized when dropped.
-/// It's useful for temporary secrets and intermediate cryptographic values.
+/// This type wraps a value and invokes its [`Zeroize`] implementation on drop.
+/// It is useful for temporary secrets and intermediate cryptographic values,
+/// subject to the module-level limits of best-effort software clearing.
 pub struct EphemeralSecret<T: Zeroize> {
     inner: Option<T>,
 }
@@ -64,8 +65,8 @@ impl<T: Zeroize> EphemeralSecret<T> {
 
     /// Consume the secret and return the inner value
     ///
-    /// Note: After calling this method, the caller is responsible
-    /// for ensuring the value is properly zeroized.
+    /// Note: after calling this method, the caller owns the value and is
+    /// responsible for invoking its clearing policy when appropriate.
     pub fn into_inner(self) -> T {
         let mut this = self;
         this.inner
@@ -136,7 +137,7 @@ impl<T: Zeroize> fmt::Debug for EphemeralSecret<T> {
     }
 }
 
-/// Guard type that ensures a value is zeroized when dropped
+/// Guard type that invokes a value's [`Zeroize`] implementation when dropped.
 ///
 /// This is useful for ensuring cleanup happens even in the presence
 /// of early returns or panics.

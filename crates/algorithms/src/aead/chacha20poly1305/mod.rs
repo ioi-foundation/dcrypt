@@ -3,12 +3,15 @@
 //! This module implements the ChaCha20-Poly1305 AEAD algorithm as specified in
 //! RFC 8439.
 //!
-//! ## Constant-Time Guarantees
+//! ## Timing-sensitive implementation properties
 //!
 //! * No variable-length early-returns after authentication is checked.  
 //! * Heap allocations and frees are balanced in both success and failure paths.
 //! * Authentication is decided with a branch-free constant-time mask; the same
 //!   byte-wise loop executes whatever the tag's validity.
+//!
+//! These source-level properties and release-gate inspections are not a blanket
+//! compiler- or target-level constant-time proof.
 
 #[cfg(feature = "alloc")]
 use crate::alloc_prelude::*;

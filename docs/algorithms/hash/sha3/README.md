@@ -1,6 +1,7 @@
 # SHA-3 Hash Functions
 
-This module provides a secure, constant-time implementation of the **SHA-3 family of hash functions** as specified in **FIPS PUB 202**. The implementations are built on the Keccak-f[1600] permutation and are designed to be resistant to side-channel attacks.
+This module provides dcrypt's implementation of the **SHA-3 family of hash
+functions** specified in **FIPS PUB 202**, built on Keccak-f[1600].
 
 ## Overview
 
@@ -8,10 +9,15 @@ The SHA-3 functions are based on the "sponge construction," which allows them to
 
 ## Features
 
--   **FIPS 202 Compliant:** The algorithms strictly adhere to the official NIST standard.
+-   **FIPS 202 interoperability:** The algorithms are checked against the
+    complete repository ACVP corpus, including partial-bit, Monte Carlo, and
+    large-data cases. This is not FIPS validation or certification.
 -   **Security-First Design:**
-    -   **Side-Channel Hardened:** The underlying Keccak permutation is implemented to be constant-time, avoiding data-dependent branches and memory access patterns that could leak information through timing analysis.
-    -   **Secure Memory Handling:** Intermediate state and buffers are handled securely to prevent data leakage.
+    -   **Timing-sensitive source design:** The Keccak permutation avoids
+        intentional data-dependent branches and table lookups. This is not a
+        compiler- or target-wide side-channel proof.
+    -   **Owned memory hygiene:** Secret-bearing intermediate state and buffers
+        use clearing wrappers, subject to the limits of software zeroization.
 -   **Unified API:** All SHA-3 variants implement the `HashFunction` trait, providing a consistent and ergonomic interface that is shared with all other hash functions in the `dcrypt` library.
 -   **`no_std` Compatibility:** The implementation is fully compatible with `no_std` environments that have an allocator (`alloc` feature).
 
@@ -64,7 +70,8 @@ println!("SHA3-512 Digest: {}", digest.to_hex());
 
 ### Hash Verification
 
-The `verify` method provides a secure, constant-time way to check if a given message produces an expected digest.
+For equal-length digests, `verify` compares bytes without a data-dependent early
+exit. Public lengths and errors may branch.
 
 ```rust
 use dcrypt::algorithms::hash::{Sha3_384, HashFunction};
@@ -88,4 +95,6 @@ The security of this module relies on a carefully implemented `keccak_f1600` per
 -   **Chi (`χ`) step:** A non-linear operation that provides confusion.
 -   **Iota (`ι`) step:** Adds round constants to break symmetry between rounds.
 
-Each step is implemented using only basic arithmetic and bitwise operations to ensure constant-time execution, which is crucial for resisting timing-based side-channel attacks.
+Each step uses fixed arithmetic and bitwise operations rather than
+secret-indexed tables. Release gates inspect representative target code; they
+do not constitute a formal timing proof.

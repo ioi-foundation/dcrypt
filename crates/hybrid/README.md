@@ -103,9 +103,9 @@ fn sign_message<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> 
 
 ## Release status
 
-No currently published dcrypt release is supported. Version 2.0.0 was
-withdrawn; the reviewed corrective API is being prepared for v3. Review the
-repository `SECURITY.md` before deployment.
+Version 3.0.0 is the supported corrective release. Version 2.0.0 was
+withdrawn and every pre-v3 release is unsupported. Review the repository
+`SECURITY.md` and the v3 migration notes before deployment.
 
 ## Features
 

@@ -8,7 +8,9 @@ data (AEAD) mode specified in **NIST Special Publication 800-38D**. It is tested
 against known-answer data; this is not a FIPS validation or blanket side-channel
 claim.
 
-It combines the AES block cipher operating in Counter (CTR) mode for encryption with the GHASH function for authentication, providing strong guarantees of both **confidentiality** and **authenticity**.
+It combines AES in Counter (CTR) mode with GHASH authentication. Under the
+SP 800-38D key, nonce, tag-length, and message-limit requirements, the intended
+security properties are confidentiality and authenticity.
 
 ## Features
 
@@ -25,7 +27,9 @@ It combines the AES block cipher operating in Counter (CTR) mode for encryption 
 
 Security is the primary design consideration for this implementation.
 
-*   **Tag comparison:** Equal-length tag bytes use `subtle::ConstantTimeEq`; public length and error paths use ordinary branching. Target-specific analysis remains required for broader timing claims.
+*   **Tag comparison:** Equal-length tag bytes use dcrypt's owned mask-based
+    `ConstantTimeEq`; public length and error paths use ordinary branching.
+    Target-specific analysis remains required for broader timing claims.
 *   **Memory hygiene:** Owned GHASH and AES key state use zeroization. This does not guarantee erasure of caller, compiler, register, or allocator copies.
 *   **Robust API:** The API is designed around the `SymmetricCipher` trait, using a builder pattern that guides the user to provide all necessary components (like the nonce) before an operation can be executed, reducing the risk of misuse.
 
@@ -94,7 +98,7 @@ println!("Decryption successful and data verified!");
 
 ## `no_std` Support
 
-The current workspace does not claim a validated standalone `no_std` GCM build.
-The feature surface is being retained for future repair; use the tested `std`
-configuration unless the exact target/feature combination is independently
-made to compile and reviewed.
+GCM is included in the release's allocation-backed `dcrypt-algorithms` AEAD
+profile compiled for `thumbv7em-none-eabihf` with default features disabled.
+Consumers must provide a compatible allocator and validate their exact target,
+feature set, nonce management, message limits, and platform behavior.

@@ -50,7 +50,9 @@ The top-level facade provides `traditional`, `post-quantum`, and `hybrid`
 category features. Each category activates and re-exports the required crates;
 `hybrid` enables both component categories. `std` implies `alloc`, while
 allocation-backed `no_std` builds use `default-features = false` plus `alloc`
-and the required categories.
+and the required categories. The ML-KEM example above requires the
+`post-quantum` or `hybrid` facade feature.
 
-No currently published dcrypt release is supported. Review the root README and
-`SECURITY.md` before relying on a release.
+Version 3.0.0 is the supported corrective release; every pre-v3 release is
+unsupported. Review the root README, `SECURITY.md`, and migration notes before
+deployment.

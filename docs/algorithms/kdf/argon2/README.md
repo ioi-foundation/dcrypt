@@ -2,11 +2,13 @@
 
 ## Overview
 
-This module provides a secure, constant-time, and RFC 9106 compliant implementation of the Argon2 key derivation and password hashing function. Argon2 was the winner of the [Password Hashing Competition](https://password-hashing.net/) and is the current state-of-the-art for hashing passwords and deriving keys from secrets.
+This module provides dcrypt's implementation of the Argon2 key-derivation and
+password-hashing function specified in RFC 9106. Argon2 was the winner of the
+[Password Hashing Competition](https://password-hashing.net/).
 
 This implementation is designed with a focus on security and ergonomics:
-*   **RFC 9106 Compliance:** Follows the latest specification for interoperability.
-*   **Security-First:** Uses secure memory types (`SecretBuffer`, `Zeroizing`) to prevent accidental leakage of sensitive data and performs hash comparisons in constant time to mitigate timing attacks.
+*   **RFC 9106 interoperability:** Tested against the relevant specification vectors; this is not certification or formal validation.
+*   **Owned memory hygiene:** Uses exact-size clearing wrappers for owned secret material and mask-based equal-length hash comparison. This does not prove whole-operation side-channel resistance or physical erasure.
 *   **Flexible API:** Supports both high-level password hashing via the `PasswordHashFunction` trait and general-purpose key derivation through the `KeyDerivationFunction` trait.
 *   **Type Safety:** Uses a strong type system for parameters (`Argon2Params`) and variants (`Argon2Type`) to ensure correct usage.
 

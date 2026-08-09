@@ -17,14 +17,20 @@ This module provides the following AEAD schemes:
     *   `Gcm<Aes192>`
     *   `Gcm<Aes256>`
 *   **ChaCha20-Poly1305:** A high-performance stream cipher-based AEAD construction, as specified in RFC 8439.
-*   **XChaCha20-Poly1305:** An extended-nonce variant of ChaCha20-Poly1305, which allows a larger 24-byte nonce to be used safely, making it more robust against nonce misuse.
+*   **XChaCha20-Poly1305:** An extended-nonce variant of ChaCha20-Poly1305.
+    Its 24-byte nonce reduces accidental collision risk when nonces are sampled
+    randomly; reuse under one key remains forbidden.
 
 ## Key Security Features
 
 The implementations in this module are designed with a focus on security and side-channel resistance.
 
-*   **Constant-Time Execution:** Tag verification is performed in constant time using the `subtle` crate's `ConstantTimeEq` trait. This prevents timing side-channel attacks where an attacker could learn information about the tag by measuring the time it takes for a comparison to complete.
-*   **Secure Memory Management:** All secret key material is handled using `SecretBuffer` and `Zeroizing` types, which ensure that sensitive data is securely wiped from memory when it is no longer needed.
+*   **Tag comparison:** Equal-length tag bytes use dcrypt's owned mask-based
+    comparison. Public length and error paths may branch, and this narrow
+    property is not a whole-operation compiler/target constant-time proof.
+*   **Owned memory hygiene:** Secret key material and secret-derived scratch use
+    exact-size clearing wrappers. Safe Rust cannot erase caller,
+    compiler/register, allocator, swap, or crash-dump copies.
 *   **Correctness testing:** Implementations are tested against NIST
     known-answer data (for supported AES-GCM cases) and relevant RFC vectors.
     This is not formal validation or certification.
@@ -124,6 +130,7 @@ The AEAD API is designed to be both ergonomic and secure:
 
 ## `no_std` Support
 
-The current workspace does not claim a validated standalone `no_std` AEAD
-build. The feature surface remains for future repair, but the exact algorithm,
-target, and feature combination must compile and be reviewed independently.
+The release gate compiles the allocation-backed `dcrypt-algorithms` AEAD
+profile for `thumbv7em-none-eabihf` with default features disabled. Consumers
+must provide a compatible allocator and validate their exact target, feature
+set, protocol limits, and platform behavior.

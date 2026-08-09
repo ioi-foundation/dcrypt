@@ -1,24 +1,26 @@
 # Security advisories
 
-The four stop-ship findings are published as GitHub Security Advisories and are
-also tracked by [RustSec advisory-db PR #3123](https://github.com/RustSec/advisory-db/pull/3123).
-The repository-local `DCRYPT-*` identifiers are project tracking identifiers,
-not assigned RustSec IDs.
+The ten findings below are published as GitHub Security Advisories. The first
+four findings and the v2 withdrawal are tracked by
+[RustSec advisory-db PR #3124](https://github.com/RustSec/advisory-db/pull/3124);
+RustSec submissions for the six additional v3 findings are part of the
+coordinated disclosure. The repository-local `DCRYPT-*` identifiers are
+project tracking identifiers, not assigned RustSec IDs.
 
 `v2.0.0` fixes the four specific findings below, but the release is
 [withdrawn](V2.0.0-WITHDRAWAL.md) because its implementation and normal/build
 dependency closure violate dcrypt's zero-unsafe, zero-native-code, and zero-FFI
 policy. `v1.2.3` is critically affected and is not a safe fallback. No dcrypt
-release is currently supported.
+release before `v3.0.0` is supported; `v3.0.0` is the supported replacement.
 
 - [DCRYPT-2026-0001: error-registry memory unsafety](DCRYPT-2026-0001.md) — [GHSA-7hc7-h3f2-r4j6](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-7hc7-h3f2-r4j6)
 - [DCRYPT-2026-0002: Ed25519 verification permits universal forgery](DCRYPT-2026-0002.md) — [GHSA-7j32-2mpw-c784](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-7j32-2mpw-c784)
 - [DCRYPT-2026-0003: GCM operation nonce ignored](DCRYPT-2026-0003.md) — [GHSA-h9f2-fgp8-vc4h](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-h9f2-fgp8-vc4h)
 - [DCRYPT-2026-0004: unauthenticated streaming framing](DCRYPT-2026-0004.md) — [GHSA-8cwp-4826-jg9f](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-8cwp-4826-jg9f)
 
-The v3 audit identified six additional release-blocking findings. Coordinated
-GitHub advisories are reserved and remain private until the corrective release
-is available. CVEs have been requested but are not yet assigned; the
+The v3 audit identified six additional release-blocking findings. Their
+coordinated GitHub advisories were published with the corrective release. CVEs
+have been requested but may not yet be assigned; the
 `DCRYPT-*` names remain repository-local tracking identifiers.
 
 The custom construction shipped under the `XChaCha20Poly1305` name in tagged

@@ -5,8 +5,8 @@
 This module provides implementations of various Key Derivation Functions (KDFs) and Password Hashing Functions. These primitives are essential for securely deriving cryptographic keys from secrets or hashing user passwords for storage.
 
 The design of this module emphasizes:
-*   **Security:** Implementations are designed to be constant-time where applicable (e.g., during hash verification) and use secure memory types to prevent accidental leakage of sensitive information.
-*   **Type Safety:** Leveraging Rust's trait system, KDFs are generic over the underlying hash functions, allowing for compile-time guarantees of correctness.
+*   **Security:** Implementations avoid intentional secret-dependent control flow where applicable and use exact-size clearing wrappers for owned secret material. Compiler/target behavior and external copies remain outside that guarantee.
+*   **Type Safety:** Rust's trait system constrains compatible hash/KDF combinations and output types; it does not prove cryptographic correctness.
 *   **Ergonomics:** A fluent builder pattern is provided for a clear and less error-prone API.
 *   **Compliance:** Algorithms are implemented according to their respective RFCs and standards.
 

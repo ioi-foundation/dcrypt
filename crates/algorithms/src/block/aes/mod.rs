@@ -3,13 +3,16 @@
 //! This module implements the Advanced Encryption Standard (AES) block cipher
 //! as specified in FIPS 197.
 //!
-//! ## Constant-Time Guarantees
+//! ## Timing-sensitive implementation properties
 //!
 //! This implementation mitigates timing side-channel attacks by:
 //! - Using branchless arithmetic for GF(2^8) operations
 //! - Using bitsliced S-box implementations instead of table lookups
 //! - Ensuring consistent memory access patterns
 //! - Validating keys before use to prevent silent failure
+//!
+//! These source-level properties are not a blanket compiler- or target-level
+//! constant-time guarantee. Release gates inspect supported target builds.
 //!
 //! Note: On platforms where AES hardware acceleration is available, consider using
 //! hardware instructions for better side-channel resistance.

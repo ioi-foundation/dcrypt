@@ -187,4 +187,5 @@ By default, `std`, `xof`, and `ec` are enabled.
 
 ## License
 
-This project is licensed under the [APACHE 2.0 License](LICENSE).
+This project is licensed under the
+[Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).

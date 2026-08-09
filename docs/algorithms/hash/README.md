@@ -1,6 +1,9 @@
 # Cryptographic Hash Functions
 
-This module provides a comprehensive suite of cryptographic hash functions implemented with a strong emphasis on security, type-safety, and a consistent, ergonomic API. The implementations are designed to be constant-time where appropriate and use secure memory-handling practices to mitigate side-channel attacks and prevent data leakage.
+This module provides a suite of cryptographic hash functions with a consistent,
+type-safe API. Keyed and secret-bearing paths use exact-size clearing wrappers
+where documented; those wrappers do not prove physical erasure or
+whole-operation side-channel resistance.
 
 ## Overview
 
@@ -12,8 +15,11 @@ The core of this module is the `HashFunction` trait, which provides a unified in
 - **One-Shot & Incremental Hashing:** Support for both simple, single-call hashing and streaming operations for large data.
 - **Type Safety:** Compile-time guarantees on digest sizes using the `Digest<N>` type.
 - **Security-First Design:**
-    - **Constant-Time:** Implementations are designed to be resistant to timing-based side-channel attacks.
-    - **Secure Memory:** Intermediate sensitive values are stored in secure, zeroizing buffers like `EphemeralSecret` to prevent accidental data leakage.
+    - **Timing-sensitive paths:** Implementations avoid intentional
+      secret-indexed lookup tables or secret-dependent early exits where
+      documented. Release checks are not a compiler/target-wide proof.
+    - **Owned memory hygiene:** Secret-bearing intermediate values use clearing
+      wrappers where documented, subject to the limits of software zeroization.
 - **Keyed Hashing:** Native support for keyed hashing with BLAKE2.
 - **`no_std` Compatibility:** Usable in embedded and resource-constrained environments (requires `alloc`).
 
@@ -111,7 +117,9 @@ println!("SHA-512 Digest: {}", digest.to_hex());
 
 ### Hash Verification
 
-The `verify` method provides a convenient and constant-time way to check if a digest matches a given message.
+For equal-length digests, `verify` computes the candidate digest and compares
+its bytes without a data-dependent early exit. Public lengths and errors may
+branch; this is not a whole-operation timing guarantee.
 
 ```rust
 use dcrypt::algorithms::hash::{Sha256, HashFunction};

@@ -22,11 +22,13 @@
 //! The tests include NIST CAVP/ACVP data for GCM mode. Passing those vectors is
 //! a correctness gate, not formal module validation or certification.
 //!
-//! ## Constant-Time Guarantees
+//! ## Timing-sensitive implementation properties
 //!
 //! GF(2^128) multiplication uses fixed-iteration, mask-based arithmetic with
 //! respect to the hash key and input blocks. Processing time still depends on
 //! the public input lengths, as permitted by the GCM interface.
+//! This is a source-level design property, not a blanket compiler- or
+//! target-level constant-time proof.
 
 use crate::error::{validate, Error, Result};
 use dcrypt_internal::zeroing::{Zeroize, Zeroizing};

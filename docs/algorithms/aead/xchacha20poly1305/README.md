@@ -2,9 +2,13 @@
 
 ## Overview
 
-This module provides an implementation of the **XChaCha20-Poly1305** Authenticated Encryption with Associated Data (AEAD) algorithm. It is an extended-nonce variant of the standard `ChaCha20Poly1305` cipher, designed to increase nonce robustness and simplify secure nonce generation.
+This module provides an implementation of the **XChaCha20-Poly1305**
+Authenticated Encryption with Associated Data (AEAD) construction. Its 24-byte
+nonce reduces accidental collision risk for correctly sampled random nonces;
+reuse under one key remains forbidden.
 
-Like its predecessor, XChaCha20-Poly1305 provides strong confidentiality and integrity for encrypted messages.
+Under the construction's key, nonce, and message-limit requirements, its
+intended security properties are confidentiality and authenticity.
 
 > **Migration note:** every published `dcrypt-algorithms` version from
 > `0.9.0-beta.1` through `1.2.3` emitted a nonstandard custom construction
@@ -93,6 +97,8 @@ Performance is nearly identical to `ChaCha20Poly1305`, with a very small, fixed 
 
 ## `no_std` Support
 
-The current workspace does not claim a validated standalone `no_std` build for
-this adapter. Validate the exact backend, target, and feature combination before
-embedding it outside the tested `std` configuration.
+XChaCha20-Poly1305 is included in the release's allocation-backed
+`dcrypt-algorithms` AEAD profile compiled for `thumbv7em-none-eabihf` with
+default features disabled. Consumers must provide a compatible allocator and
+validate their exact target, feature set, nonce management, and platform
+behavior.

@@ -14,9 +14,12 @@ tests. That coverage is a correctness check, not a high-assurance certification.
 -   **Complete SHA-2 Family:** All standard variants are available.
 -   **Unified API:** All variants implement the `HashFunction` trait, providing a consistent interface for hashing and verification.
 -   **Security-First Design:**
-    -   **Secure Memory Handling:** Intermediate calculations, such as the message schedule (`W` array) and working variables (`a, b, c, ...`), are stored in secure, zeroizing buffers (`EphemeralSecret`, `ZeroizeGuard`) to prevent secret-dependent data from leaking through memory side-channels.
-    -   **Automatic Zeroization:** All sensitive state is securely wiped from memory when the hasher object is dropped.
-    -   **Side-Channel Resistance:** Memory barriers (`compiler_fence`) are used to prevent compiler reordering that could introduce timing vulnerabilities.
+    -   **Owned Memory Handling:** Secret-bearing schedules and working state use
+        clearing wrappers whose initialized storage is explicitly cleared on
+        drop. This does not erase compiler/register or external copies.
+    -   **Timing-sensitive implementation:** The compression path avoids
+        intentional secret-indexed lookup tables. Memory fences support the
+        clearing implementation; they do not prove side-channel resistance.
 -   **Type Safety:** The use of a generic `Digest<N>` type for hash outputs ensures that digests of different sizes (e.g., from SHA-256 and SHA-384) cannot be accidentally interchanged at compile time.
 -   **`no_std` Compatibility:** Fully usable in embedded and resource-constrained environments (requires `alloc`).
 
@@ -51,7 +54,7 @@ pub trait HashFunction {
     // Convenience method for one-shot hashing.
     fn digest(data: &[u8]) -> Result<Self::Output>;
 
-    // Convenience method for verifying a hash against input data in constant time.
+    // Equal-length digest comparison avoids data-dependent early exit.
     fn verify(data: &[u8], expected: &Self::Output) -> Result<bool>;
 }
 ```
@@ -92,7 +95,9 @@ println!("SHA-512: {}", digest.to_hex());
 
 ### Hash Verification
 
-The `verify` method provides a convenient and **constant-time** way to check if a digest matches a given message, preventing timing attacks.
+For equal-length digests, `verify` compares bytes without a data-dependent early
+exit. Public lengths and errors may branch, and this is not a whole-operation
+compiler/target timing proof.
 
 ```rust
 use dcrypt::algorithms::hash::{Sha256, HashFunction};

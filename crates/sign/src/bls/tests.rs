@@ -39,10 +39,10 @@ fn keygen_matches_fixed_draft07_and_eth2_v4_values() {
 }
 
 #[test]
-fn eth2_keygen_matches_erc2333_hkdf_mod_r_vectors() {
-    // Source: ERC-2333, "Test Cases", https://eips.ethereum.org/EIPS/eip-2333
+fn eth2_keygen_matches_eip2333_hkdf_mod_r_vectors() {
+    // Source: EIP-2333, "Test Cases", https://eips.ethereum.org/EIPS/eip-2333
     // (accessed 2026-08-09). Its Version section records the 2020-09-17
-    // update to draft-v4 KeyGen. ERC-2333's `derive_master_SK(seed)` is exactly
+    // update to draft-v4 KeyGen. EIP-2333's `derive_master_SK(seed)` is exactly
     // `HKDF_mod_r(seed)`, so these are authoritative v4 KeyGen vectors.
     let vectors = [
         (

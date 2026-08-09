@@ -2,20 +2,28 @@
 
 ## Overview
 
-This module provides a secure and constant-time implementation of the ChaCha20-Poly1305 Authenticated Encryption with Associated Data (AEAD) algorithm, as specified in [RFC 8439](https://tools.ietf.org/html/rfc8439).
+This module provides dcrypt's safe-Rust implementation of the
+ChaCha20-Poly1305 Authenticated Encryption with Associated Data (AEAD)
+algorithm specified in [RFC 8439](https://www.rfc-editor.org/rfc/rfc8439).
 
 ChaCha20-Poly1305 is a widely adopted AEAD construction that combines the ChaCha20 stream cipher with the Poly1305 message authentication code. It is known for its high performance on modern CPUs that lack dedicated AES hardware acceleration, while providing a high level of security.
 
 This implementation is designed to be used through the `SymmetricCipher` trait, providing a consistent and type-safe API.
 
-## Security Guarantees
+## Security-relevant implementation properties
 
 The implementation prioritizes resistance against side-channel attacks and correctness.
 
-*   **Constant-Time Tag Verification:** The Poly1305 authentication tag is verified using the `subtle::ConstantTimeEq` trait. This ensures that the time taken to compare tags is independent of the data being compared, mitigating timing attacks that could otherwise leak information about the tag's validity.
-*   **No Early Returns:** The decryption process does not return early after an authentication failure. The full decryption operation is performed regardless of the tag's validity, and the decision to return the plaintext or an error is made only at the end. This prevents an attacker from learning information by timing the decryption function.
-*   **Secure Memory Handling:** The 256-bit secret key is stored in a `SecretBuffer`, which guarantees that the key material is securely zeroed from memory when it goes out of scope. This prevents accidental key leakage from memory dumps or improper memory management.
-*   **Balanced Memory Operations:** Heap allocations and deallocations are carefully balanced in both the success and failure paths of the decryption process to prevent side channels related to memory management.
+*   **Tag Verification:** The Poly1305 tag is compared with dcrypt's owned
+    constant-time equality primitive. Release gates inspect representative
+    target code, but this is not a compiler- or target-wide constant-time proof.
+*   **Uniform Post-Authentication Flow:** After tag calculation, the same
+    byte-wise selection loop runs for valid and invalid tags before the result
+    is returned.
+*   **Owned Memory Hygiene:** The key and secret-derived scratch use exact-size
+    wrappers that explicitly clear their owned initialized bytes on drop. Safe
+    Rust cannot guarantee physical erasure of compiler/register copies, caller
+    copies, freed storage, swap, or crash dumps.
 
 ## Usage
 
@@ -61,8 +69,8 @@ println!("Decryption successful!");
 
 // 5. Verify that tampering results in an error.
 let mut tampered_ciphertext = ciphertext_obj.as_ref().to_vec();
-tampered_ciphertext ^= 0xff; // Flip a bit in the ciphertext.
-let tampered_obj = dcrypt::api::types::Ciphertext::new(&tampered_ciphertext);
+tampered_ciphertext[0] ^= 0xff; // Flip a bit in the ciphertext.
+let tampered_obj = dcrypt::api::types::Ciphertext::new(tampered_ciphertext);
 
 let decryption_result = cipher.decrypt()
     .with_nonce(&nonce)
@@ -92,4 +100,7 @@ This module exports several important constants:
 
 ## Relationship to XChaCha20-Poly1305
 
-This module provides the core implementation of the ChaCha20-Poly1305 AEAD. For applications where a larger 24-byte nonce is required to mitigate the risks of nonce reuse (e.g., in distributed systems), please refer to the `dcrypt::algorithms::aead::xchacha20poly1305` module.```
+This module provides the core ChaCha20-Poly1305 AEAD. When a protocol needs a
+24-byte nonce to reduce accidental random-collision risk, use
+`dcrypt::algorithms::aead::xchacha20poly1305`. XChaCha20-Poly1305 is not
+nonce-misuse resistant: nonce reuse under one key remains forbidden.

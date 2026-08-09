@@ -6,7 +6,9 @@ This document provides detailed documentation for the `xof` (Extendable-Output F
 
 Extendable-Output Functions (XOFs) are a class of cryptographic hash functions that can produce an output of any desired length. They are useful in a variety of protocols, including key derivation, stream encryption, and building other cryptographic primitives.
 
-This module provides secure, constant-time, and type-safe implementations of popular XOFs, designed with a focus on preventing side-channel attacks and API misuse.
+This module provides type-safe dcrypt implementations of popular XOFs. Keyed
+and secret-bearing paths use explicit clearing wrappers where documented; the
+release does not make a blanket compiler/target constant-time claim.
 
 ### Core Traits
 
@@ -125,6 +127,10 @@ let derived_key = kdf.squeeze_into_vec(64).unwrap();
 
 ## Security and Implementation Details
 
-*   **Constant-Time:** The underlying Keccak and BLAKE3 permutations are implemented to be constant-time where appropriate, protecting against timing-based side-channel attacks.
-*   **Secure Memory:** All internal states, buffers, and keys are stored in secure, zeroizing memory wrappers (`SecretBuffer`, `EphemeralSecret`). This ensures that sensitive cryptographic material is automatically wiped from memory when it is no longer needed.
+*   **Timing-sensitive paths:** The Keccak and BLAKE3 permutations avoid
+    intentional secret-dependent control flow where applicable. Target code is
+    inspected by release gates, but this is not a blanket proof.
+*   **Owned memory hygiene:** Secret-bearing states, buffers, and keys use
+    clearing wrappers. These wrappers cannot erase caller, compiler/register,
+    allocator, swap, or crash-dump copies.
 *   **State Management:** The XOF implementations robustly manage their internal state. Attempting to `update` the state after `finalize` or `squeeze` has been called will return an error, preventing accidental misuse. The `reset` method provides a secure way to reuse an instance for a new, independent computation.

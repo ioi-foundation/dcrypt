@@ -9,10 +9,13 @@ The `dcrypt-algorithms` and `dcrypt-kem` `v0.9.0-beta.1` artifacts already
 contain the affected B-283 sources; their artifact VCS metadata points to
 `f308c73`, even though the repository's local beta.1 tag ancestry does not.
 Published-artifact contents therefore take precedence over that stale tag for
-the affected-version boundary. No supported release exists.
+the affected-version boundary. `v3.0.0` is the supported replacement and does
+not contain the B-283 surface.
 
-This is a repository-local disclosure record. It does not claim an assigned
-GHSA, CVE, or RustSec identifier.
+This repository record accompanies
+[GHSA-w3jf-cj7j-jmc5](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-w3jf-cj7j-jmc5).
+`DCRYPT-2026-0005` remains a repository-local identifier; consult the GHSA for
+the current CVE and RustSec assignment status.
 
 ## Evidence
 
@@ -43,7 +46,7 @@ for one parity. That violates the contributory behavior required of ECDH and
 invalidates the security claims of the wrapper.
 
 The source history, affected-tag calculation, constant comparison, and parser
-behavior were independently rechecked during the v3 audit. The authoritative
+behavior were rechecked during the v3 remediation review. The authoritative
 parameter and validation references are SEC 2 v2, SEC 1 v2, and NIST
 SP 800-56A Revision 3.
 

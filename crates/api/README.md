@@ -6,15 +6,16 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
 
 ## Core Components
 
-1.  **Traits (`dcrypt_docs/api/traits/README.md`)**:
+1.  **[Traits](../../docs/api/traits/README.md)**:
     Defines the essential traits that cryptographic primitives must implement. These traits ensure a consistent interface for various operations:
     *   `Kem`: For Key Encapsulation Mechanisms.
     *   `Signature`: For Digital Signature schemes.
     *   `SymmetricCipher`: For symmetric encryption algorithms, including builder patterns for `EncryptOperation` and `DecryptOperation`.
-    *   `Serialize`: For objects that can be serialized to and from byte arrays.
+    *   `Serialize` and `SerializeSecret`: Separate public-data serialization
+        from exact-size, clearing secret exports.
     *   Marker Traits: `BlockCipher`, `StreamCipher`, `AuthenticatedCipher`, `KeyDerivationFunction`, `HashAlgorithm` to categorize algorithms and define their core properties (like block size, tag size, etc.).
 
-2.  **Error Handling (`dcrypt_docs/api/error/README.md`)**:
+2.  **[Error Handling](../../docs/api/error/README.md)**:
     Provides a unified error handling system:
     *   `Error` (enum): The primary error type for all dcrypt operations, with variants for common cryptographic failures (e.g., `InvalidKey`, `InvalidSignature`, `DecryptionFailed`, `InvalidLength`).
     *   `Result<T>`: A type alias for `core::result::Result<T, api::Error>`.
@@ -24,114 +25,32 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
     *   `ErrorRegistry`: A synchronized, type-checked global last-error slot retained for compatibility. Returning errors normally is preferred.
     *   `validate` (module): Utility functions for common input validations (e.g., length checks, parameter conditions).
 
-3.  **Types (`dcrypt_docs/api/types.rs`)**:
+3.  **[Types](../../docs/api/types/README.md)**:
     Defines fundamental, security-conscious data types:
     *   `SecretBytes<const N: usize>`: A fixed-size array for sensitive data that explicitly clears its owned initialized bytes on drop and provides constant-time equality. Clearing uses best-effort safe-Rust optimization barriers rather than a compiler-guaranteed physical-erasure primitive.
     *   `SecretVec`: Exact-size boxed storage for variable-length sensitive data. It never retains spare capacity, wipes old allocations before replacement, and zeroizes its current allocation on drop.
     *   `Key`: A wrapper for cryptographic key data that explicitly clears its owned initialized bytes on drop.
     *   `PublicKey`: A wrapper for public key data.
     *   `Ciphertext`: A wrapper for ciphertext data.
-    *   These types often implement `AsRef<[u8]>`, `AsMut<[u8]>`, `Zeroize`, `Serialize`, and sometimes `PartialEq` (with constant-time comparison for secret types).
+    *   Implementations expose only the access and serialization traits
+        appropriate for each public or secret data type; see the linked type
+        reference for the current contracts.
 
 ## Design Philosophy
 
 -   **Consistency**: Provides a uniform way to interact with different cryptographic algorithms.
 -   **Type Safety**: Leverages Rust's type system to prevent common errors, such as using a key with an incompatible algorithm or providing data of incorrect length.
 -   **Ergonomics**: Aims for an API that is easy to use correctly and hard to misuse. Builder patterns for operations like encryption and decryption enhance this.
--   **Security by Default**: Secure practices, like zeroization of sensitive data and constant-time comparisons, are built into the core types and traits where appropriate.
+-   **Explicit Security Boundaries**: Secret types own exact-size initialized
+    storage and invoke best-effort clearing. Equal-length secret comparison uses
+    owned mask-based primitives; neither property is a blanket compiler,
+    target, or physical-erasure guarantee.
 -   **`no_std` Compatibility**: Designed to be usable in `no_std` environments, with features like heap allocations (`alloc`) being optional.
 
 ## How It Fits in dcrypt
 
 The `api` crate serves as the contract between the users of the dcrypt library and the underlying algorithm implementations (primarily found in `dcrypt-algorithms`). Higher-level crates like `dcrypt-symmetric`, `dcrypt-kem`, and `dcrypt-sign` implement the traits defined in `api` to expose their functionalities.
 
-### Example: Using the `SymmetricCipher` Trait
-
-A typical AEAD cipher in `dcrypt-algorithms` or `dcrypt-symmetric` would implement `api::SymmetricCipher` and `api::AuthenticatedCipher`.
-
-```rust
-use dcrypt_api::{SymmetricCipher, AuthenticatedCipher, Result, Key, Ciphertext};
-use dcrypt_api::types::SecretBytes; // Assuming Nonce type from api::types or algorithms::types
-use dcrypt_algorithms::types::Nonce; // Example, actual Nonce would be defined
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
-
-// Hypothetical AEAD Cipher struct
-struct MyAeadCipher {
-    key_material: SecretBytes<32>, // Internal key
-}
-
-// Implementing the operation traits (simplified)
-pub struct MyEncryptOperation<'a> {
-    cipher: &'a MyAeadCipher,
-    nonce: Option<&'a Nonce<12>>, // Example nonce type
-    aad: Option<&'a [u8]>,
-}
-// ... (EncryptOperation methods) ...
-impl<'a> dcrypt_api::traits::symmetric::Operation<Ciphertext> for MyEncryptOperation<'a> {
-    fn execute(self) -> Result<Ciphertext> { /* ... */ Ok(Ciphertext::new(&[])) }
-}
-impl<'a> dcrypt_api::traits::symmetric::EncryptOperation<'a, MyAeadCipher> for MyEncryptOperation<'a> {
-    fn with_nonce(mut self, nonce: &'a Nonce<12>) -> Self { self.nonce = Some(nonce); self }
-    fn with_aad(mut self, aad: &'a [u8]) -> Self { self.aad = Some(aad); self }
-    fn encrypt(self, _plaintext: &'a [u8]) -> Result<Ciphertext> {
-        // Actual encryption logic using self.cipher, self.nonce, self.aad, plaintext
-        Ok(Ciphertext::new(b"encrypted_data")) // Placeholder
-    }
-}
-
-// ... (DecryptOperation similarly) ...
-pub struct MyDecryptOperation<'a> { /* ... */ }
-impl<'a> dcrypt_api::traits::symmetric::Operation<Vec<u8>> for MyDecryptOperation<'a> {
-    fn execute(self) -> Result<Vec<u8>> { /* ... */ Ok(Vec::new()) }
-}
-impl<'a> dcrypt_api::traits::symmetric::DecryptOperation<'a, MyAeadCipher> for MyDecryptOperation<'a> {
-    fn with_nonce(self, _nonce: &'a Nonce<12>) -> Self { self }
-    fn with_aad(self, _aad: &'a [u8]) -> Self { self }
-    fn decrypt(self, _ciphertext: &'a Ciphertext) -> Result<Vec<u8>> {
-        Ok(b"decrypted_data".to_vec()) // Placeholder
-    }
-}
-
-
-impl SymmetricCipher for MyAeadCipher {
-    type Key = Key; // Using api::Key
-    type Nonce = Nonce<12>; // Using a fixed-size Nonce
-    type Ciphertext = Ciphertext; // Using api::Ciphertext
-    type EncryptOperation<'a> = MyEncryptOperation<'a>;
-    type DecryptOperation<'a> = MyDecryptOperation<'a>;
-
-    fn name() -> &'static str { "MyAeadCipher" }
-
-    fn encrypt<'a>(&'a self) -> Self::EncryptOperation<'a> {
-        MyEncryptOperation { cipher: self, nonce: None, aad: None }
-    }
-    fn decrypt<'a>(&'a self) -> Self::DecryptOperation<'a> {
-        /* MyDecryptOperation { ... } */
-        unimplemented!()
-    }
-
-    fn generate_key<R: RngCore + CryptoRng>(_rng: &mut R) -> Result<Self::Key> {
-        let mut k = vec![0u8; 32];
-        _rng.fill_bytes(&mut k);
-        Ok(Key::from_slice(&k))
-    }
-    fn generate_nonce<R: RngCore + CryptoRng>(_rng: &mut R) -> Result<Self::Nonce> {
-        let mut n_bytes = [0u8; 12];
-        _rng.fill_bytes(&mut n_bytes);
-        Ok(Nonce::new(n_bytes))
-    }
-    fn derive_key_from_bytes(bytes: &[u8]) -> Result<Self::Key> {
-        if bytes.len() < 32 { return Err(crate::Error::InvalidKey{ context: "Key too short", #[cfg(feature="std")] message: "".into()}); }
-        Ok(Key::from_slice(&bytes[..32]))
-    }
-}
-
-impl AuthenticatedCipher for MyAeadCipher {
-    const TAG_SIZE: usize = 16;
-    const ALGORITHM_ID: &'static str = "MYAEAD";
-}
-
-```
-
-This structure allows users to work with a consistent set of traits and types, regardless of the specific cryptographic algorithm being used, promoting safer and more maintainable cryptographic code.
+For executable examples of the current caller-supplied-randomness and
+explicit-nonce APIs, see the repository [README](../../README.md) and the
+[trait reference](../../docs/api/traits/README.md).

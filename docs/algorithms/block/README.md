@@ -4,7 +4,9 @@
 
 This module provides implementations of block ciphers and common modes of operation. The primary focus is on security, correctness, and a type-safe API that leverages Rust's trait system to create a flexible and secure foundation for symmetric encryption.
 
-The components in this module are designed to be constant-time where appropriate to mitigate timing-based side-channel attacks.
+The components avoid intentional secret-indexed lookup tables and
+secret-dependent early exits where documented. Release gates inspect supported
+targets, but this is not a blanket constant-time proof.
 
 ## Core Concepts & Design
 
@@ -12,8 +14,12 @@ The module is built around a few key abstractions:
 
 *   **`BlockCipher` Trait:** This is the fundamental trait for any block cipher implementation. It defines the core operations of encrypting and decrypting a single block of data. All ciphers, like `Aes128`, implement this trait.
 *   **`BlockCipherMode` Traits:** These traits define how a block cipher should be used to securely encrypt messages longer than a single block. Implementations like `Cbc` and `Ctr` are generic over any type that satisfies the `BlockCipher` trait.
-*   **Security First:** The underlying AES implementation is designed to be side-channel resistant. It avoids data-dependent table lookups by using a bitsliced S-box and ensures that operations on secret data are performed in constant time.
-*   **Secure Memory Handling:** Keys and other sensitive data are handled using secure memory wrappers that are automatically zeroed when they are no longer needed, preventing accidental data leakage.
+*   **Timing-sensitive design:** The AES implementation avoids data-dependent
+    lookup tables by using arithmetic S-box operations. Concrete compiler and
+    target behavior remains a release-validation concern.
+*   **Owned memory hygiene:** Keys and secret-derived scratch use wrappers that
+    explicitly clear their initialized storage on drop. This cannot erase
+    caller, compiler/register, allocator, swap, or crash-dump copies.
 
 ## Available Primitives
 
@@ -133,10 +139,15 @@ assert_eq!(buffer, plaintext);
 
 ## Security Features
 
-*   **Constant-Time AES:** The AES implementation avoids common sources of timing side-channels:
-    *   **Bitsliced S-Box:** Instead of using lookup tables which can be vulnerable to cache-timing attacks, a "bitsliced" implementation is used, performing the S-Box transformation through constant-time arithmetic operations.
+*   **AES source structure:** The implementation avoids common sources of timing side-channels:
+    *   **Arithmetic S-Box:** Instead of secret-indexed lookup tables, the S-Box
+        transformation uses fixed arithmetic operations.
     *   **Branchless Arithmetic:** Galois Field multiplication (`gf_mul`) and other sensitive operations are implemented to avoid secret-dependent branches.
-*   **Secure Memory Handling:** Keys (`SecretBytes`) and internal round keys (`SecretBuffer`) are stored in memory wrappers that automatically and securely zero their contents when they are dropped, minimizing the risk of secret data leakage.
+*   **Owned Memory Hygiene:** Keys, round keys, and block scratch use exact-size
+    wrappers that explicitly clear their owned initialized bytes on drop. This
+    best-effort safe-Rust behavior cannot guarantee physical erasure of
+    compiler/register copies, caller copies, freed storage, swap, or crash
+    dumps.
 *   **Type Safety:** The generic structure of the modes of operation ensures that they can only be used with a valid `BlockCipher` implementation. The use of the `Nonce` type adds clarity and helps prevent misuse of initialization vectors.
 
 ## Module Structure

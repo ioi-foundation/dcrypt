@@ -9,7 +9,7 @@
 //! The standard profile is pinned to
 //! [`draft-irtf-cfrg-bls-signature-07`](https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-bls-signature-07),
 //! published 6 July 2026. That draft's Appendix B still marks minimum-public-
-//! key vectors as TBA; dcrypt therefore combines published ERC-2333 v4 KeyGen
+//! key vectors as TBA; dcrypt therefore combines published EIP-2333 v4 KeyGen
 //! vectors with byte-for-byte tests against an independent BLS12-381 oracle in
 //! the excluded verification workspace.
 //!

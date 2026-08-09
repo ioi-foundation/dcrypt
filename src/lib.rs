@@ -7,9 +7,9 @@
 //! Releases through `v1.2.3` contain serious memory-safety,
 //! authentication, nonce-handling, and format vulnerabilities and must not be
 //! used for production cryptography. `v2.0.0` contains important remediations
-//! but is withdrawn for violating the project's implementation policy. No
-//! published dcrypt release is currently supported. Consult the workspace
-//! `SECURITY.md` before use.
+//! but is withdrawn for violating the project's implementation policy.
+//! `v3.0.0` is the supported corrective release. Consult the workspace
+//! `SECURITY.md` and migration notes before use.
 //!
 //! ## Features
 //!

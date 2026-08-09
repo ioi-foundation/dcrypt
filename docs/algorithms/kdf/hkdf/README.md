@@ -2,7 +2,8 @@
 
 ## Overview
 
-This module provides a secure and constant-time implementation of the HMAC-based Key Derivation Function (HKDF) as specified in [RFC 5869](https://tools.ietf.org/html/rfc5869).
+This module provides dcrypt's implementation of the HMAC-based Key Derivation
+Function (HKDF) specified in [RFC 5869](https://www.rfc-editor.org/rfc/rfc5869).
 
 HKDF is a standard and highly-regarded KDF used to derive one or more cryptographically strong keys from a source of initial keying material (IKM), which may not be perfectly uniform or random. A common use case is to convert a shared secret from a key exchange protocol (like ECDH) into symmetric keys suitable for encryption and authentication.
 
@@ -19,8 +20,8 @@ HKDF follows a two-step "extract-then-expand" process:
 ### Core Features of this Implementation
 
 *   **Generic over Hash Functions**: The `Hkdf` struct is generic over any hash function that implements the `HashFunction` trait, such as `Sha256` or `Sha512`.
-*   **Secure Memory Handling**: All intermediate secret values, such as the Pseudorandom Key (PRK), are stored in secure memory buffers (`SecretBuffer`, `Zeroizing`) that are automatically zeroed on drop to prevent leakage.
-*   **Constant-Time Operations**: The underlying `Hmac` implementation is constant-time, protecting against timing side-channel attacks.
+*   **Owned Memory Hygiene**: Intermediate secret values, including the PRK and expansion blocks, use exact-size clearing wrappers. This cannot erase caller, compiler/register, swap, or crash-dump copies.
+*   **Timing-sensitive paths**: Equal-length HMAC tag comparison uses dcrypt's mask-based comparison. This is not a whole-operation compiler/target constant-time proof.
 *   **Ergonomic API**: The module provides both a simple one-shot `derive` function for common use cases and a fluent builder pattern through the `KeyDerivationFunction` trait for more complex scenarios.
 
 ## Usage

@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-09
+
 ### Added
 
 - Added dcrypt-owned, safe-Rust implementations of final FIPS 203
@@ -36,11 +38,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   normal/build dependency closure violate dcrypt's zero-unsafe,
   zero-native-code, and zero-FFI policy. This policy violation is not, by
   itself, evidence of a new cryptographic exploit in `v2.0.0`.
-- Declared that no current release is supported: `v1.2.3` contains critical
-  defects and is not a safe fallback, while earlier releases remain unsupported
-  and uncleared. The immutable `v2.0.0` tag is retained for provenance.
-- Established `v3.0.0` as the planned corrective line because the implementation
-  boundary and caller-supplied-randomness contract require breaking changes.
+- Designated `v3.0.0` as the supported corrective release. `v1.2.3` contains
+  critical defects and is not a safe fallback; withdrawn `v2.0.0` and every
+  earlier release remain unsupported. The immutable `v2.0.0` tag is retained
+  for provenance.
 - Removed the affected sect283k1/ECDH-B283 implementation. Published artifacts
   from `0.9.0-beta.1` through withdrawn `2.0.0` accepted an order-two peer point
   without subgroup validation and used an incorrect group-order constant,
@@ -113,6 +114,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Removed the low-level BLS `msm` entry point that claimed secret-scalar
+  suitability without protecting its Pippenger scratch. `msm_vartime` remains
+  explicitly limited to public scalars; standard Basic, Augmentation, PoP, and
+  Eth2 signing continue to use the protected fixed-step secret multiplier.
+- Removed the unused `SecureOperation`, `SecureOperationExt`, and
+  `SecureOperationBuilder` placeholders, whose interfaces could not enforce
+  their advertised cleanup behavior.
 - Removed B-283/sect283k1 and P-192 arithmetic, ECDH-KEM, ECIES, signature,
   parameter, benchmark, and facade surfaces. B-283 contained a demonstrated
   small-subgroup failure; P-192 is limited by NIST to legacy use.
@@ -136,7 +144,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   and Ethereum aggregate behavior cover the standard BLS surface.
 - The release workflow packages and scans all twelve crates, compiles supported
   Linux x86-64, Linux AArch64, WASM, and bare-metal `no_std` profiles, and runs
-  workspace tests/doctests, Miri, Loom, fuzz-target builds, statistical timing
+  workspace tests/doctests, Miri, Loom, deterministic 1,000-run campaigns for
+  every fuzz target, statistical timing
   regressions, cargo-audit, cargo-deny, independent oracles, and clean-room
   package verification. Passing these gates is not an independent audit,
   formal verification, FIPS validation, or proof of constant-time behavior.
@@ -336,29 +345,42 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Performance
 - Reduced redundant allocations and lowered peak memory usage for large ciphertexts and secret data.  
 ### Security
-- Strengthened zeroization guarantees: moving raw key / ciphertext data into `SecretVec` or `Ciphertext` ensures original memory can be zero-wiped reliably.
+- Introduced move-based `SecretVec` ownership. A later audit found that its
+  `Vec` representation could retain inaccessible spare capacity; v3 replaces
+  secret storage with exact-size ownership and best-effort clearing.
 
 ## [1.1.0] – 2025-11-24  
 ### Added
-- Gen-2 constant-time verification harness: bootstrap CI + p-value statistical tests, KS-based distribution tests, Holm–Bonferroni multi-signal correction, and persistent noise profiling. :contentReference[oaicite:1]{index=1}  
+- Gen-2 timing-regression harness: bootstrap confidence intervals, KS-based
+  distribution tests, Holm-Bonferroni multi-signal correction, and persistent
+  noise profiling.
 ### Changed
-- No public API surface changed — backward-compatible. This is an assurance-level upgrade verifying timing behaviour across noisy environments and CI runners. :contentReference[oaicite:2]{index=2}  
+- No public API surface changed. The statistical harness added regression
+  evidence across noisy environments; it did not prove constant-time behavior.
 ### Security / Assurance
-- Provides statistically robust evidence that core cryptographic routines exhibit constant-time behaviour under diverse environments and CI runners. :contentReference[oaicite:3]{index=3}
+- Added statistical timing-regression evidence for selected cryptographic
+  routines across the tested environments and CI runners.
 
 ## [1.0.0] – 2025-11-21  
 ### Added
-- Initial stable release of dcrypt under IOI Foundation: symmetric crypto, post-quantum KEM, hybrid constructions, PKE, AEAD modules. :contentReference[oaicite:4]{index=4}  
-- `no_std` support for embedded environments; modular crate structure; constant-time implementations; automatic zeroization for sensitive data. :contentReference[oaicite:5]{index=5}  
-- Full API: public key, secret key, ciphertext types; encryption/decryption and key-encapsulation; serialization/deserialization. :contentReference[oaicite:6]{index=6}  
+- Initial stable release of dcrypt under IOI Foundation: symmetric crypto,
+  post-quantum KEM, hybrid constructions, PKE, and AEAD modules.
+- Initial `no_std` feature surface, modular crate structure, and clearing
+  wrappers for selected sensitive state. Later audits identified important
+  implementation and assurance gaps; all pre-v3 releases are unsupported.
+- Public-key, secret-key, ciphertext, encryption/decryption, encapsulation, and
+  serialization APIs.
 ### Changed
 - Stabilized API surface after beta series; breaking changes from prior betas resolved.  
 ### Fixed
 - Bug fixes across classical and PQC modules; improved test coverage and baseline for cryptographic correctness.  
 ### Security
-- Secret key material cannot be exposed via `AsRef/AsMut` — only safe, explicit serialization/export allowed.  
+- Introduced `SerializeSecret` for explicit secret exports. Later audits
+  identified allocation-lifecycle and ownership gaps; v3 uses exact-size
+  protected ownership while retaining bounded slice access.
 
-[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.3...v2.0.0
 [1.2.3]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.2...v1.2.3  
 [1.2.0]: https://github.com/ioi-foundation/dcrypt/compare/v1.1.1...v1.2.0  

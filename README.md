@@ -5,18 +5,18 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
 [![Security validation](https://img.shields.io/github/actions/workflow/status/ioi-foundation/dcrypt/security-validation.yml?branch=master&style=flat-square)](https://github.com/ioi-foundation/dcrypt/actions/workflows/security-validation.yml)
 
-> [!WARNING]
-> No dcrypt release is currently supported. `v2.0.0` contains important
-> security remediations, but is withdrawn because its implementation and
+> [!IMPORTANT]
+> `v3.0.0` is the supported corrective release. `v2.0.0` contains important
+> security remediations, but remains withdrawn because its implementation and
 > normal/build dependency closure violate the project's zero-unsafe,
 > zero-native-code, and zero-FFI policy. `v1.2.3` contains critical defects and
-> is not a safe fallback; earlier releases remain unsupported and uncleared.
+> is not a safe fallback; every pre-v3 release is unsupported.
 > See the [v2.0.0 withdrawal notice](docs/security/V2.0.0-WITHDRAWAL.md) and
 > [SECURITY.md](SECURITY.md).
 
 **dcrypt** (Decentralized Cryptography) is a Rust workspace for classical,
-post-quantum, and hybrid cryptographic APIs. The corrective release is being
-developed under a strict contract: published dcrypt code and its normal/build
+post-quantum, and hybrid cryptographic APIs. Version 3 is released under a
+strict contract: published dcrypt code and its normal/build
 dependency closure must contain no unsafe Rust, native code, or FFI. External
 implementations may be used only as isolated test oracles. These constraints
 reduce implementation risk but do not by themselves prove cryptographic
@@ -33,7 +33,7 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 
 ## 🛡️ Key Design Principles
 
-*   **Safe-Rust implementation boundary**: The next supported release must contain no unsafe Rust, native code, or FFI in published dcrypt crates or their normal/build dependency closure. This is an enforceable implementation policy, not by itself a security proof.
+*   **Safe-Rust implementation boundary**: The published v3 implementation and its normal/build dependency closure contain no unsafe Rust, native code, or FFI. This is an enforceable implementation policy, not by itself a security proof.
 *   **Post-Quantum APIs**: Exposes ML-DSA and ML-KEM parameter sets for interoperability testing and evaluation.
 *   **Defense-in-Depth**: Hybrid schemes combine battle-tested classical algorithms (ECDH/ECDSA) with modern PQC primitives.
 *   **Timing Analysis**: Security-sensitive paths are tested with a built-in statistical **Constant-Time Verification Suite** where applicable; passing statistical tests is not presented as a proof of constant-time execution.
@@ -42,11 +42,13 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 
 ## 📦 Quick Start
 
-Do not select `v1.2.3`; it contains critical defects. Do not select `v2.0.0` as
-a replacement; it has been withdrawn for violating the project's implementation
-policy. Earlier releases are unsupported and have not been cleared. The examples
-below describe the reviewed v3 API under development. They are not a
-recommendation to deploy any currently published release.
+Use `dcrypt = { version = "3.0.0", features = ["hybrid"] }` for the examples
+below. Do not select `v1.2.3`; it contains critical defects.
+Do not select `v2.0.0` as a replacement; it has been withdrawn for violating
+the project's implementation policy. Every earlier release is unsupported.
+The examples below describe the v3 API. Review [SECURITY.md](SECURITY.md) and
+the migration notes before deployment; the release has not received an
+independent post-remediation security audit or FIPS validation.
 
 ### Example 1: Hybrid Post-Quantum Key Exchange
 
@@ -153,7 +155,7 @@ The library is organized as a workspace of specialized crates to align type-safe
 
 *   **`dcrypt-api`**: Defines core traits (`SymmetricCipher`, `Kem`, `Signature`), error types, and fundamental data structures.
 *   **`dcrypt-algorithms`**: Low-level cryptographic kernels. Constant-time behavior is primitive- and backend-specific; no blanket guarantee is made for this crate.
-*   **`dcrypt-common`**: Shared security primitives, including `SecretBuffer` (automatic zeroization) and `SecureCompare`.
+*   **`dcrypt-common`**: Shared security primitives, including `SecretBuffer` (best-effort drop-time clearing of owned initialized storage) and `SecureCompare`.
 *   **`dcrypt-symmetric`**: High-level AEADs, stream ciphers, and secure key management wrappers.
 *   **`dcrypt-pke`**: Public Key Encryption schemes, specifically **ECIES** (Elliptic Curve Integrated Encryption Scheme) over standard NIST curves.
 *   **`dcrypt-kem`**: Owned implementations of final FIPS 203 ML-KEM and ECDH-based KEMs.
@@ -174,7 +176,7 @@ The repository contains a custom statistical regression engine (`dcrypt-tests/sr
 ### Standards testing
 *   **ACVP Test Harness**: Includes an ACVP JSON test harness for supported parameter sets. Passing vectors is a correctness gate, not NIST validation or certification.
 *   **ML-DSA Interoperability**: Runtime key generation, signing, verification, and complete expanded-key validation use only the dcrypt-owned implementation. The official key-generation, signature-generation, and signature-verification ACVP results are checked exactly. A separate non-published workspace performs bidirectional and byte-for-byte tests against `fips204`, libcrux, and RustCrypto. Bare expanded keys are validated coherently and retain their derived public key; paired import additionally rejects a mismatched public key.
-*   **BLS Interoperability**: Ethereum-compatible KeyGen is checked against the four published ERC-2333 master-key vectors. Draft-07 KeyGen and all four minimum-public-key domains (Basic, Augmentation, PoP signatures, and PoP proofs) are checked byte-for-byte against an independent implementation confined to the excluded verification workspace. Draft-07 Appendix B still marks G2/minimum-public-key vectors as TBA, so no nonexistent official signature-vector claim is made.
+*   **BLS Interoperability**: Ethereum-compatible KeyGen is checked against the four published EIP-2333 master-key vectors. Draft-07 KeyGen and all four minimum-public-key domains (Basic, Augmentation, PoP signatures, and PoP proofs) are checked byte-for-byte against an independent implementation confined to the excluded verification workspace. Draft-07 Appendix B still marks G2/minimum-public-key vectors as TBA, so no nonexistent official signature-vector claim is made.
 *   **No certification claim**: dcrypt is not a FIPS-validated cryptographic module. Each algorithm and encoding must be assessed independently.
 
 ## 📄 License

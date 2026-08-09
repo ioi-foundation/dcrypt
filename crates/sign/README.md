@@ -17,9 +17,9 @@ cited standards; this is not a blanket conformance, side-channel, or
 certification claim.
 Published versions through `v1.2.3` contain critical defects. `v2.0.0` retains
 important remediations but is withdrawn because it violates dcrypt's
-zero-unsafe/zero-FFI implementation policy. The next supported line is v3; see
-the workspace `SECURITY.md` before use. This crate is not FIPS validated or
-certified.
+zero-unsafe/zero-FFI implementation policy. Version 3.0.0 is the supported
+corrective line; see the workspace `SECURITY.md` before use. This crate is not
+FIPS validated or certified.
 
 ## Features
 
@@ -30,7 +30,9 @@ certified.
     -   Ed25519 with RFC 8032 encoding and strict verification behavior.
     -   Minimum-public-key BLS12-381 Basic, Message Augmentation, and Proof of Possession profiles pinned to `draft-irtf-cfrg-bls-signature-07`, plus an explicitly separate Ethereum draft-v4 PoP adapter.
 -   **Security Focused**:
-    -   Automatic zeroization of secret key material on drop to mitigate data remanence.
+    -   Exact-size secret-key owners invoke best-effort clearing on drop. This
+        cannot erase caller, compiler/register, allocator, swap, or crash-dump
+        copies.
     -   Deterministic signing for Ed25519 and deterministic nonce generation (RFC 6979) for ECDSA to enhance security against fault attacks and weak RNGs.
     -   Secret-dependent ML-DSA signing work uses the fixed public rejection
         window required by the release policy; target-specific compiler and

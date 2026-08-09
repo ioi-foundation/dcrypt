@@ -4,11 +4,14 @@
 
 This module provides implementations of stream ciphers, which are symmetric key ciphers that encrypt plaintext one byte at a time using a pseudorandom keystream. The design prioritizes security, correctness, and a type-safe, ergonomic API.
 
-The core implementation, **ChaCha20**, is designed to be constant-time and utilizes secure memory handling to automatically zeroize sensitive state and key material when it goes out of scope.
+The core **ChaCha20** implementation uses fixed-round arithmetic and explicit
+clearing wrappers for owned secret state. Release checks are not a blanket
+compiler/target timing proof or a physical-erasure guarantee.
 
 ### Key Features
 
-*   **Security-First:** Uses secure wrappers like `SecretBuffer` and implements `Zeroize` on stateful structs to prevent sensitive data leakage.
+*   **Owned memory hygiene:** Uses `SecretBuffer` and clearing implementations
+    for stateful secret storage, subject to software-zeroization limits.
 *   **Type Safety:** Leverages Rust's type system with generic `Nonce<N>` types and compatibility traits (`ChaCha20Compatible`) to prevent API misuse at compile time.
 *   **Stateful Operations:** Provides a full suite of stream cipher operations, including `encrypt`, `decrypt`, direct `keystream` generation, `seek` to arbitrary block positions, and `reset`.
 *   **RFC Compliance:** The ChaCha20 implementation is validated against official RFC 8439 test vectors.
@@ -31,7 +34,9 @@ A common interface is provided through the `StreamCipher` trait, which defines t
 *   `process(&mut self, data: &mut [u8])`: Encrypts or decrypts data in place by XORing it with the keystream. In a stream cipher, these two operations are identical.
 *   `keystream(&mut self, output: &mut [u8])`: Generates the raw keystream and writes it directly to the output buffer without requiring any plaintext or ciphertext.
 *   `seek(&mut self, block_offset: u64)`: Jumps to a specific block position in the keystream. This is useful for randomly accessing encrypted data without processing the entire stream.
-*   `reset(&mut self)`: Resets the cipher to its initial state (counter = 0), allowing it to be reused with the same key and nonce.
+*   `reset(&mut self)`: Resets the cursor to the initial counter. This may be
+    used only to reproduce the same keystream for an already-defined operation;
+    never encrypt distinct plaintext under the same key and nonce.
 
 ---
 

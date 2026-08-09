@@ -13,15 +13,19 @@ Both variants are exposed through the standard `HashFunction` trait, providing a
 
 ## Features
 
--   **High Performance**: Designed to be one of the fastest secure hash functions available.
+-   **Portable implementation**: Provides both 64-bit and 32-bit BLAKE2
+    variants without native code or FFI.
 -   **Versatile Variants**:
     -   `Blake2b` for servers and desktops (64-bit architecture).
     -   `Blake2s` for embedded systems and older hardware (32-bit architecture).
 -   **Variable Output Length**: Unlike SHA-2, BLAKE2 can produce digests of any length up to its maximum (64 bytes for BLAKE2b, 32 for BLAKE2s), making it suitable as a KDF or for applications requiring specific output sizes.
 -   **Built-in Keyed Hashing**: Provides a highly efficient MAC (Message Authentication Code) capability out-of-the-box, which is faster than the traditional HMAC construction.
 -   **Security-First Design**:
-    -   **Secure Memory Handling**: All intermediate sensitive states, such as message words and working variables, are stored in secure, zeroizing buffers (`EphemeralSecret`, `ZeroizeGuard`) to prevent data leakage.
-    -   **Constant-Time Principles**: The implementation avoids secret-dependent branches where applicable.
+    -   **Owned memory hygiene**: Secret-bearing keyed state and working
+        buffers use clearing wrappers, subject to software-zeroization limits.
+    -   **Timing-sensitive source design**: The implementation avoids
+        intentional secret-dependent branches where applicable; this is not a
+        blanket compiler/target proof.
 -   **Advanced Customization**: Exposes the low-level parameter block for advanced use cases like tree hashing or for building other cryptographic primitives like Argon2.
 
 ## Usage
@@ -105,9 +109,9 @@ use dcrypt::algorithms::hash::blake2::Blake2b;
 
 // Example: Manually configuring parameters for Argon2's H₀ function
 let mut param_block = [0u8; 64];
-param_block = 64; // digest_length = 64
-param_block = 1;  // fanout = 1
-param_block = 1;  // depth = 1
+param_block[0] = 64; // digest_length = 64
+param_block[2] = 1;  // fanout = 1
+param_block[3] = 1;  // depth = 1
 // ... other parameters like node_offset, inner_length, etc.
 
 let output_size = 64;
@@ -120,4 +124,6 @@ let digest = hasher.finalize().unwrap();
 
 ## Compliance
 
-The `Blake2b` and `Blake2s` implementations are fully compliant with **RFC 7693** and have been validated against the official test vectors provided in the RFC.
+The `Blake2b` and `Blake2s` implementations follow **RFC 7693** and are
+checked against its published vectors. This is not formal validation or
+certification.

@@ -4,7 +4,11 @@ At IOI Foundation, we take the security of our software products seriously. This
 
 ## Current security status
 
-No dcrypt release is currently supported.
+`v3.0.0` is the current supported release. It is the first release whose
+published dcrypt implementation and normal/build dependency closure satisfy the
+project's zero-unsafe, zero-native-code, and zero-FFI boundary. All randomness
+is caller supplied. External implementations are confined to non-published test
+oracle workspaces.
 
 `v2.0.0` contains important breaking remediations and regression tests for the
 published memory-unsafety, Ed25519 authentication-bypass, GCM nonce-reuse, and
@@ -17,9 +21,9 @@ themselves, demonstrated a new cryptographic exploit in `v2.0.0`.
 
 `v1.2.3` is confirmed affected by multiple critical or high-severity defects and
 is not a safe fallback. Earlier releases remain unsupported and uncleared. The
-corrective line is planned as `v3.0.0` because restoring the implementation
-boundary requires breaking API and dependency changes, including
-caller-supplied cryptographic randomness.
+corrective line is `v3.0.0` because restoring the implementation boundary
+required breaking API and dependency changes, including caller-supplied
+cryptographic randomness.
 
 The immutable annotated `v2.0.0` tag is retained as historical provenance. See
 the [withdrawal notice](docs/security/V2.0.0-WITHDRAWAL.md) for the exact scope
@@ -31,7 +35,7 @@ release.
 
 | Version | Security status |
 | ------- | --------------- |
-| `v3.0.0` | Planned corrective line; not yet released |
+| `v3.0.0` | Supported corrective release |
 | `v2.0.0` | Withdrawn; important fixes present, implementation policy violated |
 | `v1.2.3` | Confirmed critically affected; not a safe fallback |
 | Earlier releases | Unsupported and not cleared |
@@ -96,10 +100,10 @@ Users of an affected release should assume the following:
   for approximately 112-bit transition/interoperability requirements; prefer
   P-256 or stronger for new deployments.
 
-Artifacts older than `v2.0.0` should be considered affected unless and until a
-published advisory establishes a narrower range. The memory-unsafety, Ed25519
-bypass, GCM nonce misuse, and streaming protocol failures are published as
-GitHub Security Advisories and submitted to RustSec; see
+Every release before `v3.0.0` is unsupported and is affected by one or more
+published advisories. Consult each advisory for its exact package and version
+range. The findings are published as GitHub Security Advisories and submitted
+to RustSec; see
 [`docs/security/README.md`](docs/security/README.md).
 
 ## Reporting a Vulnerability
