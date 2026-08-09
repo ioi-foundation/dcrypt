@@ -66,9 +66,21 @@ INTERNAL_ENTROPY = re.compile(
 GROWABLE_ZEROIZING_BYTES = re.compile(
     r"\bZeroizing\s*<\s*(?:(?:alloc|std)\s*::\s*vec\s*::\s*)?Vec\s*<\s*u8\s*>"
 )
+INFERRED_GROWABLE_ZEROIZING_BYTES = re.compile(
+    r"\bZeroizing\s*::\s*new\s*\(\s*(?:"
+    r"(?:[A-Za-z_][A-Za-z0-9_]*\s*\.\s*)?decode\s*\("
+    r"|[^();]{0,120}\.\s*to_vec\s*\("
+    r"|(?:(?:alloc|std)\s*::\s*)?Vec\s*::\s*(?:new|with_capacity|from)\s*\()",
+    re.DOTALL,
+)
+SECRET_STRING_EXPORT = re.compile(
+    r"\bfn\s+(?:to_secure_string|serialize_(?:private|secret)_key)\b"
+    r"[^{};]*->\s*(?:(?:alloc|std)\s*::\s*string\s*::\s*)?String\b",
+    re.DOTALL,
+)
 RAW_SECRET_BYTE_OUTPUT = re.compile(
     r"\b(?:derive|derive_array|derive_key|extract|expand|hash_password|"
-    r"h_prime_variable_output|keyed_generate|mac|pbkdf2|pbkdf2_secure|"
+    r"h_prime_variable_output|kdf_hkdf_[A-Za-z0-9_]+|keyed_generate|mac|pbkdf2|pbkdf2_secure|"
     r"serialize_private_key|serialize_secret_key|squeeze_into_vec|"
     r"to_bytes_zeroizing)\s*(?:<[^>{};]*>)?\s*\([^{};]*\)\s*->\s*"
     r"(?:(?:core\s*::\s*result\s*::\s*)?Result\s*<\s*)?"
@@ -77,7 +89,61 @@ RAW_SECRET_BYTE_OUTPUT = re.compile(
     re.DOTALL,
 )
 DIRECT_RNG_FILL = re.compile(r"\.\s*try_fill_bytes\s*\(")
+UNPROTECTED_EC_SCALAR_IMPORT = re.compile(
+    r"(?:pub\s+fn\s+new\s*\(\s*data\s*:\s*\[\s*u8\s*;[^]]+\]"
+    r"[^{}]*\{[^{}]{0,240}validate_canonical_nonzero\s*\(\s*&data\s*\)\s*\?|"
+    r"pub\s+fn\s+from_secret_buffer\b[^{}]*\{[^{}]{0,360}"
+    r"let\s+mut\s+\w+\s*=\s*\[|"
+    r"pub\s+fn\s+deserialize\b[^{}]*\{[^{}]{0,360}"
+    r"let\s+mut\s+\w+\s*=\s*\[)",
+    re.DOTALL,
+)
+UNPROTECTED_ECIES_SHARED_COORDINATE = re.compile(
+    r"\blet\s+mut\s+z_bytes\s*=\s*shared_point\s*\.\s*x_coordinate_bytes\s*\(\s*\)"
+)
+UNPROTECTED_STREAMING_PLAINTEXT = re.compile(
+    r"(?:\blet\s+mut\s+buffer\s*=\s*\[\s*0u8\s*;\s*8192\s*\]|"
+    r"\bfn\s+open\b[^{};]*->\s*Result\s*<\s*Vec\s*<\s*u8\s*>|"
+    r"\blet\s+mut\s+plaintext\s*=\s*self\s*\.\s*cipher\s*\.\s*open\s*\()",
+    re.DOTALL,
+)
+UNPROTECTED_HCHACHA_OUTPUT = re.compile(
+    r"\bfn\s+hchacha20\b[^{}]*?->\s*\[\s*u8\s*;|"
+    r"\blet\s+mut\s+out\s*=\s*\[\s*0u8\s*;\s*CHACHA20_KEY_SIZE\s*\]|"
+    r"\blet\s+mut\s+state\s*=\s*\[\s*0u32\s*;\s*16\s*\]|"
+    r"\blet\s+(?:mut\s+)?words\s*=\s*\[\s*state\s*\[",
+    re.DOTALL,
+)
+UNPROTECTED_GCM_KEYED_SCRATCH = re.compile(
+    r"(?:\bfn\s+generate_j0\b[^{};]*Result\s*<\s*\[\s*u8\s*;|"
+    r"\blet\s+mut\s+counter\s*=\s*\*j0|"
+    r"\bfn\s+gf_multiply\b[^{};]*->\s*\[\s*u8\s*;|"
+    r"\blet\s+mut\s+(?:z|v)\s*=\s*(?:\[|\*y)|"
+    r"\blet\s+mut\s+h_copy\s*=\s*\[)",
+    re.DOTALL,
+)
+UNPROTECTED_MLDSA_CHALLENGE_SCRATCH = re.compile(
+    r"\blet\s+mut\s+(?:signs|byte)\s*=\s*\[\s*0u8\s*;"
+)
+UNPROTECTED_HIGH_LEVEL_KEY_COPY = re.compile(
+    r"(?:\blet\s+mut\s+(?:key_array|key_data|key|serialized)\b"
+    r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;|"
+    r"\blet\s+mut\s+encryption_key_arr(?:_aes)?\b"
+    r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;|"
+    r"\blet\s+sk_bytes\b(?:\s*:\s*[^=;]+)?\s*=\s*"
+    r"sk_scalar\s*\.\s*serialize\s*\(\s*\))",
+    re.DOTALL,
+)
 TARGETED_SECRET_SCRATCH = {
+    "src/block/aes/mod.rs": re.compile(
+        r"(?:\blet\s+mut\s+(?:round_keys_u32|round_key_bytes|state)"
+        r"(?:\s*:\s*[^=;]+)?\s*=\s*\[|"
+        r"\blet\s+mut\s+temp\s*=\s*round_keys_u32\s*\[|"
+        r"\blet\s+(?:bytes|sub_bytes)\s*=\s*(?:u32_to_bytes\s*\(|\[))"
+    ),
+    "src/block/modes/cbc/mod.rs": re.compile(
+        r"\blet\s+mut\s+block\s*=\s*\[\s*0u8\s*;\s*16\s*\]"
+    ),
     "src/xof/blake3/mod.rs": re.compile(
         r"(?:\blet\s+mut\s+(?:permuted|state|block|output|result|block_words|"
         r"padded_block|words|key_bytes|arr|key_words|tmp|input_chaining_value)"
@@ -105,8 +171,38 @@ TARGETED_SECRET_SCRATCH = {
         r"#\s*\[\s*derive\s*\([^]]*\bClone\b[^]]*\)\s*\]\s*"
         r"pub\s+struct\s+ChaCha20Rng\b)"
     ),
+    "src/dilithium/sign.rs": re.compile(
+        r"\blet\s+mut\s+(?:c_tilde_seed|selected_c_tilde)"
+        r"(?:\s*:\s*[^=;]+)?\s*=\s*(?:vec!|Vec\s*::)"
+    ),
+    "src/dilithium/encoding.rs": re.compile(
+        r"(?:fn\s+(?:pack_hints_bitpacked|pack_polyveck_w1)[^{;]*"
+        r"Result\s*<\s*Vec\s*<\s*u8\s*>|"
+        r"\blet\s+mut\s+sig_bytes\s*=\s*Vec\s*::)"
+    ),
+    "src/eddsa/field.rs": re.compile(
+        r"(?:fn\s+(?:add|sub)\b[^{}]*\{[^{}]*\blet\s+mut\s+limbs\s*=\s*\[|"
+        r"\blet\s+(?:a|b)\s*=\s*(?:self|rhs)\.0\.map\s*\(|"
+        r"fn\s+pow\b[^{}]*\{[^{}]*\blet\s+mut\s+accumulator\s*=\s*Self::one\s*\()",
+        re.DOTALL,
+    ),
+    "src/eddsa/point.rs": re.compile(
+        r"(?:fn\s+(?:add|double)\b[^{}]*\{[^{}]*"
+        r"\blet\s+(?:a|b|c|d|e|f|g|h)\s*=(?!\s*Zeroizing\s*::)\s*|"
+        r"fn\s+scalar_mult\b[^{}]*\{[^{}]*"
+        r"\blet\s+mut\s+accumulator\s*=\s*Self::identity\s*\()",
+        re.DOTALL,
+    ),
 }
 TARGETED_LIFECYCLE_REQUIREMENTS = {
+    "src/block/aes/mod.rs": (
+        re.compile(r"round_keys_u32\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"round_key_bytes\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"state\s*=\s*Zeroizing\s*::\s*new"),
+    ),
+    "src/block/modes/cbc/mod.rs": (
+        re.compile(r"block\s*=\s*Zeroizing\s*::\s*new\s*\(\s*\[\s*0u8\s*;\s*16"),
+    ),
     "src/xof/blake3/mod.rs": (
         re.compile(r"type\s+ProtectedChainingValue\s*=\s*Zeroizing\s*<"),
         re.compile(r"impl\s+Drop\s+for\s+Output\b"),
@@ -131,6 +227,30 @@ TARGETED_LIFECYCLE_REQUIREMENTS = {
         re.compile(r"let\s+initial\s*=\s*crate::zeroing::Zeroizing\s*::\s*new"),
         re.compile(r"let\s+mut\s+state\s*=\s*crate::zeroing::Zeroizing\s*::\s*new"),
         re.compile(r"fn\s+chacha20_block\s*\([^)]*output:\s*&mut\s*\[u8;\s*64\]", re.DOTALL),
+    ),
+    "src/dilithium/sign.rs": (
+        re.compile(r"c_tilde_seed:\s*ZeroizingBytes"),
+        re.compile(
+            r"selected_c_tilde\s*=\s*Zeroizing\s*::\s*new\s*\(\s*"
+            r"boxed_bytes_zeroed"
+        ),
+    ),
+    "src/dilithium/encoding.rs": (
+        re.compile(
+            r"fn\s+pack_polyveck_w1[^{;]*Result\s*<\s*ZeroizingBytes",
+            re.DOTALL,
+        ),
+        re.compile(r"sig_bytes\s*=\s*Zeroizing\s*::\s*new\s*\(\s*boxed_bytes_zeroed"),
+    ),
+    "src/eddsa/field.rs": (
+        re.compile(r"impl\s+Zeroize\s+for\s+FieldElement"),
+        re.compile(r"accumulator\s*=\s*Zeroizing\s*::\s*new\s*\(\s*Self::one"),
+    ),
+    "src/eddsa/point.rs": (
+        re.compile(r"impl\s+Zeroize\s+for\s+EdwardsPoint"),
+        re.compile(r"accumulator\s*=\s*Zeroizing\s*::\s*new\s*\(\s*Self::identity"),
+        re.compile(r"doubled\s*=\s*Zeroizing\s*::\s*new"),
+        re.compile(r"added\s*=\s*Zeroizing\s*::\s*new"),
     ),
 }
 VERSIONED_SHARED_OBJECT = re.compile(r"\.so(?:\.\d+)*$", re.IGNORECASE)
@@ -1963,6 +2083,55 @@ def audit_source_tree(
                     code_only,
                 )
             )
+            patterns.append(
+                (
+                    "inferred growable zeroizing byte storage",
+                    INFERRED_GROWABLE_ZEROIZING_BYTES,
+                    code_only,
+                )
+            )
+            patterns.append(
+                (
+                    "non-wiping secret string export",
+                    SECRET_STRING_EXPORT,
+                    code_only,
+                )
+            )
+            patterns.extend(
+                (
+                    ("unprotected EC scalar import", UNPROTECTED_EC_SCALAR_IMPORT, code_only),
+                    (
+                        "unprotected ECIES shared coordinate",
+                        UNPROTECTED_ECIES_SHARED_COORDINATE,
+                        code_only,
+                    ),
+                    (
+                        "unprotected streaming plaintext scratch",
+                        UNPROTECTED_STREAMING_PLAINTEXT,
+                        code_only,
+                    ),
+                    (
+                        "unprotected HChaCha subkey output",
+                        UNPROTECTED_HCHACHA_OUTPUT,
+                        code_only,
+                    ),
+                    (
+                        "unprotected GCM/GHASH keyed scratch",
+                        UNPROTECTED_GCM_KEYED_SCRATCH,
+                        code_only,
+                    ),
+                    (
+                        "unprotected ML-DSA challenge scratch",
+                        UNPROTECTED_MLDSA_CHALLENGE_SCRATCH,
+                        code_only,
+                    ),
+                    (
+                        "unprotected high-level key copy",
+                        UNPROTECTED_HIGH_LEVEL_KEY_COPY,
+                        code_only,
+                    ),
+                )
+            )
             if check_internal_entropy:
                 patterns.append(
                     (
@@ -1982,8 +2151,19 @@ def audit_source_tree(
                 )
             )
         target_path = relative.as_posix()
-        targeted_lifecycle_source = "dcrypt-algorithms" in label or (
-            "dcrypt-internal" in label and target_path == "src/random.rs"
+        targeted_lifecycle_source = (
+            "dcrypt-algorithms" in label
+            or ("dcrypt-internal" in label and target_path == "src/random.rs")
+            or (
+                "dcrypt-sign" in label
+                and target_path
+                in {
+                    "src/dilithium/sign.rs",
+                    "src/dilithium/encoding.rs",
+                    "src/eddsa/field.rs",
+                    "src/eddsa/point.rs",
+                }
+            )
         )
         if targeted_lifecycle_source:
             scratch_pattern = TARGETED_SECRET_SCRATCH.get(target_path)
@@ -2065,6 +2245,20 @@ const WORD: &str = "unsafe extern \\"C\\" cargo:rustc-link-lib=x";
 const RAW: &str = r###"unsafe /* extern \\"C\\" */"###;
 #![forbid(unsafe_code)]
 let secret: Zeroizing<Vec<u8>> = todo!();
+let inferred = Zeroizing::new(
+    STANDARD.decode(encoded)?
+);
+fn to_secure_string(&self) -> String { todo!() }
+pub fn new(data: [u8; 32]) -> Result<Self> {
+    Self::validate_canonical_nonzero(&data)?;
+    todo!()
+}
+let mut z_bytes = shared_point.x_coordinate_bytes();
+let mut buffer = [0u8; 8192];
+fn hchacha20(key: &[u8; 32]) -> [u8; 32] { todo!() }
+fn generate_j0() -> Result<[u8; 16]> { todo!() }
+let mut signs = [0u8; 8];
+let mut key_data = [0u8; 32];
 fn derive_key(input: &[u8]) -> Result<Vec<u8>> { todo!() }
 rng.try_fill_bytes(&mut secret)?;
 let mut key_words = [0u32; 8];
@@ -2094,6 +2288,21 @@ println!("cargo:rustc-link-lib=native");
     assert len(NATIVE_BUILD_API.findall(code_only)) == 1
     assert len(BUILD_LINK_DIRECTIVE.findall(commentless)) == 2
     assert len(GROWABLE_ZEROIZING_BYTES.findall(code_only)) == 1
+    assert len(INFERRED_GROWABLE_ZEROIZING_BYTES.findall(code_only)) == 1
+    assert len(SECRET_STRING_EXPORT.findall(code_only)) == 1
+    assert len(UNPROTECTED_EC_SCALAR_IMPORT.findall(code_only)) == 1
+    assert len(UNPROTECTED_ECIES_SHARED_COORDINATE.findall(code_only)) == 1
+    assert len(UNPROTECTED_STREAMING_PLAINTEXT.findall(code_only)) == 1
+    assert len(UNPROTECTED_HCHACHA_OUTPUT.findall(code_only)) == 1
+    assert len(UNPROTECTED_GCM_KEYED_SCRATCH.findall(code_only)) == 1
+    assert len(UNPROTECTED_MLDSA_CHALLENGE_SCRATCH.findall(code_only)) == 1
+    assert len(UNPROTECTED_HIGH_LEVEL_KEY_COPY.findall(code_only)) == 1
+    assert UNPROTECTED_HCHACHA_OUTPUT.search("let mut state = [0u32; 16];")
+    assert UNPROTECTED_HCHACHA_OUTPUT.search("let words = [state[0], state[1]];")
+    assert UNPROTECTED_GCM_KEYED_SCRATCH.search("let mut h_copy = [0u8; 16];")
+    assert UNPROTECTED_HIGH_LEVEL_KEY_COPY.search(
+        "let mut encryption_key_arr = [0u8; CHACHA20POLY1305_KEY_LEN];"
+    )
     assert len(RAW_SECRET_BYTE_OUTPUT.findall(code_only)) == 1
     assert len(DIRECT_RNG_FILL.findall(code_only)) == 1
     assert (
@@ -2105,6 +2314,18 @@ println!("cargo:rustc-link-lib=native");
     )
     assert TARGETED_SECRET_SCRATCH["src/random.rs"].search(
         "#[derive(Clone)]\npub struct ChaCha20Rng { key: [u32; 8] }"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/block/aes/mod.rs"].search(
+        "let mut round_keys_u32 = [0u32; 44];"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/block/modes/cbc/mod.rs"].search(
+        "let mut block = [0u8; 16];"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/eddsa/field.rs"].search(
+        "fn pow(&self) { let mut accumulator = Self::one(); }"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/eddsa/point.rs"].search(
+        "fn scalar_mult(&self) { let mut accumulator = Self::identity(); }"
     )
     assert UNSAFE_TOKEN.search("#![forbid(unsafe_code)]") is None
     assert has_crate_level_forbid("// header\n#![forbid(unsafe_code)]\nfn ok() {}")
