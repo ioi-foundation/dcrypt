@@ -168,7 +168,11 @@ pub mod barrier {
     }
 }
 
-/// Secure allocation utilities
+/// Exact-size initialized storage helpers for sensitive values.
+///
+/// These helpers do not lock pages, alter allocator behavior, or claim to
+/// protect memory from the operating system. Doing so would require native
+/// interfaces that are outside dcrypt's implementation boundary.
 #[cfg(feature = "alloc")]
 pub mod alloc {
     use super::*;
@@ -177,24 +181,14 @@ pub mod alloc {
     #[cfg(all(not(feature = "std"), feature = "alloc"))]
     use super::rust_alloc::vec;
 
-    /// Allocate memory for sensitive data with appropriate protections
-    ///
-    /// Note: This is a placeholder for platform-specific secure allocation.
-    /// In a real implementation, this might use mlock() on Unix systems
-    /// or VirtualLock() on Windows.
-    pub fn secure_alloc<T: Default + Zeroize + Clone>(size: usize) -> Result<Vec<T>> {
-        // For now, just use regular allocation
-        // TODO: Implement platform-specific secure allocation
-        Ok(vec![T::default(); size])
+    /// Allocate an exact-size boxed slice of initialized values.
+    pub fn zeroizing_box<T: Default + Zeroize + Clone>(size: usize) -> Box<[T]> {
+        vec![T::default(); size].into_boxed_slice()
     }
 
-    /// Free memory and ensure it's zeroized
-    pub fn secure_free<T: Zeroize>(mut data: Vec<T>) {
-        // Zeroize the data
-        for item in data.iter_mut() {
-            item.zeroize();
-        }
-        // Let the vector be dropped normally
+    /// Clear every initialized element before releasing a boxed slice.
+    pub fn clear_box<T: Zeroize>(mut data: Box<[T]>) {
+        data.zeroize();
     }
 }
 
@@ -264,5 +258,14 @@ mod tests {
         });
 
         assert_eq!(result, 43);
+    }
+
+    #[test]
+    #[cfg(feature = "alloc")]
+    fn exact_size_sensitive_storage_helpers_round_trip() {
+        let mut data = alloc::zeroizing_box::<u8>(17);
+        assert_eq!(data.len(), 17);
+        data.fill(0x5a);
+        alloc::clear_box(data);
     }
 }

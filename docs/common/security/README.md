@@ -48,7 +48,7 @@ side-channel guarantees.
     *   `with_barriers<T, F: FnOnce() -> T>(f: F) -> T`: Executes a closure, wrapping it with compiler fences.
 
 4.  **Secure Allocation (`memory.rs::alloc`)** (requires `alloc` feature):
-    Provides placeholders for secure memory allocation (`secure_alloc`) and deallocation (`secure_free`). The intention is for these to eventually use platform-specific mechanisms (like `mlock`/`VirtualLock`) to prevent sensitive data from being paged to disk and to ensure it's zeroed. Currently, it uses standard allocation.
+    Provides exact-size initialized boxed storage (`zeroizing_box`) and explicit initialized-value clearing (`clear_box`). These helpers do not lock pages or claim operating-system memory protections; dcrypt's zero-FFI boundary intentionally excludes those platform interfaces.
 
 ## Purpose and Importance
 
