@@ -2,7 +2,7 @@
 
 use super::registry::ERROR_REGISTRY;
 use super::types::{Error, Result};
-use subtle::ConditionallySelectable;
+use dcrypt_internal::constant_time::ConditionallySelectable;
 
 /// Extension trait for Result types
 pub trait ResultExt<T, E>: Sized {

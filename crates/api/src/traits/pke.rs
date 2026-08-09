@@ -1,11 +1,11 @@
 //! Trait definition for Public Key Encryption (PKE) schemes.
 
 use crate::error::Result; // from api::error
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroize;
 
 // Ensure Vec is available for no_std + alloc, and other necessary imports
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::vec::Vec;

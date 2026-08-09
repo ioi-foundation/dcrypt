@@ -4,10 +4,10 @@
 //! The design prioritizes security by not requiring mutable access to secret keys.
 
 use crate::Result;
-use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, Zeroizing};
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
 
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::vec::Vec;

@@ -4,7 +4,7 @@
 //! cryptographic operations, along with marker traits that define algorithm
 //! properties.
 
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
+#[cfg(not(feature = "std"))]
 use alloc::string::{String, ToString};
 #[cfg(feature = "std")]
 use std::string::{String, ToString};

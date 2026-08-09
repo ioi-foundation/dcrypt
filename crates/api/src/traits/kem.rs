@@ -7,8 +7,8 @@
 
 use super::serialize::{Serialize, SerializeSecret};
 use crate::Result;
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroize;
 
 /// Trait for Key Encapsulation Mechanism (KEM) with domain-specific types.
 ///

@@ -3,9 +3,9 @@
 //! Traits for byte serialization of cryptographic types.
 
 use crate::Result;
-use zeroize::Zeroizing;
+use dcrypt_internal::zeroing::Zeroizing;
 
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::vec::Vec;

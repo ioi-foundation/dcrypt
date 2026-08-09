@@ -10,19 +10,13 @@ publish = true
 
 [features]
 default = ["std"]
-std = ["thiserror", "zeroize/std", "alloc"]
-alloc = []
+std = ["alloc", "dcrypt-api/std", "dcrypt-internal/std"]
+alloc = ["dcrypt-api/alloc", "dcrypt-internal/alloc"]
 no_std = []
-serde = ["dep:serde"]
 
 [dependencies]
-zeroize = { version = "1.5.7", features = ["zeroize_derive"] }
-thiserror = { version = "1.0.37", optional = true }
-subtle = { version = "2.4.1" }
-serde = { version = "1.0.147", features = ["derive"], optional = true }
-rand = { version = "0.8.6", optional = false }
-dcrypt-internal = { path = "../internal", version = "=2.0.0" }
-dcrypt-api = { path = "../api", version = "=2.0.0" }
+dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false, features = ["alloc"] }
+dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 rand = { version = "0.8.6" }

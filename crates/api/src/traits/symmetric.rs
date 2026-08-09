@@ -1,10 +1,10 @@
 //! Trait definition for symmetric encryption algorithms with enhanced type safety
 
 use crate::Result;
-use rand::{CryptoRng, RngCore};
-use zeroize::Zeroize;
+use dcrypt_internal::random::{CryptoRng, RngCore};
+use dcrypt_internal::zeroing::Zeroize;
 
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use std::vec::Vec;

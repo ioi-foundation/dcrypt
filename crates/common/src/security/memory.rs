@@ -115,29 +115,29 @@ pub trait SecureCompare: Sized {
     fn secure_eq(&self, other: &Self) -> bool;
 
     /// Compare two values and return a constant-time choice
-    fn secure_cmp(&self, other: &Self) -> subtle::Choice;
+    fn secure_cmp(&self, other: &Self) -> dcrypt_internal::constant_time::Choice;
 }
 
 impl<const N: usize> SecureCompare for [u8; N] {
     fn secure_eq(&self, other: &Self) -> bool {
-        use subtle::ConstantTimeEq;
+        use dcrypt_internal::constant_time::ConstantTimeEq;
         bool::from(self.ct_eq(other))
     }
 
-    fn secure_cmp(&self, other: &Self) -> subtle::Choice {
-        use subtle::ConstantTimeEq;
+    fn secure_cmp(&self, other: &Self) -> dcrypt_internal::constant_time::Choice {
+        use dcrypt_internal::constant_time::ConstantTimeEq;
         self.ct_eq(other)
     }
 }
 
 impl SecureCompare for &[u8] {
     fn secure_eq(&self, other: &Self) -> bool {
-        use subtle::ConstantTimeEq;
+        use dcrypt_internal::constant_time::ConstantTimeEq;
         bool::from(self.ct_eq(other))
     }
 
-    fn secure_cmp(&self, other: &Self) -> subtle::Choice {
-        use subtle::ConstantTimeEq;
+    fn secure_cmp(&self, other: &Self) -> dcrypt_internal::constant_time::Choice {
+        use dcrypt_internal::constant_time::ConstantTimeEq;
         self.ct_eq(other)
     }
 }
@@ -172,7 +172,7 @@ pub mod barrier {
 #[cfg(feature = "alloc")]
 pub mod alloc {
     use super::*;
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
     #[cfg(all(not(feature = "std"), feature = "alloc"))]
     use super::rust_alloc::vec;
@@ -201,7 +201,7 @@ pub mod alloc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use zeroize::Zeroize;
+    use dcrypt_internal::zeroing::Zeroize;
 
     #[cfg(all(not(feature = "std"), feature = "alloc"))]
     use super::rust_alloc::vec;
