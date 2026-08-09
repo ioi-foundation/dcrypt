@@ -142,10 +142,10 @@ impl Aead for Aes128Gcm {
         let primitives_nonce = Nonce::<12>::from_slice(nonce.as_bytes())?;
 
         // Create Gcm instance with proper error handling
-        let gcm = Gcm::new(aes, &primitives_nonce)?;
+        let gcm = Gcm::new(aes)?;
 
         // Use internal_encrypt method directly
-        gcm.internal_encrypt(plaintext, aad)
+        gcm.internal_encrypt(&primitives_nonce, plaintext, aad)
             .map_err(from_primitive_error)
     }
 
@@ -167,19 +167,20 @@ impl Aead for Aes128Gcm {
         let primitives_nonce = Nonce::<12>::from_slice(nonce.as_bytes())?;
 
         // Create Gcm instance with proper error handling
-        let gcm = Gcm::new(aes, &primitives_nonce)?;
+        let gcm = Gcm::new(aes)?;
 
         // Use internal_decrypt method directly with better error context
-        gcm.internal_decrypt(ciphertext, aad).map_err(|e| match e {
-            PrimitiveError::Authentication { .. } => {
-                dcrypt_api::error::Error::AuthenticationFailed {
-                    context: "AES-128-GCM",
-                    #[cfg(feature = "std")]
-                    message: "authentication tag verification failed".to_string(),
+        gcm.internal_decrypt(&primitives_nonce, ciphertext, aad)
+            .map_err(|e| match e {
+                PrimitiveError::Authentication { .. } => {
+                    dcrypt_api::error::Error::AuthenticationFailed {
+                        context: "AES-128-GCM",
+                        #[cfg(feature = "std")]
+                        message: "authentication tag verification failed".to_string(),
+                    }
                 }
-            }
-            _ => from_primitive_error(e),
-        })
+                _ => from_primitive_error(e),
+            })
     }
 
     fn generate_nonce() -> Self::Nonce {
@@ -220,10 +221,10 @@ impl Aead for Aes256Gcm {
         let primitives_nonce = Nonce::<12>::from_slice(nonce.as_bytes())?;
 
         // Create Gcm instance with proper error handling
-        let gcm = Gcm::new(aes, &primitives_nonce)?;
+        let gcm = Gcm::new(aes)?;
 
         // Use internal_encrypt method directly
-        gcm.internal_encrypt(plaintext, aad)
+        gcm.internal_encrypt(&primitives_nonce, plaintext, aad)
             .map_err(from_primitive_error)
     }
 
@@ -245,19 +246,20 @@ impl Aead for Aes256Gcm {
         let primitives_nonce = Nonce::<12>::from_slice(nonce.as_bytes())?;
 
         // Create Gcm instance with proper error handling
-        let gcm = Gcm::new(aes, &primitives_nonce)?;
+        let gcm = Gcm::new(aes)?;
 
         // Use internal_decrypt method directly with better error context
-        gcm.internal_decrypt(ciphertext, aad).map_err(|e| match e {
-            PrimitiveError::Authentication { .. } => {
-                dcrypt_api::error::Error::AuthenticationFailed {
-                    context: "AES-256-GCM",
-                    #[cfg(feature = "std")]
-                    message: "authentication tag verification failed".to_string(),
+        gcm.internal_decrypt(&primitives_nonce, ciphertext, aad)
+            .map_err(|e| match e {
+                PrimitiveError::Authentication { .. } => {
+                    dcrypt_api::error::Error::AuthenticationFailed {
+                        context: "AES-256-GCM",
+                        #[cfg(feature = "std")]
+                        message: "authentication tag verification failed".to_string(),
+                    }
                 }
-            }
-            _ => from_primitive_error(e),
-        })
+                _ => from_primitive_error(e),
+            })
     }
 
     fn generate_nonce() -> Self::Nonce {

@@ -1,13 +1,13 @@
-//! Cryptographic primitives library with constant-time implementation
+//! Cryptographic primitive implementations and adapters.
 //!
 //! This crate provides implementations of various cryptographic primitives
-//! with a focus on constant-time operations and resistance to side-channel attacks.
-//! The library is designed to be usable in both `std` and `no_std` environments.
+//! with explicit validation and zeroization boundaries. Constant-time behavior
+//! and `no_std` support are primitive- and feature-specific; the crate does not
+//! make blanket guarantees for either property.
 //!
 //! # Security Features
 //!
-//! This library implements comprehensive security patterns to protect sensitive
-//! cryptographic material, including:
+//! Relevant defensive patterns include:
 //!
 //! - Secure memory handling with automatic zeroization
 //! - Constant-time comparison operations

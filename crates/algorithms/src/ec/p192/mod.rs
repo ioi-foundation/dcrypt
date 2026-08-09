@@ -1,6 +1,7 @@
 //! NIST P-192 Elliptic Curve Primitives
 //!
-//! This module implements NIST P-192 elliptic curve operations in constant time.
+//! This module implements legacy NIST P-192 elliptic-curve operations. No
+//! blanket compiler- or target-level constant-time guarantee is made.
 //! Curve equation: y² = x³ - 3x + b over 𝔽ₚ, where
 //! - p = 2¹⁹² − 2⁶⁴ − 1,
 //! - Curve order n = 0xFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFF.  (NIST P-192 order).

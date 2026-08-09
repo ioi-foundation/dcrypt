@@ -2,6 +2,7 @@
 //!
 //! This module implements the ChaCha20 stream cipher as defined in RFC 8439.
 
+use crate::error::{Error, Result};
 use crate::types::nonce::ChaCha20Compatible;
 use crate::types::Nonce;
 use byteorder::{ByteOrder, LittleEndian};
@@ -26,6 +27,8 @@ pub struct ChaCha20 {
     position: usize,
     /// Current block counter
     counter: u32,
+    /// Set after counter `u32::MAX` has been consumed.
+    exhausted: bool,
 }
 
 impl ChaCha20 {
@@ -86,12 +89,15 @@ impl ChaCha20 {
         state[14] = LittleEndian::read_u32(&nonce_bytes[4..8]);
         state[15] = LittleEndian::read_u32(&nonce_bytes[8..12]);
 
-        Self {
+        let instance = Self {
             state,
             buffer: [0; CHACHA20_BLOCK_SIZE],
             position: CHACHA20_BLOCK_SIZE, // Force initial keystream generation
             counter,
-        }
+            exhausted: false,
+        };
+        state.zeroize();
+        instance
     }
 
     /// The ChaCha20 quarter round function
@@ -115,7 +121,14 @@ impl ChaCha20 {
     }
 
     /// Generate a block of keystream
-    fn generate_keystream(&mut self) {
+    fn generate_keystream(&mut self) -> Result<()> {
+        if self.exhausted {
+            return Err(Error::Processing {
+                operation: "ChaCha20",
+                details: "block counter exhausted",
+            });
+        }
+
         // Create a working copy of the state
         let mut working_state = self.state;
 
@@ -149,38 +162,69 @@ impl ChaCha20 {
         for i in 0..16 {
             LittleEndian::write_u32(&mut self.buffer[i * 4..], output_state[i]);
         }
+        working_state.zeroize();
 
         // Reset position and increment counter for next block
         self.position = 0;
-        self.counter = self.counter.wrapping_add(1);
+        if self.counter == u32::MAX {
+            self.exhausted = true;
+        } else {
+            self.counter += 1;
+        }
+        Ok(())
+    }
+
+    fn ensure_capacity(&self, data_len: usize) -> Result<()> {
+        let buffered = if self.position < CHACHA20_BLOCK_SIZE {
+            CHACHA20_BLOCK_SIZE - self.position
+        } else {
+            0
+        };
+        let bytes_requiring_blocks = data_len.saturating_sub(buffered);
+        let blocks_required = bytes_requiring_blocks.div_ceil(CHACHA20_BLOCK_SIZE) as u64;
+        let blocks_available = if self.exhausted {
+            0
+        } else {
+            u64::from(u32::MAX - self.counter) + 1
+        };
+
+        if blocks_required > blocks_available {
+            return Err(Error::Processing {
+                operation: "ChaCha20",
+                details: "message would wrap the block counter",
+            });
+        }
+        Ok(())
     }
 
     /// Encrypt or decrypt data in place using the ChaCha20 stream cipher
-    pub fn process(&mut self, data: &mut [u8]) {
+    pub fn process(&mut self, data: &mut [u8]) -> Result<()> {
+        self.ensure_capacity(data.len())?;
         for byte in data.iter_mut() {
             // Generate new keystream block if needed
             if self.position >= CHACHA20_BLOCK_SIZE {
-                self.generate_keystream();
+                self.generate_keystream()?;
             }
 
             // XOR data with keystream
             *byte ^= self.buffer[self.position];
             self.position += 1;
         }
+        Ok(())
     }
 
     /// Encrypt data in place
-    pub fn encrypt(&mut self, data: &mut [u8]) {
-        self.process(data);
+    pub fn encrypt(&mut self, data: &mut [u8]) -> Result<()> {
+        self.process(data)
     }
 
     /// Decrypt data in place
-    pub fn decrypt(&mut self, data: &mut [u8]) {
-        self.process(data);
+    pub fn decrypt(&mut self, data: &mut [u8]) -> Result<()> {
+        self.process(data)
     }
 
     /// Generate keystream directly into an output buffer
-    pub fn keystream(&mut self, output: &mut [u8]) {
+    pub fn keystream(&mut self, output: &mut [u8]) -> Result<()> {
         // Zero the output buffer
         for byte in output.iter_mut() {
             *byte = 0;
@@ -190,30 +234,79 @@ impl ChaCha20 {
         self.position = CHACHA20_BLOCK_SIZE;
 
         // Then run the encryption pass to copy the keystream
-        self.process(output);
+        self.process(output)
     }
 
     /// Seek to a specific block position
     ///
     /// `block_offset` is the number of full blocks that have been consumed;
     /// after seeking, the next generated block will be at `block_offset + 1`.
-    pub fn seek(&mut self, block_offset: u32) {
+    pub fn seek(&mut self, block_offset: u32) -> Result<()> {
         // Set counter so that generate_keystream() yields the next block
-        self.counter = block_offset.wrapping_add(1);
+        self.counter = block_offset.checked_add(1).ok_or(Error::Processing {
+            operation: "ChaCha20 seek",
+            details: "block offset would wrap the counter",
+        })?;
+        self.exhausted = false;
 
         // Force regeneration on next use
         self.position = CHACHA20_BLOCK_SIZE;
 
         // Clear any old keystream
         self.buffer.zeroize();
+        Ok(())
     }
 
     /// Reset to initial state with the same key
     pub fn reset(&mut self) {
         self.counter = self.state[12]; // Restore original counter
+        self.exhausted = false;
         self.position = CHACHA20_BLOCK_SIZE; // Force keystream regeneration
         self.buffer.zeroize(); // Clear keystream buffer
     }
+}
+
+/// HChaCha20 core used to validate XChaCha20 test vectors.
+///
+/// Unlike a ChaCha20 block, HChaCha20 does not add the initial state back to
+/// the post-round state. It returns words 0..=3 and 12..=15.
+#[cfg(test)]
+pub(crate) fn hchacha20(
+    key: &[u8; CHACHA20_KEY_SIZE],
+    nonce: &[u8; 16],
+) -> [u8; CHACHA20_KEY_SIZE] {
+    let mut state = [0u32; 16];
+    state[0] = 0x6170_7865;
+    state[1] = 0x3320_646e;
+    state[2] = 0x7962_2d32;
+    state[3] = 0x6b20_6574;
+    for i in 0..8 {
+        state[4 + i] = LittleEndian::read_u32(&key[i * 4..i * 4 + 4]);
+    }
+    for i in 0..4 {
+        state[12 + i] = LittleEndian::read_u32(&nonce[i * 4..i * 4 + 4]);
+    }
+
+    for _ in 0..10 {
+        ChaCha20::quarter_round(&mut state, 0, 4, 8, 12);
+        ChaCha20::quarter_round(&mut state, 1, 5, 9, 13);
+        ChaCha20::quarter_round(&mut state, 2, 6, 10, 14);
+        ChaCha20::quarter_round(&mut state, 3, 7, 11, 15);
+        ChaCha20::quarter_round(&mut state, 0, 5, 10, 15);
+        ChaCha20::quarter_round(&mut state, 1, 6, 11, 12);
+        ChaCha20::quarter_round(&mut state, 2, 7, 8, 13);
+        ChaCha20::quarter_round(&mut state, 3, 4, 9, 14);
+    }
+
+    let words = [
+        state[0], state[1], state[2], state[3], state[12], state[13], state[14], state[15],
+    ];
+    let mut out = [0u8; CHACHA20_KEY_SIZE];
+    for (chunk, word) in out.chunks_exact_mut(4).zip(words) {
+        LittleEndian::write_u32(chunk, word);
+    }
+    state.zeroize();
+    out
 }
 
 #[cfg(test)]

@@ -37,6 +37,38 @@ fn test_ecdsa_p224_sign_verify_roundtrip() {
 }
 
 #[test]
+fn test_ecdsa_p224_signatures_are_low_s_and_high_s_is_rejected() {
+    let (public_key, secret_key) = EcdsaP224::keypair(&mut OsRng).unwrap();
+    let message = b"canonical";
+    let signature = EcdsaP224::sign(message, &secret_key).unwrap();
+    let components = crate::ecdsa::common::SignatureComponents::from_der(&signature.0).unwrap();
+    let mut s = [0u8; ec::P224_SCALAR_SIZE];
+    s[ec::P224_SCALAR_SIZE - components.s.len()..].copy_from_slice(&components.s);
+    let s = ec::Scalar::new(s).unwrap();
+    assert!(!is_high_s(&s.serialize(), &NIST_P224.n));
+
+    let high_s = s.negate();
+    assert!(is_high_s(&high_s.serialize(), &NIST_P224.n));
+    let malleable = EcdsaP224Signature(
+        crate::ecdsa::common::SignatureComponents {
+            r: components.r.clone(),
+            s: high_s.serialize().to_vec(),
+        }
+        .to_der(),
+    );
+    assert!(EcdsaP224::verify(message, &malleable, &public_key).is_err());
+
+    let out_of_range = EcdsaP224Signature(
+        crate::ecdsa::common::SignatureComponents {
+            r: NIST_P224.n.to_vec(),
+            s: s.serialize().to_vec(),
+        }
+        .to_der(),
+    );
+    assert!(EcdsaP224::verify(message, &out_of_range, &public_key).is_err());
+}
+
+#[test]
 fn test_ecdsa_p224_verify_tampered_message() {
     let (pk, sk) = EcdsaP224::keypair(&mut OsRng).expect("Keygen failed");
     let message = b"Original message.";

@@ -3,6 +3,7 @@ use super::*;
 use dcrypt_algorithms::ec::p256 as ec_p256;
 use dcrypt_api::Kem;
 use rand::rngs::OsRng;
+use rand::{CryptoRng, RngCore};
 
 #[cfg(test)]
 mod test_utils {
@@ -408,4 +409,45 @@ fn test_p256_zeroization() {
 
     // Verify zeroized
     assert!(sk_bytes.iter().all(|&b| b == 0));
+}
+
+struct ZeroThenOneRng {
+    fills: usize,
+}
+
+impl RngCore for ZeroThenOneRng {
+    fn next_u32(&mut self) -> u32 {
+        1
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        1
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        dest.fill(0);
+        if self.fills > 0 {
+            if let Some(last) = dest.last_mut() {
+                *last = 1;
+            }
+        }
+        self.fills += 1;
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        self.fill_bytes(dest);
+        Ok(())
+    }
+}
+
+impl CryptoRng for ZeroThenOneRng {}
+
+#[test]
+fn encapsulation_rejection_samples_invalid_ephemeral_scalar() {
+    let (public_key, secret_key) = EcdhP256::keypair(&mut OsRng).unwrap();
+    let mut rng = ZeroThenOneRng { fills: 0 };
+    let (ciphertext, sender_secret) = EcdhP256::encapsulate(&mut rng, &public_key).unwrap();
+    assert!(rng.fills >= 2, "zero scalar must be rejected and resampled");
+    let recipient_secret = EcdhP256::decapsulate(&secret_key, &ciphertext).unwrap();
+    assert_eq!(sender_secret.to_bytes(), recipient_secret.to_bytes());
 }

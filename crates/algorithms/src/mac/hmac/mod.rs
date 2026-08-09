@@ -1,8 +1,8 @@
-//! HMAC (Hash-based Message Authentication Code) – constant-time & allocation-free
+//! HMAC (Hash-based Message Authentication Code)
 //!
-//! • RFC 2104 / FIPS 198-1 compliant  
-//! • Secret-dependent work happens on stack-fixed buffers (≤ 144 bytes)  
-//! • Error paths burn the same CPU cycles as success paths
+//! • RFC 2104 / FIPS 198-1 compliant
+//! • Key-derived padding and hash state are zeroized on drop
+//! • Tag bytes are compared in constant time after an exact-length check
 
 use crate::error::{Error, Result};
 use crate::hash::HashFunction;
@@ -12,10 +12,10 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 const MAX_BLOCK: usize = 144; // SHA3-224 block size (largest among SHA-2 and SHA-3)
 
-/// Constant-time HMAC implementation.
+/// HMAC implementation with constant-time tag-byte comparison.
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
-pub struct Hmac<H: HashFunction + Clone> {
-    #[zeroize(skip)] // hash state contains no secrets
+pub struct Hmac<H: HashFunction + Clone + Zeroize> {
+    // The inner hash has absorbed the key-derived ipad and is secret state.
     hash: H,
     ipad: SecretBuffer<MAX_BLOCK>,
     opad: SecretBuffer<MAX_BLOCK>,
@@ -25,8 +25,8 @@ pub struct Hmac<H: HashFunction + Clone> {
 
 impl<H> Hmac<H>
 where
-    H: HashFunction + Clone,
-    H::Output: AsRef<[u8]> + Clone,
+    H: HashFunction + Clone + Zeroize,
+    H::Output: AsRef<[u8]> + Clone + Zeroize,
 {
     const IPAD_BYTE: u8 = 0x36;
     const OPAD_BYTE: u8 = 0x5c;
@@ -44,42 +44,54 @@ where
         // Hash the key unconditionally so the running time
         // depends only on the public key length.
         let mut hk = H::new();
-        hk.update(key)?;
-        let hashed = hk.finalize()?; // ≤ bs bytes
+        if let Err(error) = hk.update(key) {
+            hk.zeroize();
+            return Err(error);
+        }
+        let mut hashed = match hk.finalize() {
+            Ok(output) => output,
+            Err(error) => {
+                hk.zeroize();
+                return Err(error);
+            }
+        }; // ≤ bs bytes
+        hk.zeroize();
 
         // Select either `key` or `hashed` per byte with a mask.
-        let mut k_prime = [0u8; MAX_BLOCK];
+        let mut k_prime = SecretBuffer::<MAX_BLOCK>::zeroed();
         let long = (key.len() > bs) as u8; // 1 if key > bs
         let mask = long.wrapping_neg(); // 0xFF when long else 0x00
         #[allow(clippy::needless_range_loop)] // We need the index for multiple arrays
         for i in 0..bs {
             let k = *key.get(i).unwrap_or(&0);
             let hk = hashed.as_ref().get(i).copied().unwrap_or(0);
-            k_prime[i] = (hk & mask) | (k & !mask);
+            k_prime.as_mut()[i] = (hk & mask) | (k & !mask);
         }
+        hashed.zeroize();
 
         /* --- Build inner / outer paddings --- */
-        let mut ipad_bytes = [0u8; MAX_BLOCK];
-        let mut opad_bytes = [0u8; MAX_BLOCK];
+        let mut ipad = SecretBuffer::<MAX_BLOCK>::zeroed();
+        let mut opad = SecretBuffer::<MAX_BLOCK>::zeroed();
         #[allow(clippy::needless_range_loop)] // We need to index multiple arrays
         for i in 0..bs {
-            ipad_bytes[i] = k_prime[i] ^ Self::IPAD_BYTE;
-            opad_bytes[i] = k_prime[i] ^ Self::OPAD_BYTE;
+            ipad.as_mut()[i] = k_prime.as_ref()[i] ^ Self::IPAD_BYTE;
+            opad.as_mut()[i] = k_prime.as_ref()[i] ^ Self::OPAD_BYTE;
         }
 
-        // Zero K′ early
-        for b in k_prime.iter_mut().take(bs) {
-            *b = 0;
-        }
+        // Zero K′ before any fallible hash operation.
+        k_prime.zeroize();
 
         /* --- Initialise inner hash --- */
         let mut hash = H::new();
-        hash.update(&ipad_bytes[..bs])?;
+        if let Err(error) = hash.update(&ipad.as_ref()[..bs]) {
+            hash.zeroize();
+            return Err(error);
+        }
 
         Ok(Self {
             hash,
-            ipad: SecretBuffer::new(ipad_bytes),
-            opad: SecretBuffer::new(opad_bytes),
+            ipad,
+            opad,
             block_size: bs,
             is_finalized: false,
         })
@@ -92,13 +104,6 @@ where
     /// Feed additional `data` into the MAC.
     pub fn update(&mut self, data: &[u8]) -> Result<()> {
         if self.is_finalized {
-            /* ----------------------------------------------------------
-             * Equal-cost dummy path: hash the input into a fresh hasher
-             * and discard the result so error & success match timings.
-             * -------------------------------------------------------- */
-            let mut dummy = H::new();
-            dummy.update(data)?;
-            let _ = dummy.finalize();
             return Err(Error::param(
                 "hmac_state",
                 "Cannot update after finalization",
@@ -111,24 +116,46 @@ where
     /// Finalise and return the tag.
     pub fn finalize(&mut self) -> Result<Vec<u8>> {
         if self.is_finalized {
-            // Equal-cost burn: mimic normal finalisation cost.
-            let inner_dummy = [0u8; 64]; // max SHA-512 output
-            let mut outer = H::new();
-            outer.update(&self.opad.as_ref()[..self.block_size])?;
-            outer.update(&inner_dummy[..H::output_size()])?;
-            let _ = outer.finalize();
             return Err(Error::param("hmac_state", "HMAC already finalized"));
         }
 
         self.is_finalized = true;
 
-        let inner_hash = self.hash.finalize()?;
+        let mut inner_hash = match self.hash.finalize() {
+            Ok(output) => {
+                self.hash.zeroize();
+                output
+            }
+            Err(error) => {
+                self.hash.zeroize();
+                return Err(error);
+            }
+        };
 
         let mut outer = H::new();
-        outer.update(&self.opad.as_ref()[..self.block_size])?;
-        outer.update(inner_hash.as_ref())?;
+        if let Err(error) = outer.update(&self.opad.as_ref()[..self.block_size]) {
+            inner_hash.zeroize();
+            outer.zeroize();
+            return Err(error);
+        }
+        if let Err(error) = outer.update(inner_hash.as_ref()) {
+            inner_hash.zeroize();
+            outer.zeroize();
+            return Err(error);
+        }
+        inner_hash.zeroize();
 
-        outer.finalize().map(|out| out.as_ref().to_vec())
+        let mut output = match outer.finalize() {
+            Ok(output) => output,
+            Err(error) => {
+                outer.zeroize();
+                return Err(error);
+            }
+        };
+        outer.zeroize();
+        let tag = output.as_ref().to_vec();
+        output.zeroize();
+        Ok(tag)
     }
 
     /* ------------------------------------------------------------------ */
@@ -142,7 +169,11 @@ where
         h.finalize()
     }
 
-    /// Constant-time verification of `tag` against `key` / `data`.
+    /// Fixed-width verification of `tag` against `key` / `data`.
+    ///
+    /// Tag bytes are accumulated without an early exit. Public lengths, hash
+    /// errors, allocation, and the returned boolean still have ordinary control
+    /// flow, so this is not a whole-operation constant-time guarantee.
     pub fn verify(key: &[u8], data: &[u8], tag: &[u8]) -> Result<bool> {
         let expected = Self::mac(key, data)?;
 
@@ -155,8 +186,9 @@ where
             let b = tag.get(i).copied().unwrap_or(0);
             diff |= a ^ b;
         }
-        // Fold any length mismatch into the diff in a single operation.
-        diff |= (tag.len() ^ H::output_size()) as u8;
+        // Lengths are public, but compare them without narrowing `usize`: a
+        // difference of 256 bytes must never disappear in an `as u8` cast.
+        diff |= tag.len().ct_eq(&H::output_size()).unwrap_u8() ^ 1;
 
         Ok(diff.ct_eq(&0u8).unwrap_u8() == 1)
     }
@@ -164,7 +196,7 @@ where
 
 impl<H> SecureZeroingType for Hmac<H>
 where
-    H: HashFunction + Default + Clone,
+    H: HashFunction + Default + Clone + Zeroize,
 {
     fn zeroed() -> Self {
         Self {

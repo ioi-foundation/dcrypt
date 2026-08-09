@@ -15,14 +15,24 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 pub struct Scalar(SecretBuffer<P256_SCALAR_SIZE>);
 
 impl Scalar {
-    /// Create a scalar from raw bytes with modular reduction
+    /// Create a canonical non-zero scalar from raw bytes.
     ///
-    /// Ensures the scalar is in the valid range [1, n-1] where n is the curve order.
-    /// Performs modular reduction if the input is >= n.
-    /// Returns an error if the result would be zero (invalid for cryptographic use).
-    pub fn new(mut data: [u8; P256_SCALAR_SIZE]) -> Result<Self> {
-        Self::reduce_scalar_bytes(&mut data)?;
+    /// Private keys, nonces, and serialized signature components must be in
+    /// the interval `1..n`; out-of-range inputs are rejected rather than
+    /// reduced. Use [`Self::from_bytes_reduced`] only for mathematical
+    /// intermediates whose specification explicitly requires reduction.
+    pub fn new(data: [u8; P256_SCALAR_SIZE]) -> Result<Self> {
+        Self::validate_canonical_nonzero(&data)?;
         Ok(Scalar(SecretBuffer::new(data)))
+    }
+
+    /// Interpret a 256-bit integer modulo the group order, including zero.
+    ///
+    /// This is for ECDSA hash and x-coordinate conversion, where FIPS 186
+    /// requires reduction rather than private-scalar validation.
+    pub fn from_bytes_reduced(mut data: [u8; P256_SCALAR_SIZE]) -> Self {
+        Self::reduce_scalar_bytes_allow_zero(&mut data);
+        Self::from_bytes_unchecked(data)
     }
 
     /// Internal constructor that allows zero values
@@ -35,13 +45,13 @@ impl Scalar {
 
     /// Create a scalar from an existing SecretBuffer
     ///
-    /// Performs the same validation and reduction as `new()` but starts
+    /// Performs the same canonical validation as `new()` but starts
     /// from a SecretBuffer instead of a raw byte array.
     pub fn from_secret_buffer(buffer: SecretBuffer<P256_SCALAR_SIZE>) -> Result<Self> {
         let mut bytes = [0u8; P256_SCALAR_SIZE];
         bytes.copy_from_slice(buffer.as_ref());
 
-        Self::reduce_scalar_bytes(&mut bytes)?;
+        Self::validate_canonical_nonzero(&bytes)?;
         Ok(Scalar(SecretBuffer::new(bytes)))
     }
 
@@ -279,18 +289,10 @@ impl Scalar {
     /// The curve order n for P-256 is:
     /// n = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
     ///
-    /// Algorithm:
-    /// 1. Check if input is zero (invalid)
-    /// 2. Compare with curve order using constant-time comparison
-    /// 3. Conditionally subtract n if input >= n
-    /// 4. Verify result is still non-zero
-    fn reduce_scalar_bytes(bytes: &mut [u8; P256_SCALAR_SIZE]) -> Result<()> {
+    /// The input is at most 2^256-1 and the order is greater than 2^255,
+    /// so at most one subtraction is required. Zero is intentionally allowed.
+    fn reduce_scalar_bytes_allow_zero(bytes: &mut [u8; P256_SCALAR_SIZE]) {
         let order = &NIST_P256.n;
-
-        // Reject zero scalars immediately
-        if bytes.iter().all(|&b| b == 0) {
-            return Err(Error::param("P-256 Scalar", "Scalar cannot be zero"));
-        }
 
         // Constant-time comparison with curve order
         // We want to check: is bytes >= order?
@@ -323,16 +325,30 @@ impl Scalar {
 
             *bytes = temp_bytes;
         }
+    }
 
-        // Check for zero after reduction
-        if bytes.iter().all(|&b| b == 0) {
-            return Err(Error::param(
-                "P-256 Scalar",
-                "Reduction resulted in zero scalar",
-            ));
+    fn validate_canonical_nonzero(bytes: &[u8; P256_SCALAR_SIZE]) -> Result<()> {
+        if bytes.iter().all(|&byte| byte == 0) {
+            return Err(Error::param("P-256 Scalar", "Scalar cannot be zero"));
         }
 
-        Ok(())
+        let order = &NIST_P256.n;
+        for (&byte, &order_byte) in bytes.iter().zip(order) {
+            if byte < order_byte {
+                return Ok(());
+            }
+            if byte > order_byte {
+                return Err(Error::param(
+                    "P-256 Scalar",
+                    "Scalar must be less than the group order",
+                ));
+            }
+        }
+
+        Err(Error::param(
+            "P-256 Scalar",
+            "Scalar must be less than the group order",
+        ))
     }
 
     // Helper constants - stored in little-endian limb order

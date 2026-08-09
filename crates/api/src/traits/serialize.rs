@@ -5,6 +5,11 @@
 use crate::Result;
 use zeroize::Zeroizing;
 
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::vec::Vec;
+#[cfg(feature = "std")]
+use std::vec::Vec;
+
 /// A trait for public types that can be serialized to and from bytes.
 pub trait Serialize: Sized {
     /// Creates an object from a byte slice.

@@ -1,0 +1,150 @@
+name: Security validation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+
+jobs:
+  format-and-check:
+    name: Format and all-target workspace check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Check every workspace target with every feature
+        run: cargo check --workspace --all-targets --all-features
+
+  workspace-tests:
+    name: Workspace crate tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - name: Run workspace library and integration tests
+        # dcrypt-tests contains the heavyweight suites gated in dedicated jobs below.
+        run: cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
+
+  ml-dsa-acvp:
+    name: Exact ML-DSA FIPS 204 ACVP outputs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - name: Compare ML-DSA results with bundled official expectedResults
+        run: >-
+          cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_
+          -- --test-threads=1 --nocapture
+
+  statistical-timing:
+    name: Repository statistical timing regressions (not dudect or ctgrind)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - name: Run the in-repository statistical timing suite serially
+        env:
+          VERBOSE: "1"
+        run: >-
+          cargo test -p dcrypt-tests --test constant_time_tests
+          -- --test-threads=1 --nocapture
+
+  dependency-policy:
+    name: RustSec and workspace dependency policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: stable
+      - name: Resolve the ignored lockfile for this audit
+        run: cargo generate-lockfile
+      - name: Install pinned security tools
+        run: |
+          cargo install --root "$RUNNER_TEMP/security-tools" cargo-audit --version 0.22.2 --locked
+          cargo install --root "$RUNNER_TEMP/security-tools" cargo-deny --version 0.20.2 --locked
+          echo "$RUNNER_TEMP/security-tools/bin" >> "$GITHUB_PATH"
+      - name: Audit resolved dependencies against RustSec
+        run: cargo audit
+      - name: Enforce advisories, licenses, bans, and sources for all workspace roots
+        run: cargo deny --workspace --all-features check
+
+  miri:
+    name: Miri (${{ matrix.crate }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [dcrypt-api, dcrypt-common]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install nightly Rust with Miri
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: nightly-2026-08-07
+          components: miri
+      - name: Prepare Miri's sysroot
+        run: cargo miri setup
+      - name: Run the public memory-handling tests under Miri
+        # Keep the standalone Loom scheduler model in the stable test job;
+        # Miri runs the real registry and secret-buffer unit tests directly.
+        run: cargo miri test -p ${{ matrix.crate }} --lib --all-features
+
+  fuzz-build:
+    name: Build externally controlled decoder fuzz targets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install nightly Rust
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: nightly-2026-08-07
+      - name: Install pinned cargo-fuzz
+        run: cargo install cargo-fuzz --version 0.13.2 --locked
+      - name: Build every fuzz target
+        run: |
+          cargo fuzz build signature_decoders
+          cargo fuzz build hybrid_decoders
+          cargo fuzz build symmetric_decoders
+          cargo fuzz build stream_frames

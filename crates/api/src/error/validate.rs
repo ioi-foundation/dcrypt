@@ -7,6 +7,9 @@ pub fn parameter<T>(condition: bool, context: &'static str, reason: &'static str
 where
     T: Default,
 {
+    #[cfg(not(feature = "std"))]
+    let _ = reason;
+
     if !condition {
         return Err(Error::InvalidParameter {
             context,
@@ -19,6 +22,9 @@ where
 
 /// Just check a parameter condition
 pub fn check_parameter(condition: bool, context: &'static str, reason: &'static str) -> Result<()> {
+    #[cfg(not(feature = "std"))]
+    let _ = reason;
+
     if !condition {
         return Err(Error::InvalidParameter {
             context,
@@ -91,6 +97,9 @@ pub fn authentication(is_valid: bool, context: &'static str) -> Result<()> {
 
 /// Validate key format or content
 pub fn key(is_valid: bool, context: &'static str, reason: &'static str) -> Result<()> {
+    #[cfg(not(feature = "std"))]
+    let _ = reason;
+
     if !is_valid {
         return Err(Error::InvalidKey {
             context,
@@ -103,6 +112,9 @@ pub fn key(is_valid: bool, context: &'static str, reason: &'static str) -> Resul
 
 /// Validate signature format or content
 pub fn signature(is_valid: bool, context: &'static str, reason: &'static str) -> Result<()> {
+    #[cfg(not(feature = "std"))]
+    let _ = reason;
+
     if !is_valid {
         return Err(Error::InvalidSignature {
             context,
@@ -115,6 +127,9 @@ pub fn signature(is_valid: bool, context: &'static str, reason: &'static str) ->
 
 /// Validate ciphertext format or content
 pub fn ciphertext(is_valid: bool, context: &'static str, reason: &'static str) -> Result<()> {
+    #[cfg(not(feature = "std"))]
+    let _ = reason;
+
     if !is_valid {
         return Err(Error::InvalidCiphertext {
             context,

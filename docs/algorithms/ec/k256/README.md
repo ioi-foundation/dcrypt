@@ -1,12 +1,14 @@
 # K256 ('secp256k1') Elliptic Curve
 
-This module provides a constant-time implementation of the `secp256k1` elliptic curve, famously used by Bitcoin, Ethereum, and other cryptocurrencies. The implementation is designed for security and resistance against side-channel attacks, making it suitable for building higher-level cryptographic protocols like the Elliptic Curve Diffie-Hellman (ECDH) key exchange and digital signatures.
+This module implements the `secp256k1` elliptic curve. It has not received a
+complete compiler- and target-level side-channel audit and makes no blanket
+constant-time or protocol-suitability claim.
 
 The module operates on the curve defined by the equation `y² = x³ + 7` over the prime field `F_p`, where `p = 2^256 - 2^32 - 977`.
 
 ## Core Features
 
-*   **Constant-Time Implementation**: All operations involving secret data, particularly scalar multiplication, are designed to execute in constant time. This prevents timing side-channel attacks that could otherwise leak private key information.
+*   **Timing-aware implementation**: Secret-bearing paths attempt to avoid obvious value-dependent control flow; this is not a whole-operation guarantee.
 *   **Key Generation**: Provides a `generate_keypair` function for creating cryptographically secure private keys (Scalars) and their corresponding public keys (Points).
 *   **Point Arithmetic**: Implements fundamental elliptic curve operations, including point addition, doubling, and negation. These operations are performed efficiently using projective coordinates internally to avoid costly modular inversions.
 *   **Scalar Multiplication**: Offers robust and secure scalar multiplication functions:

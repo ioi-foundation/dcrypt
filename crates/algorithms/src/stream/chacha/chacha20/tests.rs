@@ -29,14 +29,14 @@ fn test_chacha20_rfc8439() {
 
     // Encrypt
     let mut output = plaintext.clone();
-    chacha.encrypt(&mut output);
+    chacha.encrypt(&mut output).unwrap();
 
     assert_eq!(output, expected_ciphertext);
 
     // Test decryption
     let mut chacha = ChaCha20::with_counter(&key_bytes, &nonce, 1);
     let mut decrypted = expected_ciphertext.clone();
-    chacha.decrypt(&mut decrypted);
+    chacha.decrypt(&mut decrypted).unwrap();
 
     assert_eq!(decrypted, plaintext);
 }
@@ -54,14 +54,14 @@ fn test_chacha20_keystream() {
 
     // Generate keystream and test encryption
     let mut keystream = [0u8; 64];
-    chacha.keystream(&mut keystream);
+    chacha.keystream(&mut keystream).unwrap();
 
     let plaintext = [0x12; 64];
     let mut ciphertext = plaintext;
 
     // Reset to start
     chacha.reset();
-    chacha.encrypt(&mut ciphertext);
+    chacha.encrypt(&mut ciphertext).unwrap();
 
     // Manual XOR to verify
     let mut expected = [0u8; 64];
@@ -87,17 +87,17 @@ fn test_chacha20_seek() {
 
     // Advance chacha1 by processing some data
     let mut data = [0u8; 200];
-    chacha1.process(&mut data);
+    chacha1.process(&mut data).unwrap();
 
     // Seek chacha2 to where chacha1 should be
-    chacha2.seek(3); // After 200 bytes (3 full blocks + part of 4th)
+    chacha2.seek(3).unwrap(); // After 200 bytes (3 full blocks + part of 4th)
 
     // Both should now produce the same keystream
     let mut ks1 = [0u8; 64];
     let mut ks2 = [0u8; 64];
 
-    chacha1.keystream(&mut ks1);
-    chacha2.keystream(&mut ks2);
+    chacha1.keystream(&mut ks1).unwrap();
+    chacha2.keystream(&mut ks2).unwrap();
 
     assert_eq!(ks1, ks2);
 }
@@ -114,11 +114,11 @@ fn test_chacha20_with_secure_key() {
     let plaintext = b"test message";
     let mut buffer = plaintext.to_vec();
 
-    cipher.encrypt(&mut buffer);
+    cipher.encrypt(&mut buffer).unwrap();
     assert_ne!(&buffer[..], plaintext);
 
     cipher.reset();
-    cipher.decrypt(&mut buffer);
+    cipher.decrypt(&mut buffer).unwrap();
     assert_eq!(&buffer[..], plaintext);
 }
 
@@ -129,7 +129,7 @@ fn test_chacha20_zeroization() {
 
     let mut cipher = ChaCha20::new(&key, &nonce);
     let mut keystream = [0u8; 64];
-    cipher.keystream(&mut keystream);
+    cipher.keystream(&mut keystream).unwrap();
 
     // Verify keystream was generated
     assert_ne!(keystream, [0u8; 64]);
@@ -138,4 +138,23 @@ fn test_chacha20_zeroization() {
     cipher.reset();
     // Note: We can't directly access the buffer to verify it's zeroed
     // but reset() calls zeroize on it
+}
+
+#[test]
+fn counter_exhaustion_fails_before_reusing_a_block() {
+    let key = [0x42; CHACHA20_KEY_SIZE];
+    let nonce = Nonce::<CHACHA20_NONCE_SIZE>::new([0x24; CHACHA20_NONCE_SIZE]);
+    let mut cipher = ChaCha20::with_counter(&key, &nonce, u32::MAX);
+
+    // The last representable counter block may be consumed exactly once.
+    let mut final_block = [0u8; CHACHA20_BLOCK_SIZE];
+    cipher.encrypt(&mut final_block).unwrap();
+
+    // A subsequent request is rejected before mutating caller data.
+    let mut sentinel = [0x5a];
+    assert!(cipher.encrypt(&mut sentinel).is_err());
+    assert_eq!(sentinel, [0x5a]);
+
+    // Seeking to a position whose next counter would wrap is rejected too.
+    assert!(cipher.seek(u32::MAX).is_err());
 }

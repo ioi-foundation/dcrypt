@@ -4,13 +4,14 @@
 //! and SP 800-56A Rev. 3: Recommendation for Pair-Wise Key-Establishment Schemes
 //! Using Discrete Logarithm Cryptography. SHA-224 is used as the hash function.
 
-use crate::ecdsa::common::SignatureComponents;
+use crate::ecdsa::common::{is_canonical_nonzero_scalar, is_high_s, SignatureComponents};
 use dcrypt_algorithms::ec::p224 as ec;
 use dcrypt_algorithms::hash::sha2::{Sha224, Sha224Algorithm}; // Import Sha224Algorithm for BLOCK_SIZE
 use dcrypt_algorithms::hash::{HashAlgorithm, HashFunction}; // Import HashAlgorithm for BLOCK_SIZE
 use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
 use dcrypt_internal::constant_time::ct_eq;
+use dcrypt_params::traditional::ecdsa::NIST_P224;
 use rand::{CryptoRng, RngCore};
 use zeroize::Zeroize; // ZeroizeOnDrop is implicitly handled by ec::Scalar's own Drop
 
@@ -142,10 +143,13 @@ impl SignatureTrait for EcdsaP224 {
             let k_inv = k.inv_mod_n().map_err(ApiError::from)?;
             let rd = r.mul_mod_n(&d).map_err(ApiError::from)?;
             let z_plus_rd = z.add_mod_n(&rd).map_err(ApiError::from)?;
-            let s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
+            let mut s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
 
             if s.is_zero() {
                 continue;
+            }
+            if is_high_s(&s.serialize(), &NIST_P224.n) {
+                s = s.negate();
             }
 
             let sig_comps = SignatureComponents {
@@ -178,6 +182,16 @@ impl SignatureTrait for EcdsaP224 {
         r_bytes[r_offset..].copy_from_slice(&sig_comps.r);
         s_bytes[s_offset..].copy_from_slice(&sig_comps.s);
 
+        if !is_canonical_nonzero_scalar(&r_bytes, &NIST_P224.n)
+            || !is_canonical_nonzero_scalar(&s_bytes, &NIST_P224.n)
+        {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P224 verify",
+                #[cfg(feature = "std")]
+                message: "signature components must be canonical integers in [1, n-1]".to_string(),
+            });
+        }
+
         let r = ec::Scalar::new(r_bytes).map_err(|_| ApiError::InvalidSignature {
             context: "ECDSA-P224 verify",
             #[cfg(feature = "std")]
@@ -188,6 +202,13 @@ impl SignatureTrait for EcdsaP224 {
             #[cfg(feature = "std")]
             message: "Invalid s component".to_string(),
         })?;
+        if is_high_s(&s.serialize(), &NIST_P224.n) {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P224 verify",
+                #[cfg(feature = "std")]
+                message: "high-s signatures are non-canonical".to_string(),
+            });
+        }
 
         let mut hasher = Sha224::new();
         hasher.update(message).map_err(ApiError::from)?;

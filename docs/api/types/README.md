@@ -22,11 +22,13 @@ While the `algorithms` crate (`dcrypt_docs/algorithms/types/README.md`) defines 
     *   **Purpose**: A variable-length vector (`Vec<u8>`) for sensitive data.
     *   **Security**:
         *   Implements `Zeroize` and `ZeroizeOnDrop`.
+        *   Wipes bytes before truncation or shrinking and wipes the complete old allocation before any operation replaces it.
+        *   Mutable dereferencing exposes only `[u8]`, preventing callers from invoking `Vec` operations that can reallocate without first wiping the old allocation.
         *   `PartialEq` uses constant-time comparison.
         *   `Debug` formatting redacts content.
     *   **Functionality**:
         *   Constructors: `new(data: Vec<u8>)`, `from_slice(slice: &[u8])`, `zeroed(len: usize)`, `random<R: RngCore + CryptoRng>(rng: &mut R, len: usize)`.
-        *   Standard `Vec`-like methods: `len()`, `is_empty()`, `as_ref()`, `as_mut()`, `Deref` to `Vec<u8>`.
+        *   Controlled `Vec`-like methods: `len()`, `is_empty()`, `capacity()`, `extend_from_slice()`, `resize()`, `truncate()`, `clear()`, `push()`, `pop()`, `reserve()`, and `shrink_to_fit()`; plus slice access through `as_ref()`, `as_mut()`, and `Deref<Target = [u8]>`.
     *   **Serialization**: Implements `crate::Serialize`.
     *   **Feature Dependency**: Available when the `alloc` feature is enabled.
 

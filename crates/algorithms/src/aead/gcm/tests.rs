@@ -7,6 +7,9 @@ use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+use dcrypt_api::traits::symmetric::{DecryptOperation, EncryptOperation};
+use dcrypt_api::traits::SymmetricCipher as ApiSymmetricCipher;
+
 #[test]
 fn test_aes_gcm() {
     // Basic sanity vector (128-bit key, 96-bit nonce, full tag)
@@ -35,15 +38,17 @@ fn test_aes_gcm() {
     .unwrap();
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let ct = gcm.internal_encrypt(&plaintext, Some(&aad)).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let ct = gcm
+        .internal_encrypt(&nonce, &plaintext, Some(&aad))
+        .unwrap();
     assert_eq!(ct.len(), expected_full.len());
     assert_eq!(hex::encode(&ct), hex::encode(&expected_full));
 
     // Round-trip
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let pt = gcm.internal_decrypt(&ct, Some(&aad)).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let pt = gcm.internal_decrypt(&nonce, &ct, Some(&aad)).unwrap();
     assert_eq!(pt, plaintext);
 }
 
@@ -56,16 +61,18 @@ fn test_gcm_tampered_ciphertext() {
     let plaintext = [0xAA; 32];
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
 
-    let mut ciphertext = gcm.internal_encrypt(&plaintext, Some(&aad)).unwrap();
+    let mut ciphertext = gcm
+        .internal_encrypt(&nonce, &plaintext, Some(&aad))
+        .unwrap();
     if ciphertext.len() > 5 {
         ciphertext[5] ^= 0x01;
     }
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let result = gcm.internal_decrypt(&ciphertext, Some(&aad));
+    let gcm = Gcm::new(cipher).unwrap();
+    let result = gcm.internal_decrypt(&nonce, &ciphertext, Some(&aad));
     assert!(result.is_err());
     assert!(matches!(
         result,
@@ -81,9 +88,9 @@ fn test_gcm_tampered_tag() {
     let plaintext = [0xAA; 32];
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
 
-    let mut ciphertext = gcm.internal_encrypt(&plaintext, None).unwrap();
+    let mut ciphertext = gcm.internal_encrypt(&nonce, &plaintext, None).unwrap();
     let tag_len = GCM_TAG_SIZE;
     if ciphertext.len() >= tag_len {
         let tag_idx = ciphertext.len() - tag_len;
@@ -91,8 +98,8 @@ fn test_gcm_tampered_tag() {
     }
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let result = gcm.internal_decrypt(&ciphertext, None);
+    let gcm = Gcm::new(cipher).unwrap();
+    let result = gcm.internal_decrypt(&nonce, &ciphertext, None);
     assert!(result.is_err());
     assert!(matches!(
         result,
@@ -108,14 +115,16 @@ fn test_gcm_empty_plaintext() {
     let aad = [0x10; 16];
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
 
-    let ciphertext = gcm.internal_encrypt(&[], Some(&aad)).unwrap();
+    let ciphertext = gcm.internal_encrypt(&nonce, &[], Some(&aad)).unwrap();
     assert_eq!(ciphertext.len(), GCM_TAG_SIZE);
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let decrypted = gcm.internal_decrypt(&ciphertext, Some(&aad)).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let decrypted = gcm
+        .internal_decrypt(&nonce, &ciphertext, Some(&aad))
+        .unwrap();
     assert_eq!(decrypted.len(), 0);
 }
 
@@ -132,8 +141,9 @@ fn test_gcm_invalid_nonce() {
     let nonce12 = Nonce::<12>::new([0x24; 12]);
     let nonce16 = Nonce::<16>::new([0x24; 16]);
 
-    assert!(Gcm::new(cipher.clone(), &nonce12).is_ok());
-    assert!(Gcm::new(cipher.clone(), &nonce16).is_ok());
+    let gcm = Gcm::new(cipher.clone()).unwrap();
+    assert!(gcm.internal_encrypt(&nonce12, b"", None).is_ok());
+    assert!(gcm.internal_encrypt(&nonce16, b"", None).is_ok());
 
     // Test that Nonce creation validates length
     let empty_bytes: [u8; 0] = [];
@@ -154,8 +164,8 @@ fn test_gcm_short_ciphertext() {
     let ciphertext = [0xAA; 8];
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let result = gcm.internal_decrypt(&ciphertext, None);
+    let gcm = Gcm::new(cipher).unwrap();
+    let result = gcm.internal_decrypt(&nonce, &ciphertext, None);
     assert!(result.is_err());
     assert!(matches!(result, Err(Error::Length { .. })));
 }
@@ -169,17 +179,21 @@ fn test_gcm_empty_associated_data() {
     let empty_aad: [u8; 0] = [];
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let ciphertext = gcm.internal_encrypt(&plaintext, Some(&empty_aad)).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let ciphertext = gcm
+        .internal_encrypt(&nonce, &plaintext, Some(&empty_aad))
+        .unwrap();
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let decrypted = gcm.internal_decrypt(&ciphertext, Some(&empty_aad)).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let decrypted = gcm
+        .internal_decrypt(&nonce, &ciphertext, Some(&empty_aad))
+        .unwrap();
     assert_eq!(decrypted, plaintext);
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let decrypted = gcm.internal_decrypt(&ciphertext, None).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let decrypted = gcm.internal_decrypt(&nonce, &ciphertext, None).unwrap();
     assert_eq!(decrypted, plaintext);
 }
 
@@ -192,13 +206,92 @@ fn test_gcm_non_standard_nonce() {
     let plaintext = [0xAA; 32];
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let ciphertext = gcm.internal_encrypt(&plaintext, None).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let ciphertext = gcm.internal_encrypt(&nonce, &plaintext, None).unwrap();
 
     let cipher = Aes128::new(&key);
-    let gcm = Gcm::new(cipher, &nonce).unwrap();
-    let decrypted = gcm.internal_decrypt(&ciphertext, None).unwrap();
+    let gcm = Gcm::new(cipher).unwrap();
+    let decrypted = gcm.internal_decrypt(&nonce, &ciphertext, None).unwrap();
     assert_eq!(decrypted, plaintext);
+}
+
+#[test]
+fn nist_120_bit_iv_known_answer_with_full_safe_tag() {
+    // NIST ACVP AES-GCM 1.0 internalProjection.json, tgId 2 / tcId 16.
+    // The source group publishes only a 32-bit tag. We generate the safe full
+    // tag and compare the published prefix, validating non-96-bit J0 without
+    // exposing a short-tag verification API.
+    let key: [u8; 16] = hex::decode("49bfa3bf9492dc7bcc93edafc725c730")
+        .unwrap()
+        .try_into()
+        .unwrap();
+    let iv: [u8; 15] = hex::decode("b40811be58d20804e60926ee571491")
+        .unwrap()
+        .try_into()
+        .unwrap();
+    let plaintext = hex::decode("f2dc083b4ca1c54bf5228a5bb67129").unwrap();
+    let expected_ciphertext = hex::decode("e8f5854061720508ea3fbcceb78f4f").unwrap();
+    let expected_tag_prefix = hex::decode("8ad3515a").unwrap();
+
+    let key = SecretBytes::<16>::new(key);
+    let nonce = Nonce::<15>::new(iv);
+    let gcm = Gcm::new(Aes128::new(&key)).unwrap();
+    let output = gcm.internal_encrypt(&nonce, &plaintext, None).unwrap();
+    let (ciphertext, full_tag) = output.split_at(plaintext.len());
+
+    assert_eq!(ciphertext, expected_ciphertext);
+    assert_eq!(&full_tag[..expected_tag_prefix.len()], expected_tag_prefix);
+    assert_eq!(full_tag.len(), GCM_TAG_SIZE);
+}
+
+#[test]
+fn operation_builder_uses_each_operation_nonce() {
+    let key = SecretBytes::<16>::new([0x42; 16]);
+    let nonce_a = Nonce::<12>::new([0x11; 12]);
+    let nonce_b = Nonce::<12>::new([0x22; 12]);
+    let gcm = Gcm::new(Aes128::new(&key)).unwrap();
+    let plaintext = b"the nonce belongs to the operation";
+
+    let ciphertext_a = ApiSymmetricCipher::encrypt(&gcm)
+        .with_nonce(&nonce_a)
+        .encrypt(plaintext)
+        .unwrap();
+    let ciphertext_b = ApiSymmetricCipher::encrypt(&gcm)
+        .with_nonce(&nonce_b)
+        .encrypt(plaintext)
+        .unwrap();
+
+    assert_ne!(ciphertext_a.as_ref(), ciphertext_b.as_ref());
+    assert!(ApiSymmetricCipher::decrypt(&gcm)
+        .with_nonce(&nonce_b)
+        .decrypt(&ciphertext_a)
+        .is_err());
+    assert_eq!(
+        ApiSymmetricCipher::decrypt(&gcm)
+            .with_nonce(&nonce_a)
+            .decrypt(&ciphertext_a)
+            .unwrap(),
+        plaintext
+    );
+}
+
+#[test]
+fn rejects_dangerously_short_tags() {
+    let key = SecretBytes::<16>::new([0x42; 16]);
+    assert!(Gcm::new_with_tag_len(Aes128::new(&key), 1).is_err());
+    assert!(Gcm::new_with_tag_len(Aes128::new(&key), 11).is_err());
+    assert!(Gcm::new_with_tag_len(Aes128::new(&key), 12).is_ok());
+    assert!(Gcm::new_with_tag_len(Aes128::new(&key), 16).is_ok());
+}
+
+#[test]
+#[cfg(target_pointer_width = "64")]
+fn rejects_messages_past_the_gcm_counter_limit_before_allocation() {
+    let max_blocks = (u32::MAX as usize) - 1;
+    let max_bytes = max_blocks * GCM_BLOCK_SIZE;
+
+    assert_eq!(gcm_block_count(max_bytes).unwrap(), max_blocks);
+    assert!(gcm_block_count(max_bytes + 1).is_err());
 }
 
 // -------------------------------------------------------------------------
@@ -452,7 +545,7 @@ fn process_gcm_test_with_nonce<const N: usize, B: BlockCipher + Zeroize + Zeroiz
     };
 
     // Create GCM instance
-    let gcm = match Gcm::new_with_tag_len(cipher, &nonce, tag_bytes) {
+    let gcm = match Gcm::new_with_tag_len(cipher, tag_bytes) {
         Ok(g) => g,
         Err(e) => {
             println!("Skipping test {} - GCM creation failed: {}", test_index, e);
@@ -475,7 +568,7 @@ fn process_gcm_test_with_nonce<const N: usize, B: BlockCipher + Zeroize + Zeroiz
     };
 
     // Decrypt and verify
-    let res = gcm.internal_decrypt(&cw, aad);
+    let res = gcm.internal_decrypt(&nonce, &cw, aad);
     if test.fail_expected {
         assert!(res.is_err(), "Vector {} should fail", test_index);
     } else {
@@ -519,6 +612,7 @@ fn run_gcm_decrypt_tests_128(filepath: &str) {
             // Process each nonce size separately
             match test.iv.len() {
                 12 => process_gcm_test_with_nonce::<12, _>(i, test, cipher, tag_bytes),
+                15 => process_gcm_test_with_nonce::<15, _>(i, test, cipher, tag_bytes),
                 16 => process_gcm_test_with_nonce::<16, _>(i, test, cipher, tag_bytes),
                 // For unsupported nonce sizes:
                 _ => println!(
@@ -559,6 +653,7 @@ fn run_gcm_decrypt_tests_192(filepath: &str) {
             // Process each nonce size separately
             match test.iv.len() {
                 12 => process_gcm_test_with_nonce::<12, _>(i, test, cipher, tag_bytes),
+                15 => process_gcm_test_with_nonce::<15, _>(i, test, cipher, tag_bytes),
                 16 => process_gcm_test_with_nonce::<16, _>(i, test, cipher, tag_bytes),
                 // For unsupported nonce sizes:
                 _ => println!(
@@ -599,6 +694,7 @@ fn run_gcm_decrypt_tests_256(filepath: &str) {
             // Process each nonce size separately
             match test.iv.len() {
                 12 => process_gcm_test_with_nonce::<12, _>(i, test, cipher, tag_bytes),
+                15 => process_gcm_test_with_nonce::<15, _>(i, test, cipher, tag_bytes),
                 16 => process_gcm_test_with_nonce::<16, _>(i, test, cipher, tag_bytes),
                 // For unsupported nonce sizes:
                 _ => println!(
@@ -630,7 +726,7 @@ fn process_gcm_encrypt_test_with_nonce<const N: usize, B: BlockCipher + Zeroize 
     };
 
     // Create GCM instance with the correct tag length
-    let gcm = match Gcm::new_with_tag_len(cipher, &nonce, tag_bytes) {
+    let gcm = match Gcm::new_with_tag_len(cipher, tag_bytes) {
         Ok(g) => g,
         Err(e) => {
             println!("Skipping test {} - GCM creation failed: {}", test_index, e);
@@ -645,7 +741,7 @@ fn process_gcm_encrypt_test_with_nonce<const N: usize, B: BlockCipher + Zeroize 
         Some(&test.aad[..])
     };
 
-    let cw = gcm.internal_encrypt(plaintext, aad).unwrap();
+    let cw = gcm.internal_encrypt(&nonce, plaintext, aad).unwrap();
 
     // split off ciphertext vs. tag by expected lengths
     let exp_ct_len = test.ct.as_ref().map_or(0, |v| v.len());
@@ -704,6 +800,7 @@ fn run_gcm_encrypt_tests_128(filepath: &str) {
             // Process each nonce size separately
             match test.iv.len() {
                 12 => process_gcm_encrypt_test_with_nonce::<12, _>(i, test, cipher, tag_bytes),
+                15 => process_gcm_encrypt_test_with_nonce::<15, _>(i, test, cipher, tag_bytes),
                 16 => process_gcm_encrypt_test_with_nonce::<16, _>(i, test, cipher, tag_bytes),
                 _ => println!(
                     "Skipping test {} - unsupported IV length {}",
@@ -745,6 +842,7 @@ fn run_gcm_encrypt_tests_192(filepath: &str) {
             // Process each nonce size separately
             match test.iv.len() {
                 12 => process_gcm_encrypt_test_with_nonce::<12, _>(i, test, cipher, tag_bytes),
+                15 => process_gcm_encrypt_test_with_nonce::<15, _>(i, test, cipher, tag_bytes),
                 16 => process_gcm_encrypt_test_with_nonce::<16, _>(i, test, cipher, tag_bytes),
                 _ => println!(
                     "Skipping test {} - unsupported IV length {}",
@@ -786,6 +884,7 @@ fn run_gcm_encrypt_tests_256(filepath: &str) {
             // Process each nonce size separately
             match test.iv.len() {
                 12 => process_gcm_encrypt_test_with_nonce::<12, _>(i, test, cipher, tag_bytes),
+                15 => process_gcm_encrypt_test_with_nonce::<15, _>(i, test, cipher, tag_bytes),
                 16 => process_gcm_encrypt_test_with_nonce::<16, _>(i, test, cipher, tag_bytes),
                 _ => println!(
                     "Skipping test {} - unsupported IV length {}",

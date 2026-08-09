@@ -1,24 +1,33 @@
 # Common Security Primitives (`common/security`)
 
-This module is a cornerstone of the dcrypt library's security model. It provides essential types, traits, and utilities for handling sensitive data securely, performing operations in a way that mitigates side-channel attacks (especially timing attacks), and ensuring proper memory management for cryptographic secrets.
+This module provides wrappers and cleanup utilities that reduce exposure of
+sensitive data. They are defense-in-depth tools, not secure-memory or
+side-channel guarantees.
 
 ## Key Components
 
 1.  **Secret Data Handling (`secret.rs`)**:
-    These types are designed to automatically manage the lifecycle of sensitive information, ensuring it's zeroed out from memory when no longer needed.
+    These types invoke `zeroize` on storage they own. They cannot erase caller
+    copies, compiler/register copies, allocator history outside the current
+    allocation, or data freed before ownership was transferred.
     *   **`SecretBuffer<const N: usize>`**:
-        A fixed-size array (`[u8; N]`) wrapper that implements `Zeroize` and `ZeroizeOnDrop`. This means its contents are automatically overwritten with zeros when it goes out of scope. It's ideal for fixed-size secrets like symmetric keys or internal cryptographic state. It also provides `secure_clone` to ensure cloned instances maintain zeroization guarantees.
+        A fixed-size array (`[u8; N]`) wrapper implementing `Zeroize` and
+        `ZeroizeOnDrop`. Each clone owns storage that invokes zeroization on
+        drop.
     *   **`SecretVec`** (requires `alloc` feature):
-        A variable-length `Vec<u8>` wrapper with similar `Zeroize` and `ZeroizeOnDrop` guarantees. Suitable for secrets whose size isn't known at compile time or can change.
+        A variable-length `Vec<u8>` wrapper that wipes removed bytes on shrink, copies into a fresh allocation and wipes the old allocation before growth, and wipes its complete capacity on drop. Suitable for secrets whose size isn't known at compile time or can change.
     *   **`EphemeralSecret<T: Zeroize>`**:
-        A generic wrapper for any type `T` that implements `Zeroize`. It ensures that `T` is zeroized when the `EphemeralSecret` wrapper is dropped. This is particularly useful for intermediate values in cryptographic computations that are sensitive but short-lived.
+        A generic wrapper for a `T: Zeroize` that invokes `T::zeroize` on drop.
     *   **`ZeroizeGuard<'a, T: Zeroize>`**:
-        An RAII guard that takes a mutable reference to a `T: Zeroize` and ensures `T` is zeroized when the guard itself is dropped. This is useful for ensuring cleanup in complex functions with multiple exit points or potential panics.
+        An RAII guard that invokes `zeroize` on a borrowed value when the guard
+        is dropped.
     *   **`SecureZeroingType` Trait**:
         A trait for types that can be securely zeroed and cloned while maintaining their security properties. Both `SecretBuffer` and `SecretVec` implement this.
 
 2.  **Secure Operations and Comparisons (`memory.rs`)**:
-    This part focuses on performing operations and comparisons in a way that resists side-channel attacks.
+    This part supplies cleanup composition and equality helpers. Equal-length
+    comparison uses `subtle`; no whole-operation/compiler/target constant-time
+    guarantee follows from using these helpers.
     *   **`SecureOperation<T>` Trait**:
         Defines a contract for operations that handle sensitive data. The key method is `execute_secure(self) -> Result<T>`, which should perform the operation and then ensure all sensitive intermediate data is cleared via `clear_sensitive_data(&mut self)`.
     *   **`SecureOperationExt` Trait**:
@@ -32,7 +41,8 @@ This module is a cornerstone of the dcrypt library's security model. It provides
         Implementations are provided for `[u8; N]` and `&[u8]` using the `subtle` crate.
 
 3.  **Memory Barriers (`memory.rs::barrier`)**:
-    These are crucial for preventing compiler and CPU instruction reordering that could undermine constant-time code or cryptographic logic.
+    These expose compiler and CPU fences. Fences alone do not make an algorithm
+    constant-time or make memory securely erasable.
     *   `compiler_fence_seq_cst()`: Inserts a compiler fence with sequential consistency ordering.
     *   `memory_fence_seq_cst()`: Inserts a full memory fence with sequential consistency.
     *   `with_barriers<T, F: FnOnce() -> T>(f: F) -> T`: Executes a closure, wrapping it with compiler fences.
@@ -42,9 +52,10 @@ This module is a cornerstone of the dcrypt library's security model. It provides
 
 ## Purpose and Importance
 
-The `common::security` module underpins dcrypt's commitment to robust security practices. By providing these reusable components:
--   **Reduces Risk of Error**: Developers using dcrypt primitives are less likely to make common mistakes in handling sensitive data or implementing constant-time operations.
--   **Centralizes Security Logic**: Security-critical patterns are implemented once and reused, making auditing and maintenance easier.
--   **Enforces Best Practices**: The type system and trait bounds encourage or enforce the use of these secure patterns.
+These components centralize cleanup patterns and can reduce accidental data
+retention. Their exact coverage must still be audited at every call site.
 
-For example, cryptographic keys within `dcrypt-algorithms` are often stored in `SecretBuffer`, and intermediate results of permutations or mixing functions might be wrapped in `EphemeralSecret` or managed by `ZeroizeGuard`. Constant-time comparisons rely on `SecureCompare` or direct use of `subtle`. Memory barriers are strategically placed in algorithm implementations to ensure correctness and resist side-channel attacks.
+For example, cryptographic keys within `dcrypt-algorithms` may be stored in
+`SecretBuffer`, while intermediate values may use `EphemeralSecret` or
+`ZeroizeGuard`. `SecureCompare` avoids value-dependent early exit for supported
+equal-length comparisons; surrounding code still needs its own timing review.

@@ -7,6 +7,11 @@ use crate::Result;
 use rand::{CryptoRng, RngCore};
 use zeroize::{Zeroize, Zeroizing};
 
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::vec::Vec;
+#[cfg(feature = "std")]
+use std::vec::Vec;
+
 /// Core trait for digital signature algorithms
 ///
 /// This trait defines the minimal interface that all signature algorithms

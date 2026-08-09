@@ -1,12 +1,16 @@
 # ECDSA Signature Implementations (`sign::traditional::ecdsa`)
 
-This module provides secure and compliant implementations of the **Elliptic Curve Digital Signature Algorithm (ECDSA)** as specified in **FIPS 186-4**. It supports the standard NIST prime curves and is designed for robust, general-purpose use.
+This module implements the **Elliptic Curve Digital Signature Algorithm
+(ECDSA)** for several NIST prime curves. The implementation targets the ECDSA
+algorithm and encodings described by relevant standards, but this project has
+not claimed or received FIPS validation or certification. Documentation of an
+algorithm or test-vector coverage is not a compliance certificate.
 
 All schemes implement the `dcrypt_api::Signature` trait for a consistent and safe developer experience.
 
 -----
 
-## NIST Curves Supported  elliptic-curves
+## NIST curves supported
 
 The module provides implementations for the following NIST-recommended curves, each paired with its standard hash function as per FIPS 186-5 recommendations.
 
@@ -22,10 +26,10 @@ The module provides implementations for the following NIST-recommended curves, e
 
 ## ✨ Features
 
-  * **Standards Compliant**: Follows the specifications in **FIPS 186-4** for signature generation and verification.
-  * **Secure Nonce Generation**: Implements deterministic nonce (`k`) generation based on **RFC 6979**, hedged with additional entropy from a CSPRNG. This approach prevents catastrophic key failure due to nonce reuse or a weak RNG, as recommended by **FIPS 186-5**.
-  * **Side-Channel Resistance**: Final verification comparisons are performed using constant-time functions to mitigate timing attacks.
-  * **Secure Key Handling**: Secret key types implement `Zeroize` on `Drop`, ensuring that sensitive key material is automatically cleared from memory when it goes out of scope.
+  * **Nonce generation**: Uses RFC 6979-style deterministic nonce generation hedged with entropy from the supplied CSPRNG.
+  * **Canonical signatures**: Emits low-`s` signatures and accepts only strict DER encodings with canonical scalar values.
+  * **Verification comparison**: Uses constant-time equality for the final scalar comparison. This narrow property is not a blanket side-channel assurance for every compiler, target, or surrounding operation.
+  * **Key handling**: Secret key types request zeroization on drop. Applications remain responsible for copies, storage, crash dumps, and platform-specific memory behavior.
   * **Type Safety**: Each curve (`P-256`, `P-384`, etc.) has distinct public key, secret key, and signature types. This prevents accidental misuse, such as trying to verify a `P-256` signature with a `P-384` key.
 
 -----
@@ -71,7 +75,8 @@ fn main() -> dcrypt::api::Result<()> {
 
 ## Signature Format
 
-Signatures are encoded using the standard **ASN.1 DER (Distinguished Encoding Rules)** format, as is common for ECDSA. The structure is a `SEQUENCE` containing two `INTEGER` values, `r` and `s`.
+Signatures are encoded as an ASN.1 DER `SEQUENCE` containing two `INTEGER`
+values, `r` and `s`.
 
 ```
 SEQUENCE {
@@ -80,12 +85,28 @@ SEQUENCE {
 }
 ```
 
-The `common.rs` file in this module contains the logic for serializing and deserializing this structure.
+The decoder is intentionally strict:
+
+* The outer `SEQUENCE` and both `INTEGER` objects must use exact DER lengths;
+  trailing bytes are rejected.
+* Each INTEGER must be nonempty, positive, and minimally encoded. A leading
+  zero byte is permitted only when required to keep the value positive.
+* Both scalars must satisfy `1 <= r,s < n`, where `n` is the selected curve's
+  group order.
+* `s` must be in the low half of the scalar range. Signing normalizes to low
+  `s`, and verification rejects high-`s` inputs.
+
+This is a compatibility break from affected releases, which accepted high-`s`,
+negative-as-unsigned, and other noncanonical encodings. Callers must not expect
+those historical byte strings to verify after upgrading. Re-encode or reissue
+data through an explicitly reviewed migration process; never silently weaken
+the new parser.
 
 -----
 
 ## 🛡️ Security Considerations
 
-  * **Secret Key Management**: The `EcdsaP<NNN>SecretKey` types are designed to be secure, but the underlying key material (the raw bytes) must still be stored and handled with extreme care. Always use encrypted storage for secret keys at rest.
+  * **Secret Key Management**: Store and handle raw private-key material as sensitive data, including backups, process memory, and diagnostics.
   * **Public Key Authenticity**: When verifying a signature, you must have confidence that the public key belongs to the claimed entity. Use a secure method (like a PKI or a trusted channel) to obtain public keys.
-  * **Algorithm Choice**: While all implemented curves are secure, **`EcdsaP256`** is the most common choice and provides a 128-bit security level, which is sufficient for most modern applications.
+  * **Signature identity**: Affected releases allowed multiple accepted byte encodings for one mathematical signature. Audit any protocol that used signature bytes as unique identifiers, receipts, cache keys, or consensus values.
+  * **Algorithm policy**: Curve selection, lifetime, protocol binding, and deployment requirements must be decided by the consuming application's security policy. Availability in this module is not an endorsement or compliance claim.

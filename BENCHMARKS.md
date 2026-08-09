@@ -1,9 +1,15 @@
 # dcrypt Performance Benchmarks
 
-**Version:** 1.0.0
-**Generated:** Automatically via Criterion
+**Archived version:** 1.0.0
+**Originally generated:** Automatically via Criterion
 
-This document contains performance benchmarks for the `dcrypt` cryptographic library.
+This is an archival snapshot of benchmarks from dcrypt 1.0.0. It predates the
+security remediations released in `v2.0.0` and is not representative of the
+current implementation, a release qualification, or evidence of cryptographic
+security. Results for the removed custom Dilithium implementation and the
+nonfunctional RSA/Falcon placeholder have been omitted; this document does not
+benchmark the current ML-DSA backend or a usable RSA/Falcon hybrid.
+
 > **Note:** Specific results depend on hardware architecture (AVX2/AVX-512 support), available entropy, and system load.
 
 ## Key Encapsulation (KEM)
@@ -54,32 +60,10 @@ This document contains performance benchmarks for the `dcrypt` cryptographic lib
 <!-- START: Digital Signatures -->
 | Algorithm / Operation | Average Execution Time |
 |:----------------------|-----------------------:|
-| `ECDSA_P384_Dilithium3` | 28.13 ms |
-| `RSA_PSS_Falcon512` | 76.26 ns |
 | `SHA-256_verify-1KB` | 4.82 µs |
 | `SHA-256_verify-1MB` | 4.54 ms |
 | `SHA-512_verify-1KB` | 3.28 µs |
 | `SHA-512_verify-1MB` | 2.85 ms |
-| `dilithium` | 5.98 µs |
-| `dilithium2` | 4.94 ms |
-| `dilithium2_multi_sign` | 862.88 µs |
-| `dilithium2_pk_deserialize` | 12.10 µs |
-| `dilithium2_sig_deserialize` | 22.02 µs |
-| `dilithium2_sk_deserialize` | 26.53 µs |
-| `dilithium3` | 23.83 ms |
-| `dilithium3_multi_sign` | 6.34 ms |
-| `dilithium3_pk_deserialize` | 18.12 µs |
-| `dilithium3_sig_deserialize` | 29.68 µs |
-| `dilithium3_sk_deserialize` | 42.75 µs |
-| `dilithium5` | 94.38 ms |
-| `dilithium5_multi_sign` | 13.69 ms |
-| `dilithium5_pk_deserialize` | 24.08 µs |
-| `dilithium5_sig_deserialize` | 41.82 µs |
-| `dilithium5_sk_deserialize` | 52.09 µs |
-| `dilithium_montgomery_reduce` | 1.13 ns |
-| `dilithium_ntt_based` | 8.92 µs |
-| `dilithium_pointwise` | 377.23 ns |
-| `dilithium_schoolbook` | 16.97 µs |
 | `verify` | 4.69 ms |
 <!-- END: Digital Signatures -->
 
@@ -284,5 +268,4 @@ This document contains performance benchmarks for the `dcrypt` cryptographic lib
 | `validation` | 536.77 ns |
 | `varying_recipients` | 1.70 ms |
 | `with_fixed_keypair` | 3.21 ms |
-| `zero_nonce` | 4.66 µs |
 <!-- END: Other / Benchmarks -->

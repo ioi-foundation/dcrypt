@@ -1,6 +1,6 @@
 # Streaming Symmetric Encryption (`symmetric/streaming`)
 
-This module provides APIs for streaming symmetric encryption and decryption. Streaming is essential for handling large files or data streams that cannot fit entirely into memory. The implementations here manage chunking of data, per-chunk nonce derivation (where applicable), and interaction with `std::io::Read` and `std::io::Write` traits.
+This module provides APIs for streaming symmetric encryption and decryption using the authenticated `DCRSTRM2` version-2 dcrypt stream format. Version 1 is intentionally rejected because its unauthenticated terminator, counters, and lengths could not prove stream completeness or ordering.
 
 ## Core Traits
 
@@ -8,7 +8,7 @@ This module provides APIs for streaming symmetric encryption and decryption. Str
     *   **Purpose**: Defines the interface for a streaming encryption context.
     *   **Methods**:
         *   `write(&mut self, data: &[u8]) -> Result<()>`: Encrypts a chunk of plaintext `data` and writes the resulting ciphertext to the underlying writer `W`. This can be called multiple times.
-        *   `finalize(self) -> Result<W>`: Finalizes the encryption stream. This encrypts any remaining buffered plaintext, writes out any finalization data (like an end-of-stream marker or final authentication tag if the scheme requires it at the end), and returns the underlying writer. This method consumes the encryptor.
+        *   `finalize(self) -> Result<W>`: Encrypts any remaining plaintext, writes an authenticated final frame, flushes the writer, and returns it. This method consumes the encryptor and must be called explicitly.
 
 2.  **`StreamingDecrypt<R: Read>`**:
     *   **Purpose**: Defines the interface for a streaming decryption context.
@@ -20,28 +20,14 @@ This module provides APIs for streaming symmetric encryption and decryption. Str
 The module provides streaming implementations for the AEAD ciphers available in `dcrypt-symmetric`:
 
 1.  **ChaCha20Poly1305 Streaming (`chacha20poly1305.rs`)**:
-    *   **`ChaCha20Poly1305EncryptStream<W: Write>`**:
-        *   Manages encryption of data in chunks (e.g., 16KB).
-        *   **Nonce Management**: Writes an initial "base nonce" to the stream. For each subsequent chunk of data, it derives a unique chunk nonce by XORing the base nonce with an incrementing counter. This counter is also written to the stream alongside the ciphertext chunk.
-        *   **Format**: The output stream consists of:
-            1.  Base Nonce (12 bytes).
-            2.  For each chunk:
-                *   Chunk marker (1 byte, `0x01` for data chunk).
-                *   Chunk counter (4 bytes, big-endian).
-                *   Ciphertext length (4 bytes, big-endian).
-                *   Ciphertext (including AEAD tag for that chunk).
-            3.  End-of-stream marker (1 byte, `0x00`).
-    *   **`ChaCha20Poly1305DecryptStream<R: Read>`**:
-        *   Reads the base nonce from the stream.
-        *   For each chunk, reads the marker, counter, and ciphertext.
-        *   Derives the chunk nonce using the base nonce and the read counter.
-        *   Decrypts and verifies the chunk.
-        *   Stops when the end-of-stream marker is encountered.
+    *   `ChaCha20Poly1305EncryptStream<W>` and `ChaCha20Poly1305DecryptStream<R>` use bounded 16 KiB frames and preserve plaintext across arbitrarily small caller read buffers.
 
 2.  **AES-GCM Streaming (`gcm.rs`)**:
     *   **`Aes128GcmEncryptStream<W: Write>`** and **`Aes256GcmEncryptStream<W: Write>`**.
     *   **`Aes128GcmDecryptStream<R: Read>`** and **`Aes256GcmDecryptStream<R: Read>`**.
-    *   **Nonce Management and Format**: Follows the exact same chunking, per-chunk nonce derivation, and stream format strategy as `ChaCha20Poly1305EncryptStream` and `ChaCha20Poly1305DecryptStream`. The only difference is the underlying AEAD cipher used (AES-128-GCM or AES-256-GCM).
+    *   Uses the same authenticated version-2 framing as ChaCha20-Poly1305 with a distinct authenticated algorithm identifier.
+
+Every frame authenticates the protocol version, algorithm identifier, random stream identifier, base nonce, expected 64-bit sequence number, plaintext and ciphertext lengths, final-frame flag, and caller AAD. Frames are limited to 16 KiB and caller AAD to 1 MiB before allocation. The decryptor rejects sequence mismatches, missing final frames, trailing data, oversized lengths, unknown flags, and counter exhaustion before releasing unauthenticated plaintext.
 
 ## Utility Functions
 
@@ -70,7 +56,7 @@ fn streaming_aes128_gcm_example() -> Result<()> {
 
     // --- Encryption ---
     let mut ciphertext_buffer = Vec::new(); // In-memory buffer for encrypted data
-    // Scope for the encrypt_stream to ensure finalize is called via drop or explicitly
+    // The final authenticated frame is written only by explicit finalization.
     {
         let mut writer_cursor = Cursor::new(&mut ciphertext_buffer);
         let mut encrypt_stream = Aes128GcmEncryptStream::new(writer_cursor, &key, aad)?;
@@ -81,7 +67,7 @@ fn streaming_aes128_gcm_example() -> Result<()> {
 
         // Finalize the stream (consumes the encrypt_stream)
         let _ = encrypt_stream.finalize()?;
-    } // encrypt_stream is dropped here, finalize would be called if not done explicitly.
+    }
 
     println!("Total encrypted data size (incl. header & metadata): {} bytes", ciphertext_buffer.len());
 
@@ -114,7 +100,7 @@ fn streaming_aes128_gcm_example() -> Result<()> {
 
 ## Security Considerations
 
--   **Nonce Derivation**: The streaming protocols implemented here derive per-chunk nonces from a single base nonce and an incrementing counter. This ensures that the underlying AEAD primitive (which requires unique nonces per key) is used correctly for each chunk. The base nonce itself must be unique for each overall stream encrypted with the same key.
--   **AAD**: If Associated Data is used, it's applied to each chunk's AEAD operation. This means the same AAD protects all chunks.
+-   **Nonce Derivation**: Each stream gets a random base nonce and random stream identifier. Per-frame nonces are derived from the internally enforced 64-bit sequence number; exhaustion is an error.
+-   **AAD**: Caller AAD (at most 1 MiB) and all framing metadata are authenticated on every frame.
 -   **Error Handling**: `std::io::Error`s from read/write operations are converted to `symmetric::error::Error::Io`. AEAD decryption errors (tag mismatch) will result in `Error::Primitive(PrimitiveError::Authentication { .. })`.
--   **Stream Integrity**: Each chunk is authenticated individually. The end-of-stream marker helps detect premature truncation, but a sophisticated attacker could potentially reorder or remove authenticated chunks if the higher-level application doesn't also protect against this (e.g., by sequencing data or using a manifest).
+-   **Stream Integrity**: The authenticated final-frame flag and strict expected sequence number make truncation, omission, in-stream frame replay, and reordering fail closed. A complete, otherwise valid ciphertext stream can still be replayed to a fresh decryptor. Applications that require whole-object replay protection must bind a unique record or session identifier in caller AAD and track it externally.

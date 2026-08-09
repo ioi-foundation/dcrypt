@@ -21,13 +21,13 @@ fn test_chacha20_constant_time() {
     let warmup_op = || {
         let mut chacha = ChaCha20::new(&key, &nonce);
         let mut buf = data_zeros.clone();
-        chacha.encrypt(&mut buf);
+        chacha.encrypt(&mut buf).unwrap();
     };
 
     let measurement_op = |use_ones: bool| {
         let mut buf = if use_ones { data_ones } else { data_zeros };
         let mut chacha = ChaCha20::new(&key, &nonce);
-        chacha.encrypt(&mut buf);
+        chacha.encrypt(&mut buf).unwrap();
     };
 
     let analysis = tester

@@ -3,17 +3,15 @@
 //!
 //! This module provides a Key Encapsulation Mechanism (KEM) based on the
 //! Elliptic Curve Diffie-Hellman (ECDH) protocol using the secp256k1 curve.
-//! The implementation is secure against timing attacks and follows best practices
-//! for key derivation according to RFC 9180 (HPKE).
+//! This is a dcrypt-specific ECDH-plus-HKDF construction, not RFC 9180 HPKE.
+//! Invalid inputs return errors. No blanket constant-time or IND-CCA claim is
+//! made; arithmetic behavior depends on the backend, compiler, and target.
 //!
 //! This implementation uses compressed point format for optimal bandwidth efficiency.
 //!
-//! # Security Features
-//!
-//! - No direct byte access to keys or secrets (prevents tampering)
-//! - Constant-time operations where applicable
-//! - Proper validation of curve points
-//! - Secure key derivation using HKDF-SHA256
+//! Public points are validated and the shared point is processed with
+//! HKDF-SHA256. Protocols needing HPKE or implicit rejection must use a vetted
+//! implementation of that construction instead.
 
 use crate::error::Error as KemError;
 use dcrypt_algorithms::ec::k256 as ec_k256;

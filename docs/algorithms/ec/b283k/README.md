@@ -1,6 +1,8 @@
 # B283K ('sect283k1') Elliptic Curve
 
-This module provides a constant-time implementation of the `sect283k1` elliptic curve, a Koblitz curve defined over a binary field. The implementation is designed for security, with a focus on preventing timing-based side-channel attacks, making it suitable for cryptographic protocols like Elliptic Curve Diffie-Hellman (ECDH) key exchange.
+This module implements the legacy `sect283k1` binary Koblitz curve. It has not
+received a complete side-channel audit and makes no blanket constant-time or
+protocol-suitability claim.
 
 The `sect283k1` curve is specified by SECG (Standards for Efficient Cryptography Group) and offers a security level of approximately 141 bits.
 
@@ -12,7 +14,7 @@ The `sect283k1` curve is specified by SECG (Standards for Efficient Cryptography
 
 ## Core Features
 
-*   **Constant-Time Implementation**: All cryptographic operations involving secret data, such as scalar multiplication, are designed to execute in constant time, protecting against timing side-channel attacks.
+*   **Timing-aware implementation**: Scalar multiplication uses branch-free selection in relevant paths, but compiler- and target-level behavior is not guaranteed.
 *   **Key Generation**: Provides the `generate_keypair` function to securely create `(private_key, public_key)` pairs suitable for ECDH.
 *   **Scalar Multiplication**: Offers efficient and secure scalar multiplication functions:
     *   `scalar_mult_base_g`: Fixed-base multiplication with the curve's standard generator point (G), used for deriving a public key from a private key.

@@ -1,11 +1,12 @@
 //! NIST P-256 Elliptic Curve Primitives
 //!
-//! This module implements the NIST P-256 elliptic curve operations in constant time.
+//! This module implements NIST P-256 elliptic-curve arithmetic.
 //! The curve equation is y² = x³ - 3x + b over the prime field F_p where:
 //! - p = 2^256 - 2^224 + 2^192 + 2^96 - 1 (NIST P-256 prime)
 //! - The curve order n = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
 //!
-//! All operations are implemented to be constant-time to prevent timing attacks.
+//! Selected paths use fixed-iteration or conditional-selection techniques, but
+//! no blanket constant-time claim is made for the module, compiler, or target.
 //! The implementation uses:
 //! - Montgomery reduction for field arithmetic
 //! - Jacobian projective coordinates for efficient point operations

@@ -1,12 +1,13 @@
 # P-256 ('secp256r1') Elliptic Curve
 
-This module provides a robust, constant-time implementation of the NIST P-256 elliptic curve, also known as `secp256r1` and `prime256v1`. It is one of the most widely used elliptic curves, standardized by NIST in FIPS 186-4, and is commonly found in protocols like TLS, JWTs, and various digital signature schemes.
-
-The implementation prioritizes security, particularly resistance to timing-based side-channel attacks. All cryptographic operations involving secret data, such as scalar multiplication with a private key, are designed to execute in a constant amount of time.
+This module implements the NIST P-256 curve, also known as `secp256r1` and
+`prime256v1`. Conformance of curve parameters does not make this module a
+FIPS-validated implementation. It has not received a complete compiler- and
+target-level side-channel audit.
 
 ## Core Features
 
-*   **Constant-Time Security**: All operations involving secret scalars are implemented to be constant-time, protecting against timing side-channel attacks.
+*   **Timing-aware implementation**: Secret-bearing paths attempt to avoid obvious value-dependent control flow; this is not a whole-operation guarantee.
 *   **Key Generation**: Securely generate P-256 key pairs using `p256::generate_keypair`.
 *   **Scalar Multiplication**: Provides efficient and secure scalar multiplication for core ECC operations:
     *   `scalar_mult_base_g`: Fixed-base multiplication with the standard generator point, used for deriving a public key from a private key.

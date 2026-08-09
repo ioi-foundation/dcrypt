@@ -1,13 +1,15 @@
 //! Poly1305 message authentication code
-//! Pure-Rust limb arithmetic implementation, constant-time throughout.
+//! Pure-Rust branch-free limb arithmetic implementation.
 //!
 //! Implements the algorithm described in RFC 8439.
+//! Branch-free source is not a blanket side-channel proof for every compiler
+//! and target.
 
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 use crate::error::{validate, Result};
-use crate::mac::{Mac, MacAlgorithm};
+use crate::mac::MacAlgorithm;
 use crate::types::Tag;
 use dcrypt_common::security::SecretBuffer;
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
@@ -51,7 +53,7 @@ impl Poly1305 {
         validate::length("Poly1305 key", key.len(), POLY1305_KEY_SIZE)?;
 
         // ---- split & clamp r -------------------------------------------
-        let mut r_bytes = [0u8; 16];
+        let mut r_bytes = Zeroizing::new([0u8; 16]);
         r_bytes.copy_from_slice(&key[..16]);
         r_bytes[3] &= 15;
         r_bytes[7] &= 15;
@@ -61,29 +63,17 @@ impl Poly1305 {
         r_bytes[8] &= 252;
         r_bytes[12] &= 252;
 
-        // Convert to 64-bit values with proper padding for storage
-        let r0 = u64::from_le_bytes(r_bytes[0..8].try_into().unwrap());
-        let r1 = u64::from_le_bytes(r_bytes[8..16].try_into().unwrap());
-        let r2 = 0u64;
-
-        // Create a 24-byte buffer for r (3 * 8 bytes)
-        let mut r_buf = [0u8; 24];
-        r_buf[0..8].copy_from_slice(&r0.to_le_bytes());
-        r_buf[8..16].copy_from_slice(&r1.to_le_bytes());
-        r_buf[16..24].copy_from_slice(&r2.to_le_bytes());
+        // Keep key-derived temporaries inside zeroizing containers.
+        let mut r = SecretBuffer::<24>::zeroed();
+        r.as_mut()[..16].copy_from_slice(r_bytes.as_ref());
 
         // ---- split s ---------------------------------------------------
-        let s0 = u64::from_le_bytes(key[16..24].try_into().unwrap());
-        let s1 = u64::from_le_bytes(key[24..32].try_into().unwrap());
-
-        // Create a 16-byte buffer for s (2 * 8 bytes)
-        let mut s_buf = [0u8; 16];
-        s_buf[0..8].copy_from_slice(&s0.to_le_bytes());
-        s_buf[8..16].copy_from_slice(&s1.to_le_bytes());
+        let mut s = SecretBuffer::<16>::zeroed();
+        s.as_mut().copy_from_slice(&key[16..32]);
 
         Ok(Self {
-            r: SecretBuffer::new(r_buf),
-            s: SecretBuffer::new(s_buf),
+            r,
+            s,
             data: Zeroizing::new(Vec::new()),
         })
     }
@@ -138,10 +128,10 @@ impl Poly1305 {
     pub fn finalize(self) -> Tag<POLY1305_TAG_SIZE> {
         // 1) polynomial evaluation h = Σ (block · r^i)
         let mut h = [0u64; 3];
-        let r = self.get_r(); // Get r values from SecretBuffer
+        let r = Zeroizing::new(self.get_r());
 
         for block in self.data.chunks(16) {
-            let mut buf = [0u8; 16];
+            let mut buf = Zeroizing::new([0u8; 16]);
             buf[..block.len()].copy_from_slice(block);
             let n2 = if block.len() == 16 {
                 1
@@ -160,7 +150,7 @@ impl Poly1305 {
             let (h2a, _) = h[2].overflowing_add(n2);
             let (h2, _) = h2a.overflowing_add(c1);
 
-            h = mul_reduce([h0, h1, h2], r);
+            h = mul_reduce([h0, h1, h2], &r);
         }
 
         // 2) final reduction mod p = 2^130 − 5 (branch-free)
@@ -181,7 +171,7 @@ impl Poly1305 {
         h[2] = (h[2] & !mask) | (g2 & mask);
 
         // 3) add s (mod 2^128)
-        let s = self.get_s(); // Get s values from SecretBuffer
+        let s = Zeroizing::new(self.get_s());
         let (t0, carry0) = h[0].overflowing_add(s[0]);
         let (t1a, _) = h[1].overflowing_add(s[1]);
         let (t1, _) = t1a.overflowing_add(carry0 as u64);
@@ -194,42 +184,9 @@ impl Poly1305 {
 }
 
 /* ---------------------------------------------------------------------- */
-/*                       TRAIT IMPLEMENTATIONS                            */
-/* ---------------------------------------------------------------------- */
-impl Mac for Poly1305 {
-    type Key = [u8; POLY1305_KEY_SIZE];
-    type Tag = Tag<POLY1305_TAG_SIZE>;
-
-    fn new(key: &[u8]) -> Result<Self> {
-        Self::new(key)
-    }
-    fn update(&mut self, data: &[u8]) -> Result<&mut Self> {
-        self.update(data)?;
-        Ok(self)
-    }
-    fn finalize(&mut self) -> Result<Self::Tag> {
-        Ok(self.clone().finalize())
-    }
-    fn reset(&mut self) -> Result<()> {
-        self.data.clear();
-        Ok(())
-    }
-}
-
-impl Clone for Poly1305 {
-    fn clone(&self) -> Self {
-        Self {
-            r: self.r.clone(),
-            s: self.s.clone(),
-            data: self.data.clone(),
-        }
-    }
-}
-
-/* ---------------------------------------------------------------------- */
 /*                SCHOOLBOOK MUL & REDUCE (2^130 − 5)                     */
 /* ---------------------------------------------------------------------- */
-fn mul_reduce(h: [u64; 3], r: [u64; 3]) -> [u64; 3] {
+fn mul_reduce(h: [u64; 3], r: &[u64; 3]) -> [u64; 3] {
     let (h0, h1, h2) = (h[0] as u128, h[1] as u128, h[2] as u128);
     let (r0, r1, r2) = (r[0] as u128, r[1] as u128, r[2] as u128);
 

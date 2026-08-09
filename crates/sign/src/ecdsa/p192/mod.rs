@@ -5,13 +5,14 @@
 //! Using Discrete Logarithm Cryptography. SHA-256 is used as the hash function
 //! as recommended for P-192.
 
-use crate::ecdsa::common::SignatureComponents;
+use crate::ecdsa::common::{is_canonical_nonzero_scalar, is_high_s, SignatureComponents};
 use dcrypt_algorithms::ec::p192 as ec; // Use P-192 algorithms
 use dcrypt_algorithms::hash::sha2::Sha256; // Use Sha256
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
 use dcrypt_internal::constant_time::ct_eq;
+use dcrypt_params::traditional::ecdsa::NIST_P192;
 use rand::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
@@ -143,10 +144,13 @@ impl SignatureTrait for EcdsaP192 {
             let k_inv = k.inv_mod_n().map_err(ApiError::from)?;
             let rd = r.mul_mod_n(&d).map_err(ApiError::from)?;
             let z_plus_rd = z.add_mod_n(&rd).map_err(ApiError::from)?;
-            let s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
+            let mut s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
 
             if s.is_zero() {
                 continue;
+            }
+            if is_high_s(&s.serialize(), &NIST_P192.n) {
+                s = s.negate();
             }
 
             let sig_comps = SignatureComponents {
@@ -179,6 +183,16 @@ impl SignatureTrait for EcdsaP192 {
         r_bytes[r_offset..].copy_from_slice(&sig_comps.r);
         s_bytes[s_offset..].copy_from_slice(&sig_comps.s);
 
+        if !is_canonical_nonzero_scalar(&r_bytes, &NIST_P192.n)
+            || !is_canonical_nonzero_scalar(&s_bytes, &NIST_P192.n)
+        {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P192 verify",
+                #[cfg(feature = "std")]
+                message: "signature components must be canonical integers in [1, n-1]".to_string(),
+            });
+        }
+
         let r = ec::Scalar::new(r_bytes).map_err(|_| ApiError::InvalidSignature {
             context: "ECDSA-P192 verify",
             #[cfg(feature = "std")]
@@ -189,6 +203,13 @@ impl SignatureTrait for EcdsaP192 {
             #[cfg(feature = "std")]
             message: "Invalid s component".to_string(),
         })?;
+        if is_high_s(&s.serialize(), &NIST_P192.n) {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P192 verify",
+                #[cfg(feature = "std")]
+                message: "high-s signatures are non-canonical".to_string(),
+            });
+        }
 
         let mut hasher = Sha256::new(); // Use SHA-256
         hasher.update(message).map_err(ApiError::from)?;

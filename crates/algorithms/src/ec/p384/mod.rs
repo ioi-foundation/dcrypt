@@ -1,11 +1,12 @@
 //! NIST P-384 Elliptic Curve Primitives
 //!
-//! This module implements the NIST P-384 elliptic curve operations in constant time.
+//! This module implements NIST P-384 elliptic-curve arithmetic.
 //! The curve equation is y² = x³ - 3x + b over the prime field F_p where:
 //! - p = 2^384 - 2^128 - 2^96 + 2^32 - 1 (NIST P-384 prime)
 //! - The curve order n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF581A0DB248B0A77AECEC196ACCC52973
 //!
-//! All operations are implemented to be constant-time to prevent timing attacks.
+//! Selected paths use fixed-iteration or conditional-selection techniques, but
+//! no blanket constant-time claim is made for the module, compiler, or target.
 //! The implementation uses:
 //! - Barrett reduction for field arithmetic  
 //! - Jacobian projective coordinates for efficient point operations

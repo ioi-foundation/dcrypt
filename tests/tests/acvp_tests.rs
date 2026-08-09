@@ -500,8 +500,6 @@ fn test_ml_kem_keygen_acvp() {
         .expect("ACVP ML-KEM keyGen tests failed");
 }
 
-// In acvp_tests.rs - Updated ML-DSA tests that should now pass
-
 #[test]
 fn test_ml_dsa_keygen_acvp() {
     let engine = DcryptEngine;
@@ -511,9 +509,6 @@ fn test_ml_dsa_keygen_acvp() {
     let r = Runner::new(&engine);
 
     println!("Running ACVP test suite: ML-DSA-keyGen-FIPS204");
-    println!("Note: Using compatibility layer to handle ACVP's reduced SK format");
-
-    // With the updated handler, these tests should now pass
     r.run_suite(&suite)
         .expect("ACVP ML-DSA KeyGen tests failed");
 }
@@ -527,9 +522,6 @@ fn test_ml_dsa_siggen_acvp() {
     let r = Runner::new(&engine);
 
     println!("Running ACVP test suite: ML-DSA-sigGen-FIPS204");
-    println!("Note: Recomputing tr component when ACVP provides reduced SK format");
-
-    // With tr recomputation, these tests should now pass
     r.run_suite(&suite)
         .expect("ACVP ML-DSA SigGen tests failed");
 }
@@ -543,9 +535,6 @@ fn test_ml_dsa_sigver_acvp() {
     let r = Runner::new(&engine);
 
     println!("Running ACVP test suite: ML-DSA-sigVer-FIPS204");
-    println!("Note: Handling missing message fields by using empty messages");
-
-    // Signature verification with proper message handling should pass
     r.run_suite(&suite)
         .expect("ACVP ML-DSA SigVer tests failed");
 }

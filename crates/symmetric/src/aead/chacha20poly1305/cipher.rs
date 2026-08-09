@@ -149,7 +149,12 @@ impl ChaCha20Poly1305Cipher {
     }
 }
 
-/// XChaCha20Poly1305 authenticated encryption with extended 24-byte nonce
+/// Standard XChaCha20-Poly1305 authenticated encryption with a 24-byte nonce.
+///
+/// It intentionally rejects the nonstandard construction emitted under the
+/// same name by the affected legacy implementation (confirmed in dcrypt
+/// v1.2.3). Legacy data requires an isolated
+/// decrypt-only migration tool.
 pub struct XChaCha20Poly1305Cipher {
     cipher: XChaCha20Poly1305,
 }

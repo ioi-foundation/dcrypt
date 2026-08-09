@@ -2,7 +2,11 @@
 
 ## Overview
 
-This module provides a constant-time, secure implementation of the AES-GCM (Advanced Encryption Standard in Galois/Counter Mode) authenticated encryption with associated data (AEAD) cipher. AES-GCM is a widely-used, high-performance AEAD mode specified in **NIST Special Publication 800-38D**.
+This module provides an implementation of AES-GCM (Advanced Encryption
+Standard in Galois/Counter Mode), the authenticated encryption with associated
+data (AEAD) mode specified in **NIST Special Publication 800-38D**. It is tested
+against known-answer data; this is not a FIPS validation or blanket side-channel
+claim.
 
 It combines the AES block cipher operating in Counter (CTR) mode for encryption with the GHASH function for authentication, providing strong guarantees of both **confidentiality** and **authenticity**.
 
@@ -13,16 +17,16 @@ It combines the AES block cipher operating in Counter (CTR) mode for encryption 
     *   `Gcm<Aes128>`
     *   `Gcm<Aes192>`
     *   `Gcm<Aes256>`
-*   **NIST Compliance:** The implementation is validated against the official NIST Cryptographic Algorithm Validation Program (CAVP) test vectors to ensure correctness and interoperability.
-*   **Flexible Nonce Size:** While optimized for the standard 96-bit (12-byte) nonce, the implementation correctly handles other nonce lengths as specified by NIST SP 800-38D.
-*   **Variable Tag Length:** Supports customizable authentication tag lengths, though the full 128-bit (16-byte) tag is recommended for maximum security.
+*   **NIST vectors:** Supported tag/IV combinations are tested against NIST CAVP/ACVP known-answer data for correctness and interoperability.
+*   **Supported Nonce Sizes:** The public nonce types support 96-, 120-, and 128-bit (12-, 15-, and 16-byte) IVs. The non-96-bit `J0` derivation follows NIST SP 800-38D; arbitrary IV lengths are not exposed by this API.
+*   **Safe Tag Lengths:** Uses a 128-bit (16-byte) tag by default. The compatibility constructor permits only 96- through 128-bit tags (12 through 16 bytes).
 
 ## Security
 
 Security is the primary design consideration for this implementation.
 
-*   **Constant-Time Execution:** The core cryptographic operations, especially the GHASH multiplication and the final tag comparison, are implemented to be constant-time. Tag verification uses `subtle::ConstantTimeEq` to prevent timing side-channel attacks that could leak information about the tag's validity.
-*   **Secure Memory Handling:** The internal GHASH key (`H`) and the AES round keys are stored in a `SecretBuffer`, which ensures they are securely zeroed from memory when no longer in use, preventing accidental key leakage.
+*   **Tag comparison:** Equal-length tag bytes use `subtle::ConstantTimeEq`; public length and error paths use ordinary branching. Target-specific analysis remains required for broader timing claims.
+*   **Memory hygiene:** Owned GHASH and AES key state use zeroization. This does not guarantee erasure of caller, compiler, register, or allocator copies.
 *   **Robust API:** The API is designed around the `SymmetricCipher` trait, using a builder pattern that guides the user to provide all necessary components (like the nonce) before an operation can be executed, reducing the risk of misuse.
 
 ## Usage
@@ -48,7 +52,7 @@ let associated_data = b"unencrypted but authenticated metadata";
 let aes_encrypt = Aes128::new(&key);
 
 // 3. Create the GCM instance for encryption.
-let gcm_encrypt = Gcm::new(aes_encrypt, &nonce).unwrap();
+let gcm_encrypt = Gcm::new(aes_encrypt).unwrap();
 
 // 4. Encrypt the data using the builder pattern.
 // The `encrypt()` method on the SymmetricCipher trait returns an EncryptOperation builder.
@@ -64,7 +68,7 @@ println!("AES-GCM Ciphertext (hex): {}", hex::encode(ciphertext_obj.as_ref()));
 
 // 5. For decryption, create a new cipher instance.
 let aes_decrypt = Aes128::new(&key);
-let gcm_decrypt = Gcm::new(aes_decrypt, &nonce).unwrap();
+let gcm_decrypt = Gcm::new(aes_decrypt).unwrap();
 
 // 6. Decrypt the data. This will fail if the ciphertext or AAD was tampered with.
 let decrypted_payload = gcm_decrypt
@@ -86,15 +90,11 @@ println!("Decryption successful and data verified!");
 
 #### Tag Length
 
-While this implementation supports tag lengths from 1 to 16 bytes via `Gcm::new_with_tag_len`, the full 16-byte (128-bit) tag is strongly recommended. Using shorter tags significantly reduces the security against forgery attacks and should only be done if required by a specific protocol or for performance-critical applications where the security trade-off is acceptable.
+`Gcm::new` always uses a full 16-byte (128-bit) tag. `Gcm::new_with_tag_len` exists for protocol compatibility and accepts only 12 through 16 bytes; shorter tags are rejected. Prefer the default 16-byte tag for new protocols.
 
 ## `no_std` Support
 
-This module is compatible with `no_std` environments but requires an allocator. To use it in a `no_std` project, enable the `alloc` and `aead` features in your `Cargo.toml`.
-
-```toml
-[dependencies.dcrypt-algorithms]
-version = "0.12.0-beta.1"
-default-features = false
-features = ["alloc", "aead"]
-```
+The current workspace does not claim a validated standalone `no_std` GCM build.
+The feature surface is being retained for future repair; use the tested `std`
+configuration unless the exact target/feature combination is independently
+made to compile and reviewed.

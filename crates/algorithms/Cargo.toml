@@ -57,15 +57,16 @@ pairing-debug = []
 
 [dependencies]
 # Internal dependencies
-dcrypt-api = { path = "../api", version = "=1.2.3", default-features = false }
-dcrypt-common = { path = "../common", version = "=1.2.3", default-features = false }
-dcrypt-internal = { path = "../internal", version = "=1.2.3", default-features = false }
-dcrypt-params = { path = "../params", version = "=1.2.3" }
+dcrypt-api = { path = "../api", version = "=2.0.0-alpha.1", default-features = false }
+dcrypt-common = { path = "../common", version = "=2.0.0-alpha.1", default-features = false }
+dcrypt-internal = { path = "../internal", version = "=2.0.0-alpha.1", default-features = false }
+dcrypt-params = { path = "../params", version = "=2.0.0-alpha.1" }
 
 # Core cryptographic dependencies
 zeroize = { version = "1.5.7", features = ["zeroize_derive"], optional = true }
 subtle = { version = "2.6.1", default-features = false }
 byteorder = { version = "1.4.3", default-features = false }
+chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["alloc"] }
 
 # Encoding/serialization
 hex = { version = "0.4.3", default-features = false }
@@ -75,7 +76,7 @@ serde = { version = "1.0.189", features = ["derive"], optional = true }
 serde_json = { version = "1.0.107", optional = true }
 
 # Random number generation
-rand = { version = "0.8.5", default-features = false }
+rand = { version = "0.8.6", default-features = false }
 rand_core = { version = "0.6.4", default-features = false }
 getrandom = { version = "0.2.15", default-features = false, optional = true, features = ["custom"] }
 
@@ -89,7 +90,7 @@ rand_chacha = { version = "0.3.1", default-features = false }
 criterion = { version = "0.5", features = ["html_reports"] }
 serde = { version = "1.0.189", features = ["derive"] }
 serde_json = "1.0.107"
-rand = { version = "0.8.5", features = ["std", "std_rng"] }
+rand = { version = "0.8.6", features = ["std", "std_rng"] }
 rand_chacha = "0.3.1"
 
 [[bench]]

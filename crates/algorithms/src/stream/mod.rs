@@ -65,13 +65,11 @@ impl StreamCipher for ChaCha20 {
     const BLOCK_SIZE: usize = CHACHA20_BLOCK_SIZE;
 
     fn process(&mut self, data: &mut [u8]) -> Result<()> {
-        self.process(data);
-        Ok(())
+        ChaCha20::process(self, data)
     }
 
     fn keystream(&mut self, output: &mut [u8]) -> Result<()> {
-        self.keystream(output);
-        Ok(())
+        ChaCha20::keystream(self, output)
     }
 
     fn reset(&mut self) -> Result<()> {
@@ -87,7 +85,6 @@ impl StreamCipher for ChaCha20 {
                 "ChaCha20 seek position must fit in u32",
             ));
         }
-        self.seek(position as u32);
-        Ok(())
+        ChaCha20::seek(self, position as u32)
     }
 }

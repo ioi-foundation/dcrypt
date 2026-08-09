@@ -6,6 +6,8 @@ This module provides an implementation of the **XChaCha20-Poly1305** Authenticat
 
 Like its predecessor, XChaCha20-Poly1305 provides strong confidentiality and integrity for encrypted messages.
 
+> **Migration note:** dcrypt v1.2.3 is confirmed to emit a nonstandard custom construction under this name; the exact earlier introduced-version range is under investigation. This implementation follows standard XChaCha20-Poly1305 and intentionally does not accept those legacy ciphertexts. Existing data must be migrated with a separately isolated copy of the legacy decryptor; it must not be relabeled as standard XChaCha20-Poly1305.
+
 ## The Nonce Advantage: Why Use XChaCha20?
 
 The primary motivation for XChaCha20 is its use of a large **24-byte (192-bit) nonce**. This is a significant advantage over the 12-byte (96-bit) nonce used by the standard ChaCha20-Poly1305.
@@ -23,45 +25,39 @@ This makes XChaCha20 an excellent choice for systems where managing a sequential
 ## Security Considerations
 
 *   **Nonce Safety:** The primary security advantage of this algorithm is its large nonce size, which makes random nonce generation a safe practice. **However, it is still a critical violation to ever reuse a (key, nonce) pair.**
-*   **Constant-Time Execution:** The underlying `ChaCha20Poly1305` implementation performs tag verification in constant time to mitigate timing side-channel attacks.
-*   **Secure Memory:** Keys and intermediate cryptographic state are handled using secure buffers that are zeroed from memory on drop, preventing accidental leakage of sensitive information.
+*   **Vetted Implementation:** Encryption and verification are delegated to RustCrypto's standard `chacha20poly1305` implementation.
+*   **Memory Hygiene:** The adapter's owned key buffer is zeroized on drop. This does not erase caller, compiler, register, or allocator copies.
 *   **Cryptography:** The cryptographic core of this algorithm is based on the well-vetted ChaCha20 stream cipher and the Poly1305 message authentication code.
 
 ## Usage
 
-The API for `XChaCha20Poly1305` is consistent with other AEAD ciphers in the `dcrypt` ecosystem and implements the `SymmetricCipher` trait.
+The low-level API accepts an explicit 24-byte nonce on each encryption and decryption call.
 
 ### Example: Encrypting and Decrypting Data
 
 ```rust
 use dcrypt::algorithms::aead::xchacha20poly1305::XChaCha20Poly1305;
-use dcrypt::algorithms::types::{Nonce, SecretBytes};
-use dcrypt::api::traits::SymmetricCipher;
-use dcrypt::api::traits::symmetric::{EncryptOperation, DecryptOperation};
+use dcrypt::algorithms::types::Nonce;
 
 // 1. Setup the key, a 24-byte nonce, and plaintext.
-let key = SecretBytes::new([42u8; 32]);
+let key = [42u8; 32];
 let nonce = Nonce::<24>::new([1u8; 24]); // Note the 24-byte size
 let plaintext = b"a secret message with an extended nonce";
 let associated_data = b"authenticated but not encrypted metadata";
 
 // 2. Create the XChaCha20-Poly1305 instance.
-let cipher = XChaCha20Poly1305::new(key.as_ref());
+let cipher = XChaCha20Poly1305::new(&key);
 
-// 3. Encrypt the data using the builder pattern.
-let ciphertext_obj = cipher.encrypt()
-    .with_nonce(&nonce)
-    .with_aad(associated_data)
-    .encrypt(plaintext)
+// 3. Encrypt with an explicit nonce and AAD.
+let ciphertext = cipher
+    .encrypt(&nonce, plaintext, Some(associated_data))
     .unwrap();
 
-println!("XChaCha20-Poly1305 Ciphertext: {}", hex::encode(ciphertext_obj.as_ref()));
+println!("XChaCha20-Poly1305 Ciphertext: {}", hex::encode(&ciphertext));
 
 // 4. Decrypt the data.
-let decrypted_payload = cipher.decrypt()
-    .with_nonce(&nonce)
-    .with_aad(associated_data)
-    .decrypt(&ciphertext_obj)
+let decrypted_payload = cipher
+    .decrypt(&nonce, &ciphertext, Some(associated_data))
     .unwrap();
 
 assert_eq!(decrypted_payload, plaintext);
@@ -72,11 +68,11 @@ println!("XChaCha20-Poly1305 Decryption successful!");
 
 *   **`XChaCha20Poly1305`**: The main struct representing the XChaCha20-Poly1305 cipher.
     *   `new(key: &[u8; 32]) -> Self`: Creates a new instance with the given 32-byte key.
-    *   Implements the `SymmetricCipher` and `AuthenticatedCipher` traits, providing the standard `.encrypt()` and `.decrypt()` builder methods.
+    *   Provides `.encrypt(&nonce, plaintext, aad)` and `.decrypt(&nonce, ciphertext, aad)` methods and implements `AuthenticatedCipher`.
 
 ## Relationship to ChaCha20-Poly1305
 
-This implementation is a wrapper around the core `ChaCha20Poly1305` primitive. It works as follows:
+The vetted implementation follows the standard construction:
 
 1.  The **HChaCha20** function is used to derive a unique 32-byte subkey from the original key and the first 16 bytes of the 24-byte nonce.
 2.  This subkey is then used to initialize a standard `ChaCha20Poly1305` instance.
@@ -88,11 +84,6 @@ Performance is nearly identical to `ChaCha20Poly1305`, with a very small, fixed 
 
 ## `no_std` Support
 
-This module is compatible with `no_std` environments but requires an allocator (`alloc` feature). To use it, enable the `aead` feature flag in your `Cargo.toml`.
-
-```toml
-[dependencies.dcrypt-algorithms]
-version = "0.12.0-beta.1"
-default-features = false
-features = ["alloc", "aead"]
-```
+The current workspace does not claim a validated standalone `no_std` build for
+this adapter. Validate the exact backend, target, and feature combination before
+embedding it outside the tested `std` configuration.

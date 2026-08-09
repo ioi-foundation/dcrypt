@@ -2,6 +2,33 @@
 
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult};
 
+/// Return true when a canonical big-endian scalar lies above `order / 2`.
+///
+/// ECDSA admits both `(r, s)` and `(r, n - s)`. Requiring the lower half of
+/// the scalar range gives signatures a unique representation.
+pub(crate) fn is_high_s(s: &[u8], order: &[u8]) -> bool {
+    if s.len() != order.len() {
+        return true;
+    }
+    let mut carry = 0u8;
+    for (&scalar_byte, &order_byte) in s.iter().zip(order) {
+        let half_order_byte = (order_byte >> 1) | (carry << 7);
+        let next_carry = order_byte & 1;
+        if scalar_byte != half_order_byte {
+            return scalar_byte > half_order_byte;
+        }
+        carry = next_carry;
+    }
+    false
+}
+
+/// Return true only for a fixed-width, non-zero scalar strictly below the
+/// curve order. DER signature components are integers, not values to be
+/// silently reduced modulo the order.
+pub(crate) fn is_canonical_nonzero_scalar(value: &[u8], order: &[u8]) -> bool {
+    value.len() == order.len() && value.iter().any(|&byte| byte != 0) && value < order
+}
+
 /// ECDSA signature components (r, s)
 #[derive(Clone, Debug)]
 pub struct SignatureComponents {
@@ -247,6 +274,17 @@ impl SignatureComponents {
                 message: format!("Truncated DER INTEGER {name}"),
             })?;
 
+        // ECDSA components are non-negative ASN.1 INTEGERs. Interpreting a
+        // negative two's-complement INTEGER as an unsigned magnitude creates
+        // multiple accepted encodings for the same mathematical value.
+        if value[0] & 0x80 != 0 {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA DER parsing",
+                #[cfg(feature = "std")]
+                message: format!("DER INTEGER {name} must not be negative"),
+            });
+        }
+
         if value.len() > 1 && value[0] == 0x00 && value[1] & 0x80 == 0 {
             return Err(ApiError::InvalidSignature {
                 context: "ECDSA DER parsing",
@@ -263,6 +301,16 @@ impl SignatureComponents {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn canonical_scalar_check_rejects_zero_order_and_larger_values() {
+        let order = [0x01, 0x00];
+        assert!(is_canonical_nonzero_scalar(&[0x00, 0xff], &order));
+        assert!(!is_canonical_nonzero_scalar(&[0x00, 0x00], &order));
+        assert!(!is_canonical_nonzero_scalar(&order, &order));
+        assert!(!is_canonical_nonzero_scalar(&[0x01, 0x01], &order));
+        assert!(!is_canonical_nonzero_scalar(&[0xff], &order));
+    }
 
     #[test]
     fn test_der_encoding() {
@@ -325,5 +373,13 @@ mod tests {
     fn test_der_rejects_trailing_bytes() {
         let der = [0x30, 0x08, 0x02, 0x01, 0x01, 0x02, 0x01, 0x01, 0x00, 0x00];
         assert!(SignatureComponents::from_der(&der).is_err());
+    }
+
+    #[test]
+    fn test_der_rejects_negative_integers() {
+        let negative_r = [0x30, 0x06, 0x02, 0x01, 0x80, 0x02, 0x01, 0x01];
+        let negative_s = [0x30, 0x06, 0x02, 0x01, 0x01, 0x02, 0x01, 0xff];
+        assert!(SignatureComponents::from_der(&negative_r).is_err());
+        assert!(SignatureComponents::from_der(&negative_s).is_err());
     }
 }

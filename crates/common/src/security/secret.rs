@@ -1,7 +1,8 @@
-//! Secret data types with guaranteed zeroization
+//! Secret data types that invoke zeroization for owned storage
 //!
 //! This module provides type-safe wrappers for sensitive data that ensure
-//! proper cleanup and zeroization when the data is no longer needed.
+//! cleanup and zeroization when the data is no longer needed. Software
+//! zeroization cannot erase caller, compiler/register, or already-freed copies.
 
 use core::convert::{AsMut, AsRef};
 use core::fmt;
@@ -103,30 +104,35 @@ impl<const N: usize> fmt::Debug for SecretBuffer<N> {
     }
 }
 
-/// Variable-size secret vector that guarantees zeroization
+/// Variable-size secret vector that wipes storage it owns
 ///
 /// This type provides:
 /// - Automatic zeroization on drop
 /// - Secure cloning that preserves security properties
 /// - Dynamic sizing with secure memory management
 #[cfg(feature = "alloc")]
-#[derive(Clone, Zeroize, ZeroizeOnDrop)]
+#[derive(Zeroize, ZeroizeOnDrop)]
 pub struct SecretVec {
     data: Vec<u8>,
 }
 
 #[cfg(feature = "alloc")]
 impl SecretVec {
-    /// Create a new secret vector with the given data
-    pub fn new(data: Vec<u8>) -> Self {
+    /// Create a new secret vector with the given data.
+    ///
+    /// The current allocation and its spare capacity become protected by this
+    /// type. Allocations the caller freed before passing this `Vec` cannot be
+    /// recovered or retroactively wiped.
+    pub fn new(mut data: Vec<u8>) -> Self {
+        // A Vec supplied by a caller may previously have been truncated. Wipe
+        // its unused allocation before accepting responsibility for it.
+        Self::zeroize_spare_capacity(&mut data);
         Self { data }
     }
 
     /// Create a secret vector from a slice
     pub fn from_slice(slice: &[u8]) -> Self {
-        Self {
-            data: slice.to_vec(),
-        }
+        Self::new(slice.to_vec())
     }
 
     /// Create an empty secret vector
@@ -136,9 +142,9 @@ impl SecretVec {
 
     /// Create a secret vector with the specified capacity
     pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            data: Vec::with_capacity(capacity),
-        }
+        let mut data = Vec::with_capacity(capacity);
+        Self::zeroize_spare_capacity(&mut data);
+        Self { data }
     }
 
     /// Get the length of the vector
@@ -161,19 +167,118 @@ impl SecretVec {
         &mut self.data
     }
 
+    /// Get the allocation capacity.
+    pub fn capacity(&self) -> usize {
+        self.data.capacity()
+    }
+
     /// Extend the vector with additional data
     pub fn extend_from_slice(&mut self, slice: &[u8]) {
+        self.ensure_additional_capacity(slice.len());
         self.data.extend_from_slice(slice);
     }
 
     /// Resize the vector to the specified length
     pub fn resize(&mut self, new_len: usize, value: u8) {
+        if new_len <= self.data.len() {
+            self.truncate(new_len);
+            return;
+        }
+
+        self.ensure_additional_capacity(new_len - self.data.len());
         self.data.resize(new_len, value);
     }
 
     /// Truncate the vector to the specified length
     pub fn truncate(&mut self, len: usize) {
+        if len >= self.data.len() {
+            return;
+        }
+
+        self.data[len..].zeroize();
         self.data.truncate(len);
+    }
+
+    /// Remove all bytes while retaining a fully zeroed allocation.
+    pub fn clear(&mut self) {
+        self.data.zeroize();
+    }
+
+    /// Append one byte, securely replacing the allocation when it is full.
+    pub fn push(&mut self, value: u8) {
+        self.ensure_additional_capacity(1);
+        self.data.push(value);
+    }
+
+    /// Remove and return the last byte, wiping its allocation slot first.
+    pub fn pop(&mut self) -> Option<u8> {
+        let value = self.data.last().copied()?;
+        let new_len = self.data.len() - 1;
+        self.data[new_len].zeroize();
+        self.data.truncate(new_len);
+        Some(value)
+    }
+
+    /// Reserve room for at least `additional` more bytes.
+    ///
+    /// Unlike `Vec::reserve`, this never asks the allocator to resize the live
+    /// secret allocation. It copies into a new allocation and wipes the old
+    /// allocation before releasing it.
+    pub fn reserve(&mut self, additional: usize) {
+        self.ensure_additional_capacity(additional);
+    }
+
+    /// Reduce capacity to the current length while wiping the old allocation.
+    pub fn shrink_to_fit(&mut self) {
+        if self.data.capacity() > self.data.len() {
+            self.secure_reallocate(self.data.len());
+        }
+    }
+
+    fn ensure_additional_capacity(&mut self, additional: usize) {
+        let required = self
+            .data
+            .len()
+            .checked_add(additional)
+            .expect("SecretVec capacity overflow");
+
+        if required > self.data.capacity() {
+            self.secure_reallocate(required);
+        }
+    }
+
+    fn secure_reallocate(&mut self, capacity: usize) {
+        debug_assert!(capacity >= self.data.len());
+
+        let mut replacement = Vec::with_capacity(capacity);
+        replacement.extend_from_slice(&self.data);
+        Self::zeroize_spare_capacity(&mut replacement);
+
+        // zeroize() wipes both initialized elements and the entire spare
+        // capacity before clearing the Vec. Only then is the allocation freed.
+        self.data.zeroize();
+        #[cfg(test)]
+        assert!(Self::allocation_is_zeroed(&self.data));
+        self.data = replacement;
+    }
+
+    fn zeroize_spare_capacity(data: &mut Vec<u8>) {
+        data.spare_capacity_mut().zeroize();
+    }
+
+    #[cfg(test)]
+    fn allocation_is_zeroed(data: &Vec<u8>) -> bool {
+        // Callers use this only after Vec::zeroize(), which initializes the
+        // entire allocation with zero bytes and sets len to zero.
+        let allocation = unsafe { core::slice::from_raw_parts(data.as_ptr(), data.capacity()) };
+        allocation.iter().all(|byte| *byte == 0)
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl Clone for SecretVec {
+    fn clone(&self) -> Self {
+        Self::from_slice(&self.data)
     }
 }
 
@@ -184,7 +289,7 @@ impl SecureZeroingType for SecretVec {
     }
 
     fn secure_clone(&self) -> Self {
-        Self::new(self.data.clone())
+        self.clone()
     }
 }
 
@@ -331,6 +436,9 @@ impl<T: Zeroize> DerefMut for ZeroizeGuard<'_, T> {
 mod tests {
     use super::*;
 
+    #[cfg(all(not(feature = "std"), feature = "alloc"))]
+    use alloc::vec;
+
     #[test]
     fn test_secret_buffer_basic() {
         let mut buffer = SecretBuffer::<32>::new([42u8; 32]);
@@ -373,6 +481,76 @@ mod tests {
         // Test resize
         vec.resize(5, 0xFF);
         assert_eq!(vec.as_slice(), &[1, 2, 3, 0xFF, 0xFF]);
+    }
+
+    #[cfg(feature = "alloc")]
+    fn assert_secret_vec_spare_capacity_is_zero(vec: &SecretVec) {
+        // SecretVec initializes every spare-capacity byte on construction and
+        // after each operation that can change the allocation.
+        let spare = unsafe {
+            core::slice::from_raw_parts(
+                vec.data.as_ptr().add(vec.data.len()),
+                vec.data.capacity() - vec.data.len(),
+            )
+        };
+        assert!(spare.iter().all(|byte| *byte == 0));
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn secret_vec_wipes_preexisting_unused_capacity() {
+        let mut raw = vec![0xA5; 64];
+        raw.truncate(4);
+        let secret = SecretVec::new(raw);
+
+        assert_eq!(secret.as_slice(), &[0xA5; 4]);
+        assert_secret_vec_spare_capacity_is_zero(&secret);
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn secret_vec_wipes_bytes_removed_by_truncate_resize_clear_and_pop() {
+        let mut secret = SecretVec::from_slice(&[1, 2, 3, 4, 5, 6]);
+
+        secret.truncate(4);
+        assert_eq!(secret.as_slice(), &[1, 2, 3, 4]);
+        assert_secret_vec_spare_capacity_is_zero(&secret);
+
+        secret.resize(2, 0xFF);
+        assert_eq!(secret.as_slice(), &[1, 2]);
+        assert_secret_vec_spare_capacity_is_zero(&secret);
+
+        assert_eq!(secret.pop(), Some(2));
+        assert_eq!(secret.as_slice(), &[1]);
+        assert_secret_vec_spare_capacity_is_zero(&secret);
+
+        secret.clear();
+        assert!(secret.is_empty());
+        assert_secret_vec_spare_capacity_is_zero(&secret);
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn secret_vec_growth_and_shrink_replace_allocations_securely() {
+        let mut raw = Vec::with_capacity(4);
+        raw.extend_from_slice(&[0x11; 4]);
+        let mut secret = SecretVec::new(raw);
+        let initial_capacity = secret.capacity();
+
+        // This exercises secure_reallocate; its test assertion observes the
+        // old allocation after zeroization and before deallocation.
+        secret.extend_from_slice(&[0x22, 0x33]);
+        assert!(secret.capacity() > initial_capacity);
+        assert_eq!(secret.as_slice(), &[0x11, 0x11, 0x11, 0x11, 0x22, 0x33]);
+        assert_secret_vec_spare_capacity_is_zero(&secret);
+
+        secret.reserve(32);
+        assert!(secret.capacity() >= secret.len() + 32);
+        assert_secret_vec_spare_capacity_is_zero(&secret);
+
+        secret.shrink_to_fit();
+        assert_eq!(secret.capacity(), secret.len());
+        assert_eq!(secret.as_slice(), &[0x11, 0x11, 0x11, 0x11, 0x22, 0x33]);
     }
 
     #[test]

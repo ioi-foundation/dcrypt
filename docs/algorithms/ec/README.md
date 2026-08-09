@@ -1,8 +1,14 @@
 # Elliptic Curve Cryptography Primitives
 
-This module provides robust, constant-time implementations of various standard elliptic curves. It serves as the foundation for Elliptic Curve Cryptography (ECC) within the `dcrypt` library, enabling operations like key generation, scalar multiplication, and Elliptic Curve Diffie-Hellman (ECDH) key exchange.
+This module provides low-level implementations of several elliptic curves. It
+serves as a foundation for key generation, scalar multiplication, and ECDH-like
+constructions within dcrypt.
 
-The primary focus is on security, particularly resistance to timing-based side-channel attacks. All cryptographic operations involving secret data are designed to execute in constant time.
+Timing behavior is implementation-, compiler-, and target-specific. Some
+individual operations use branch-free selection, but this module has not passed
+a complete dudect/ctgrind review and makes no blanket constant-time or
+production-safety claim. Prefer independently audited protocol implementations
+for new deployments.
 
 ## Supported Curves
 
@@ -23,7 +29,7 @@ The `ec` module offers a wide range of standard curves to suit different securit
 
 ## Core Features
 
-*   **Constant-Time Implementation**: All scalar multiplications and other operations involving private keys are implemented using constant-time algorithms to mitigate timing side-channel vulnerabilities.
+*   **Timing-aware implementation**: Secret-bearing paths attempt to avoid obvious value-dependent branches. Treat that as a design property, not a verified whole-operation guarantee.
 *   **Key Generation**: Securely generate public/private key pairs for any supported curve using `generate_keypair`. This function uses a cryptographically secure random number generator to create a private key (a scalar) and then computes the corresponding public key (a point on the curve).
 *   **Scalar Multiplication**: Provides efficient and secure scalar multiplication:
     *   `scalar_mult_base_g`: Fixed-base multiplication with the curve's standard generator point, ideal for public key derivation.

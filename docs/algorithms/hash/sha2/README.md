@@ -6,7 +6,8 @@ This module provides a comprehensive suite of SHA-2 (Secure Hash Algorithm 2) ha
 
 The SHA-2 family consists of six hash functions with varying digest sizes. They are a fundamental component of modern cryptography, used in digital signatures, message authentication codes, and a wide range of other security protocols.
 
-This implementation provides all standard SHA-2 variants and is designed for high-assurance applications where security is paramount.
+This implementation provides the documented SHA-2 variants and known-answer
+tests. That coverage is a correctness check, not a high-assurance certification.
 
 ## Features
 

@@ -32,6 +32,15 @@ pub const CHACHA20POLY1305_KEY_SIZE: usize = CHACHA20_KEY_SIZE;
 pub const CHACHA20POLY1305_NONCE_SIZE: usize = CHACHA20_NONCE_SIZE;
 /// Size of the authentication tag produced by ChaCha20Poly1305 in bytes
 pub const CHACHA20POLY1305_TAG_SIZE: usize = POLY1305_TAG_SIZE;
+const CHACHA20POLY1305_MAX_DATA_BYTES: u128 = (u32::MAX as u128) * 64;
+
+fn validate_data_length(data_len: usize) -> Result<()> {
+    validate::parameter(
+        (data_len as u128) <= CHACHA20POLY1305_MAX_DATA_BYTES,
+        "message_length",
+        "ChaCha20Poly1305 message would wrap the block counter",
+    )
+}
 
 /// ChaCha20-Poly1305 AEAD
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
@@ -75,7 +84,10 @@ impl ChaCha20Poly1305 {
 
         let mut chacha = ChaCha20::new(key_array, &nonce_obj);
         let mut poly_key = [0u8; POLY1305_KEY_SIZE];
-        chacha.keystream(&mut poly_key);
+        // A 32-byte request cannot exhaust a freshly-created counter-0 stream.
+        chacha
+            .keystream(&mut poly_key)
+            .expect("fresh ChaCha20 counter has capacity for one block");
         poly_key
     }
 
@@ -101,10 +113,21 @@ impl ChaCha20Poly1305 {
         plaintext: &[u8],
         aad: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
+        // RFC 8439 data encryption starts at counter 1. Reject any message
+        // that would consume counter 0 again, before allocating output.
+        validate_data_length(plaintext.len())?;
+        let output_len =
+            plaintext
+                .len()
+                .checked_add(POLY1305_TAG_SIZE)
+                .ok_or(Error::Processing {
+                    operation: "ChaCha20Poly1305 encryption",
+                    details: "ciphertext length overflow",
+                })?;
         let poly_key = self.poly1305_key(nonce);
 
         // ciphertext || tag
-        let mut ct_buf = Vec::with_capacity(plaintext.len() + POLY1305_TAG_SIZE);
+        let mut ct_buf = Vec::with_capacity(output_len);
 
         // --- encryption ----------------------------------------------------
         ct_buf.extend_from_slice(plaintext);
@@ -120,7 +143,7 @@ impl ChaCha20Poly1305 {
             .try_into()
             .expect("SecretBuffer has correct size");
 
-        ChaCha20::with_counter(key_array, &nonce_obj, 1).encrypt(&mut ct_buf);
+        ChaCha20::with_counter(key_array, &nonce_obj, 1).encrypt(&mut ct_buf)?;
 
         // --- tag -----------------------------------------------------------
         let tag = self.calculate_tag_ct(&poly_key, aad, &ct_buf)?;
@@ -162,6 +185,7 @@ impl ChaCha20Poly1305 {
 
         let ct_len = ciphertext.len() - POLY1305_TAG_SIZE;
         let (encrypted, tag) = ciphertext.split_at(ct_len);
+        validate_data_length(encrypted.len())?;
 
         // -------- one-time key & expected tag ------------------------------
         let poly_key = self.poly1305_key(nonce);
@@ -183,7 +207,7 @@ impl ChaCha20Poly1305 {
             .try_into()
             .expect("SecretBuffer has correct size");
 
-        ChaCha20::with_counter(key_array, &nonce_obj, 1).decrypt(&mut m);
+        ChaCha20::with_counter(key_array, &nonce_obj, 1).decrypt(&mut m)?;
 
         // -------- constant-time post-processing ----------------------------
         // mask = 0xFF when tag_ok == 1, else 0x00

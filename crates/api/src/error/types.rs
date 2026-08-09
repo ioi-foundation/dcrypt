@@ -1,7 +1,5 @@
 //! Error type definitions for cryptographic operations
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 #[cfg(feature = "std")]
 use std::string::String;
 

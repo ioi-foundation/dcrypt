@@ -20,6 +20,12 @@ The primary AEAD schemes exposed through this module are:
     *   Includes `ChaCha20Poly1305CiphertextPackage` for bundling nonce and ciphertext.
     *   Offers key derivation (`derive_chacha20poly1305_key`) and salt generation utilities.
 
+    The XChaCha adapter now uses the standard HChaCha20 construction. Published
+    dcrypt v1.2.3 is confirmed to emit a different, nonstandard format under the
+    same name; the exact earlier introduced-version range is under investigation.
+    The current API intentionally rejects that legacy ciphertext.
+    Migration requires a separately isolated decrypt-only legacy tool.
+
 2.  **AES-GCM (`gcm`)**:
     *   Wraps `algorithms::aead::gcm::Gcm` instantiated with AES block ciphers (`algorithms::block::aes::Aes128` or `Aes256`).
     *   Provides `Aes128Gcm` and `Aes256Gcm` cipher structures.

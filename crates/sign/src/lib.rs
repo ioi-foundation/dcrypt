@@ -5,13 +5,16 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+
 pub mod dilithium;
 pub mod error;
 pub mod falcon;
 pub mod rainbow;
 pub mod sphincs;
 
-pub use dilithium::{Dilithium2, Dilithium3, Dilithium5};
+pub use dilithium::{Dilithium2, Dilithium3, Dilithium5, MlDsa44, MlDsa65, MlDsa87};
 pub use falcon::{Falcon1024, Falcon512};
 pub use rainbow::{RainbowI, RainbowIII, RainbowV};
 pub use sphincs::{SphincsSha2, SphincsShake};

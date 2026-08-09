@@ -1,7 +1,5 @@
 //! Error handling for cryptographic ecosystem
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
 pub mod registry;
 pub mod traits;
 pub mod types;
@@ -14,7 +12,8 @@ pub use types::{Error, Result};
 pub use registry::ERROR_REGISTRY;
 
 // Re-export error traits
-pub use traits::{ResultExt, SecureErrorHandling};
+#[allow(deprecated)]
+pub use traits::{ErrorRegistryExt, ResultExt, SecureErrorHandling};
 
 // Re-export validation utilities module (not as a nested function)
 pub use validate as validation;

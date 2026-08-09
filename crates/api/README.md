@@ -19,14 +19,15 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
     *   `Error` (enum): The primary error type for all dcrypt operations, with variants for common cryptographic failures (e.g., `InvalidKey`, `InvalidSignature`, `DecryptionFailed`, `InvalidLength`).
     *   `Result<T>`: A type alias for `core::result::Result<T, api::Error>`.
     *   `ResultExt` (trait): Extension methods for `Result` types to easily add context or wrap errors.
-    *   `SecureErrorHandling` (trait): For handling errors in constant-time operations, integrating with `ErrorRegistry`.
-    *   `ErrorRegistry`: A global (or thread-local) mechanism to record errors occurring within constant-time code paths without immediate branching.
+    *   `ErrorRegistryExt` (trait): For explicitly recording an error before returning a fallback value. This is ordinary, branching control flow and is not constant-time.
+    *   `SecureErrorHandling` (trait): A compatibility name whose deprecated `secure_unwrap` method is not constant-time.
+    *   `ErrorRegistry`: A synchronized, type-checked global last-error slot retained for compatibility. Returning errors normally is preferred.
     *   `validate` (module): Utility functions for common input validations (e.g., length checks, parameter conditions).
 
 3.  **Types (`dcrypt_docs/api/types.rs`)**:
     Defines fundamental, security-conscious data types:
     *   `SecretBytes<const N: usize>`: A fixed-size array for sensitive data, guaranteeing zeroization on drop and providing constant-time equality.
-    *   `SecretVec`: A variable-length vector for sensitive data, also with zeroization on drop.
+    *   `SecretVec`: A variable-length vector for sensitive data that wipes removed bytes, wipes an old allocation before growth or capacity changes, and zeroizes its complete allocation on drop.
     *   `Key`: A wrapper for cryptographic key data, ensuring zeroization.
     *   `PublicKey`: A wrapper for public key data.
     *   `Ciphertext`: A wrapper for ciphertext data.

@@ -1,0 +1,46 @@
+[package]
+name = "dcrypt-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+dcrypt-api = { path = "../crates/api" }
+dcrypt-hybrid = { path = "../crates/hybrid" }
+dcrypt-sign = { path = "../crates/sign" }
+dcrypt-symmetric = { path = "../crates/symmetric" }
+
+[[bin]]
+name = "signature_decoders"
+path = "fuzz_targets/signature_decoders.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hybrid_decoders"
+path = "fuzz_targets/hybrid_decoders.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "symmetric_decoders"
+path = "fuzz_targets/symmetric_decoders.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "stream_frames"
+path = "fuzz_targets/stream_frames.rs"
+test = false
+doc = false
+bench = false
+
+[profile.release]
+debug = 1

@@ -1,457 +1,45 @@
-//! Streaming AES-GCM implementations
+//! Version-2 authenticated streaming AES-GCM adapters.
+//!
+//! Version 1 used unauthenticated markers, counters, and lengths and is
+//! intentionally not accepted by these types.
 
+use super::framed::{FramedDecryptStream, FramedEncryptStream};
 use super::{StreamingDecrypt, StreamingEncrypt};
-use crate::aead::gcm::{Aes128Gcm, Aes256Gcm, GcmNonce};
+use crate::aead::gcm::{Aes128Gcm, Aes256Gcm};
 use crate::aes::keys::{Aes128Key, Aes256Key};
-use crate::cipher::{Aead, SymmetricCipher};
-use crate::error::{validate_stream_state, Result, SymmetricResultExt};
+use crate::error::{Result, SymmetricResultExt};
 use std::io::{Read, Write};
 
-/// Streaming encryption API for AES-128-GCM with secure nonce management
-pub struct Aes128GcmEncryptStream<W: Write> {
-    writer: W,
-    cipher: Aes128Gcm,
-    buffer: Vec<u8>,
-    finalized: bool,
-    aad: Option<Vec<u8>>,
-    // Counter for deriving unique nonces
-    counter: u32,
-    // Base nonce - used to derive per-chunk nonces
-    base_nonce: GcmNonce,
-}
-
-impl<W: Write> Aes128GcmEncryptStream<W> {
-    /// Creates a new encryption stream
-    pub fn new(writer: W, key: &Aes128Key, aad: Option<&[u8]>) -> Result<Self> {
-        // Create cipher with proper error handling
-        let cipher = Aes128Gcm::new(key)?;
-        let base_nonce = Aes128Gcm::generate_nonce();
-
-        // Write base nonce to the beginning of the stream
-        let mut w = writer;
-        w.write_all(base_nonce.as_bytes()).map_io_err()?;
-
-        Ok(Self {
-            writer: w,
-            cipher,
-            buffer: Vec::with_capacity(16384), // 16 KB buffer
-            finalized: false,
-            aad: aad.map(|a| a.to_vec()),
-            counter: 0,
-            base_nonce,
-        })
-    }
-
-    /// Derives a unique nonce for the current chunk
-    fn derive_chunk_nonce(&self) -> GcmNonce {
-        // Create a derived nonce by XORing the counter with the base nonce
-        let mut nonce_bytes = *self.base_nonce.as_bytes();
-        let counter_bytes = self.counter.to_be_bytes();
-
-        // XOR the last 4 bytes with the counter
-        for i in 0..4 {
-            nonce_bytes[8 + i] ^= counter_bytes[i];
-        }
-
-        GcmNonce::new(nonce_bytes)
-    }
-
-    /// Flushes the internal buffer, encrypting and writing data
-    fn flush_buffer(&mut self) -> Result<()> {
-        if self.buffer.is_empty() {
-            return Ok(());
-        }
-
-        // Generate a unique nonce for this chunk using counter
-        let chunk_nonce = self.derive_chunk_nonce();
-
-        // Encrypt the buffered data with the unique nonce
-        let ciphertext = self
-            .cipher
-            .encrypt(&chunk_nonce, &self.buffer, self.aad.as_deref())?;
-
-        // Write the chunk nonce indicator followed by ciphertext length and data
-        self.writer.write_all(&[1]).map_io_err()?; // 1 = has chunk nonce
-
-        // Write the chunk counter (used to derive the nonce)
-        let counter_bytes = self.counter.to_be_bytes();
-        self.writer.write_all(&counter_bytes).map_io_err()?;
-
-        // Write the length of the ciphertext followed by the ciphertext itself
-        let len = (ciphertext.len() as u32).to_be_bytes();
-        self.writer.write_all(&len).map_io_err()?;
-        self.writer.write_all(&ciphertext).map_io_err()?;
-
-        // Increment counter for next chunk
-        self.counter += 1;
-
-        // Clear the buffer
-        self.buffer.clear();
-
-        Ok(())
-    }
-}
-
-impl<W: Write> StreamingEncrypt<W> for Aes128GcmEncryptStream<W> {
-    /// Writes plaintext data to the stream
-    fn write(&mut self, data: &[u8]) -> Result<()> {
-        validate_stream_state(!self.finalized, "stream write", "stream already finalized")?;
-
-        // Add data to internal buffer
-        self.buffer.extend_from_slice(data);
-
-        // If buffer exceeds 16 KB, encrypt and write a chunk
-        if self.buffer.len() >= 16384 {
-            self.flush_buffer()?;
-        }
-
-        Ok(())
-    }
-
-    /// Finalizes the stream, encrypting any remaining data
-    fn finalize(mut self) -> Result<W> {
-        validate_stream_state(
-            !self.finalized,
-            "stream finalize",
-            "stream already finalized",
-        )?;
-
-        // Flush any remaining data
-        self.flush_buffer()?;
-
-        // Write a zero marker to indicate end of data
-        self.writer.write_all(&[0]).map_io_err()?;
-
-        self.finalized = true;
-        Ok(self.writer)
-    }
-}
-
-/// Streaming decryption API for AES-128-GCM with secure nonce handling
-pub struct Aes128GcmDecryptStream<R: Read> {
-    reader: R,
-    cipher: Aes128Gcm,
-    base_nonce: GcmNonce,
-    finished: bool,
-    aad: Option<Vec<u8>>,
-}
-
-impl<R: Read> Aes128GcmDecryptStream<R> {
-    /// Creates a new decryption stream
-    pub fn new(mut reader: R, key: &Aes128Key, aad: Option<&[u8]>) -> Result<Self> {
-        // Read the base nonce from the beginning of the stream
-        let mut nonce_bytes = [0u8; 12];
-        reader.read_exact(&mut nonce_bytes).map_io_err()?;
-
-        let base_nonce = GcmNonce::new(nonce_bytes);
-        // Create cipher with proper error handling
-        let cipher = Aes128Gcm::new(key)?;
-
-        Ok(Self {
-            reader,
-            cipher,
-            base_nonce,
-            finished: false,
-            aad: aad.map(|a| a.to_vec()),
-        })
-    }
-
-    /// Derives a chunk nonce from the base nonce and counter
-    fn derive_chunk_nonce(&self, counter: u32) -> GcmNonce {
-        let mut nonce_bytes = *self.base_nonce.as_bytes();
-        let counter_bytes = counter.to_be_bytes();
-
-        // XOR the last 4 bytes with the counter
-        for i in 0..4 {
-            nonce_bytes[8 + i] ^= counter_bytes[i];
-        }
-
-        GcmNonce::new(nonce_bytes)
-    }
-}
-
-impl<R: Read> StreamingDecrypt<R> for Aes128GcmDecryptStream<R> {
-    /// Reads and decrypts data from the stream
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        if self.finished {
-            return Ok(0);
-        }
-
-        // Read the chunk marker
-        let mut marker = [0u8; 1];
-        self.reader.read_exact(&mut marker).map_io_err()?;
-
-        // Check if we've reached the end of the stream
-        if marker[0] == 0 {
-            self.finished = true;
-            return Ok(0);
-        }
-
-        // Read the chunk counter
-        let mut counter_bytes = [0u8; 4];
-        self.reader.read_exact(&mut counter_bytes).map_io_err()?;
-        let counter = u32::from_be_bytes(counter_bytes);
-
-        // Derive the nonce for this chunk
-        let chunk_nonce = self.derive_chunk_nonce(counter);
-
-        // Read the length of the ciphertext
-        let mut len_bytes = [0u8; 4];
-        self.reader.read_exact(&mut len_bytes).map_io_err()?;
-        let len = u32::from_be_bytes(len_bytes) as usize;
-
-        // Read the ciphertext
-        let mut ciphertext = vec![0u8; len];
-        self.reader.read_exact(&mut ciphertext).map_io_err()?;
-
-        // Decrypt the chunk using the derived nonce
-        let plaintext = self
-            .cipher
-            .decrypt(&chunk_nonce, &ciphertext, self.aad.as_deref())?;
-
-        // Copy to output buffer
-        let to_copy = plaintext.len().min(buf.len());
-        buf[..to_copy].copy_from_slice(&plaintext[..to_copy]);
-
-        Ok(to_copy)
-    }
-}
-
-/// Streaming encryption API for AES-256-GCM with secure nonce management
-pub struct Aes256GcmEncryptStream<W: Write> {
-    writer: W,
-    cipher: Aes256Gcm,
-    buffer: Vec<u8>,
-    finalized: bool,
-    aad: Option<Vec<u8>>,
-    // Counter for deriving unique nonces
-    counter: u32,
-    // Base nonce - used to derive per-chunk nonces
-    base_nonce: GcmNonce,
-}
-
-impl<W: Write> Aes256GcmEncryptStream<W> {
-    /// Creates a new encryption stream
-    pub fn new(writer: W, key: &Aes256Key, aad: Option<&[u8]>) -> Result<Self> {
-        // Create cipher with proper error handling
-        let cipher = Aes256Gcm::new(key)?;
-        let base_nonce = Aes256Gcm::generate_nonce();
-
-        // Write base nonce to the beginning of the stream
-        let mut w = writer;
-        w.write_all(base_nonce.as_bytes()).map_io_err()?;
-
-        Ok(Self {
-            writer: w,
-            cipher,
-            buffer: Vec::with_capacity(16384), // 16 KB buffer
-            finalized: false,
-            aad: aad.map(|a| a.to_vec()),
-            counter: 0,
-            base_nonce,
-        })
-    }
-
-    /// Derives a unique nonce for the current chunk
-    fn derive_chunk_nonce(&self) -> GcmNonce {
-        // Create a derived nonce by XORing the counter with the base nonce
-        let mut nonce_bytes = *self.base_nonce.as_bytes();
-        let counter_bytes = self.counter.to_be_bytes();
-
-        // XOR the last 4 bytes with the counter
-        for i in 0..4 {
-            nonce_bytes[8 + i] ^= counter_bytes[i];
-        }
-
-        GcmNonce::new(nonce_bytes)
-    }
-
-    /// Flushes the internal buffer, encrypting and writing data
-    fn flush_buffer(&mut self) -> Result<()> {
-        if self.buffer.is_empty() {
-            return Ok(());
-        }
-
-        // Generate a unique nonce for this chunk using counter
-        let chunk_nonce = self.derive_chunk_nonce();
-
-        // Encrypt the buffered data with the unique nonce
-        let ciphertext = self
-            .cipher
-            .encrypt(&chunk_nonce, &self.buffer, self.aad.as_deref())?;
-
-        // Write the chunk nonce indicator followed by ciphertext length and data
-        self.writer.write_all(&[1]).map_io_err()?; // 1 = has chunk nonce
-
-        // Write the chunk counter (used to derive the nonce)
-        let counter_bytes = self.counter.to_be_bytes();
-        self.writer.write_all(&counter_bytes).map_io_err()?;
-
-        // Write the length of the ciphertext followed by the ciphertext itself
-        let len = (ciphertext.len() as u32).to_be_bytes();
-        self.writer.write_all(&len).map_io_err()?;
-        self.writer.write_all(&ciphertext).map_io_err()?;
-
-        // Increment counter for next chunk
-        self.counter += 1;
-
-        // Clear the buffer
-        self.buffer.clear();
-
-        Ok(())
-    }
-}
-
-impl<W: Write> StreamingEncrypt<W> for Aes256GcmEncryptStream<W> {
-    /// Writes plaintext data to the stream
-    fn write(&mut self, data: &[u8]) -> Result<()> {
-        validate_stream_state(!self.finalized, "stream write", "stream already finalized")?;
-
-        // Add data to internal buffer
-        self.buffer.extend_from_slice(data);
-
-        // If buffer exceeds 16 KB, encrypt and write a chunk
-        if self.buffer.len() >= 16384 {
-            self.flush_buffer()?;
-        }
-
-        Ok(())
-    }
-
-    /// Finalizes the stream, encrypting any remaining data
-    fn finalize(mut self) -> Result<W> {
-        validate_stream_state(
-            !self.finalized,
-            "stream finalize",
-            "stream already finalized",
-        )?;
-
-        // Flush any remaining data
-        self.flush_buffer()?;
-
-        // Write a zero marker to indicate end of data
-        self.writer.write_all(&[0]).map_io_err()?;
-
-        self.finalized = true;
-        Ok(self.writer)
-    }
-}
-
-/// Streaming decryption API for AES-256-GCM with secure nonce handling
-pub struct Aes256GcmDecryptStream<R: Read> {
-    reader: R,
-    cipher: Aes256Gcm,
-    base_nonce: GcmNonce,
-    finished: bool,
-    aad: Option<Vec<u8>>,
-}
-
-impl<R: Read> Aes256GcmDecryptStream<R> {
-    /// Creates a new decryption stream
-    pub fn new(mut reader: R, key: &Aes256Key, aad: Option<&[u8]>) -> Result<Self> {
-        // Read the base nonce from the beginning of the stream
-        let mut nonce_bytes = [0u8; 12];
-        reader.read_exact(&mut nonce_bytes).map_io_err()?;
-
-        let base_nonce = GcmNonce::new(nonce_bytes);
-        // Create cipher with proper error handling
-        let cipher = Aes256Gcm::new(key)?;
-
-        Ok(Self {
-            reader,
-            cipher,
-            base_nonce,
-            finished: false,
-            aad: aad.map(|a| a.to_vec()),
-        })
-    }
-
-    /// Derives a chunk nonce from the base nonce and counter
-    fn derive_chunk_nonce(&self, counter: u32) -> GcmNonce {
-        let mut nonce_bytes = *self.base_nonce.as_bytes();
-        let counter_bytes = counter.to_be_bytes();
-
-        // XOR the last 4 bytes with the counter
-        for i in 0..4 {
-            nonce_bytes[8 + i] ^= counter_bytes[i];
-        }
-
-        GcmNonce::new(nonce_bytes)
-    }
-}
-
-impl<R: Read> StreamingDecrypt<R> for Aes256GcmDecryptStream<R> {
-    /// Reads and decrypts data from the stream
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
-        if self.finished {
-            return Ok(0);
-        }
-
-        // Read the chunk marker
-        let mut marker = [0u8; 1];
-        self.reader.read_exact(&mut marker).map_io_err()?;
-
-        // Check if we've reached the end of the stream
-        if marker[0] == 0 {
-            self.finished = true;
-            return Ok(0);
-        }
-
-        // Read the chunk counter
-        let mut counter_bytes = [0u8; 4];
-        self.reader.read_exact(&mut counter_bytes).map_io_err()?;
-        let counter = u32::from_be_bytes(counter_bytes);
-
-        // Derive the nonce for this chunk
-        let chunk_nonce = self.derive_chunk_nonce(counter);
-
-        // Read the length of the ciphertext
-        let mut len_bytes = [0u8; 4];
-        self.reader.read_exact(&mut len_bytes).map_io_err()?;
-        let len = u32::from_be_bytes(len_bytes) as usize;
-
-        // Read the ciphertext
-        let mut ciphertext = vec![0u8; len];
-        self.reader.read_exact(&mut ciphertext).map_io_err()?;
-
-        // Decrypt the chunk using the derived nonce
-        let plaintext = self
-            .cipher
-            .decrypt(&chunk_nonce, &ciphertext, self.aad.as_deref())?;
-
-        // Copy to output buffer
-        let to_copy = plaintext.len().min(buf.len());
-        buf[..to_copy].copy_from_slice(&plaintext[..to_copy]);
-
-        Ok(to_copy)
-    }
-}
-
-/// Encrypts a file using AES-128-GCM
+/// AES-128-GCM writer using authenticated version-2 frames.
+pub type Aes128GcmEncryptStream<W> = FramedEncryptStream<W, Aes128Gcm>;
+/// AES-128-GCM reader using authenticated version-2 frames.
+pub type Aes128GcmDecryptStream<R> = FramedDecryptStream<R, Aes128Gcm>;
+/// AES-256-GCM writer using authenticated version-2 frames.
+pub type Aes256GcmEncryptStream<W> = FramedEncryptStream<W, Aes256Gcm>;
+/// AES-256-GCM reader using authenticated version-2 frames.
+pub type Aes256GcmDecryptStream<R> = FramedDecryptStream<R, Aes256Gcm>;
+
+/// Encrypt a reader into the authenticated AES-128-GCM stream format.
 pub fn encrypt_file_aes128<R: Read, W: Write>(
     mut reader: R,
     writer: W,
     key: &Aes128Key,
     aad: Option<&[u8]>,
 ) -> Result<()> {
-    // Create stream with proper error handling
     let mut stream = Aes128GcmEncryptStream::new(writer, key, aad)?;
-
     let mut buffer = [0u8; 8192];
     loop {
-        let bytes_read = reader.read(&mut buffer).map_io_err()?;
-        if bytes_read == 0 {
+        let read = reader.read(&mut buffer).map_io_err()?;
+        if read == 0 {
             break;
         }
-
-        stream.write(&buffer[..bytes_read])?;
+        stream.write(&buffer[..read])?;
     }
-
     stream.finalize()?;
     Ok(())
 }
 
-/// Decrypts a file using AES-128-GCM
+/// Decrypt an authenticated AES-128-GCM stream into a writer.
 pub fn decrypt_file_aes128<R: Read, W: Write>(
     reader: R,
     mut writer: W,
@@ -459,45 +47,38 @@ pub fn decrypt_file_aes128<R: Read, W: Write>(
     aad: Option<&[u8]>,
 ) -> Result<()> {
     let mut stream = Aes128GcmDecryptStream::new(reader, key, aad)?;
-
     let mut buffer = [0u8; 8192];
     loop {
-        let bytes_read = stream.read(&mut buffer)?;
-        if bytes_read == 0 {
+        let read = stream.read(&mut buffer)?;
+        if read == 0 {
             break;
         }
-
-        writer.write_all(&buffer[..bytes_read]).map_io_err()?;
+        writer.write_all(&buffer[..read]).map_io_err()?;
     }
-
     Ok(())
 }
 
-/// Encrypts a file using AES-256-GCM
+/// Encrypt a reader into the authenticated AES-256-GCM stream format.
 pub fn encrypt_file_aes256<R: Read, W: Write>(
     mut reader: R,
     writer: W,
     key: &Aes256Key,
     aad: Option<&[u8]>,
 ) -> Result<()> {
-    // Create stream with proper error handling
     let mut stream = Aes256GcmEncryptStream::new(writer, key, aad)?;
-
     let mut buffer = [0u8; 8192];
     loop {
-        let bytes_read = reader.read(&mut buffer).map_io_err()?;
-        if bytes_read == 0 {
+        let read = reader.read(&mut buffer).map_io_err()?;
+        if read == 0 {
             break;
         }
-
-        stream.write(&buffer[..bytes_read])?;
+        stream.write(&buffer[..read])?;
     }
-
     stream.finalize()?;
     Ok(())
 }
 
-/// Decrypts a file using AES-256-GCM
+/// Decrypt an authenticated AES-256-GCM stream into a writer.
 pub fn decrypt_file_aes256<R: Read, W: Write>(
     reader: R,
     mut writer: W,
@@ -505,16 +86,116 @@ pub fn decrypt_file_aes256<R: Read, W: Write>(
     aad: Option<&[u8]>,
 ) -> Result<()> {
     let mut stream = Aes256GcmDecryptStream::new(reader, key, aad)?;
-
     let mut buffer = [0u8; 8192];
     loop {
-        let bytes_read = stream.read(&mut buffer)?;
-        if bytes_read == 0 {
+        let read = stream.read(&mut buffer)?;
+        if read == 0 {
             break;
         }
+        writer.write_all(&buffer[..read]).map_io_err()?;
+    }
+    Ok(())
+}
 
-        writer.write_all(&buffer[..bytes_read]).map_io_err()?;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::streaming::framed::{FRAME_HEADER_SIZE, FRAME_PLAINTEXT_MAX, HEADER_SIZE};
+    use std::io::Cursor;
+
+    fn encrypted(plaintext: &[u8]) -> (Vec<u8>, Aes128Key) {
+        let key = Aes128Key::new([0x42; 16]);
+        let mut stream = Aes128GcmEncryptStream::new(Vec::new(), &key, Some(b"context")).unwrap();
+        stream.write(plaintext).unwrap();
+        (stream.finalize().unwrap(), key)
     }
 
-    Ok(())
+    fn decrypt_all(bytes: Vec<u8>, key: &Aes128Key, read_size: usize) -> Result<Vec<u8>> {
+        let mut stream = Aes128GcmDecryptStream::new(Cursor::new(bytes), key, Some(b"context"))?;
+        let mut plaintext = Vec::new();
+        let mut buffer = vec![0u8; read_size];
+        loop {
+            let read = stream.read(&mut buffer)?;
+            if read == 0 {
+                break;
+            }
+            plaintext.extend_from_slice(&buffer[..read]);
+        }
+        Ok(plaintext)
+    }
+
+    #[test]
+    fn partial_reads_preserve_complete_plaintext() {
+        let plaintext = vec![0x5a; FRAME_PLAINTEXT_MAX * 2 + 777];
+        let (ciphertext, key) = encrypted(&plaintext);
+        assert_eq!(decrypt_all(ciphertext, &key, 13).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn truncation_cannot_be_successful_eof() {
+        let plaintext = vec![0x33; FRAME_PLAINTEXT_MAX + 1];
+        let (mut ciphertext, key) = encrypted(&plaintext);
+        ciphertext.truncate(ciphertext.len() - (FRAME_HEADER_SIZE + 1 + 16));
+        assert!(decrypt_all(ciphertext, &key, 1024).is_err());
+    }
+
+    #[test]
+    fn replay_reorder_and_omission_are_rejected() {
+        let plaintext = vec![0x21; FRAME_PLAINTEXT_MAX * 2 + 1];
+        let (ciphertext, key) = encrypted(&plaintext);
+
+        let mut wrong_sequence = ciphertext.clone();
+        wrong_sequence[HEADER_SIZE + 7] = 1;
+        assert!(decrypt_all(wrong_sequence, &key, 4096).is_err());
+
+        let first_ciphertext_len = u32::from_be_bytes(
+            ciphertext[HEADER_SIZE + 13..HEADER_SIZE + 17]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let second_offset = HEADER_SIZE + FRAME_HEADER_SIZE + first_ciphertext_len;
+        let mut omitted = ciphertext.clone();
+        omitted.drain(HEADER_SIZE..second_offset);
+        assert!(decrypt_all(omitted, &key, 4096).is_err());
+    }
+
+    #[test]
+    fn transmitted_lengths_are_bounded_before_allocation() {
+        let (mut ciphertext, key) = encrypted(b"small");
+        ciphertext[HEADER_SIZE + 9..HEADER_SIZE + 13].copy_from_slice(&u32::MAX.to_be_bytes());
+        ciphertext[HEADER_SIZE + 13..HEADER_SIZE + 17].copy_from_slice(&u32::MAX.to_be_bytes());
+        assert!(decrypt_all(ciphertext, &key, 32).is_err());
+    }
+
+    #[test]
+    fn final_flag_and_user_aad_are_authenticated() {
+        let (mut ciphertext, key) = encrypted(b"authenticated finality");
+        ciphertext[HEADER_SIZE + 8] = 0;
+        assert!(decrypt_all(ciphertext, &key, 1024).is_err());
+
+        let (ciphertext, key) = encrypted(b"authenticated context");
+        let mut stream =
+            Aes128GcmDecryptStream::new(Cursor::new(ciphertext), &key, Some(b"wrong")).unwrap();
+        assert!(stream.read(&mut [0u8; 64]).is_err());
+    }
+
+    #[test]
+    fn legacy_v1_header_is_disabled() {
+        let key = Aes128Key::new([0x42; 16]);
+        let legacy = vec![0u8; HEADER_SIZE];
+        assert!(Aes128GcmDecryptStream::new(Cursor::new(legacy), &key, None).is_err());
+    }
+
+    #[test]
+    fn bytes_and_replayed_frames_after_final_are_rejected() {
+        let (ciphertext, key) = encrypted(b"complete");
+
+        let mut arbitrary_trailing = ciphertext.clone();
+        arbitrary_trailing.push(0x80);
+        assert!(decrypt_all(arbitrary_trailing, &key, 3).is_err());
+
+        let mut replayed_final = ciphertext.clone();
+        replayed_final.extend_from_slice(&ciphertext[HEADER_SIZE..]);
+        assert!(decrypt_all(replayed_final, &key, 3).is_err());
+    }
 }

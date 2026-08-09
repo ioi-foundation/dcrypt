@@ -217,16 +217,6 @@ fn bench_xchacha20poly1305_nonce_advantage(c: &mut Criterion) {
         });
     });
 
-    // Test with zero nonce (for completeness, not recommended)
-    group.bench_function("zero_nonce", |b| {
-        b.iter(|| {
-            let ciphertext = cipher
-                .encrypt_with_zero_nonce(black_box(&plaintext), None)
-                .unwrap();
-            black_box(ciphertext);
-        });
-    });
-
     group.finish();
 }
 

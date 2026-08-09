@@ -1,8 +1,12 @@
 # EdDSA Digital Signature Algorithm (`sign/traditional/ed25519`)
 
-This module provides a production-ready, security-hardened implementation of **Ed25519**, the Edwards-curve Digital Signature Algorithm (EdDSA) variant defined in **RFC 8032**.
+This module provides an **Ed25519** adapter for the Edwards-curve Digital
+Signature Algorithm defined in **RFC 8032**. It delegates signing and secret
+scalar arithmetic to `ed25519-dalek` and applies strict canonical and subgroup
+checks during public-key parsing and verification. This is not an independent
+audit or production-safety claim.
 
-The implementation is built from the ground up, including all necessary field, scalar, and point arithmetic for Curve25519. It is designed for correctness, security, and ease of use, conforming to the `dcrypt-api` traits for a consistent cryptographic interface.
+The adapter conforms to the `dcrypt-api` traits for a consistent interface.
 
 -----
 
@@ -11,7 +15,9 @@ The implementation is built from the ground up, including all necessary field, s
 Security is the primary design consideration for this module.
 
   * **Automatic Zeroization**: `Ed25519SecretKey` implements `ZeroizeOnDrop`, ensuring that sensitive key material is automatically cleared from memory when it goes out of scope.
-  * **Constant-Time Operations**: Core cryptographic operations are implemented to resist timing-based side-channel attacks.
+  * **Maintained Backend**: Secret arithmetic is delegated to
+    `ed25519-dalek`/`curve25519-dalek`; side-channel properties remain dependent
+    on the backend, compiler, and target.
   * **Type Safety**: The API uses distinct types for public keys, secret keys, and signatures, preventing accidental misuse (e.g., trying to sign with a public key).
   * **Secure API Design**: The API surface is minimal to reduce complexity and the potential for errors. Secret key material is encapsulated and cannot be directly mutated.
   * **Deterministic Signatures**: Following RFC 8032, signature generation is deterministic, which mitigates risks associated with faulty random number generators during the signing process.
@@ -20,13 +26,9 @@ Security is the primary design consideration for this module.
 
 ### ⚙️ Implementation Details
 
-This module contains a self-contained implementation of all the cryptographic primitives required for Ed25519:
-
-  * **`field.rs`**: Arithmetic for field elements modulo the prime $p = 2^{255} - 19$.
-  * **`scalar.rs`**: Arithmetic for scalars modulo the curve order $L$.
-  * **`point.rs`**: Edwards curve point addition and scalar multiplication using extended coordinates.
-  * **`operations.rs`**: High-level cryptographic functions that combine the primitives.
-  * **`ed25519/mod.rs`**: The public-facing implementation of the `Ed25519` signature scheme.
+`ed25519/mod.rs` contains the dcrypt key/signature wrappers and validation
+boundary. The former custom field, scalar, point, and multiplication modules
+were removed after the `v1.2.3` security review.
 
 -----
 

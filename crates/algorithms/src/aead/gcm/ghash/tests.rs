@@ -149,3 +149,10 @@ fn test_ghash_unaligned() -> Result<()> {
     assert_eq!(manual_result, helper_result);
     Ok(())
 }
+
+#[test]
+fn test_ghash_rejects_bit_length_overflow() {
+    let mut ghash = GHash::new(&[0x42; 16]);
+    assert!(ghash.update_lengths(u64::MAX / 8 + 1, 0).is_err());
+    assert!(ghash.update_lengths(0, u64::MAX / 8 + 1).is_err());
+}

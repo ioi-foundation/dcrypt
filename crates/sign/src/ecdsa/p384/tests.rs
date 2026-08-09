@@ -10,6 +10,38 @@ use rand::rngs::OsRng;
 use std::fs;
 use std::path::PathBuf;
 
+#[test]
+fn test_ecdsa_p384_signatures_are_low_s_and_high_s_is_rejected() {
+    let (public_key, secret_key) = EcdsaP384::keypair(&mut OsRng).unwrap();
+    let message = b"canonical";
+    let signature = EcdsaP384::sign(message, &secret_key).unwrap();
+    let components = SignatureComponents::from_der(&signature.0).unwrap();
+    let mut s = [0u8; ec::P384_SCALAR_SIZE];
+    s[ec::P384_SCALAR_SIZE - components.s.len()..].copy_from_slice(&components.s);
+    let s = ec::Scalar::new(s).unwrap();
+    assert!(!is_high_s(&s.serialize(), &NIST_P384.n));
+
+    let high_s = s.negate();
+    assert!(is_high_s(&high_s.serialize(), &NIST_P384.n));
+    let malleable = EcdsaP384Signature(
+        SignatureComponents {
+            r: components.r.clone(),
+            s: high_s.serialize().to_vec(),
+        }
+        .to_der(),
+    );
+    assert!(EcdsaP384::verify(message, &malleable, &public_key).is_err());
+
+    let out_of_range = EcdsaP384Signature(
+        SignatureComponents {
+            r: NIST_P384.n.to_vec(),
+            s: s.serialize().to_vec(),
+        }
+        .to_der(),
+    );
+    assert!(EcdsaP384::verify(message, &out_of_range, &public_key).is_err());
+}
+
 /* ------------------------------------------------------------------------- */
 /*                       Helper: canonicalise curve/hash                     */
 /* ------------------------------------------------------------------------- */
@@ -946,9 +978,29 @@ fn test_p384_sigver_rsp_verify() {
         pk_uncompressed[(1 + ec::P384_SCALAR_SIZE)..].copy_from_slice(&qy_bytes);
         let public_key = EcdsaP384PublicKey(pk_uncompressed);
 
+        let mut canonical_s = s_bytes_vec.clone();
+        if vector.expected_result == "P" && s_bytes_vec.len() <= ec::P384_SCALAR_SIZE {
+            let mut padded = [0u8; ec::P384_SCALAR_SIZE];
+            padded[ec::P384_SCALAR_SIZE - s_bytes_vec.len()..].copy_from_slice(&s_bytes_vec);
+            if is_high_s(&padded, &NIST_P384.n) {
+                let original = EcdsaP384Signature(
+                    SignatureComponents {
+                        r: r_bytes_vec.clone(),
+                        s: s_bytes_vec.clone(),
+                    }
+                    .to_der(),
+                );
+                assert!(EcdsaP384::verify(&msg_bytes, &original, &public_key).is_err());
+                canonical_s = ec::Scalar::new(padded)
+                    .unwrap()
+                    .negate()
+                    .serialize()
+                    .to_vec();
+            }
+        }
         let sig_components = SignatureComponents {
             r: r_bytes_vec.clone(),
-            s: s_bytes_vec.clone(),
+            s: canonical_s,
         };
         let der_signature = EcdsaP384Signature(sig_components.to_der());
 

@@ -1,8 +1,11 @@
 # Elliptic Curve Diffie-Hellman KEM
 
-This module provides robust and secure implementations of the Elliptic Curve Diffie-Hellman Key Encapsulation Mechanism (ECDH-KEM) for a variety of standard curves. It is a core component of the `dcrypt` cryptographic library.
+This module provides dcrypt-specific ECDH-plus-HKDF KEM adapters for several
+curves. They are not RFC 9180 HPKE implementations and do not claim implicit
+rejection or IND-CCA security. Invalid inputs return errors.
 
-All implementations are designed with a security-first mindset, adhering to best practices for cryptographic software development. They provide a unified API by implementing the `dcrypt::api::Kem` trait, making them interchangeable based on security and performance requirements.
+They share the `dcrypt::api::Kem` interface, but their curve, KDF, validation,
+and side-channel properties must be assessed separately.
 
 ## Supported Elliptic Curves
 
@@ -24,13 +27,13 @@ This module prioritizes cryptographic correctness and resilience against common 
 
 -   **Type Safety:** Each curve has its own set of distinct, strongly-typed structs for public keys, secret keys, and ciphertexts (e.g., `EcdhP256PublicKey`, `EcdhP384SecretKey`). This prevents accidental mixing of keys from different algorithms at compile time.
 
--   **Secure Key Derivation:** Shared secrets are derived using a robust Key Derivation Function (HKDF) as recommended by standards like RFC 9180 (HPKE). The KDF input includes the ephemeral public key and the recipient's static public key, binding the shared secret to the entire exchange and preventing unknown key-share attacks.
+-   **Key Derivation:** Shared points are processed with the listed HKDF. This custom transcript is not an assertion of RFC 9180 compatibility or a proof against unknown-key-share attacks in every surrounding protocol.
 
--   **Memory Safety & Zeroization:** All secret key and shared secret types implement the `ZeroizeOnDrop` trait. This ensures that sensitive cryptographic material is automatically wiped from memory as soon as it goes out of scope, minimizing the window of exposure.
+-   **Memory hygiene:** Owned secret-key/shared-secret storage uses zeroization where implemented. This cannot erase caller copies, registers, compiler temporaries, backend-internal copies, or previously freed allocator storage.
 
--   **Controlled Data Access:** To prevent accidental leakage or misuse, sensitive types do not implement generic traits like `AsRef<[u8]>`. Access to the underlying bytes is provided only through explicit methods (e.g., `to_bytes()`, `to_bytes_zeroizing()`) that are clearly documented with security warnings.
+-   **Data Access:** Some sensitive wrappers implement `AsRef<[u8]>` for API compatibility; explicit zeroizing export methods are preferable when available. Trait shape alone is not a leakage boundary.
 
--   **Point Validation:** All public keys and ciphertexts (which are ephemeral public keys) are rigorously validated upon creation or deserialization. The code checks that the point is on the curve and is not the identity element, protecting against invalid curve and small subgroup attacks.
+-   **Point Validation:** Public-key and ciphertext decoders perform the curve-specific checks implemented by their backends. This is tested with negative inputs but is not a blanket proof for every curve.
 
 -   **Bandwidth Efficiency:** All implementations use compressed elliptic curve points for public keys and ciphertexts, significantly reducing their size compared to uncompressed or hybrid formats.
 

@@ -6,13 +6,9 @@
 //! Uses HKDF-SHA256 for key derivation and compressed points for ciphertexts.
 //! Includes authentication via HMAC-SHA256 tags to ensure key confirmation.
 //!
-//! # Security Features
-//!
-//! - No mutable access to keys or secrets (prevents tampering)
-//! - No direct byte access (prevents accidental exposure)
-//! - Authentication tags prevent ciphertext substitution attacks
-//! - Constant-time operations where applicable
-//! - Proper validation of curve points
+//! The construction validates public points and adds an HMAC-SHA256
+//! key-confirmation tag. This is not RFC 9180 HPKE and makes no blanket
+//! constant-time or IND-CCA claim.
 
 use crate::error::Error as KemError;
 use dcrypt_algorithms::ec::p224 as ec; // Use P-224 algorithms

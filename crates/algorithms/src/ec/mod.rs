@@ -1,10 +1,10 @@
 // File: crates/algorithms/src/ec/mod.rs
 //! Elliptic Curve Primitives
 //!
-//! This module provides constant-time implementations of elliptic curve operations
-//! on NIST curves P-224, P-256, P-384, and P-521. These implementations are designed
-//! to be resistant to timing attacks and provide a foundation for higher-level
-//! protocols like ECDH-KEM.
+//! This module provides low-level elliptic-curve operations on several curves.
+//! Individual implementations use timing-aware techniques, but the module has
+//! no blanket compiler- or target-level constant-time guarantee and is not by
+//! itself a complete protocol such as RFC 9180 HPKE.
 //! This module now also includes support for Koblitz (secp256k1) and Binary (sect283k1) curves.
 
 pub mod b283k;

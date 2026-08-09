@@ -8,6 +8,7 @@ use alloc::vec::Vec;
 
 use crate::error::Result;
 use crate::types::Digest;
+use zeroize::Zeroize;
 
 pub mod blake2;
 pub mod keccak; // Added module
@@ -63,12 +64,12 @@ pub trait HashAlgorithm {
 /// // Verification
 /// assert!(EnhancedSha256::verify(b"hello world", &digest).unwrap());
 /// ```
-pub trait HashFunction: Sized {
+pub trait HashFunction: Sized + Zeroize {
     /// The algorithm type that defines constants and properties
     type Algorithm: HashAlgorithm;
 
     /// The output digest type with size guarantees
-    type Output: AsRef<[u8]> + AsMut<[u8]> + Clone;
+    type Output: AsRef<[u8]> + AsMut<[u8]> + Clone + Zeroize;
 
     /// Creates a new instance of the hash function.
     fn new() -> Self;
@@ -119,7 +120,7 @@ pub trait HashFunction: Sized {
 }
 
 /// Implementation of enhanced Sha256 using the new trait structure
-#[derive(Clone)]
+#[derive(Clone, Zeroize)]
 pub struct EnhancedSha256 {
     inner: sha2::Sha256,
 }

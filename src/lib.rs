@@ -2,14 +2,13 @@
 //!
 //! A modular cryptographic library providing both traditional and post-quantum algorithms.
 //!
-//! ## Usage
+//! ## Security status
 //!
-//! Add this to your `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! dcrypt = "0.11.0-beta.1"
-//! ```
+//! Releases through `v1.2.3` contain serious memory-safety,
+//! authentication, nonce-handling, and format vulnerabilities and must not be
+//! used for production cryptography. `v2.0.0` is the first remediated release,
+//! but has not completed an independent post-remediation audit or FIPS
+//! validation. Consult the workspace `SECURITY.md` before use.
 //!
 //! ## Features
 //!
@@ -36,7 +35,7 @@
 //! # {
 //! // Using through the main crate (requires 'sign' feature)
 //! use dcrypt::api::Signature;
-//! use dcrypt::sign::dilithium::{DilithiumSigningKey, DilithiumVerifyingKey};
+//! use dcrypt::sign::dilithium::MlDsa44;
 //! # }
 //!
 //! // Or using the prelude (always available)
@@ -113,7 +112,7 @@ pub mod prelude {
     // Note: Specific algorithm implementations should be imported directly from their modules
     // For example:
     // - use dcrypt::kem::ecdh::p256::{EcdhP256PublicKey, EcdhP256SecretKey};
-    // - use dcrypt::sign::dilithium::{DilithiumSigningKey, DilithiumVerifyingKey};
+    // - use dcrypt::sign::dilithium::MlDsa44;
     // - use dcrypt::pke::ecies::p256::{EciesP256PublicKey, EciesP256Ciphertext};
 }
 
@@ -127,17 +126,19 @@ mod tests {
         use crate::api::Signature as SignatureTrait;
         use crate::sign;
 
-        // Type annotations to ensure we can access the module
-        let _: Option<&dyn SignatureTrait> = None;
+        fn assert_signature<T: SignatureTrait>() {}
+        assert_signature::<sign::eddsa::Ed25519>();
     }
 
     #[test]
     #[cfg(feature = "full")]
     fn test_full_imports() {
         // Test that all modules are accessible with full features
+        #[allow(unused_imports)]
         use crate::{algorithms, api, common, hybrid, internal, kem, params, pke, sign, symmetric};
 
-        // Just checking that the modules exist
-        let _ = api::Error;
+        // The imports above check module resolution; this checks the core API
+        // re-export as a concrete type rather than treating an enum as a value.
+        let _ = core::mem::size_of::<api::Error>();
     }
 }

@@ -4,13 +4,14 @@
 //! and SP 800-56A Rev. 3: Recommendation for Pair-Wise Key-Establishment Schemes
 //! Using Discrete Logarithm Cryptography
 
-use crate::ecdsa::common::SignatureComponents;
+use crate::ecdsa::common::{is_canonical_nonzero_scalar, is_high_s, SignatureComponents};
 use dcrypt_algorithms::ec::p256 as ec;
 use dcrypt_algorithms::hash::sha2::Sha256;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
 use dcrypt_internal::constant_time::ct_eq;
+use dcrypt_params::traditional::ecdsa::NIST_P256;
 use rand::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
@@ -170,11 +171,7 @@ impl SignatureTrait for EcdsaP256 {
         // For P-256, we use all 256 bits of the hash output
         let mut z_bytes = [0u8; ec::P256_SCALAR_SIZE];
         z_bytes.copy_from_slice(hash_output.as_ref());
-        let z = ec::Scalar::new(z_bytes).map_err(|e| ApiError::InvalidParameter {
-            context: "ECDSA-P256 sign",
-            #[cfg(feature = "std")]
-            message: format!("Hash to scalar conversion failed: {:?}", e),
-        })?;
+        let z = ec::Scalar::from_bytes_reduced(z_bytes);
 
         // Get the private key scalar d
         let d = secret_key.raw.clone();
@@ -191,10 +188,10 @@ impl SignatureTrait for EcdsaP256 {
             let r_bytes = kg.x_coordinate_bytes();
 
             // Step 5: Compute r = x₁ mod n
-            let r = match ec::Scalar::new(r_bytes) {
-                Ok(scalar) => scalar,
-                Err(_) => continue, // If r = 0, try again
-            };
+            let r = ec::Scalar::from_bytes_reduced(r_bytes);
+            if r.is_zero() {
+                continue;
+            }
 
             // Compute k⁻¹ mod n
             let k_inv = k.inv_mod_n().map_err(ApiError::from)?;
@@ -204,11 +201,14 @@ impl SignatureTrait for EcdsaP256 {
 
             let z_plus_rd = z.add_mod_n(&rd).map_err(ApiError::from)?;
 
-            let s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
+            let mut s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
 
             // If s = 0, try again (extremely unlikely)
             if s.is_zero() {
                 continue;
+            }
+            if is_high_s(&s.serialize(), &NIST_P256.n) {
+                s = s.negate();
             }
 
             // Step 7: Create signature (r, s)
@@ -262,6 +262,16 @@ impl SignatureTrait for EcdsaP256 {
         r_bytes[ec::P256_SCALAR_SIZE - sig.r.len()..].copy_from_slice(&sig.r);
         s_bytes[ec::P256_SCALAR_SIZE - sig.s.len()..].copy_from_slice(&sig.s);
 
+        if !is_canonical_nonzero_scalar(&r_bytes, &NIST_P256.n)
+            || !is_canonical_nonzero_scalar(&s_bytes, &NIST_P256.n)
+        {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P256 verify",
+                #[cfg(feature = "std")]
+                message: "signature components must be canonical integers in [1, n-1]".to_string(),
+            });
+        }
+
         let r = ec::Scalar::new(r_bytes).map_err(|_| ApiError::InvalidSignature {
             context: "ECDSA-P256 verify",
             #[cfg(feature = "std")]
@@ -273,6 +283,13 @@ impl SignatureTrait for EcdsaP256 {
             #[cfg(feature = "std")]
             message: "Invalid s component".to_string(),
         })?;
+        if is_high_s(&s.serialize(), &NIST_P256.n) {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P256 verify",
+                #[cfg(feature = "std")]
+                message: "high-s signatures are non-canonical".to_string(),
+            });
+        }
 
         // Step 2: Hash the message using SHA-256
         let mut hasher = Sha256::new();
@@ -282,11 +299,7 @@ impl SignatureTrait for EcdsaP256 {
         // Step 3: Convert hash to integer z
         let mut z_bytes = [0u8; ec::P256_SCALAR_SIZE];
         z_bytes.copy_from_slice(hash_output.as_ref());
-        let z = ec::Scalar::new(z_bytes).map_err(|e| ApiError::InvalidSignature {
-            context: "ECDSA-P256 verify",
-            #[cfg(feature = "std")]
-            message: format!("Hash to scalar conversion failed: {:?}", e),
-        })?;
+        let z = ec::Scalar::from_bytes_reduced(z_bytes);
 
         // Step 4: Compute w = s⁻¹ mod n
         let s_inv = s.inv_mod_n().map_err(ApiError::from)?;
@@ -316,11 +329,7 @@ impl SignatureTrait for EcdsaP256 {
 
         // Step 8: Compute v = x₁ mod n
         let x1_bytes = point.x_coordinate_bytes();
-        let x1 = ec::Scalar::new(x1_bytes).map_err(|_| ApiError::InvalidSignature {
-            context: "ECDSA-P256 verify",
-            #[cfg(feature = "std")]
-            message: "Recovered X coordinate out of range".to_string(),
-        })?;
+        let x1 = ec::Scalar::from_bytes_reduced(x1_bytes);
 
         // Step 9: Verify v = r using constant-time comparison
         if !ct_eq(r.serialize(), x1.serialize()) {

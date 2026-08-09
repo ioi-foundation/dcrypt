@@ -3,6 +3,10 @@
 use crate::suites::acvp::model::{TestCase, TestGroup, TestSuite};
 use std::collections::HashMap;
 
+/// Internal output marker used by handlers for vector groups that the safe
+/// public API intentionally does not support.
+pub(crate) const SKIP_MARKER: &str = "__acvp_skip";
+
 /// Trait every crypto back-end must implement.
 pub trait AcvpEngine {
     /// Execute one test case and return `Ok(())` on success.
@@ -22,6 +26,7 @@ impl<'e, E: AcvpEngine> Runner<'e, E> {
     pub fn run_suite(&self, suite: &TestSuite) -> Result<(), String> {
         let mut passed = 0;
         let mut failed = 0;
+        let mut skipped = 0;
         let mut results = HashMap::new(); // Collect results for response generation
 
         for group in &suite.groups {
@@ -38,6 +43,12 @@ impl<'e, E: AcvpEngine> Runner<'e, E> {
             for case in &group.tests {
                 let res = self.engine.run(group, case);
                 let expected = case.expected_result.as_str();
+
+                if let Some(reason) = case.outputs.borrow_mut().remove(SKIP_MARKER) {
+                    skipped += 1;
+                    println!("Case {} skipped: {}", case.test_id, reason);
+                    continue;
+                }
 
                 match (res, expected) {
                     (Ok(()), "valid") => {
@@ -70,7 +81,10 @@ impl<'e, E: AcvpEngine> Runner<'e, E> {
             }
         }
 
-        println!("Test results: {} passed, {} failed", passed, failed);
+        println!(
+            "Test results: {} passed, {} skipped, {} failed",
+            passed, skipped, failed
+        );
 
         // If we collected results, we could serialize them here for ACVP response
         if !results.is_empty() {

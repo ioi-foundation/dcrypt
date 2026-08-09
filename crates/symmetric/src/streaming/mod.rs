@@ -6,6 +6,8 @@
 use crate::error::Result;
 use std::io::{Read, Write};
 
+mod framed;
+
 /// Trait for streaming encryption
 pub trait StreamingEncrypt<W: Write> {
     /// Writes plaintext data to the stream

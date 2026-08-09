@@ -1,11 +1,12 @@
 //! NIST P-224 Elliptic Curve Primitives
 //!
-//! This module implements the NIST P-224 elliptic curve operations in constant time.
+//! This module implements NIST P-224 elliptic-curve arithmetic.
 //! The curve equation is y² = x³ - 3x + b over the prime field F_p where:
 //! - p = 2^224 - 2^96 + 1 (NIST P-224 prime)
 //! - The curve order n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D
 //!
-//! All operations are implemented to be constant-time to prevent timing attacks.
+//! Selected paths use fixed-iteration or conditional-selection techniques, but
+//! no blanket constant-time claim is made for the module, compiler, or target.
 //! The implementation uses:
 //! - Specialized reduction for the P-224 prime
 //! - Jacobian projective coordinates for efficient point operations

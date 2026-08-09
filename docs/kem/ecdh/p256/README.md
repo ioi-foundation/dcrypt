@@ -1,6 +1,8 @@
 # ECDH-KEM with NIST P-256 (`secp256r1`)
 
-This module provides a secure and efficient implementation of the Key Encapsulation Mechanism (KEM) based on the Elliptic Curve Diffie-Hellman (ECDH) protocol over the NIST P-256 curve (also known as `secp256r1` or `prime256v1`).
+This module provides a dcrypt-specific ECDH-plus-HKDF KEM adapter over NIST
+P-256. It is not RFC 9180 HPKE; invalid inputs return errors, and no implicit
+rejection or IND-CCA claim is made.
 
 P-256 is one of the most widely used elliptic curves, offering approximately 128 bits of security. It is standardized by NIST in FIPS 186-4 and is commonly found in protocols like TLS. This implementation conforms to the `dcrypt::api::Kem` trait, ensuring a consistent and predictable API.
 
@@ -12,13 +14,13 @@ The `EcdhP256` implementation is built with a strong focus on cryptographic best
 
 -   **Strongly-Typed Keys:** The module exposes distinct types for keys and ciphertexts (`EcdhP256PublicKey`, `EcdhP256SecretKey`, `EcdhP256Ciphertext`). This prevents the accidental mixing of keys from different algorithms or misuse of a key in the wrong context (e.g., using a secret key where a public key is expected).
 
--   **Automatic Zeroization:** Secret data is handled with care. `EcdhP256SecretKey` and `EcdhP256SharedSecret` implement the `ZeroizeOnDrop` trait, ensuring their contents are securely erased from memory as soon as they are no longer in use.
+-   **Owned-buffer zeroization:** `EcdhP256SecretKey` and `EcdhP256SharedSecret` wipe their owned storage on drop. Caller copies, registers, compiler temporaries, and allocator history are outside that guarantee.
 
--   **Explicit Serialization:** To prevent accidental key leakage, direct byte access via traits like `AsRef<[u8]>` is intentionally omitted for sensitive types. Serialization and deserialization must be performed through explicit, security-auditable methods (`to_bytes()`, `from_bytes()`, `to_bytes_zeroizing()`).
+-   **Serialization:** The secret-key wrapper implements `AsRef<[u8]>` for API compatibility and also offers explicit serialization/zeroizing export methods. Callers remain responsible for every copied byte string.
 
 -   **Point Validation:** All external inputs representing curve points (public keys and ciphertexts) are rigorously validated. The implementation ensures that points are validly compressed, lie on the P-256 curve, and are not the point at infinity. This is a critical defense against invalid-curve attacks.
 
--   **Constant-Time Operations:** The underlying `dcrypt-algorithms` crate performs scalar multiplication in constant time, protecting the secret key against timing-based side-channel attacks.
+-   **Timing boundary:** Scalar code uses fixed-iteration and conditional-selection techniques in selected paths. A concrete constant-time claim still requires compiler/target-specific review and dynamic testing.
 
 -   **Bandwidth Efficiency:** Public keys and ciphertexts are serialized using the compressed point format (33 bytes), minimizing data transmission size.
 

@@ -1,40 +1,48 @@
-# dcrypt: A Modern, High-Assurance Cryptographic Library in Rust
+# dcrypt: A Cryptographic Library in Rust
 
 [![Crates.io](https://img.shields.io/crates/v/dcrypt.svg?style=flat-square)](https://crates.io/crates/dcrypt)
 [![Docs.rs](https://img.shields.io/docsrs/dcrypt?style=flat-square)](https://docs.rs/dcrypt)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/ioi-foundation/dcrypt/rust.yml?branch=main&style=flat-square)](https://github.com/ioi-foundation/dcrypt/actions)
+[![Security validation](https://img.shields.io/github/actions/workflow/status/ioi-foundation/dcrypt/security-validation.yml?branch=master&style=flat-square)](https://github.com/ioi-foundation/dcrypt/actions/workflows/security-validation.yml)
 
-**dcrypt** (Decentralized Cryptography) is a comprehensive cryptographic library implemented entirely in safe Rust. It bridges the gap between traditional security and the post-quantum future by providing NIST-standardized Post-Quantum Cryptography (PQC) algorithms alongside novel, production-ready hybrid constructions.
+> [!WARNING]
+> `v1.2.3` is confirmed to contain serious security defects. Earlier releases
+> have not been cleared. `v2.0.0` is the first remediated release, but has not
+> completed an independent post-remediation audit or FIPS validation. See
+> [SECURITY.md](SECURITY.md) before evaluating or migrating this project.
 
-Spearheaded by the **IOI Foundation** as the security cornerstone for next-generation decentralized infrastructure, dcrypt eliminates foreign function interfaces (FFI) and `unsafe` code blocks in cryptographic logic, ensuring memory safety and cross-platform compatibility from embedded devices to enterprise servers.
+**dcrypt** (Decentralized Cryptography) is a Rust workspace for classical,
+post-quantum, and hybrid cryptographic APIs. Security-sensitive standard
+algorithms are being moved to reviewed ecosystem implementations and checked
+against independent known-answer tests. Rust and the absence of FFI in most
+paths reduce some implementation risks, but do not by themselves establish
+memory safety, side-channel resistance, or suitability for production.
 
 ## 🚀 Novel Capabilities
 
 dcrypt introduces capabilities critical for the transition to quantum-safe and decentralized computing:
 
-1.  **Pure-Rust FIPS 204 (ML-DSA)**: A production-ready implementation of the complete **CRYSTALS-Dilithium** signature scheme with zero `unsafe` code, spec-aligned hint handling, and a fixed-window constant-time signer bounded by the public FIPS 204 Appendix C loop limit.
-2.  **Pure-Rust FIPS 203 (ML-KEM)**: A complete implementation of **CRYSTALS-Kyber** with protections against timing side-channels.
-3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + Kyber-768`) and hybrid Digital Signatures, ensuring security even if one underlying primitive is compromised.
+1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use libcrux's portable backend, with exact encodings and formally verified arithmetic/NTT/serialization components. The public wrapper exposes randomized pure ML-DSA with empty context; backend-level tests cover the broader official ACVP interfaces and expected results, using a separate test-only implementation for supplied `mu`. This is not a claim that dcrypt as a whole is formally verified, audited, or FIPS validated.
+2.  **FIPS 203 / ML-KEM API**: ML-KEM parameter sets are available for testing and integration; this project is not a FIPS-validated cryptographic module.
+3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + Kyber-768`) and hybrid Digital Signatures, designed to combine independent primitive families.
 4.  **BLS12-381 Pairing Engine**: A fully featured implementation of the pairing-friendly curve, including optimal Ate pairings and IETF-compliant **Hash-to-Curve**, essential for Zero-Knowledge Proofs and Signature Aggregation.
 
 ## 🛡️ Key Design Principles
 
-*   **Pure Rust & Memory Safety**: Implemented with **zero FFI dependencies** to eliminate memory vulnerabilities like buffer overflows and use-after-free errors common in C/C++ wrapped libraries.
-*   **Post-Quantum Ready**: Full support for NIST-selected algorithms, protecting data against "Harvest Now, Decrypt Later" attacks.
+*   **Rust-first implementation**: Most implementation code avoids FFI. This narrows the attack surface; it is not a memory-safety or security proof.
+*   **Post-Quantum APIs**: Exposes ML-DSA and ML-KEM parameter sets for interoperability testing and evaluation.
 *   **Defense-in-Depth**: Hybrid schemes combine battle-tested classical algorithms (ECDH/ECDSA) with modern PQC primitives.
-*   **Constant-Time Assurance**: Security-sensitive paths are designed to avoid secret-dependent timing behavior where supported, and ML-DSA signing uses a fixed public rejection window derived from FIPS 204 Appendix C. This work is backed by a built-in **Constant-Time Verification Suite** that statistically detects timing leaks during CI.
+*   **Timing Analysis**: Security-sensitive paths are tested with a built-in statistical **Constant-Time Verification Suite** where applicable; passing statistical tests is not presented as a proof of constant-time execution.
 *   **Type Safety**: High-level APIs prevent misuse through strong typing (e.g., distinct types for `Nonce`, `Key`, and `Tag` prevents byte-array confusion).
-*   **`no_std` & Cross-Platform**: Fully functional in `no_std` environments (requiring `alloc`), making it suitable for IoT, embedded systems, and WASM targets.
+*   **`no_std` & Cross-Platform**: Selected crates and feature combinations support `no_std` with `alloc`; validate the exact algorithm and target combination before deployment.
 
 ## 📦 Quick Start
 
-Add `dcrypt` to your project's `Cargo.toml`.
-
-```toml
-[dependencies]
-dcrypt = { version = "1.0" }
-```
+Do not select `v1.2.3`; it is confirmed affected, and earlier
+introduced-version ranges remain under investigation. Use `2.0.0` or later and
+pin the exact version you have reviewed. The examples below describe the
+breaking `v2.0.0` API and are not a substitute for application-specific security
+review.
 
 ### Example 1: Hybrid Post-Quantum Key Exchange
 
@@ -136,18 +144,18 @@ dcrypt provides a unified API for classical, post-quantum, and hybrid operations
 | **Password Hashing** | `Argon2id` (default), `Argon2i`, `Argon2d`, `PBKDF2` |
 | **Key Derivation** | `HKDF`, `PBKDF2` |
 | **Digital Signatures** | `ECDSA` (P-192 to P-521), `Ed25519` |
-| **Post-Quantum Signatures** | `Dilithium` / `ML-DSA` (Levels 2, 3, 5) |
+| **Post-Quantum Signatures** | `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87` (final FIPS 204) |
 | **Key Exchange / KEM** | `ECDH` (P-Curves, K-256, B-283) |
 | **Pairing-Friendly Curves** | `BLS12-381` (G1, G2, Gt, Pairings, Hash-to-Curve) |
 | **Post-Quantum KEMs**| `Kyber` / `ML-KEM` (Levels 512, 768, 1024) |
-| **Hybrid Schemes** | `EcdhP256Kyber768`, `EcdhP384Kyber1024`, `EcdsaDilithiumHybrid` |
+| **Hybrid Schemes** | `EcdhP256Kyber768`, `EcdhP384Kyber1024`, `EcdsaMlDsa65Hybrid` |
 
 ## 🏗️ Architecture
 
 The library is organized as a workspace of specialized crates to align type-safety boundaries with security boundaries:
 
 *   **`dcrypt-api`**: Defines core traits (`SymmetricCipher`, `Kem`, `Signature`), error types, and fundamental data structures.
-*   **`dcrypt-algorithms`**: Low-level, constant-time implementations of cryptographic kernels (hashing, curve arithmetic, lattice math).
+*   **`dcrypt-algorithms`**: Low-level cryptographic kernels. Constant-time behavior is primitive- and backend-specific; no blanket guarantee is made for this crate.
 *   **`dcrypt-common`**: Shared security primitives, including `SecretBuffer` (automatic zeroization) and `SecureCompare`.
 *   **`dcrypt-symmetric`**: High-level AEADs, stream ciphers, and secure key management wrappers.
 *   **`dcrypt-pke`**: Public Key Encryption schemes, specifically **ECIES** (Elliptic Curve Integrated Encryption Scheme) over standard NIST curves.
@@ -161,15 +169,15 @@ The library is organized as a workspace of specialized crates to align type-safe
 Security is the primary driver for dcrypt. The library employs a rigorous testing methodology:
 
 ### Constant-Time Verification
-We utilize a custom statistical analysis engine (`dcrypt-tests/src/suites/constant_time`) that integrates into our CI.
+The repository contains a custom statistical regression engine (`dcrypt-tests/src/suites/constant_time`). The security-validation workflow runs it serially as a regression gate and labels its scope explicitly. It is not dudect or ctgrind, and those stronger target-specific checks remain required before any production constant-time claim.
 *   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the combined signals.
 *   **Noise Gating**: Maintains a persistent noise profile and aborts inconclusive runs when the host environment is materially noisier than the historical baseline.
-*   **Coverage**: Exercises critical paths in Kyber, ML-DSA/Dilithium, hybrid constructions, ECDH, and AEAD implementations against timing side-channels.
+*   **Coverage**: Exercises critical paths in Kyber, ML-DSA verification, hybrid constructions, ECDH, and AEAD implementations for timing regressions.
 
-### FIPS/NIST Compliance
-*   **ACVP Test Harness**: Includes a full test harness compatible with NIST's Automated Cryptographic Validation Program (ACVP) JSON vectors to ensure implementation correctness against official standards.
-*   **Parameters**: All PQC parameters strictly adhere to FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA).
-*   **ML-DSA Signing Bound**: The constant-time ML-DSA signer uses the public fixed rejection bound from FIPS 204 Appendix C, Table 3.
+### Standards testing
+*   **ACVP Test Harness**: Includes an ACVP JSON test harness for supported parameter sets. Passing vectors is a correctness gate, not NIST validation or certification.
+*   **ML-DSA Interoperability**: Runtime key generation, signing, verification, and paired expanded-key validation use libcrux's portable backend. Wrapper-level tests cross-import keys and signatures with the independent `fips204` API and pin official NIST ACVP key-generation outputs; that implementation is a development dependency only. Because libcrux does not expose public-key derivation from a bare expanded key, callers that need the associated public key must import the pair with `from_bytes_with_public_key`.
+*   **No certification claim**: dcrypt is not a FIPS-validated cryptographic module. Each algorithm and encoding must be assessed independently.
 
 ## 📄 License
 

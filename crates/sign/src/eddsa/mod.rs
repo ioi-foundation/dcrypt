@@ -1,19 +1,21 @@
 //! EdDSA (Edwards-curve Digital Signature Algorithm) implementations
 //!
-//! This module provides a production-ready, security-hardened implementation
-//! of Ed25519, the most widely used EdDSA variant, as specified in RFC 8032.
+//! This module provides an Ed25519 adapter backed by `ed25519-dalek`, with
+//! strict verification and additional canonical/subgroup input validation.
+//! This description is not an independent audit or production-safety claim.
 //!
 //! # Security Features
 //!
 //! - **Immutable secret keys**: Prevents accidental key corruption
 //! - **Automatic zeroization**: Clears sensitive data from memory
 //! - **Secure API design**: Minimal surface area, maximum safety
-//! - **Constant-time operations**: Where applicable to prevent timing attacks
+//! - **Maintained arithmetic backend**: Secret scalar operations are delegated
+//!   to `ed25519-dalek`/`curve25519-dalek`
 //! - **Type safety**: Strong typing prevents key confusion
 //!
 //! # Features
 //!
-//! - Full Ed25519 signature scheme with actual curve arithmetic
+//! - RFC 8032 Ed25519 signing and strict verification
 //! - Deterministic signature generation
 //! - Secure key generation and handling
 //! - Comprehensive input validation
@@ -61,13 +63,6 @@
 
 mod constants;
 mod ed25519;
-mod field;
-mod operations;
-mod point;
-mod scalar;
 
 // Re-export Ed25519 types
 pub use ed25519::{Ed25519, Ed25519PublicKey, Ed25519SecretKey, Ed25519Signature};
-
-// The curve arithmetic modules are internal and not exported.
-// They provide the mathematical operations needed by Ed25519.

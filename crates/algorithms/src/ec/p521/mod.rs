@@ -1,11 +1,12 @@
 //! NIST P-521 Elliptic Curve Primitives
 //!
-//! This module implements the NIST P-521 elliptic curve operations in constant time.
+//! This module implements NIST P-521 elliptic-curve arithmetic.
 //! The curve equation is y² = x³ - 3x + b over the prime field F_p where:
 //! - p = 2^521 - 1 (NIST P-521 prime, a Mersenne prime)
 //! - The curve order n = 0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFA51868783BF2F966B7FCC0148F709A5D03BB5C9B8899C47AEBB6FB71E91386409
 //!
-//! All operations are implemented to be constant-time to prevent timing attacks.
+//! Selected paths use fixed-iteration or conditional-selection techniques, but
+//! no blanket constant-time claim is made for the module, compiler, or target.
 //! The implementation uses:
 //! - Mersenne reduction for field arithmetic (2^521 ≡ 1 mod p)
 //! - Jacobian projective coordinates for efficient point operations

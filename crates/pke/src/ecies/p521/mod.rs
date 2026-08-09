@@ -112,11 +112,11 @@ impl Pke for EciesP521 {
         let aes_core = Aes256::new(&aes_core_key); // Assuming Aes256::new takes AlgoSecretBytes
         let aead_nonce = Nonce::<AES256GCM_NONCE_LEN>::random(rng);
 
-        let gcm_cipher_impl = Gcm::<Aes256>::new(aes_core, &aead_nonce)
-            .map_err(|e| ApiError::from(PkeError::from(e)))?;
+        let gcm_cipher_impl =
+            Gcm::<Aes256>::new(aes_core).map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let aead_ciphertext_and_tag_vec = gcm_cipher_impl
-            .internal_encrypt(plaintext, aad)
+            .internal_encrypt(&aead_nonce, plaintext, aad)
             .map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         let ecies_components = EciesCiphertextComponents {
@@ -180,11 +180,11 @@ impl Pke for EciesP521 {
 
         let aes_core_key = AlgoSecretBytes::<AES256GCM_KEY_LEN>::new(encryption_key_arr_aes);
         let aes_core = Aes256::new(&aes_core_key);
-        let gcm_cipher_impl = Gcm::<Aes256>::new(aes_core, &aead_nonce)
-            .map_err(|e| ApiError::from(PkeError::from(e)))?;
+        let gcm_cipher_impl =
+            Gcm::<Aes256>::new(aes_core).map_err(|e| ApiError::from(PkeError::from(e)))?;
 
         gcm_cipher_impl
-            .internal_decrypt(&aead_ciphertext_tag, aad)
+            .internal_decrypt(&aead_nonce, &aead_ciphertext_tag, aad)
             .map_err(|_| ApiError::from(PkeError::DecryptionFailed("AEAD authentication failed")))
     }
 }

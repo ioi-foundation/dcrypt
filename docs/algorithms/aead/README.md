@@ -25,7 +25,9 @@ The implementations in this module are designed with a focus on security and sid
 
 *   **Constant-Time Execution:** Tag verification is performed in constant time using the `subtle` crate's `ConstantTimeEq` trait. This prevents timing side-channel attacks where an attacker could learn information about the tag by measuring the time it takes for a comparison to complete.
 *   **Secure Memory Management:** All secret key material is handled using `SecretBuffer` and `Zeroizing` types, which ensure that sensitive data is securely wiped from memory when it is no longer needed.
-*   **Correctness:** The implementations are validated against official test vectors from NIST (for AES-GCM) and relevant RFCs to ensure correctness and interoperability.
+*   **Correctness testing:** Implementations are tested against NIST
+    known-answer data (for supported AES-GCM cases) and relevant RFC vectors.
+    This is not formal validation or certification.
 
 ## Usage
 
@@ -48,7 +50,7 @@ let associated_data = b"metadata";
 
 // 2. Create the AES block cipher and the GCM instance.
 let aes = Aes128::new(&key);
-let gcm = Gcm::new(aes, &nonce).unwrap();
+let gcm = Gcm::new(aes).unwrap();
 
 // 3. Encrypt the data using the builder pattern.
 let ciphertext_obj = <Gcm<Aes128> as SymmetricCipher>::encrypt(&gcm)
@@ -62,7 +64,7 @@ println!("AES-GCM Ciphertext: {}", hex::encode(ciphertext_obj.as_ref()));
 
 // 4. Decrypt the data.
 let aes_decrypt = Aes128::new(&key);
-let gcm_decrypt = Gcm::new(aes_decrypt, &nonce).unwrap();
+let gcm_decrypt = Gcm::new(aes_decrypt).unwrap();
 let decrypted_payload = <Gcm<Aes128> as SymmetricCipher>::decrypt(&gcm_decrypt)
     .with_nonce(&nonce)
     .with_aad(associated_data)
@@ -122,11 +124,6 @@ The AEAD API is designed to be both ergonomic and secure:
 
 ## `no_std` Support
 
-This module is compatible with `no_std` environments, but it requires an allocator, which can be enabled via the `alloc` feature flag. The `aead` feature flag must also be enabled in your `Cargo.toml`.
-
-```toml
-[dependencies.dcrypt-algorithms]
-version = "0.12.0-beta.1"
-default-features = false
-features = ["alloc", "aead"]
-```
+The current workspace does not claim a validated standalone `no_std` AEAD
+build. The feature surface remains for future repair, but the exact algorithm,
+target, and feature combination must compile and be reviewed independently.

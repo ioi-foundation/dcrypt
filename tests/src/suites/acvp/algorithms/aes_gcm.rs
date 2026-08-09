@@ -11,6 +11,27 @@ use subtle::ConstantTimeEq;
 use zeroize::Zeroize;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
+use super::super::runner::SKIP_MARKER;
+
+fn skip_unsupported_tag(case: &TestCase, tag_len: usize) -> Result<bool> {
+    if tag_len < 12 {
+        case.outputs.borrow_mut().insert(
+            SKIP_MARKER.into(),
+            format!(
+                "{}-bit GCM tags are intentionally unsupported; minimum is 96 bits",
+                tag_len * 8
+            ),
+        );
+        return Ok(true);
+    }
+    if tag_len > 16 {
+        return Err(EngineError::InvalidData(format!(
+            "GCM tag length exceeds 128 bits: {}",
+            tag_len * 8
+        )));
+    }
+    Ok(false)
+}
 
 /// Extract tag length from test case (ACVP provides it in bits)
 fn get_tag_length(case: &TestCase, group: &TestGroup) -> Result<usize> {
@@ -86,6 +107,10 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
 
     // Get tag length
     let tag_len = get_tag_length(case, group)?;
+    if skip_unsupported_tag(case, tag_len)? {
+        key_bytes.zeroize();
+        return Ok(());
+    }
 
     // Perform encryption based on key size AND IV length
     let result = match (key_bytes.len(), iv_bytes.len()) {
@@ -95,8 +120,8 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes128::new(&key);
             let nonce = Nonce::<12>::new(*array_ref![iv_bytes, 0, 12]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_encrypt(&plaintext, Some(&aad))?
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_encrypt(&nonce, &plaintext, Some(&aad))?
         }
         // 128-bit key with 120-bit IV
         (16, 15) => {
@@ -104,8 +129,8 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes128::new(&key);
             let nonce = Nonce::<15>::new(*array_ref![iv_bytes, 0, 15]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_encrypt(&plaintext, Some(&aad))?
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_encrypt(&nonce, &plaintext, Some(&aad))?
         }
         // 192-bit key with 96-bit IV
         (24, 12) => {
@@ -113,8 +138,8 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes192::new(&key);
             let nonce = Nonce::<12>::new(*array_ref![iv_bytes, 0, 12]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_encrypt(&plaintext, Some(&aad))?
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_encrypt(&nonce, &plaintext, Some(&aad))?
         }
         // 192-bit key with 120-bit IV
         (24, 15) => {
@@ -122,8 +147,8 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes192::new(&key);
             let nonce = Nonce::<15>::new(*array_ref![iv_bytes, 0, 15]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_encrypt(&plaintext, Some(&aad))?
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_encrypt(&nonce, &plaintext, Some(&aad))?
         }
         // 256-bit key with 96-bit IV
         (32, 12) => {
@@ -131,8 +156,8 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes256::new(&key);
             let nonce = Nonce::<12>::new(*array_ref![iv_bytes, 0, 12]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_encrypt(&plaintext, Some(&aad))?
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_encrypt(&nonce, &plaintext, Some(&aad))?
         }
         // 256-bit key with 120-bit IV
         (32, 15) => {
@@ -140,8 +165,8 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes256::new(&key);
             let nonce = Nonce::<15>::new(*array_ref![iv_bytes, 0, 15]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_encrypt(&plaintext, Some(&aad))?
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_encrypt(&nonce, &plaintext, Some(&aad))?
         }
         (_, iv_len) => {
             return Err(EngineError::InvalidData(format!(
@@ -246,6 +271,10 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
 
     // Get tag length from the tag itself
     let tag_len = tag.len();
+    if skip_unsupported_tag(case, tag_len)? {
+        key_bytes.zeroize();
+        return Ok(());
+    }
 
     // Combine ciphertext and tag for decryption
     let mut combined = ciphertext.clone();
@@ -259,8 +288,8 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes128::new(&key);
             let nonce = Nonce::<12>::new(*array_ref![iv_bytes, 0, 12]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_decrypt(&combined, Some(&aad))
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_decrypt(&nonce, &combined, Some(&aad))
         }
         // 128-bit key with 120-bit IV
         (16, 15) => {
@@ -268,8 +297,8 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes128::new(&key);
             let nonce = Nonce::<15>::new(*array_ref![iv_bytes, 0, 15]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_decrypt(&combined, Some(&aad))
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_decrypt(&nonce, &combined, Some(&aad))
         }
         // 192-bit key with 96-bit IV
         (24, 12) => {
@@ -277,8 +306,8 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes192::new(&key);
             let nonce = Nonce::<12>::new(*array_ref![iv_bytes, 0, 12]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_decrypt(&combined, Some(&aad))
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_decrypt(&nonce, &combined, Some(&aad))
         }
         // 192-bit key with 120-bit IV
         (24, 15) => {
@@ -286,8 +315,8 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes192::new(&key);
             let nonce = Nonce::<15>::new(*array_ref![iv_bytes, 0, 15]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_decrypt(&combined, Some(&aad))
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_decrypt(&nonce, &combined, Some(&aad))
         }
         // 256-bit key with 96-bit IV
         (32, 12) => {
@@ -295,8 +324,8 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes256::new(&key);
             let nonce = Nonce::<12>::new(*array_ref![iv_bytes, 0, 12]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_decrypt(&combined, Some(&aad))
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_decrypt(&nonce, &combined, Some(&aad))
         }
         // 256-bit key with 120-bit IV
         (32, 15) => {
@@ -304,8 +333,8 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
                 .map_err(|_| EngineError::InvalidData("Failed to create key".into()))?;
             let cipher = Aes256::new(&key);
             let nonce = Nonce::<15>::new(*array_ref![iv_bytes, 0, 15]);
-            let gcm = Gcm::new_with_tag_len(cipher, &nonce, tag_len)?;
-            gcm.internal_decrypt(&combined, Some(&aad))
+            let gcm = Gcm::new_with_tag_len(cipher, tag_len)?;
+            gcm.internal_decrypt(&nonce, &combined, Some(&aad))
         }
         (_, iv_len) => {
             return Err(EngineError::InvalidData(format!(

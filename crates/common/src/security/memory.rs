@@ -10,10 +10,10 @@ use dcrypt_api::Result;
 use std::{boxed::Box, vec::Vec};
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
-extern crate alloc;
+extern crate alloc as rust_alloc;
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
-use alloc::{boxed::Box, vec::Vec};
+use rust_alloc::{boxed::Box, vec::Vec};
 
 /// Type alias for cleanup functions used in secure operations
 #[cfg(any(feature = "std", feature = "alloc"))]
@@ -174,6 +174,9 @@ pub mod alloc {
     use super::*;
     use zeroize::Zeroize;
 
+    #[cfg(all(not(feature = "std"), feature = "alloc"))]
+    use super::rust_alloc::vec;
+
     /// Allocate memory for sensitive data with appropriate protections
     ///
     /// Note: This is a placeholder for platform-specific secure allocation.
@@ -199,6 +202,9 @@ pub mod alloc {
 mod tests {
     use super::*;
     use zeroize::Zeroize;
+
+    #[cfg(all(not(feature = "std"), feature = "alloc"))]
+    use super::rust_alloc::vec;
 
     #[cfg(any(feature = "std", feature = "alloc"))]
     struct TestOperation {

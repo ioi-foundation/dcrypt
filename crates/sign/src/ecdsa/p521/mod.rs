@@ -4,13 +4,14 @@
 //! and SP 800-56A Rev. 3: Recommendation for Pair-Wise Key-Establishment Schemes
 //! Using Discrete Logarithm Cryptography
 
-use crate::ecdsa::common::SignatureComponents;
+use crate::ecdsa::common::{is_canonical_nonzero_scalar, is_high_s, SignatureComponents};
 use dcrypt_algorithms::ec::p521 as ec;
 use dcrypt_algorithms::hash::sha2::Sha512;
 use dcrypt_algorithms::hash::HashFunction;
 use dcrypt_algorithms::mac::hmac::Hmac;
 use dcrypt_api::{error::Error as ApiError, Result as ApiResult, Signature as SignatureTrait};
 use dcrypt_internal::constant_time::ct_eq;
+use dcrypt_params::traditional::ecdsa::NIST_P521;
 use rand::{CryptoRng, RngCore};
 use zeroize::Zeroize;
 
@@ -203,11 +204,14 @@ impl SignatureTrait for EcdsaP521 {
 
             let z_plus_rd = z.add_mod_n(&rd).map_err(ApiError::from)?;
 
-            let s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
+            let mut s = k_inv.mul_mod_n(&z_plus_rd).map_err(ApiError::from)?;
 
             // If s = 0, try again (extremely unlikely)
             if s.is_zero() {
                 continue;
+            }
+            if is_high_s(&s.serialize(), &NIST_P521.n) {
+                s = s.negate();
             }
 
             // Step 7: Create signature (r, s)
@@ -261,6 +265,16 @@ impl SignatureTrait for EcdsaP521 {
         r_bytes[ec::P521_SCALAR_SIZE - sig.r.len()..].copy_from_slice(&sig.r);
         s_bytes[ec::P521_SCALAR_SIZE - sig.s.len()..].copy_from_slice(&sig.s);
 
+        if !is_canonical_nonzero_scalar(&r_bytes, &NIST_P521.n)
+            || !is_canonical_nonzero_scalar(&s_bytes, &NIST_P521.n)
+        {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P521 verify",
+                #[cfg(feature = "std")]
+                message: "signature components must be canonical integers in [1, n-1]".to_string(),
+            });
+        }
+
         let r = ec::Scalar::new(r_bytes).map_err(|_| ApiError::InvalidSignature {
             context: "ECDSA-P521 verify",
             #[cfg(feature = "std")]
@@ -272,6 +286,13 @@ impl SignatureTrait for EcdsaP521 {
             #[cfg(feature = "std")]
             message: "Invalid s component".to_string(),
         })?;
+        if is_high_s(&s.serialize(), &NIST_P521.n) {
+            return Err(ApiError::InvalidSignature {
+                context: "ECDSA-P521 verify",
+                #[cfg(feature = "std")]
+                message: "high-s signatures are non-canonical".to_string(),
+            });
+        }
 
         // Step 2: Hash the message using SHA-512
         let mut hasher = Sha512::new();

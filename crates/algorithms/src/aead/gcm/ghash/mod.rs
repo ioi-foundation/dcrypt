@@ -6,8 +6,8 @@
 //! ## Implementation Note
 //!
 //! NIST SP 800-38D allows for multiple valid implementations of the Galois field
-//! arithmetic that underpins GHASH. This implementation has been validated against
-//! the official NIST test vectors for the complete GCM algorithm, ensuring
+//! arithmetic that underpins GHASH. This implementation has been tested against
+//! official NIST vectors for the complete GCM algorithm, checking
 //! interoperability and correctness of the overall authenticated encryption.
 //!
 //! The Galois field multiplication in particular may produce intermediate values
@@ -19,31 +19,20 @@
 //! 2. Polynomial reduction implementation
 //! 3. Internal state representation
 //!
-//! Our implementation has been tested against the NIST CAVP (Cryptographic Algorithm
-//! Validation Program) test vectors for GCM mode, which is the authoritative
-//! reference for validating GCM implementations.
+//! The tests include NIST CAVP/ACVP data for GCM mode. Passing those vectors is
+//! a correctness gate, not formal module validation or certification.
 //!
 //! ## Constant-Time Guarantees
 //!
-//! This implementation is designed to be timing-attack resistant:
-//! - All block operations process the entire block to avoid data-dependent timing
-//! - All conditional operations use arithmetic rather than branches
-//! - GF(2^128) multiplication is implemented in a constant-time manner
-//! - Memory barriers prevent compiler optimizations that could introduce timing variation
+//! GF(2^128) multiplication uses fixed-iteration, mask-based arithmetic with
+//! respect to the hash key and input blocks. Processing time still depends on
+//! the public input lengths, as permitted by the GCM interface.
 
-use crate::error::{validate, Result};
+use crate::error::{validate, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
 use zeroize::Zeroize;
 
-// FIXED: Use proper import for atomic operations
-#[cfg(not(feature = "std"))]
-use portable_atomic::{compiler_fence, Ordering};
-#[cfg(feature = "std")]
-use std::sync::atomic::{compiler_fence, Ordering};
-
 const GCM_BLOCK_SIZE: usize = 16;
-// Maximum size we process with timing consistency (for testing only)
-const MAX_INPUT_SIZE_FOR_TESTING: usize = 128;
 
 /// `GHash` struct for computing the GHASH function in GCM mode.
 #[derive(Clone, Zeroize)]
@@ -67,11 +56,12 @@ impl GHash {
         let mut h_copy = [0u8; GCM_BLOCK_SIZE];
         h_copy.copy_from_slice(h);
         let y = [0u8; GCM_BLOCK_SIZE];
-        Self { h: h_copy, y }
+        let instance = Self { h: h_copy, y };
+        h_copy.zeroize();
+        instance
     }
 
     /// Updates the hash with input data, processing it in 16-byte blocks.
-    /// This version has improved timing consistency for test purposes.
     ///
     /// # Arguments
     /// * `data` - The input data to process.
@@ -93,35 +83,12 @@ impl GHash {
             self.update_block(&data[offset..], remaining)?;
         }
 
-        // Add dummy operations for smaller inputs to provide more consistent timing
-        // This would not be done in production code, but helps with timing leak tests
-        if data.len() < MAX_INPUT_SIZE_FOR_TESTING {
-            let dummy_blocks = (MAX_INPUT_SIZE_FOR_TESTING - data.len()).div_ceil(GCM_BLOCK_SIZE);
-
-            // Create a temporary state for dummy operations to avoid changing the real state
-            let mut dummy_y = self.y;
-
-            // Perform dummy operations with memory barriers to prevent optimization
-            compiler_fence(Ordering::SeqCst);
-            for _ in 0..dummy_blocks {
-                // Process dummy block but don't update actual state
-                dummy_y = Self::gf_multiply(&dummy_y, &self.h);
-            }
-            compiler_fence(Ordering::SeqCst);
-
-            // Use dummy_y in a way that doesn't affect result but prevents optimization
-            if dummy_y[0] == 0xff && dummy_y[1] == 0xff && data.is_empty() {
-                // This branch is extremely unlikely (practically impossible) but prevents
-                // compiler from optimizing out the dummy operations
-                self.y[0] ^= 1; // Toggle a bit in a way that would break the result
-            }
-        }
-
         Ok(())
     }
 
     /// Updates the hash with a single block, padding with zeros if necessary.
-    /// This implementation ensures constant-time operation regardless of block length.
+    /// Processing depends on the public block length and uses fixed-width field
+    /// arithmetic for the selected block.
     ///
     /// # Arguments
     /// * `block` - The input block data.
@@ -135,7 +102,7 @@ impl GHash {
         // Create a temporary block with zeros
         let mut temp_block = [0u8; GCM_BLOCK_SIZE];
 
-        // In constant time, copy only the valid portion of the input
+        // Copy only the valid, public-length portion of the input.
         for i in 0..GCM_BLOCK_SIZE {
             // Only copy if within valid range (constant-time selection)
             // For each position i, we compute a mask that's 0xFF if i < block_len, and 0x00 otherwise
@@ -143,15 +110,12 @@ impl GHash {
             let in_range = ((block_len as isize - 1 - i as isize) >> 63) as u8;
             let mask = !in_range; // 0xFF if i < block_len, 0x00 otherwise
 
-            // Only read from input if in range (avoid out-of-bounds access)
+            // Only read from input if in range (avoid out-of-bounds access).
             let source_byte = if i < block_len { block[i] } else { 0 };
 
             // Masked assignment (constant-time selection)
             temp_block[i] = source_byte & mask;
         }
-
-        // Ensure all operations above can't be optimized out
-        compiler_fence(Ordering::SeqCst);
 
         // XOR with current state
         for (y_byte, temp_byte) in self.y.iter_mut().zip(temp_block.iter()) {
@@ -174,10 +138,18 @@ impl GHash {
     /// `Ok(())` on success, or an error if processing fails.
     pub fn update_lengths(&mut self, aad_len: u64, cipher_len: u64) -> Result<()> {
         let mut length_block = [0u8; GCM_BLOCK_SIZE];
+        let aad_bits = aad_len.checked_mul(8).ok_or(Error::Processing {
+            operation: "GHASH length encoding",
+            details: "AAD length exceeds the GCM bit-length field",
+        })?;
+        let cipher_bits = cipher_len.checked_mul(8).ok_or(Error::Processing {
+            operation: "GHASH length encoding",
+            details: "ciphertext length exceeds the GCM bit-length field",
+        })?;
         // AAD length in bits (big-endian)
-        BigEndian::write_u64(&mut length_block[0..8], aad_len * 8);
+        BigEndian::write_u64(&mut length_block[0..8], aad_bits);
         // Ciphertext length in bits (big-endian)
-        BigEndian::write_u64(&mut length_block[8..16], cipher_len * 8);
+        BigEndian::write_u64(&mut length_block[8..16], cipher_bits);
         self.update_block(&length_block, GCM_BLOCK_SIZE)
     }
 
@@ -243,9 +215,6 @@ impl GHash {
             }
         }
 
-        // Ensure operations can't be optimized out
-        compiler_fence(Ordering::SeqCst);
-
         z
     }
 }
@@ -254,8 +223,6 @@ impl GHash {
 ///
 /// This is a helper function that creates a GHASH instance, processes the AAD
 /// and ciphertext, and returns the final GHASH tag.
-///
-/// For testing, it implements timing balancing to make AAD processing more constant-time.
 ///
 /// # Returns
 /// The GHASH tag as a 16-byte array, or an error if processing fails.

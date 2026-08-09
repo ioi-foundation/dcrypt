@@ -14,7 +14,7 @@ use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
 
 // Helper to set up the GCM instance once
-fn make_gcm() -> (Gcm<Aes128>, Vec<u8>, Vec<u8>, Vec<u8>) {
+fn make_gcm() -> (Gcm<Aes128>, Nonce<12>, Vec<u8>, Vec<u8>, Vec<u8>) {
     let key_bytes = [0u8; 16];
     let key = SecretBytes::<16>::new(key_bytes);
     let nonce_bytes = [0u8; 12];
@@ -23,27 +23,27 @@ fn make_gcm() -> (Gcm<Aes128>, Vec<u8>, Vec<u8>, Vec<u8>) {
     let plain_a = b"secret message";
     let plain_b = b"second message";
     let cipher = Aes128::new(&key);
-    let g = Gcm::new(cipher, &nonce).unwrap();
-    let ct_a = g.internal_encrypt(plain_a, Some(aad)).unwrap();
-    let ct_b = g.internal_encrypt(plain_b, Some(aad)).unwrap();
-    (g, ct_a, ct_b, aad.to_vec())
+    let g = Gcm::new(cipher).unwrap();
+    let ct_a = g.internal_encrypt(&nonce, plain_a, Some(aad)).unwrap();
+    let ct_b = g.internal_encrypt(&nonce, plain_b, Some(aad)).unwrap();
+    (g, nonce, ct_a, ct_b, aad.to_vec())
 }
 
 #[test]
 fn test_gcm_success_path_constant_time() {
     let config = TestConfig::for_aead();
-    let (gcm, ciphertext_a, ciphertext_b, aad) = make_gcm();
+    let (gcm, nonce, ciphertext_a, ciphertext_b, aad) = make_gcm();
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let warmup_op = || {
-        let _ = gcm.internal_decrypt(&ciphertext_a, Some(&aad));
+        let _ = gcm.internal_decrypt(&nonce, &ciphertext_a, Some(&aad));
     };
 
     let measurement_op = |use_b: bool| {
         if use_b {
-            let _ = gcm.internal_decrypt(&ciphertext_b, Some(&aad));
+            let _ = gcm.internal_decrypt(&nonce, &ciphertext_b, Some(&aad));
         } else {
-            let _ = gcm.internal_decrypt(&ciphertext_a, Some(&aad));
+            let _ = gcm.internal_decrypt(&nonce, &ciphertext_a, Some(&aad));
         }
     };
 
@@ -75,7 +75,7 @@ fn test_gcm_success_path_constant_time() {
 #[test]
 fn test_gcm_error_path_constant_time() {
     let config = TestConfig::for_aead();
-    let (gcm, valid_ct, _, aad) = make_gcm();
+    let (gcm, nonce, valid_ct, _, aad) = make_gcm();
 
     let mut invalid_ct = valid_ct.clone();
     if !invalid_ct.is_empty() {
@@ -85,14 +85,14 @@ fn test_gcm_error_path_constant_time() {
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let warmup_op = || {
-        let _ = gcm.internal_decrypt(&valid_ct, Some(&aad));
+        let _ = gcm.internal_decrypt(&nonce, &valid_ct, Some(&aad));
     };
 
     let measurement_op = |use_invalid: bool| {
         if use_invalid {
-            let _ = gcm.internal_decrypt(&invalid_ct, Some(&aad));
+            let _ = gcm.internal_decrypt(&nonce, &invalid_ct, Some(&aad));
         } else {
-            let _ = gcm.internal_decrypt(&valid_ct, Some(&aad));
+            let _ = gcm.internal_decrypt(&nonce, &valid_ct, Some(&aad));
         }
     };
 

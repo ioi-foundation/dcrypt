@@ -1,6 +1,8 @@
 # NIST P-224 ('secp224r1') Elliptic Curve
 
-This module provides a constant-time, side-channel resistant implementation of the NIST P-224 elliptic curve, also known as `secp224r1`. It is designed for cryptographic applications requiring around 112 bits of security, such as digital signatures and key exchange.
+This module implements the legacy NIST P-224 curve, also known as
+`secp224r1`. It has not received a complete side-channel audit and makes no
+blanket constant-time or production-suitability claim.
 
 The implementation conforms to standards specified by NIST, including SP 800-186, "Recommendations for Discrete Logarithm-based Cryptography".
 
@@ -17,7 +19,7 @@ The `p224` module is structured to provide a comprehensive and secure set of too
 
 ## Core Features
 
-*   **Constant-Time Security**: All operations involving secret data, such as private keys (scalars), are implemented to execute in constant time, protecting against timing-based side-channel attacks.
+*   **Timing-aware implementation**: Secret-bearing paths attempt to avoid obvious value-dependent control flow; this is not a compiler- or target-level guarantee.
 *   **Key Generation**: The `generate_keypair` function securely creates a new P-224 key pair using a cryptographically secure random number generator.
 *   **Scalar Multiplication**: Efficient and secure scalar multiplication is provided through two functions:
     *   `scalar_mult_base_g`: For fixed-base multiplication with the curve's standard generator, used in public key generation.
@@ -29,7 +31,8 @@ The `p224` module is structured to provide a comprehensive and secure set of too
 
 NIST P-224 provides approximately 112 bits of security, which is generally considered the minimum for modern applications. While secure against classical computers today, some vulnerability scanners may flag it as weak for long-term security. For new applications requiring at least 128-bit security, **P-256 is often recommended over P-224**.
 
-This implementation is designed to be secure against a range of attacks, including invalid curve and twist attacks, by validating that all points are on the correct curve.
+Point decoders perform curve validation, but callers must independently assess
+subgroup, protocol, side-channel, and legacy-algorithm requirements.
 
 ## Usage Example: ECDH Key Exchange
 

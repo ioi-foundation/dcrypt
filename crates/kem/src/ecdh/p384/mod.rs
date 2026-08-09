@@ -3,18 +3,15 @@
 //!
 //! This module provides a Key Encapsulation Mechanism (KEM) based on the
 //! Elliptic Curve Diffie-Hellman (ECDH) protocol using the NIST P-384 curve.
-//! The implementation is secure against timing attacks and follows best practices
-//! for key derivation according to RFC 9180 (HPKE).
+//! This is a dcrypt-specific ECDH-plus-HKDF construction, not RFC 9180 HPKE.
+//! Invalid inputs return errors. No blanket constant-time or IND-CCA claim is
+//! made; arithmetic behavior depends on the backend, compiler, and target.
 //!
 //! This implementation uses compressed point format for optimal bandwidth efficiency.
 //!
-//! # Security Features
-//!
-//! - No direct byte access to keys (prevents tampering and exposure)
-//! - Constant-time operations where applicable
-//! - Proper validation of curve points
-//! - Secure key derivation using HKDF-SHA384
-//! - Automatic zeroization of sensitive material
+//! Public points are validated and the shared point is processed with
+//! HKDF-SHA384. Owned secret buffers are zeroized on drop, subject to the usual
+//! caller/compiler/backend-copy limitations.
 
 use crate::error::Error as KemError;
 use dcrypt_algorithms::ec::p384 as ec_p384;

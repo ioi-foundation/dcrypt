@@ -14,20 +14,6 @@ fn test_ed25519_keypair_generation() {
     let (public_key, secret_key) = result.unwrap();
     assert_eq!(public_key.0.len(), ED25519_PUBLIC_KEY_SIZE);
     assert_eq!(secret_key.seed.len(), ED25519_SECRET_KEY_SIZE);
-    assert_eq!(secret_key.expanded.len(), 64);
-
-    // Verify clamping was applied correctly
-    assert_eq!(
-        secret_key.expanded[0] & 7,
-        0,
-        "Low 3 bits should be cleared"
-    );
-    assert_eq!(
-        secret_key.expanded[31] & 128,
-        0,
-        "Bit 255 should be cleared"
-    );
-    assert_eq!(secret_key.expanded[31] & 64, 64, "Bit 254 should be set");
 }
 
 #[test]
@@ -294,7 +280,6 @@ fn test_from_seed_matches_keypair() {
     // Should match
     assert_eq!(public1.0, public2.0);
     assert_eq!(secret1.seed, secret2.seed);
-    assert_eq!(secret1.expanded, secret2.expanded);
 }
 
 #[test]
@@ -346,9 +331,7 @@ fn test_zeroization_on_drop() {
     // but we can verify the type implements Drop + Zeroize
     let _secret = Ed25519SecretKey::from_seed(&seed_copy).unwrap();
 
-    // This is a compile-time check that Drop is implemented
-    fn assert_implements_drop<T: Drop>() {}
-    assert_implements_drop::<Ed25519SecretKey>();
+    assert!(core::mem::needs_drop::<Ed25519SecretKey>());
 }
 
 #[test]
@@ -498,4 +481,86 @@ fn test_invalid_sizes() {
 
     // Note: Invalid seed size is already enforced at compile time by the type system
     // since from_seed takes a fixed-size array &[u8; 32]
+}
+
+#[test]
+fn rejects_identity_public_key_and_universal_forgery() {
+    let mut identity = [0u8; 32];
+    identity[0] = 1;
+    assert!(Ed25519PublicKey::from_bytes(&identity).is_err());
+
+    // Even a key assembled through the public tuple field is revalidated by
+    // verify. R = B and S = 1 used to verify for every message when A = 0.
+    let mut basepoint = [0x66u8; 32];
+    basepoint[0] = 0x58;
+    let mut forgery = [0u8; 64];
+    forgery[..32].copy_from_slice(&basepoint);
+    forgery[32] = 1;
+    assert!(Ed25519::verify(
+        b"arbitrary message",
+        &Ed25519Signature(forgery),
+        &Ed25519PublicKey(identity),
+    )
+    .is_err());
+}
+
+#[test]
+fn strict_verification_rejects_small_order_r() {
+    let mut rng = OsRng;
+    let (public, _) = Ed25519::keypair(&mut rng).unwrap();
+    let mut signature = [0u8; 64];
+    signature[0] = 1; // compressed Edwards identity R
+    signature[32] = 1;
+    assert!(Ed25519::verify(b"message", &Ed25519Signature(signature), &public).is_err());
+}
+
+#[test]
+fn strict_verification_rejects_s_plus_group_order() {
+    const L: [u8; 32] = [
+        0xed, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58, 0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde,
+        0x14, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x10,
+    ];
+    let mut rng = OsRng;
+    let (public, secret) = Ed25519::keypair(&mut rng).unwrap();
+    let mut signature = Ed25519::sign(b"malleability", &secret).unwrap();
+    let mut carry = 0u16;
+    for (s, l) in signature.0[32..].iter_mut().zip(L) {
+        let sum = *s as u16 + l as u16 + carry;
+        *s = sum as u8;
+        carry = sum >> 8;
+    }
+    assert!(Ed25519::verify(b"malleability", &signature, &public).is_err());
+}
+
+#[test]
+fn rejects_noncanonical_public_key_encoding() {
+    assert!(Ed25519PublicKey::from_bytes(&[0xff; 32]).is_err());
+}
+
+#[test]
+fn rfc8032_test_vector_one() {
+    let seed: [u8; 32] =
+        hex::decode("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let expected_public: [u8; 32] =
+        hex::decode("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a")
+            .unwrap()
+            .try_into()
+            .unwrap();
+    let expected_signature: [u8; 64] = hex::decode(concat!(
+        "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155",
+        "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b",
+    ))
+    .unwrap()
+    .try_into()
+    .unwrap();
+
+    let secret = Ed25519SecretKey::from_seed(&seed).unwrap();
+    let public = secret.public_key().unwrap();
+    let signature = Ed25519::sign(b"", &secret).unwrap();
+    assert_eq!(public.to_bytes(), expected_public);
+    assert_eq!(signature.to_bytes(), expected_signature);
+    assert!(Ed25519::verify(b"", &signature, &public).is_ok());
 }

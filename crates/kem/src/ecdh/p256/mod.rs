@@ -3,18 +3,15 @@
 //!
 //! This module provides a Key Encapsulation Mechanism (KEM) based on the
 //! Elliptic Curve Diffie-Hellman (ECDH) protocol using the NIST P-256 curve.
-//! The implementation is secure against timing attacks and follows best practices
-//! for key derivation according to RFC 9180 (HPKE).
+//! This is a dcrypt-specific ECDH-plus-HKDF construction, not RFC 9180 HPKE.
+//! Invalid inputs return errors. No blanket constant-time or IND-CCA claim is
+//! made; arithmetic behavior depends on the backend, compiler, and target.
 //!
 //! This implementation uses compressed point format for optimal bandwidth efficiency.
 //!
-//! # Security Features
-//!
-//! - No direct byte access to keys (prevents tampering and accidental exposure)
-//! - Constant-time scalar operations
-//! - Point validation to prevent invalid curve attacks
-//! - Secure key derivation using HKDF-SHA256
-//! - Implicit rejection for IND-CCA2 security
+//! Public points are validated and the shared point is processed with
+//! HKDF-SHA256. Protocols needing HPKE or implicit rejection must use a vetted
+//! implementation of that construction instead.
 
 use crate::error::Error as KemError;
 use dcrypt_algorithms::ec::p256 as ec_p256;
@@ -247,11 +244,17 @@ impl Kem for EcdhP256 {
                 message: "Recipient public key cannot be the identity point".to_string(),
             });
         }
-        let mut ephemeral_bytes = [0u8; ec_p256::P256_SCALAR_SIZE];
-        rng.fill_bytes(&mut ephemeral_bytes);
-        let ephemeral_buffer = SecretBuffer::new(ephemeral_bytes);
-        let ephemeral_scalar = ec_p256::Scalar::from_secret_buffer(ephemeral_buffer)
-            .map_err(|e| ApiError::from(KemError::from(e)))?;
+        // Rejection-sample until the random value maps to a valid non-zero
+        // private scalar. A CSPRNG output outside [1, n-1] is expected input,
+        // not an operation failure.
+        let ephemeral_scalar = loop {
+            let mut ephemeral_bytes = [0u8; ec_p256::P256_SCALAR_SIZE];
+            rng.fill_bytes(&mut ephemeral_bytes);
+            let ephemeral_buffer = SecretBuffer::new(ephemeral_bytes);
+            if let Ok(scalar) = ec_p256::Scalar::from_secret_buffer(ephemeral_buffer) {
+                break scalar;
+            }
+        };
         let ephemeral_point = ec_p256::scalar_mult_base_g(&ephemeral_scalar)
             .map_err(|e| ApiError::from(KemError::from(e)))?;
         let ciphertext = EcdhP256Ciphertext(ephemeral_point.serialize_compressed());

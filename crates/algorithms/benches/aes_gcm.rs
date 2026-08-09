@@ -28,7 +28,8 @@ fn bench_gcm_setup(c: &mut Criterion) {
 
         b.iter(|| {
             let cipher = Aes128::new(black_box(&key));
-            let gcm = Gcm::new(cipher, black_box(&nonce)).unwrap();
+            black_box(&nonce);
+            let gcm = Gcm::new(cipher).unwrap();
             black_box(gcm);
         });
     });
@@ -41,7 +42,8 @@ fn bench_gcm_setup(c: &mut Criterion) {
 
         b.iter(|| {
             let cipher = Aes192::new(black_box(&key));
-            let gcm = Gcm::new(cipher, black_box(&nonce)).unwrap();
+            black_box(&nonce);
+            let gcm = Gcm::new(cipher).unwrap();
             black_box(gcm);
         });
     });
@@ -54,7 +56,8 @@ fn bench_gcm_setup(c: &mut Criterion) {
 
         b.iter(|| {
             let cipher = Aes256::new(black_box(&key));
-            let gcm = Gcm::new(cipher, black_box(&nonce)).unwrap();
+            black_box(&nonce);
+            let gcm = Gcm::new(cipher).unwrap();
             black_box(gcm);
         });
     });
@@ -84,14 +87,16 @@ fn bench_gcm_encrypt(c: &mut Criterion) {
             rng.fill(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes128::new(&key);
-            let gcm = Gcm::new(cipher, &nonce).unwrap();
+            let gcm = Gcm::new(cipher).unwrap();
 
             group.bench_with_input(BenchmarkId::new("aes128_gcm", size), size, |b, &size| {
                 let mut plaintext = vec![0u8; size];
                 rng.fill(&mut plaintext[..]);
 
                 b.iter(|| {
-                    let ciphertext = gcm.internal_encrypt(black_box(&plaintext), None).unwrap();
+                    let ciphertext = gcm
+                        .internal_encrypt(&nonce, black_box(&plaintext), None)
+                        .unwrap();
                     black_box(ciphertext);
                 });
             });
@@ -103,14 +108,16 @@ fn bench_gcm_encrypt(c: &mut Criterion) {
             rng.fill(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes256::new(&key);
-            let gcm = Gcm::new(cipher, &nonce).unwrap();
+            let gcm = Gcm::new(cipher).unwrap();
 
             group.bench_with_input(BenchmarkId::new("aes256_gcm", size), size, |b, &size| {
                 let mut plaintext = vec![0u8; size];
                 rng.fill(&mut plaintext[..]);
 
                 b.iter(|| {
-                    let ciphertext = gcm.internal_encrypt(black_box(&plaintext), None).unwrap();
+                    let ciphertext = gcm
+                        .internal_encrypt(&nonce, black_box(&plaintext), None)
+                        .unwrap();
                     black_box(ciphertext);
                 });
             });
@@ -142,15 +149,17 @@ fn bench_gcm_decrypt(c: &mut Criterion) {
             rng.fill(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes128::new(&key);
-            let gcm = Gcm::new(cipher, &nonce).unwrap();
+            let gcm = Gcm::new(cipher).unwrap();
 
             group.bench_with_input(BenchmarkId::new("aes128_gcm", size), size, |b, &size| {
                 let mut plaintext = vec![0u8; size];
                 rng.fill(&mut plaintext[..]);
-                let ciphertext = gcm.internal_encrypt(&plaintext, None).unwrap();
+                let ciphertext = gcm.internal_encrypt(&nonce, &plaintext, None).unwrap();
 
                 b.iter(|| {
-                    let plaintext = gcm.internal_decrypt(black_box(&ciphertext), None).unwrap();
+                    let plaintext = gcm
+                        .internal_decrypt(&nonce, black_box(&ciphertext), None)
+                        .unwrap();
                     black_box(plaintext);
                 });
             });
@@ -162,15 +171,17 @@ fn bench_gcm_decrypt(c: &mut Criterion) {
             rng.fill(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes256::new(&key);
-            let gcm = Gcm::new(cipher, &nonce).unwrap();
+            let gcm = Gcm::new(cipher).unwrap();
 
             group.bench_with_input(BenchmarkId::new("aes256_gcm", size), size, |b, &size| {
                 let mut plaintext = vec![0u8; size];
                 rng.fill(&mut plaintext[..]);
-                let ciphertext = gcm.internal_encrypt(&plaintext, None).unwrap();
+                let ciphertext = gcm.internal_encrypt(&nonce, &plaintext, None).unwrap();
 
                 b.iter(|| {
-                    let plaintext = gcm.internal_decrypt(black_box(&ciphertext), None).unwrap();
+                    let plaintext = gcm
+                        .internal_decrypt(&nonce, black_box(&ciphertext), None)
+                        .unwrap();
                     black_box(plaintext);
                 });
             });
@@ -204,7 +215,7 @@ fn bench_gcm_with_aad(c: &mut Criterion) {
             rng.fill(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes128::new(&key);
-            let gcm = Gcm::new(cipher, &nonce).unwrap();
+            let gcm = Gcm::new(cipher).unwrap();
 
             group.bench_with_input(
                 BenchmarkId::new(format!("aes128_gcm_aad_{}", aad_size), aad_size),
@@ -217,7 +228,7 @@ fn bench_gcm_with_aad(c: &mut Criterion) {
 
                     b.iter(|| {
                         let ciphertext = gcm
-                            .internal_encrypt(black_box(&plaintext), Some(black_box(&aad)))
+                            .internal_encrypt(&nonce, black_box(&plaintext), Some(black_box(&aad)))
                             .unwrap();
                         black_box(ciphertext);
                     });
@@ -231,7 +242,7 @@ fn bench_gcm_with_aad(c: &mut Criterion) {
             rng.fill(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes256::new(&key);
-            let gcm = Gcm::new(cipher, &nonce).unwrap();
+            let gcm = Gcm::new(cipher).unwrap();
 
             group.bench_with_input(
                 BenchmarkId::new(format!("aes256_gcm_aad_{}", aad_size), aad_size),
@@ -244,7 +255,7 @@ fn bench_gcm_with_aad(c: &mut Criterion) {
 
                     b.iter(|| {
                         let ciphertext = gcm
-                            .internal_encrypt(black_box(&plaintext), Some(black_box(&aad)))
+                            .internal_encrypt(&nonce, black_box(&plaintext), Some(black_box(&aad)))
                             .unwrap();
                         black_box(ciphertext);
                     });
@@ -275,14 +286,16 @@ fn bench_gcm_nonce_sizes(c: &mut Criterion) {
         let nonce = Nonce::<12>::new(nonce_bytes);
 
         let cipher = Aes128::new(&key);
-        let gcm = Gcm::new(cipher, &nonce).unwrap();
+        let gcm = Gcm::new(cipher).unwrap();
 
         group.bench_function("aes128_gcm_96bit_nonce", |b| {
             let mut plaintext = vec![0u8; message_size];
             rng.fill(&mut plaintext[..]);
 
             b.iter(|| {
-                let ciphertext = gcm.internal_encrypt(black_box(&plaintext), None).unwrap();
+                let ciphertext = gcm
+                    .internal_encrypt(&nonce, black_box(&plaintext), None)
+                    .unwrap();
                 black_box(ciphertext);
             });
         });
@@ -299,14 +312,16 @@ fn bench_gcm_nonce_sizes(c: &mut Criterion) {
         let nonce = Nonce::<16>::new(nonce_bytes);
 
         let cipher = Aes128::new(&key);
-        let gcm = Gcm::new(cipher, &nonce).unwrap();
+        let gcm = Gcm::new(cipher).unwrap();
 
         group.bench_function("aes128_gcm_128bit_nonce", |b| {
             let mut plaintext = vec![0u8; message_size];
             rng.fill(&mut plaintext[..]);
 
             b.iter(|| {
-                let ciphertext = gcm.internal_encrypt(black_box(&plaintext), None).unwrap();
+                let ciphertext = gcm
+                    .internal_encrypt(&nonce, black_box(&plaintext), None)
+                    .unwrap();
                 black_box(ciphertext);
             });
         });
@@ -337,14 +352,16 @@ fn bench_gcm_small_messages(c: &mut Criterion) {
             rng.fill(&mut key_bytes);
             let key = SecretBytes::new(key_bytes);
             let cipher = Aes128::new(&key);
-            let gcm = Gcm::new(cipher, &nonce).unwrap();
+            let gcm = Gcm::new(cipher).unwrap();
 
             group.bench_with_input(BenchmarkId::new("aes128_gcm", size), size, |b, &size| {
                 let mut plaintext = vec![0u8; size];
                 rng.fill(&mut plaintext[..]);
 
                 b.iter(|| {
-                    let ciphertext = gcm.internal_encrypt(black_box(&plaintext), None).unwrap();
+                    let ciphertext = gcm
+                        .internal_encrypt(&nonce, black_box(&plaintext), None)
+                        .unwrap();
                     black_box(ciphertext);
                 });
             });

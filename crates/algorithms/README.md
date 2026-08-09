@@ -3,20 +3,26 @@
 [![Crates.io](https://img.shields.io/crates/v/dcrypt-algorithms.svg)](https://crates.io/crates/dcrypt-algorithms)
 [![Docs.rs](https://docs.rs/dcrypt-algorithms/badge.svg)](https://docs.rs/dcrypt-algorithms)
 [![License](https://img.shields.io/crates/l/dcrypt-algorithms.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/your-repo/rust.yml?branch=main)](https://github.com/your-repo/actions)
 
-`dcrypt-algorithms` is a comprehensive, high-assurance cryptographic library for Rust, providing a wide array of primitives with a strong focus on security, correctness, and type-safety.
+`dcrypt-algorithms` is a Rust crate providing a range of cryptographic
+primitives and type-oriented adapters. `v1.2.3` is confirmed
+not production-safe; known-answer tests and Rust implementation alone do not
+constitute high assurance or an independent audit.
 
-This crate serves as the core cryptographic engine for the `dcrypt` ecosystem, implementing algorithms designed to be resistant to side-channel attacks through constant-time execution and secure memory handling.
+This crate is the low-level engine for the dcrypt ecosystem. Side-channel and
+memory-erasure properties are primitive-, backend-, compiler-, and
+target-specific; this document makes no blanket guarantee.
 
 ## Overview
 
 This library provides low-level cryptographic implementations intended to be used through the higher-level APIs of the `dcrypt` suite. It is built with the following principles:
 
-*   **Security-First:** Implementations prioritize resistance to side-channel attacks. Operations on secret data are designed to be constant-time, and sensitive memory is securely zeroed on drop.
-*   **Correctness:** Algorithms are rigorously tested against official test vectors from sources like NIST (CAVP) and RFCs to ensure interoperability and correctness.
+*   **Security review:** Secret-bearing paths are expected to follow the workspace constant-time and zeroization policies, but not every current implementation has completed the required dynamic review.
+*   **Correctness:** Selected algorithms have NIST/RFC known-answer coverage. Self-roundtrips and vector tests are evidence of interoperability, not certification or a security audit.
 *   **Type Safety:** A strong type system is used to prevent common cryptographic mistakes at compile time. Keys, nonces, and other cryptographic types are bound to the algorithms they are intended for.
-*   **Flexibility:** The crate is designed to work in both `std` and `no_std` environments (with `alloc`), making it suitable for a wide range of applications from servers to embedded systems.
+*   **Feature-oriented builds:** The crate exposes `std` and `alloc` feature
+    boundaries. A complete standalone `no_std` algorithms build is not currently
+    a validated configuration; check the exact primitive and target.
 *   **Modern Cryptography:** Includes a selection of modern, post-quantum and pairing-friendly primitives alongside traditional, widely-adopted standards.
 
 ## Features
@@ -65,8 +71,8 @@ The crate provides a broad range of cryptographic primitives, categorized as fol
 
 This library is written with a security-first mindset.
 
-*   **Constant-Time Execution:** Primitives that handle secret data, particularly elliptic curve and block cipher operations, are implemented to be "constant-time." This means their execution time does not depend on the values of the secret inputs, mitigating a broad class of timing side-channel attacks.
-*   **Secure Memory Handling:** Sensitive data like keys, intermediate cryptographic state, and nonces are handled using secure memory buffers (`SecretBuffer`, `Zeroizing`) that automatically zero their contents when they go out of scope, preventing accidental leakage.
+*   **Timing boundary:** Some operations use branchless code or maintained backends designed for constant-time execution. Refer to `CONSTANT_TIME_POLICY.md`; source shape and statistical tests are not proof for every build.
+*   **Memory hygiene:** Owned key and intermediate buffers use `SecretBuffer` or `Zeroizing` where implemented. This cannot guarantee erasure of caller copies, registers, compiler temporaries, freed allocator storage, or every backend-internal copy.
 *   **Type System:** We leverage Rust's type system to enforce cryptographic properties at compile time. For example, a `SymmetricKey<Aes128, 16>` cannot be accidentally used with a ChaCha20 cipher, preventing API misuse.
 
 ## Usage
@@ -142,14 +148,11 @@ let derived_key = p256::kdf_hkdf_sha256_for_ecdh_kem(&key_material, Some(b"ecdh-
 
 ## `no_std` Support
 
-This crate supports `no_std` environments by disabling the default `std` feature. Many algorithms require an allocator, which can be enabled with the `alloc` feature.
-
-```toml
-[dependencies.dcrypt-algorithms]
-version = "0.12.0-beta.1"
-default-features = false
-features = ["alloc", "hash", "mac", "aead"] # Enable desired algorithm modules
-```
+The manifest retains granular `alloc` and algorithm feature flags for ongoing
+portability work. A complete standalone `no_std` configuration is not currently
+a release-gated or supported build. Do not infer support from the presence of a
+feature name; validate the exact primitive, dependency graph, target, and panic
+strategy before use.
 
 ## Benchmarks
 

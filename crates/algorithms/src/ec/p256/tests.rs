@@ -276,12 +276,8 @@ fn test_scalar_validation() -> Result<()> {
     let invalid_scalar_bytes = [0xFF; 32]; // All 0xFF is definitely larger than curve order
     let result = Scalar::new(invalid_scalar_bytes);
 
-    // Should succeed but reduce the scalar mod order
-    assert!(result.is_ok());
-    let reduced_scalar = result.unwrap();
-
-    // The reduced scalar should be valid and different from the original
-    assert_ne!(reduced_scalar.serialize(), invalid_scalar_bytes);
+    // Private/non-zero scalar decoding is canonical and must reject it.
+    assert!(result.is_err());
 
     // Test zero scalar which should be rejected
     let zero_scalar_bytes = [0; 32];
@@ -289,6 +285,25 @@ fn test_scalar_validation() -> Result<()> {
     assert!(zero_result.is_err());
 
     Ok(())
+}
+
+#[test]
+fn test_intermediate_scalar_reduction_allows_zero_and_reduces_order() {
+    let reduced_order = Scalar::from_bytes_reduced(NIST_P256.n);
+    assert!(reduced_order.is_zero());
+
+    let mut order_plus_one = NIST_P256.n;
+    for byte in order_plus_one.iter_mut().rev() {
+        let (value, carry) = byte.overflowing_add(1);
+        *byte = value;
+        if !carry {
+            break;
+        }
+    }
+    let reduced = Scalar::from_bytes_reduced(order_plus_one);
+    let mut one = [0u8; P256_SCALAR_SIZE];
+    one[P256_SCALAR_SIZE - 1] = 1;
+    assert_eq!(reduced.serialize(), one);
 }
 
 #[test]

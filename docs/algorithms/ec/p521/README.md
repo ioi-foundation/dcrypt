@@ -1,12 +1,17 @@
 # NIST P-521 (`secp521r1`) Elliptic Curve
 
-This module provides a robust, constant-time implementation of the NIST P-521 elliptic curve, also known as `secp521r1`. It is designed for security and is a fundamental component for building higher-level cryptographic protocols like Elliptic Curve Diffie-Hellman (ECDH) and the Elliptic Curve Digital Signature Algorithm (ECDSA).
+This module implements the NIST P-521 curve, also known as `secp521r1`. It is a
+low-level primitive, not by itself a complete ECDH or ECDSA protocol. No blanket
+constant-time or production-suitability claim is made.
 
 P-521 is a prime-order curve that operates over a 521-bit prime field defined by the Mersenne prime `p = 2^521 - 1`. It offers a very high security level (approximately 256 bits) and is part of the NSA's Suite B (now CNSA) cryptography standards for protecting classified information.
 
-## Security Focus
+## Timing scope
 
-The primary design goal of this module is security against side-channel attacks. All cryptographic operations involving secret data, such as scalar multiplication with a private key, are implemented to execute in **constant time**. This ensures that the execution time and memory access patterns do not leak information about the secret values being processed.
+Secret-bearing paths attempt to avoid obvious value-dependent control flow.
+That source-level property is not proof of constant-time execution after
+compilation on every target; deployment requires independent side-channel
+validation.
 
 ## Core Primitives
 
@@ -23,7 +28,7 @@ The `p521` module provides the essential building blocks for Elliptic Curve Cryp
 
 *   **`generate_keypair()`**: Securely generates a new P-521 key pair, consisting of a private key (`Scalar`) and a corresponding public key (`Point`).
 
-*   **`scalar_mult()` and `scalar_mult_base_g()`**: Constant-time scalar multiplication. `scalar_mult_base_g` is optimized for the common operation of multiplying the standard generator point `G` by a scalar (i.e., deriving a public key). `scalar_mult` handles the general case of multiplying any curve point by a scalar, as required in ECDH.
+*   **`scalar_mult()` and `scalar_mult_base_g()`**: Scalar multiplication with timing-aware source structure. `scalar_mult_base_g` multiplies the standard generator; `scalar_mult` handles an arbitrary point.
 
 *   **`kdf_hkdf_sha512_for_ecdh_kem()`**: A Key Derivation Function based on HKDF-SHA512. This function is essential for ECDH, transforming the raw shared secret (an elliptic curve point) into a cryptographically secure symmetric key suitable for encryption or authentication. SHA-512 is used as the underlying hash function to match the high security level of the P-521 curve.
 

@@ -1,19 +1,30 @@
-# dcrypt - Pure Rust Cryptographic Library
+# dcrypt - Cryptographic Library
 
-dcrypt is a pure Rust cryptographic library implementing both traditional and post-quantum cryptographic algorithms. Built with security, modularity, and usability as core principles, it eliminates foreign function interfaces (FFI) to ensure memory safety and cross-platform compatibility.
+dcrypt is a Rust workspace implementing traditional, post-quantum, and hybrid
+cryptographic APIs. `v1.2.3` is confirmed to contain serious security
+defects and must not be used for production cryptography. Earlier releases have
+not been cleared. `v2.0.0` is the first remediated release, but has not received
+an independent post-remediation audit or FIPS validation. Rust and reduced FFI
+usage narrow some risks, but do not ensure memory safety or cryptographic
+security; see the workspace `SECURITY.md`.
 
 This documentation provides an overview of the dcrypt project structure, its core components, and guidance on using its cryptographic functionalities.
 
 ## Key Features
 
--   **Pure Rust Implementation**: All algorithms implemented entirely in Rust without FFI, enhancing memory safety and portability.
+-   **Rust-first Implementation**: Most code avoids FFI, improving portability without constituting a memory-safety guarantee.
 -   **Comprehensive Algorithm Support**: Includes a wide range of traditional (AES, SHA, HMAC, RSA, ECDSA, etc.) and post-quantum cryptographic algorithms (Kyber, Dilithium, Falcon, etc.).
 -   **Modular Architecture**: Organized as a Rust workspace with specialized crates, promoting maintainability and clear separation of concerns.
 -   **Strong Type Safety**: Leverages Rust's type system with const generics and marker traits to prevent misuse of cryptographic primitives and ensure correct API usage.
 -   **Memory Protection**: Prioritizes secure memory handling, including automatic zeroization of sensitive data (keys, intermediate values) using the `zeroize` crate and custom secure types.
--   **Constant-Time Operations**: Implements critical cryptographic operations in constant time to mitigate timing side-channel attacks, guided by a formal [Constant-Time Implementation Policy](./CONSTANT_TIME_POLICY.md).
+-   **Timing Testing**: Selected paths have statistical timing regressions,
+    guided by a [Constant-Time Implementation Policy](../CONSTANT_TIME_POLICY.md).
+    This is not a blanket constant-time claim or proof.
 -   **Hybrid Cryptography**: Offers ready-to-use hybrid schemes combining traditional and post-quantum algorithms for robust, forward-looking security.
--   **Cross-Platform**: Designed to work in both `std` (standard library) and `no_std` (embedded) environments, with features for `wasm` and `simd` acceleration.
+-   **Cross-Platform**: Selected crate/feature combinations target `std`,
+    `no_std` plus `alloc`, and WASM. The `dcrypt-sign` and `dcrypt-symmetric`
+    `no_std` feature combinations do not currently compile and are unsupported;
+    the entire workspace is not a universal `no_std` build.
 
 ## Project Structure
 

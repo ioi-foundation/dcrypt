@@ -159,6 +159,12 @@ fn test_hmac_verify() {
     // Verify with different tag length
     let short_tag = Hmac::<Sha1>::mac(key, message).unwrap(); // SHA-1 produces shorter output
     assert!(!Hmac::<Sha256>::verify(key, message, &short_tag).unwrap());
+
+    // Regression: the old `(len ^ expected) as u8` check accepted a valid
+    // digest followed by 256 bytes because the mismatch narrowed to zero.
+    let mut tag_plus_256 = tag.clone();
+    tag_plus_256.extend_from_slice(&[0u8; 256]);
+    assert!(!Hmac::<Sha256>::verify(key, message, &tag_plus_256).unwrap());
 }
 
 /// Test for error handling after finalization

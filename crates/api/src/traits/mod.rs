@@ -4,6 +4,11 @@
 //! cryptographic operations, along with marker traits that define algorithm
 //! properties.
 
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
+use alloc::string::{String, ToString};
+#[cfg(feature = "std")]
+use std::string::{String, ToString};
+
 // Original trait modules
 pub mod kem;
 pub mod pke;

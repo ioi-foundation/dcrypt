@@ -87,3 +87,11 @@ fn test_chacha20poly1305_encrypt_decrypt() {
     let result = chacha_poly.decrypt(&nonce, &ciphertext, Some(wrong_aad));
     assert!(result.is_err());
 }
+
+#[test]
+#[cfg(target_pointer_width = "64")]
+fn rejects_messages_past_the_chacha20_counter_limit_before_allocation() {
+    let max_bytes = usize::try_from(CHACHA20POLY1305_MAX_DATA_BYTES).unwrap();
+    assert!(validate_data_length(max_bytes).is_ok());
+    assert!(validate_data_length(max_bytes + 1).is_err());
+}

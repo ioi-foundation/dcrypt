@@ -56,7 +56,11 @@ pub trait Mac: Sized {
         mac.finalize()
     }
 
-    /// Verify a MAC tag in constant time
+    /// Verify a MAC tag with equal-length byte comparison that avoids early exit.
+    ///
+    /// Public lengths and errors use ordinary control flow; this is not a
+    /// whole-operation constant-time guarantee. This reusable-key trait must
+    /// not be implemented by one-time authenticators such as Poly1305.
     fn verify_tag(key: &[u8], data: &[u8], tag: &[u8]) -> Result<bool> {
         let computed = Self::compute_tag(key, data)?;
 
@@ -117,7 +121,7 @@ impl<'a, M: Mac> MacBuilder<'a, M> for GenericMacBuilder<'a, M> {
     }
 }
 
-/// Extension trait for MAC implementations to provide builder methods
+/// Extension trait for reusable-key MAC implementations to provide builders.
 pub trait MacExt: Mac {
     /// Creates a builder for this MAC instance
     fn builder(&mut self) -> GenericMacBuilder<'_, Self>;

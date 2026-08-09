@@ -1,11 +1,12 @@
 //! Koblitz secp256k1 Elliptic Curve Primitives
 //!
-//! This module implements the secp256k1 elliptic curve operations in constant time.
+//! This module implements secp256k1 elliptic-curve arithmetic.
 //! The curve equation is y² = x³ + 7 over the prime field F_p where:
 //! - p = 2^256 - 2^32 - 977
 //! - The curve order n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 //!
-//! All operations are implemented to be constant-time to prevent timing attacks.
+//! Selected paths use fixed-iteration or conditional-selection techniques, but
+//! no blanket constant-time claim is made for the module, compiler, or target.
 
 mod constants;
 mod field;

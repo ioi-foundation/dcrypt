@@ -5,7 +5,8 @@
 //! - Field polynomial: x^283 + x^12 + x^7 + x^5 + 1
 //! - The curve order n = 0x01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE96E404282DD3232283E52623152F256011
 //!
-//! Operations are designed to be constant-time.
+//! Operations use timing-aware source structure, but no blanket compiler- or
+//! target-level constant-time guarantee is made.
 
 mod constants;
 mod field;

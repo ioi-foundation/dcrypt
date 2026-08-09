@@ -85,7 +85,7 @@ pub trait DilithiumSchemeParams: Send + Sync + 'static {
     /// Master seed size for key generation (ζ)
     const SEED_ZETA_BYTES: usize = 32;
     /// Hash output size for tr = H(pk)
-    const HASH_TR_BYTES: usize = 32;
+    const HASH_TR_BYTES: usize = 64;
 
     // Additional parameters
     /// Maximum signing attempts before failure
@@ -156,7 +156,7 @@ pub const DILITHIUM2: Dilithium2Params = Dilithium2Params {
 };
 
 impl DilithiumSchemeParams for Dilithium2Params {
-    const NAME: &'static str = "Dilithium2";
+    const NAME: &'static str = "ML-DSA-44";
     const D_PARAM: u32 = 13;
     const K_DIM: usize = 4;
     const L_DIM: usize = 4;
@@ -235,7 +235,7 @@ pub const DILITHIUM3: Dilithium3Params = Dilithium3Params {
 };
 
 impl DilithiumSchemeParams for Dilithium3Params {
-    const NAME: &'static str = "Dilithium3";
+    const NAME: &'static str = "ML-DSA-65";
     const D_PARAM: u32 = 13;
     const K_DIM: usize = 6;
     const L_DIM: usize = 5;
@@ -314,7 +314,7 @@ pub const DILITHIUM5: Dilithium5Params = Dilithium5Params {
 };
 
 impl DilithiumSchemeParams for Dilithium5Params {
-    const NAME: &'static str = "Dilithium5";
+    const NAME: &'static str = "ML-DSA-87";
     const D_PARAM: u32 = 13;
     const K_DIM: usize = 8;
     const L_DIM: usize = 7;

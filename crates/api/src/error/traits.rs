@@ -2,7 +2,7 @@
 
 use super::registry::ERROR_REGISTRY;
 use super::types::{Error, Result};
-use subtle::{Choice, ConditionallySelectable};
+use subtle::ConditionallySelectable;
 
 /// Extension trait for Result types
 pub trait ResultExt<T, E>: Sized {
@@ -53,41 +53,91 @@ impl<T, E> ResultExt<T, E> for core::result::Result<T, E> {
     }
 }
 
-/// Trait for secure error handling to prevent timing attacks
-pub trait SecureErrorHandling<T, E>: Sized {
-    /// Handle errors in constant time
-    fn secure_unwrap<F>(self, default: T, on_error: F) -> T
-    where
-        F: FnOnce() -> E;
-}
-
-impl<T, E> SecureErrorHandling<T, E> for core::result::Result<T, E> {
-    fn secure_unwrap<F>(self, default: T, on_error: F) -> T
+/// Result extension for recording an error before returning a fallback value.
+///
+/// This operation uses ordinary branching on the `Result` discriminant. It is
+/// intended for diagnostics and must not be used when the success/failure state
+/// itself is secret.
+pub trait ErrorRegistryExt<T, E>: Sized {
+    /// Return the successful value, or record `on_error()` and return `default`.
+    fn unwrap_or_record_with<F>(self, default: T, on_error: F) -> T
     where
         F: FnOnce() -> E,
+        E: Send + 'static;
+}
+
+impl<T, E> ErrorRegistryExt<T, E> for core::result::Result<T, E> {
+    fn unwrap_or_record_with<F>(self, default: T, on_error: F) -> T
+    where
+        F: FnOnce() -> E,
+        E: Send + 'static,
     {
         match self {
             Ok(value) => value,
             Err(_) => {
-                // Store error in a way that maintains constant-time
-                let error = on_error();
-                ERROR_REGISTRY.store(error);
+                ERROR_REGISTRY.store(on_error());
                 default
             }
         }
     }
 }
 
-/// Trait for checking if an operation succeeded in constant time
+/// Legacy name for [`ErrorRegistryExt`].
+///
+/// Despite its historical name, this trait has never provided constant-time
+/// execution: it branches on `Result`, invokes only the selected path, and
+/// records an error only on failure.
+pub trait SecureErrorHandling<T, E>: Sized {
+    /// Return the successful value, or record `on_error()` and return `default`.
+    ///
+    /// This method is not constant-time and must not be used when the `Result`
+    /// variant is secret.
+    #[deprecated(
+        note = "secure_unwrap is not constant-time; use ErrorRegistryExt::unwrap_or_record_with for non-secret control flow"
+    )]
+    fn secure_unwrap<F>(self, default: T, on_error: F) -> T
+    where
+        F: FnOnce() -> E,
+        E: Send + 'static;
+}
+
+#[allow(deprecated)]
+impl<T, E> SecureErrorHandling<T, E> for core::result::Result<T, E> {
+    fn secure_unwrap<F>(self, default: T, on_error: F) -> T
+    where
+        F: FnOnce() -> E,
+        E: Send + 'static,
+    {
+        self.unwrap_or_record_with(default, on_error)
+    }
+}
+
+/// Deprecated compatibility helpers for inspecting a `Result`.
+///
+/// These methods perform ordinary, data-dependent branching. Their historical
+/// `ct_` prefix is inaccurate; use `Result::is_ok`, `Result::is_err`, or
+/// `Result::map_or_else` instead. No generic helper can make arbitrary closures
+/// and enum-variant control flow constant-time.
 pub trait ConstantTimeResult<T, E> {
-    /// Check if this result is Ok, without branching on the result
+    /// Equivalent to [`Result::is_ok`]; this is not constant-time.
+    #[deprecated(
+        note = "ct_is_ok branches on the Result variant; use Result::is_ok and do not treat the variant as secret"
+    )]
     fn ct_is_ok(&self) -> bool;
 
-    /// Check if this result is Err, without branching on the result
+    /// Equivalent to [`Result::is_err`]; this is not constant-time.
+    #[deprecated(
+        note = "ct_is_err branches on the Result variant; use Result::is_err and do not treat the variant as secret"
+    )]
     fn ct_is_err(&self) -> bool;
 
-    /// Map a result to a value in constant time, calling a provided function
-    /// regardless of whether the result is Ok or Err
+    /// Map the selected variant; only one closure is called.
+    ///
+    /// This is not constant-time. The `ConditionallySelectable` bound remains
+    /// only to avoid breaking the legacy method signature.
+    #[deprecated(
+        note = "ct_map invokes only the selected closure; use Result::map_or_else and do not treat the variant as secret"
+    )]
     fn ct_map<U, F, G>(self, ok_fn: F, err_fn: G) -> U
     where
         F: FnOnce(T) -> U,
@@ -95,32 +145,14 @@ pub trait ConstantTimeResult<T, E> {
         U: ConditionallySelectable;
 }
 
+#[allow(deprecated)]
 impl<T, E> ConstantTimeResult<T, E> for core::result::Result<T, E> {
     fn ct_is_ok(&self) -> bool {
-        // Create a Choice based on whether this is Ok or Err
-        let is_ok_choice = match self {
-            Ok(_) => Choice::from(1u8),
-            Err(_) => Choice::from(0u8),
-        };
-
-        // Convert the Choice to bool in constant time
-        // We use conditional selection between false and true
-        let mut result = false;
-        result.conditional_assign(&true, is_ok_choice);
-        result
+        self.is_ok()
     }
 
     fn ct_is_err(&self) -> bool {
-        // Use ct_is_ok and negate in constant time
-        let is_ok = self.ct_is_ok();
-
-        // Create choices for the negation
-        let is_ok_choice = Choice::from(is_ok as u8);
-
-        // Select between true (if is_ok is false) and false (if is_ok is true)
-        let mut result = true;
-        result.conditional_assign(&false, is_ok_choice);
-        result
+        self.is_err()
     }
 
     fn ct_map<U, F, G>(self, ok_fn: F, err_fn: G) -> U
@@ -129,45 +161,43 @@ impl<T, E> ConstantTimeResult<T, E> for core::result::Result<T, E> {
         G: FnOnce(E) -> U,
         U: ConditionallySelectable,
     {
-        // To maintain constant-time behavior, we must evaluate both branches
-        // This is less efficient but prevents timing attacks
         match self {
-            Ok(t) => {
-                // We need to create a dummy error to call err_fn
-                // This maintains constant-time execution
-                // Note: This requires E to implement Default or we need another approach
-                // For now, we'll just return the function result directly
-                ok_fn(t)
-            }
-            Err(e) => {
-                // Similarly, we'd need to call ok_fn with a dummy value
-                // For now, we'll just return the function result directly
-                err_fn(e)
-            }
+            Ok(value) => ok_fn(value),
+            Err(error) => err_fn(error),
         }
-        // Note: A truly constant-time implementation would require:
-        // 1. Both T and E to implement Default or similar
-        // 2. Calling both functions always
-        // 3. Using ConditionallySelectable to choose the result
-        // This current implementation is a compromise for practicality
     }
 }
 
-/// Helper trait for types that can be assigned conditionally in constant time
-trait ConditionalAssign {
-    fn conditional_assign(&mut self, other: &Self, choice: Choice);
-}
+#[cfg(test)]
+mod tests {
+    use super::ErrorRegistryExt;
+    use crate::error::ERROR_REGISTRY;
+    use core::sync::atomic::{AtomicUsize, Ordering};
 
-impl ConditionalAssign for bool {
-    fn conditional_assign(&mut self, other: &bool, choice: Choice) {
-        // Convert bools to u8 for constant-time selection
-        let self_as_u8 = *self as u8;
-        let other_as_u8 = *other as u8;
+    #[test]
+    fn record_extension_invokes_error_factory_only_on_error() {
+        static CALLS: AtomicUsize = AtomicUsize::new(0);
+        ERROR_REGISTRY.clear();
 
-        // Perform constant-time selection
-        let result = u8::conditional_select(&self_as_u8, &other_as_u8, choice);
+        let ok: core::result::Result<u8, &'static str> = Ok(7);
+        assert_eq!(
+            ok.unwrap_or_record_with(9, || {
+                CALLS.fetch_add(1, Ordering::SeqCst);
+                "recorded error"
+            }),
+            7
+        );
+        assert_eq!(CALLS.load(Ordering::SeqCst), 0);
 
-        // Convert back to bool
-        *self = result != 0;
+        let error: core::result::Result<u8, &'static str> = Err("source error");
+        assert_eq!(
+            error.unwrap_or_record_with(9, || {
+                CALLS.fetch_add(1, Ordering::SeqCst);
+                "recorded error"
+            }),
+            9
+        );
+        assert_eq!(CALLS.load(Ordering::SeqCst), 1);
+        ERROR_REGISTRY.clear();
     }
 }

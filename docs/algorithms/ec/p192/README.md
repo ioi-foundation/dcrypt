@@ -1,12 +1,14 @@
 # NIST P-192 (`secp192r1`) Elliptic Curve 
 
-This module provides a constant-time implementation of the NIST P-192 elliptic curve, also known as `secp192r1` and `prime192v1`. It is a prime field Weierstrass curve defined by the equation y² = x³ - 3x + b over the prime field Fₚ.
+This module implements the legacy NIST P-192 curve, also known as `secp192r1`
+and `prime192v1`. It is a prime-field Weierstrass curve. No blanket
+constant-time or production-suitability claim is made.
 
 **⚠️ Security Warning:** The P-192 curve provides an effective security strength of only 96 bits, which is below the minimum of 112 bits recommended for modern cryptographic applications. This implementation is intended for interoperability with legacy systems and should not be used for new protocols.
 
 ## Core Features
 
-*   **Constant-Time Implementation**: All scalar multiplications and other operations involving private keys are designed to execute in constant time to mitigate timing side-channel vulnerabilities.
+*   **Timing-aware implementation**: Secret-bearing paths attempt to avoid obvious value-dependent control flow; compiler- and target-level behavior is not guaranteed.
 *   **Key Generation**: Securely generate public/private key pairs using `generate_keypair`. This function uses a cryptographically secure random number generator to create a private key (a 192-bit scalar) and computes the corresponding public key (a point on the curve).
 *   **Scalar Multiplication**: Provides efficient and secure scalar multiplication:
     *   `scalar_mult_base_g`: Fixed-base multiplication with the curve's standard generator point, ideal for public key derivation.

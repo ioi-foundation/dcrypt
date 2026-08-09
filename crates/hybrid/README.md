@@ -7,9 +7,14 @@
 
 ## Overview
 
-`dcrypt-hybrid` is a Rust crate that provides hybrid cryptographic schemes by combining classical and post-quantum algorithms. This approach is vital for ensuring long-term security against future threats, particularly from quantum computers, by providing resistance to "Harvest Now, Decrypt Later" attacks.
+`dcrypt-hybrid` composes classical and post-quantum algorithms. Hybrid designs
+can reduce dependence on a single primitive during a migration, but their
+security also depends on the combiner, framing, domain separation, protocol
+context, key validation, and both component implementations.
 
-The core principle is to combine two cryptographic primitives—one classical (like ECDH) and one post-quantum (like Kyber)—such that the resulting scheme is secure as long as *at least one* of the underlying primitives remains secure.
+Do not interpret this composition as an unconditional guarantee that the result
+is secure whenever either component survives. Applications still need an
+independent review of the complete protocol and its assumptions.
 
 This crate is part of the broader `dcrypt` library ecosystem.
 
@@ -19,7 +24,10 @@ The crate provides hybrid implementations for two primary cryptographic function
 
 ### Hybrid Key Encapsulation Mechanisms (KEMs)
 
-A KEM is used to securely establish a shared secret between two parties. Our hybrid KEM ensures that the shared secret remains confidential even if one of the constituent algorithms is broken in the future. The design is modular, allowing for easy addition of new hybrid combinations.
+A KEM establishes a shared secret between two parties. These hybrid KEMs combine
+two component secrets through a KDF. The resulting security claim is conditional
+on the combiner and surrounding protocol as well as the component assumptions;
+it is not established by concatenating algorithms alone.
 
 #### **Available KEMs**
 *   **`EcdhP256Kyber768`**: Combines classical ECDH on the P-256 curve with post-quantum Kyber-768 (NIST Level 3).
@@ -59,64 +67,69 @@ println!("Successfully established a hybrid shared secret!");
 
 A hybrid signature requires that both the classical and post-quantum signatures are valid to be accepted.
 
-#### **`EcdsaDilithiumHybrid`**
+#### **`EcdsaMlDsa65Hybrid`**
 
 This scheme combines:
 *   **Classical:** `ECDSA` with the P-384 curve.
-*   **Post-Quantum:** `Dilithium3`, a signature algorithm selected by the NIST PQC standardization process.
+*   **Post-Quantum:** final FIPS 204 `ML-DSA-65`.
+
+Public keys, secret keys, and signatures use domain-separated version-2 framing.
+The decoder rejects version-1 `EcdsaDilithiumHybrid` objects because their
+component called Dilithium used a nonstandard, incompatible encoding. Version-1
+objects are not migrated or relabeled as ML-DSA.
 
 #### **`RsaFalconHybrid`**
 
-This scheme combines:
-*   **Classical:** `RSA-PSS`.
-*   **Post-Quantum:** `Falcon-512`, another signature algorithm from the NIST PQC process.
+`RsaFalconHybrid` is a placeholder, not an available secure scheme. Its RSA-PSS
+component is an `RSA-PSS-STUB` whose key generation, signing, and verification
+return `NotImplemented`. Do not use it for security or present it as a completed
+RSA-PSS/Falcon construction.
 
 **How it works:**
 1.  A hybrid key pair consists of both a classical and a post-quantum key pair.
 2.  To sign a message, two separate signatures are generated and concatenated.
 3.  To verify, a recipient must successfully verify *both* component signatures. If either fails, the entire signature is invalid.
 
-**Example Usage (`EcdsaDilithiumHybrid`):**
+**Example Usage (`EcdsaMlDsa65Hybrid`):**
 ```rust
 use dcrypt::api::Signature;
-use dcrypt::hybrid::sign::EcdsaDilithiumHybrid;
+use dcrypt::hybrid::sign::EcdsaMlDsa65Hybrid;
 use rand::rngs::OsRng;
 
 // 1. Generate a hybrid key pair.
-let (pk, sk) = EcdhDilithiumHybrid::keypair(&mut OsRng)?;
+let (pk, sk) = EcdsaMlDsa65Hybrid::keypair(&mut OsRng)?;
 
 let message = b"This message needs a hybrid signature.";
 
 // 2. Sign the message with the hybrid secret key.
-let signature = EcdhDilithiumHybrid::sign(message, &sk)?;
+let signature = EcdsaMlDsa65Hybrid::sign(message, &sk)?;
 
 // 3. Verify the hybrid signature with the public key.
-let verification_result = EcdhDilithiumHybrid::verify(message, &signature, &pk);
+let verification_result = EcdsaMlDsa65Hybrid::verify(message, &signature, &pk);
 
 assert!(verification_result.is_ok());
 println!("Successfully created and verified a hybrid signature!");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-## Installation
+## Release status
 
-Add `dcrypt-hybrid` to your `Cargo.toml` dependencies:
-```toml
-[dependencies]
-dcrypt-hybrid = "0.13.0-beta.2"
-```
-Or use the cargo command:
-```sh
-cargo add dcrypt-hybrid
-```
+`v2.0.0` is the first remediated dcrypt release. `v1.2.3` is confirmed
+affected, and the exact affected ranges for earlier releases remain under
+investigation. The remediated line has not received an independent
+post-remediation audit or FIPS validation; review `SECURITY.md` and pin the exact
+version selected for deployment.
 
 ## Features
 
-This crate is designed to be flexible and supports `no_std` environments.
+Only the default `std` build is currently supported. Although the manifest still
+declares `alloc` and `no_std` feature flags, the transitive dependency graph does
+not provide a validated, supported `no_std` configuration. Do not rely on those
+flags for embedded deployment until a release explicitly restores and tests that
+support.
 
 *   **`std`** (default): Enables functionality that requires the standard library.
-*   **`alloc`**: Enables functionality requiring a global allocator, used by `std` and `no_std`.
-*   **`no_std`**: For use in environments without the standard library. You must depend on the crate with `default-features = false`.
+*   **`alloc` / `no_std`**: Present for compatibility, but unsupported and not a release guarantee.
 *   **`serde`**: Enables serialization and deserialization for some public types via the [Serde](https://serde.rs/) framework.
 
 ## License

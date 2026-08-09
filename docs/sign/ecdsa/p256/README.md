@@ -1,60 +1,68 @@
-
----
-
-### `sign` Crate Documentation Updates
-
-#### **COMPLETE FILE:** `docs/sign/traditional/ecdsa/p256/README.md`
-```markdown
 # ECDSA with NIST P-256 (`sign::traditional::ecdsa::p256`)
 
-This module implements the Elliptic Curve Digital Signature Algorithm (ECDSA) using the NIST P-256 curve (also known as secp256r1 or prime256v1). The implementation adheres to FIPS 186-4 for the core algorithm and incorporates deterministic nonce generation as per RFC 6979, hedged with additional entropy (inspired by FIPS 186-5 recommendations) for enhanced security against weak RNGs. SHA-256 is used as the hash function, as specified for P-256 in FIPS 186-4/5.
+This module implements ECDSA using the P-256 curve (also called `secp256r1` or
+`prime256v1`) and SHA-256. It uses RFC 6979-style deterministic nonce generation
+hedged with entropy from the supplied CSPRNG.
 
-## Algorithm Details (`EcdsaP256`)
+This project has not claimed or received FIPS validation or certification for
+this implementation. References to FIPS or RFC algorithms describe the intended
+operation and interoperability target, not a compliance status or security
+guarantee.
 
-The `EcdsaP256` struct implements the `api::Signature` trait.
+## Public types
 
-### Key Types
+`EcdsaP256` implements `dcrypt_api::Signature` with distinct public-key,
+secret-key, and signature types. Public keys use the module's validated P-256
+point encoding, secret scalars must be in the range `1..n`, and signatures are
+stored as DER bytes.
 
--   **`EcdsaP256PublicKey`**:
-    *   Wraps a `[u8; algorithms::ec::p256::P256_POINT_UNCOMPRESSED_SIZE]`.
-    *   Stores the P-256 public key point in uncompressed format (65 bytes: `0x04 || X-coordinate || Y-coordinate`).
--   **`EcdsaP256SecretKey`**:
-    *   Contains `raw: algorithms::ec::p256::Scalar` and `bytes: [u8; algorithms::ec::p256::P256_SCALAR_SIZE]`.
-    *   Stores the P-256 private key scalar (32 bytes) and its direct byte representation.
-    *   Implements `Zeroize` and `Drop` for secure memory handling of the byte array component.
+Secret-key types request zeroization on drop. Applications are still responsible
+for copies, persistent storage, crash dumps, swap, allocator behavior, and any
+serialized export of key material.
 
-### Signature Format
+## Signature encoding
 
--   **`EcdsaP256Signature`**:
-    *   Wraps a `Vec<u8>`.
-    *   Stores the ECDSA signature `(r, s)` encoded in ASN.1 DER format: `SEQUENCE { r INTEGER, s INTEGER }`.
-    *   The integers `r` and `s` are derived from P-256 scalar values.
+An `EcdsaP256Signature` is an ASN.1 DER sequence containing `(r, s)`:
 
-### Operations
+```text
+SEQUENCE {
+  r INTEGER,
+  s INTEGER
+}
+```
 
-1.  **`keypair(rng)`**:
-    *   Generates a P-256 key pair using `algorithms::ec::p256::generate_keypair`.
-    *   The private key scalar `d` is ensured to be in the range `[1, n-1]`, where `n` is the order of the curve's base point.
-    *   The public key point `Q = d*G` is serialized in uncompressed format.
+Parsing applies all of the following rules:
 
-2.  **`sign(message, secret_key)`**:
-    *   Hashes the input `message` using SHA-256.
-    *   Converts the hash output to an integer `z` (specifically, the leftmost `min(N, bitlen(hash))` bits, where `N` for P-256 is 256 bits).
-    *   Generates a per-message secret number `k` using deterministic nonce generation as per RFC 6979, hedged with additional entropy from a CSPRNG. HMAC-SHA256 is used as the PRF within RFC 6979.
-    *   Computes the elliptic curve point `(x_1, y_1) = k*G`.
-    *   Calculates `r = x_1 mod n`. If `r = 0`, a new `k` is generated and the process repeats.
-    *   Calculates `s = k^(-1) * (z + r*d) mod n`. If `s = 0`, a new `k` is generated. (`d` is the private key scalar).
-    *   The signature is the pair `(r, s)`, DER-encoded using the `SignatureComponents` helper.
+* The sequence and INTEGER lengths must be exact, with no trailing data.
+* Each INTEGER must be nonempty, positive, and minimally encoded. A leading
+  `0x00` is allowed only when needed to prevent a positive value from appearing
+  negative.
+* `r` and `s` must satisfy `1 <= r,s < n`, where `n` is the P-256 group order.
+* `s` must be low. Signing normalizes `s`, and verification rejects high-`s`
+  signatures.
 
-3.  **`verify(message, signature, public_key)`**:
-    *   Parses the DER-encoded `signature` (using `SignatureComponents::from_der`) to retrieve `r` and `s`. Validates that `r` and `s` are in the range `[1, n-1]`.
-    *   Hashes the input `message` using SHA-256 to get `z`.
-    *   Computes `w = s^(-1) mod n`.
-    *   Computes `u1 = z*w mod n` and `u2 = r*w mod n`.
-    *   Deserializes the `public_key` to point `Q`.
-    *   Computes the point `(x_1, y_1) = u1*G + u2*Q`.
-    *   If `(x_1, y_1)` is the point at infinity, the signature is invalid.
-    *   Calculates `v = x_1 mod n`.
-    *   The signature is valid if and only if `v == r`. Comparison is done in constant time.
+Affected releases accepted negative INTEGER encodings as unsigned values,
+noncanonical DER, and high-`s` signatures. Those byte strings intentionally fail
+under the strict decoder. This may break historical fixtures and protocols that
+treated signature bytes as identifiers; audit and migrate such data rather than
+relaxing verification.
 
-This implementation provides a standard and secure digital signature scheme based on the P-256 curve.
+## Operations
+
+`keypair` rejection-samples until it obtains a private scalar in `1..n` and
+derives the corresponding public point. `sign` hashes the message with SHA-256,
+derives a hedged per-message nonce, computes `(r, s)`, normalizes `s` to its low
+form, and emits strict DER. `verify` validates the public key and signature
+encoding, checks the scalar ranges and low-`s` rule, and then evaluates the ECDSA
+verification equation.
+
+The message hash and verification x-coordinate are reduced as required instead
+of treating values at or above the group order as exceptional failures.
+
+## Deployment notes
+
+Public-key authenticity, message/domain binding, key rotation, algorithm policy,
+and replay handling belong to the surrounding protocol. Passing verification
+means only that this signature operation accepted the supplied inputs; it is not
+proof of signer identity without a trusted key association, nor evidence of FIPS
+certification.

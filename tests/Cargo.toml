@@ -9,18 +9,22 @@ license.workspace = true
 publish = false
 
 [dependencies]
-dcrypt-kem = { path = "../crates/kem", version = "=1.2.3" }
-dcrypt-sign = { path = "../crates/sign", version = "=1.2.3" }
-dcrypt-algorithms = { path = "../crates/algorithms", version = "=1.2.3" }
-dcrypt-params = { path = "../crates/params", version = "=1.2.3" }
-dcrypt-symmetric = { path = "../crates/symmetric", version = "=1.2.3" }
-dcrypt-hybrid = { path = "../crates/hybrid", version = "=1.2.3" }
-dcrypt-api = { version = "=1.2.3", path = "../crates/api" }
-dcrypt-common = { path = "../crates/common" , version = "=1.2.3" }
-dcrypt-internal = { path = "../crates/internal" , version = "=1.2.3" }
+dcrypt-kem = { path = "../crates/kem", version = "=2.0.0-alpha.1" }
+dcrypt-sign = { path = "../crates/sign", version = "=2.0.0-alpha.1" }
+dcrypt-algorithms = { path = "../crates/algorithms", version = "=2.0.0-alpha.1" }
+dcrypt-params = { path = "../crates/params", version = "=2.0.0-alpha.1" }
+dcrypt-symmetric = { path = "../crates/symmetric", version = "=2.0.0-alpha.1" }
+dcrypt-hybrid = { path = "../crates/hybrid", version = "=2.0.0-alpha.1" }
+dcrypt-api = { version = "=2.0.0-alpha.1", path = "../crates/api" }
+dcrypt-common = { path = "../crates/common" , version = "=2.0.0-alpha.1" }
+dcrypt-internal = { path = "../crates/internal" , version = "=2.0.0-alpha.1" }
+libcrux-ml-dsa = { version = "=0.0.10", default-features = false, features = ["acvp", "mldsa44", "mldsa65", "mldsa87"] }
+# Test-only independent support for ACVP's externally supplied `mu` interface,
+# which libcrux deliberately does not expose.
+ml-dsa = { version = "=0.1.1", default-features = false, features = ["rand_core"] }
+rand_core_10 = { package = "rand_core", version = "0.10" }
 rand = { workspace = true }
 rand_chacha = { workspace = true }
-statrs = "0.16"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"

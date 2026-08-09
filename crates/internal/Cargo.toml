@@ -21,7 +21,7 @@ thiserror = { version = "1.0.37", optional = true }
 subtle = { version = "2.4.1" }
 
 [dev-dependencies]
-rand = { version = "0.8.5" }
+rand = { version = "0.8.6" }
 
 [package.metadata.release]
 publish = true

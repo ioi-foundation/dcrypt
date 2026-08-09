@@ -1,16 +1,19 @@
 # NIST P-384 (`secp384r1`) Elliptic Curve
 
-This module provides a robust, constant-time implementation of the NIST P-384 elliptic curve, also known as `secp384r1`. It is part of the `dcrypt` library's elliptic curve cryptography (`ec`) suite and is designed for high-security applications, offering a 192-bit security level. The implementation is specified in FIPS 186-4 and is a recommended algorithm in the Commercial National Security Algorithm (CNSA) Suite.
+This module implements the NIST P-384 curve, also known as `secp384r1`.
+Conformance of the curve parameters does not make this implementation FIPS
+validated or suitable for a particular classified-data profile. No blanket
+constant-time claim is made.
 
 The P-384 curve is a Weierstrass curve defined by the equation `y² = x³ - 3x + b` over the 384-bit prime field `p = 2³⁸⁴ − 2¹²⁸ − 2⁹⁶ + 2³² − 1`.
 
 ## Key Features
 
 *   **192-bit Security Level**: Offers a higher security margin than 256-bit curves, suitable for protecting highly sensitive data.
-*   **Constant-Time Implementation**: All operations involving secret data, such as scalar multiplication, are designed to execute in constant time, providing strong resistance against timing-based side-channel attacks.
+*   **Timing-aware implementation**: Secret-bearing paths attempt to avoid obvious value-dependent control flow; this is not a compiler- or target-level guarantee.
 *   **Secure Key Generation**: `generate_keypair` securely creates new public/private key pairs using a cryptographically secure random number generator and rejection sampling to ensure private keys are uniformly distributed.
 *   **Efficient Point Arithmetic**: Utilizes Jacobian projective coordinates for point addition and doubling, minimizing the number of costly modular inversions required during computations.
-*   **Standard Compliance**: Fully compliant with standards from NIST (FIPS 186-4) and SECG (secp384r1), ensuring interoperability.
+*   **Standard parameters**: Uses the NIST/SECG P-384 parameters. Interoperability must be established with external vectors for the operation and encoding in use.
 *   **Point Serialization**: Supports both uncompressed (`0x04 || x || y`) and compressed (`0x02/0x03 || x`) point formats as defined in SEC 1, allowing developers to balance storage size and computational overhead.
 *   **ECDH Key Exchange**: Provides all necessary primitives for Elliptic Curve Diffie-Hellman, including a dedicated Key Derivation Function (`kdf_hkdf_sha384_for_ecdh_kem`) to derive a shared symmetric key.
 

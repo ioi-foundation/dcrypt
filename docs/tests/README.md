@@ -51,12 +51,28 @@ cargo test -p dcrypt-tests --test constant_time_tests -- --nocapture
 
 # ACVP ML-DSA coverage in release mode
 cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_ -- --nocapture
+
+# Exhaustive ErrorRegistry generation/ownership schedule model
+cargo test -p dcrypt-api --test error_registry_loom
+
+# Public error and secret-buffer APIs under Miri
+cargo +nightly-2026-08-07 miri test -p dcrypt-api --lib --all-features
+cargo +nightly-2026-08-07 miri test -p dcrypt-common --lib --all-features
+
+# Compile the attacker-controlled decoder fuzz targets
+cargo +nightly-2026-08-07 fuzz build
 ```
+
+The pull-request security workflow also runs workspace-wide `cargo-audit` and
+`cargo-deny` checks after generating the intentionally untracked lockfile. Fuzz
+targets and their exact coverage are documented in `fuzz/README.md`; ordinary
+CI compiles them, while sustained fuzz campaigns remain a separate release
+operation.
 
 ## Key Test Areas
 
 -   **Correctness**: Verifying algorithm outputs against known-answer tests (KATs) and official test vectors.
--   **Security Properties**: Constant-time behavior of sensitive operations, including ML-DSA fixed-window signing.
+-   **Security Properties**: Statistical timing-regression checks for selected sensitive operations, including ML-DSA verification.
 -   **Parameter Handling**: Correct handling of keys, nonces, and other cryptographic parameters.
 -   **Error Handling**: Proper behavior for invalid inputs and failure conditions.
 -   **API Usability**: Ensuring the public APIs are ergonomic and function as documented.
