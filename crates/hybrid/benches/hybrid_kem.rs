@@ -6,8 +6,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use dcrypt_api::Kem;
 use dcrypt_hybrid::kem::{EcdhP256Kyber768, EcdhP384Kyber1024};
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+use dcrypt_internal::random::ChaCha20Rng;
 
 fn bench_hybrid_keypair(c: &mut Criterion) {
     let mut group = c.benchmark_group("Hybrid_KEM_Keypair");

@@ -14,7 +14,6 @@ complete system remains secure whenever either component survives.
 This module exports the following hybrid signature schemes:
 
 *   `EcdsaMlDsa65Hybrid`: Combines classical **ECDSA P-384** with final FIPS 204 **ML-DSA-65**. The old `EcdsaDilithiumHybrid` spelling is a source-compatible alias to the remediated implementation.
-*   `RsaFalconHybrid`: An unusable placeholder. Its `RSA-PSS-STUB` component returns `NotImplemented` for key generation, signing, and verification. It is not a completed or supported security construction.
 
 ## Format and compatibility
 

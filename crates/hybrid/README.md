@@ -78,13 +78,6 @@ The decoder rejects version-1 `EcdsaDilithiumHybrid` objects because their
 component called Dilithium used a nonstandard, incompatible encoding. Version-1
 objects are not migrated or relabeled as ML-DSA.
 
-#### **`RsaFalconHybrid`**
-
-`RsaFalconHybrid` is a placeholder, not an available secure scheme. Its RSA-PSS
-component is an `RSA-PSS-STUB` whose key generation, signing, and verification
-return `NotImplemented`. Do not use it for security or present it as a completed
-RSA-PSS/Falcon construction.
-
 **How it works:**
 1.  A hybrid key pair consists of both a classical and a post-quantum key pair.
 2.  To sign a message, two separate signatures are generated and concatenated.

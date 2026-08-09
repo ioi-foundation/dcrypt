@@ -17,8 +17,7 @@ use dcrypt_hybrid::kem::{
     EcdhP384Kyber1024, // NIST P-384 + Kyber1024
     EcdhP521Kyber1024, // NIST P-521 + Kyber1024
 };
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+use dcrypt_internal::random::ChaCha20Rng;
 
 /// Generic helper to benchmark a specific KEM implementation
 fn bench_kem_workflow<K: Kem>(c: &mut Criterion, name: &str) {

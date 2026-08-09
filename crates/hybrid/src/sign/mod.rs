@@ -4,7 +4,5 @@
 //! post-quantum algorithms.
 
 mod ecdsa_dilithium;
-mod rsa_falcon;
 
 pub use ecdsa_dilithium::{EcdsaDilithiumHybrid, EcdsaMlDsa65Hybrid};
-pub use rsa_falcon::RsaFalconHybrid;
