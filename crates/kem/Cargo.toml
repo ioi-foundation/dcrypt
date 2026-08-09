@@ -40,8 +40,6 @@ dcrypt-params = { path = "../params", version = "=2.0.0" }
 dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0", default-features = false, features = ["alloc", "ec", "hash", "kdf", "mac", "xof"] }
 
 [dev-dependencies]
-rand = { version = "=0.8.7" }
-rand_chacha = { workspace = true }
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]

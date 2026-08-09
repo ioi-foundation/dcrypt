@@ -4,10 +4,11 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use dcrypt_api::Kem;
 use dcrypt_kem::ecdh::p384::EcdhP384;
-use rand::rngs::OsRng;
+mod support;
+use support::TestRng;
 
 fn bench_p384_keypair(c: &mut Criterion) {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     c.bench_function("ECDH-P384/keypair", |b| {
         b.iter(|| EcdhP384::keypair(&mut rng).unwrap());
@@ -15,7 +16,7 @@ fn bench_p384_keypair(c: &mut Criterion) {
 }
 
 fn bench_p384_encapsulate(c: &mut Criterion) {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, _) = EcdhP384::keypair(&mut rng).unwrap();
 
     c.bench_function("ECDH-P384/encapsulate", |b| {
@@ -24,7 +25,7 @@ fn bench_p384_encapsulate(c: &mut Criterion) {
 }
 
 fn bench_p384_decapsulate(c: &mut Criterion) {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let (pk, sk) = EcdhP384::keypair(&mut rng).unwrap();
     let (ct, _) = EcdhP384::encapsulate(&mut rng, &pk).unwrap();
 
@@ -34,7 +35,7 @@ fn bench_p384_decapsulate(c: &mut Criterion) {
 }
 
 fn bench_p384_full_kem_flow(c: &mut Criterion) {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     c.bench_function("ECDH-P384/full_kem_flow", |b| {
         b.iter(|| {
@@ -54,7 +55,7 @@ fn bench_p384_full_kem_flow(c: &mut Criterion) {
 }
 
 fn bench_p384_batch_operations(c: &mut Criterion) {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let batch_sizes = vec![10, 100, 1000];
 
     let mut group = c.benchmark_group("ECDH-P384/batch");
@@ -117,7 +118,7 @@ fn bench_p384_batch_operations(c: &mut Criterion) {
 }
 
 fn bench_p384_memory_patterns(c: &mut Criterion) {
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Benchmark memory allocation patterns
     c.bench_function("ECDH-P384/memory/keypair_allocation", |b| {
@@ -145,7 +146,7 @@ fn bench_p384_parallel_operations(c: &mut Criterion) {
     use std::sync::Arc;
     use std::thread;
 
-    let mut rng = OsRng;
+    let mut rng = TestRng;
     let num_threads = 4;
 
     c.bench_function("ECDH-P384/parallel/keypair_generation", |b| {
@@ -153,7 +154,7 @@ fn bench_p384_parallel_operations(c: &mut Criterion) {
             let handles: Vec<_> = (0..num_threads)
                 .map(|_| {
                     thread::spawn(|| {
-                        let mut rng = OsRng;
+                        let mut rng = TestRng;
                         EcdhP384::keypair(&mut rng).unwrap()
                     })
                 })
@@ -175,7 +176,7 @@ fn bench_p384_parallel_operations(c: &mut Criterion) {
                 .map(|_| {
                     let pk_clone = Arc::clone(&pk_arc);
                     thread::spawn(move || {
-                        let mut rng = OsRng;
+                        let mut rng = TestRng;
                         EcdhP384::encapsulate(&mut rng, &pk_clone).unwrap()
                     })
                 })

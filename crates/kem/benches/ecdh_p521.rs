@@ -4,13 +4,14 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use dcrypt_api::Kem;
 use dcrypt_kem::ecdh::p521::{EcdhP521, EcdhP521PublicKey, EcdhP521SecretKey};
-use rand::rngs::OsRng;
+mod support;
+use support::TestRng;
 
 fn bench_p521_keypair(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P521");
 
     group.bench_function("keypair_generation", |b| {
-        let mut rng = OsRng;
+        let mut rng = TestRng;
         b.iter(|| EcdhP521::keypair(&mut rng).unwrap());
     });
 
@@ -19,7 +20,7 @@ fn bench_p521_keypair(c: &mut Criterion) {
 
 fn bench_p521_encapsulate(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P521");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate a recipient keypair for the benchmark
     let (recipient_pk, _) = EcdhP521::keypair(&mut rng).unwrap();
@@ -33,7 +34,7 @@ fn bench_p521_encapsulate(c: &mut Criterion) {
 
 fn bench_p521_decapsulate(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P521");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate a recipient keypair and ciphertext for the benchmark
     let (recipient_pk, recipient_sk) = EcdhP521::keypair(&mut rng).unwrap();
@@ -48,7 +49,7 @@ fn bench_p521_decapsulate(c: &mut Criterion) {
 
 fn bench_p521_roundtrip(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P521");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate a recipient keypair for the benchmark
     let (recipient_pk, recipient_sk) = EcdhP521::keypair(&mut rng).unwrap();
@@ -71,7 +72,7 @@ fn bench_p521_roundtrip(c: &mut Criterion) {
 
 fn bench_p521_batch_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P521");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Benchmark different batch sizes
     for batch_size in [10, 50, 100].iter() {
@@ -116,7 +117,7 @@ fn bench_p521_batch_operations(c: &mut Criterion) {
 
 fn bench_p521_parallel_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P521");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate multiple keypairs for parallel operations
     let num_keypairs = 100;
@@ -139,7 +140,7 @@ fn bench_p521_parallel_operations(c: &mut Criterion) {
 
 fn bench_p521_key_sizes(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P521-sizes");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Generate sample keys and ciphertext
     let (pk, sk) = EcdhP521::keypair(&mut rng).unwrap();

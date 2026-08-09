@@ -9,18 +9,18 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use dcrypt_api::Kem;
+use dcrypt_internal::random::ChaCha20Rng;
 use dcrypt_kem::ecdh::p256::EcdhP256;
-use rand::rngs::OsRng;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+mod support;
+use support::TestRng;
 
 /// Benchmark key generation
 fn bench_keypair_generation(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/Keypair");
 
-    // Benchmark with OsRng (system randomness)
-    group.bench_function("OsRng", |b| {
-        let mut rng = OsRng;
+    // Benchmark with a caller-provided RNG.
+    group.bench_function("CallerRng", |b| {
+        let mut rng = TestRng;
         b.iter(|| {
             let keypair = EcdhP256::keypair(&mut rng).unwrap();
             black_box(keypair);
@@ -29,7 +29,7 @@ fn bench_keypair_generation(c: &mut Criterion) {
 
     // Benchmark with ChaCha20Rng (deterministic for consistency)
     group.bench_function("ChaCha20Rng", |b| {
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42; 32]);
         b.iter(|| {
             let keypair = EcdhP256::keypair(&mut rng).unwrap();
             black_box(keypair);
@@ -42,7 +42,7 @@ fn bench_keypair_generation(c: &mut Criterion) {
 /// Benchmark encapsulation
 fn bench_encapsulation(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/Encapsulate");
-    let mut rng = ChaCha20Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Generate a recipient keypair
     let (recipient_pk, _) = EcdhP256::keypair(&mut rng).unwrap();
@@ -61,7 +61,7 @@ fn bench_encapsulation(c: &mut Criterion) {
 /// Benchmark decapsulation
 fn bench_decapsulation(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/Decapsulate");
-    let mut rng = ChaCha20Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Generate recipient keypair and create a ciphertext
     let (recipient_pk, recipient_sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -82,7 +82,7 @@ fn bench_full_roundtrip(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/FullRoundtrip");
 
     group.bench_function("default", |b| {
-        let mut rng = ChaCha20Rng::seed_from_u64(42);
+        let mut rng = ChaCha20Rng::from_seed([42; 32]);
         b.iter(|| {
             // Generate recipient keypair
             let (recipient_pk, recipient_sk) = EcdhP256::keypair(&mut rng).unwrap();
@@ -112,7 +112,7 @@ fn bench_parallel_operations(c: &mut Criterion) {
             BenchmarkId::new("keypairs", num_keys),
             num_keys,
             |b, &num_keys| {
-                let mut rng = ChaCha20Rng::seed_from_u64(42);
+                let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
                 // Pre-generate recipient keys
                 let recipients: Vec<_> = (0..num_keys)
@@ -136,7 +136,7 @@ fn bench_parallel_operations(c: &mut Criterion) {
 /// Benchmark memory allocation patterns
 fn bench_memory_patterns(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/Memory");
-    let mut rng = ChaCha20Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark key sizes
     group.bench_function("key_sizes", |b| {
@@ -161,7 +161,7 @@ fn bench_memory_patterns(c: &mut Criterion) {
 /// Benchmark error cases and edge conditions
 fn bench_error_cases(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/ErrorCases");
-    let mut rng = ChaCha20Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark invalid public key handling (identity point)
     group.bench_function("invalid_public_key", |b| {
@@ -209,7 +209,7 @@ fn bench_error_cases(c: &mut Criterion) {
 /// Benchmark KDF performance within the KEM
 fn bench_kdf_performance(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/KDF");
-    let mut rng = ChaCha20Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Measure the overhead of KDF in encapsulation
     group.bench_function("encapsulation_kdf_overhead", |b| {
@@ -229,7 +229,7 @@ fn bench_kdf_performance(c: &mut Criterion) {
 /// Compare compressed vs uncompressed point operations (if applicable)
 fn bench_point_compression(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-P256/Compression");
-    let mut rng = ChaCha20Rng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark serialization/deserialization of compressed points
     group.bench_function("compressed_point_operations", |b| {

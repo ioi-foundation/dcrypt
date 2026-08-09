@@ -8,10 +8,10 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use dcrypt_api::Kem;
+use dcrypt_internal::random::ChaCha20Rng;
 use dcrypt_kem::ecdh::k256::{EcdhK256, EcdhK256PublicKey, EcdhK256SecretKey};
-use rand::rngs::OsRng;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
+mod support;
+use support::TestRng;
 
 /// Benchmark key generation for ECDH-K256
 fn bench_keypair_generation(c: &mut Criterion) {
@@ -20,9 +20,9 @@ fn bench_keypair_generation(c: &mut Criterion) {
     group.sample_size(20);
     group.measurement_time(std::time::Duration::from_secs(10));
 
-    // Benchmark with OsRng (system randomness)
-    group.bench_function("OsRng", |b| {
-        let mut rng = OsRng;
+    // Benchmark with a caller-provided RNG.
+    group.bench_function("CallerRng", |b| {
+        let mut rng = TestRng;
         b.iter(|| {
             let keypair = EcdhK256::keypair(&mut rng).unwrap();
             black_box(keypair);

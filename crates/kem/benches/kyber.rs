@@ -4,14 +4,13 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use dcrypt_api::Kem;
+use dcrypt_internal::random::ChaCha20Rng;
 use dcrypt_kem::kyber::{Kyber1024, Kyber512, Kyber768};
-use rand::SeedableRng;
-use rand_chacha::ChaChaRng;
 
 /// Benchmark Kyber-512 operations
 fn bench_kyber512(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber512");
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark key generation
     group.bench_function("keygen", |b| {
@@ -61,7 +60,7 @@ fn bench_kyber512(c: &mut Criterion) {
 /// Benchmark Kyber-768 operations
 fn bench_kyber768(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber768");
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark key generation
     group.bench_function("keygen", |b| {
@@ -111,7 +110,7 @@ fn bench_kyber768(c: &mut Criterion) {
 /// Benchmark Kyber-1024 operations
 fn bench_kyber1024(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber1024");
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark key generation
     group.bench_function("keygen", |b| {
@@ -161,7 +160,7 @@ fn bench_kyber1024(c: &mut Criterion) {
 /// Comparative benchmark across all Kyber variants
 fn bench_kyber_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber_Comparison");
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Compare key generation across variants
     for variant in ["Kyber512", "Kyber768", "Kyber1024"].iter() {
@@ -212,7 +211,7 @@ fn bench_kyber_comparison(c: &mut Criterion) {
 /// Benchmark operations with different message patterns
 fn bench_kyber_patterns(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber_Patterns");
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark multiple sequential encapsulations (simulating multiple key exchanges)
     let (pk512, sk512) = Kyber512::keypair(&mut rng).unwrap();
@@ -255,7 +254,7 @@ fn bench_kyber_patterns(c: &mut Criterion) {
 /// Benchmark memory-intensive operations
 fn bench_kyber_memory(c: &mut Criterion) {
     let mut group = c.benchmark_group("Kyber_Memory");
-    let mut rng = ChaChaRng::seed_from_u64(42);
+    let mut rng = ChaCha20Rng::from_seed([42; 32]);
 
     // Benchmark key generation with immediate drop (tests zeroization overhead)
     group.bench_function("Kyber512_keygen_with_drop", |b| {

@@ -5,7 +5,8 @@ use criterion::{
     criterion_group, criterion_main, AxisScale, BenchmarkId, Criterion, PlotConfiguration,
 };
 use dcrypt_api::Kem;
-use rand::rngs::OsRng;
+mod support;
+use support::TestRng;
 
 // Import all ECDH implementations
 use dcrypt_kem::ecdh::b283k::EcdhB283k;
@@ -16,7 +17,7 @@ use dcrypt_kem::ecdh::p521::EcdhP521;
 
 fn bench_ecdh_keypair_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-Keypair-Comparison");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     group.bench_function("P-256", |b| {
         b.iter(|| EcdhP256::keypair(&mut rng).unwrap());
@@ -43,7 +44,7 @@ fn bench_ecdh_keypair_comparison(c: &mut Criterion) {
 
 fn bench_ecdh_encapsulate_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-Encapsulate-Comparison");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Pre-generate public keys for each curve
     let (pk_p256, _) = EcdhP256::keypair(&mut rng).unwrap();
@@ -77,7 +78,7 @@ fn bench_ecdh_encapsulate_comparison(c: &mut Criterion) {
 
 fn bench_ecdh_decapsulate_comparison(c: &mut Criterion) {
     let mut group = c.benchmark_group("ECDH-Decapsulate-Comparison");
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Pre-generate keypairs and ciphertexts for each curve
     let (pk_p256, sk_p256) = EcdhP256::keypair(&mut rng).unwrap();
@@ -127,7 +128,7 @@ fn bench_ecdh_throughput_comparison(c: &mut Criterion) {
     // Set a reasonable time limit
     group.measurement_time(std::time::Duration::from_secs(20));
 
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // Use different iteration counts based on curve performance
     // Deprecated curves (P-192, P-224) removed from benchmark
@@ -189,7 +190,7 @@ fn bench_ecdh_throughput_comparison(c: &mut Criterion) {
 fn print_ecdh_sizes() {
     println!("\n=== ECDH-KEM Key and Ciphertext Sizes ===\n");
 
-    let mut rng = OsRng;
+    let mut rng = TestRng;
 
     // P-256
     let (pk_p256, sk_p256) = EcdhP256::keypair(&mut rng).unwrap();
