@@ -15,7 +15,7 @@ side-channel guarantees.
         `ZeroizeOnDrop`. Each clone owns storage that invokes zeroization on
         drop.
     *   **`SecretVec`** (requires `alloc` feature):
-        A variable-length `Vec<u8>` wrapper that wipes removed bytes on shrink, copies into a fresh allocation and wipes the old allocation before growth, and wipes its complete capacity on drop. Suitable for secrets whose size isn't known at compile time or can change.
+        The exact-size `Box<[u8]>`-backed type from `dcrypt-api`, re-exported here. It never retains spare capacity, wipes its complete old allocation before replacement, and wipes its current allocation on drop.
     *   **`EphemeralSecret<T: Zeroize>`**:
         A generic wrapper for a `T: Zeroize` that invokes `T::zeroize` on drop.
     *   **`ZeroizeGuard<'a, T: Zeroize>`**:

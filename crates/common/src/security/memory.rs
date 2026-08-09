@@ -202,7 +202,7 @@ mod tests {
 
     #[cfg(any(feature = "std", feature = "alloc"))]
     struct TestOperation {
-        secret: Vec<u8>,
+        secret: [u8; 4],
         result: Option<Vec<u8>>,
     }
 
@@ -229,7 +229,7 @@ mod tests {
     #[cfg(any(feature = "std", feature = "alloc"))]
     fn test_secure_operation() {
         let op = TestOperation {
-            secret: vec![1, 2, 3, 4],
+            secret: [1, 2, 3, 4],
             result: None,
         };
 

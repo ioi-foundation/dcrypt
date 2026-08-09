@@ -27,7 +27,7 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
 3.  **Types (`dcrypt_docs/api/types.rs`)**:
     Defines fundamental, security-conscious data types:
     *   `SecretBytes<const N: usize>`: A fixed-size array for sensitive data, guaranteeing zeroization on drop and providing constant-time equality.
-    *   `SecretVec`: A variable-length vector for sensitive data that wipes removed bytes, wipes an old allocation before growth or capacity changes, and zeroizes its complete allocation on drop.
+    *   `SecretVec`: Exact-size boxed storage for variable-length sensitive data. It never retains spare capacity, wipes old allocations before replacement, and zeroizes its current allocation on drop.
     *   `Key`: A wrapper for cryptographic key data, ensuring zeroization.
     *   `PublicKey`: A wrapper for public key data.
     *   `Ciphertext`: A wrapper for ciphertext data.
@@ -114,7 +114,7 @@ impl SymmetricCipher for MyAeadCipher {
     fn generate_key<R: RngCore + CryptoRng>(_rng: &mut R) -> Result<Self::Key> {
         let mut k = vec![0u8; 32];
         _rng.fill_bytes(&mut k);
-        Ok(Key::new(&k))
+        Ok(Key::from_slice(&k))
     }
     fn generate_nonce<R: RngCore + CryptoRng>(_rng: &mut R) -> Result<Self::Nonce> {
         let mut n_bytes = [0u8; 12];
@@ -123,7 +123,7 @@ impl SymmetricCipher for MyAeadCipher {
     }
     fn derive_key_from_bytes(bytes: &[u8]) -> Result<Self::Key> {
         if bytes.len() < 32 { return Err(crate::Error::InvalidKey{ context: "Key too short", #[cfg(feature="std")] message: "".into()}); }
-        Ok(Key::new(&bytes[..32]))
+        Ok(Key::from_slice(&bytes[..32]))
     }
 }
 

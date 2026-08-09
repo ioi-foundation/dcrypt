@@ -19,23 +19,24 @@ While the `algorithms` crate (`dcrypt_docs/algorithms/types/README.md`) defines 
     *   **Serialization**: Implements `crate::Serialize`.
 
 2.  **`SecretVec`**:
-    *   **Purpose**: A variable-length vector (`Vec<u8>`) for sensitive data.
+    *   **Purpose**: Variable-length exact-size boxed storage (`Box<[u8]>`) for sensitive data.
     *   **Security**:
         *   Implements `Zeroize` and `ZeroizeOnDrop`.
-        *   Wipes bytes before truncation or shrinking and wipes the complete old allocation before any operation replaces it.
+        *   Never retains inaccessible spare capacity. It wipes the complete old allocation before any operation replaces it.
         *   Mutable dereferencing exposes only `[u8]`, preventing callers from invoking `Vec` operations that can reallocate without first wiping the old allocation.
         *   `PartialEq` uses constant-time comparison.
         *   `Debug` formatting redacts content.
     *   **Functionality**:
-        *   Constructors: `new(data: Vec<u8>)`, `from_slice(slice: &[u8])`, `zeroed(len: usize)`, `random<R: RngCore + CryptoRng>(rng: &mut R, len: usize)`.
-        *   Controlled `Vec`-like methods: `len()`, `is_empty()`, `capacity()`, `extend_from_slice()`, `resize()`, `truncate()`, `clear()`, `push()`, `pop()`, `reserve()`, and `shrink_to_fit()`; plus slice access through `as_ref()`, `as_mut()`, and `Deref<Target = [u8]>`.
+        *   Constructors: `new(data: Box<[u8]>)`, `from_slice(slice: &[u8])`, `zeroed(len: usize)`, and `random<R: CryptoRng>(rng: &mut R, len: usize)`.
+        *   Controlled methods: `len()`, `is_empty()`, `capacity()`, `extend_from_slice()`, `resize()`, `truncate()`, `clear()`, `push()`, and `pop()`; plus slice access through `as_ref()`, `as_mut()`, and `Deref<Target = [u8]>`.
+        *   `to_bytes_zeroizing_boxed()` and `into_bytes_zeroizing_boxed()` return exact-size zeroizing storage.
     *   **Serialization**: Implements `crate::Serialize`.
     *   **Feature Dependency**: Available when the `alloc` feature is enabled.
 
 3.  **`Key`**:
     *   **Purpose**: A generic wrapper for cryptographic key data (variable length).
-    *   **Security**: Implements `Zeroize` and `ZeroizeOnDrop`.
-    *   **Functionality**: `new(bytes: &[u8])`, `new_zeros(len: usize)`, `len()`, `is_empty()`, `as_ref()`, `as_mut()`.
+    *   **Security**: Uses exact-size boxed storage and implements `Zeroize` and `ZeroizeOnDrop`.
+    *   **Functionality**: `new(bytes: &[u8])`, `from_boxed_slice(bytes: Box<[u8]>)`, `new_zeros(len: usize)`, `len()`, `is_empty()`, `as_ref()`, `as_mut()`.
     *   **Serialization**: Implements `crate::Serialize`.
 
 4.  **`PublicKey`**:

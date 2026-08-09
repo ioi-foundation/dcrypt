@@ -1,7 +1,8 @@
 //! Safe-Rust memory clearing utilities.
 
 #[cfg(any(feature = "alloc", feature = "std"))]
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use core::fmt;
 use core::hint::black_box;
 use core::ops::{Deref, DerefMut};
 use core::sync::atomic::{compiler_fence, Ordering};
@@ -93,8 +94,14 @@ impl Zeroize for String {
 }
 
 /// A wrapper that clears its initialized value when dropped.
-#[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Zeroizing<T: Zeroize>(T);
+
+impl<T: Zeroize> fmt::Debug for Zeroizing<T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Zeroizing([REDACTED])")
+    }
+}
 
 impl<T: Zeroize> Zeroizing<T> {
     pub const fn new(value: T) -> Self {
@@ -142,6 +149,36 @@ impl<T: Zeroize> Zeroize for Zeroizing<T> {
 
 impl<T: Zeroize> ZeroizeOnDrop for Zeroizing<T> {}
 
+/// An exact-size byte allocation that clears every initialized byte on drop.
+///
+/// Unlike `Zeroizing<Vec<u8>>`, this type has no inaccessible spare capacity.
+/// New secret-returning APIs should prefer this representation.
+#[cfg(any(feature = "alloc", feature = "std"))]
+pub type ZeroizingBytes = Zeroizing<Box<[u8]>>;
+
+/// Allocate an exact-size boxed byte slice initialized to zero.
+///
+/// The temporary `Vec` contains only zeroes. Secret bytes must be written only
+/// after conversion to the exact-size boxed slice.
+#[cfg(any(feature = "alloc", feature = "std"))]
+pub fn boxed_bytes_zeroed(len: usize) -> Box<[u8]> {
+    vec![0u8; len].into_boxed_slice()
+}
+
+/// Copy bytes directly into exact-size owned storage.
+#[cfg(any(feature = "alloc", feature = "std"))]
+pub fn boxed_bytes_from_slice(data: &[u8]) -> Box<[u8]> {
+    let mut boxed = boxed_bytes_zeroed(data.len());
+    boxed.copy_from_slice(data);
+    boxed
+}
+
+/// Copy bytes into exact-size storage that clears itself on drop.
+#[cfg(any(feature = "alloc", feature = "std"))]
+pub fn zeroizing_bytes_from_slice(data: &[u8]) -> ZeroizingBytes {
+    Zeroizing::new(boxed_bytes_from_slice(data))
+}
+
 /// Securely zero a slice of memory
 ///
 /// This function ensures that the contents of the slice are securely
@@ -150,13 +187,14 @@ pub fn secure_zero(data: &mut [u8]) {
     data.zeroize();
 }
 
-/// Securely clone a slice, zeroing the source afterwards
+/// Securely clone a slice into exact-size storage, zeroing the source
+/// afterwards.
 ///
 /// This function clones the contents of the slice and then securely
 /// zeroes the original slice.
 #[cfg(any(feature = "alloc", feature = "std"))]
-pub fn secure_clone_and_zero(data: &mut [u8]) -> Vec<u8> {
-    let result = data.to_vec();
+pub fn secure_clone_and_zero(data: &mut [u8]) -> Box<[u8]> {
+    let result = boxed_bytes_from_slice(data);
     secure_zero(data);
     result
 }
@@ -188,5 +226,41 @@ impl<'a> ZeroGuard<'a> {
 impl Drop for ZeroGuard<'_> {
     fn drop(&mut self) {
         secure_zero(self.0);
+    }
+}
+
+#[cfg(all(test, any(feature = "alloc", feature = "std")))]
+mod tests {
+    use super::{
+        boxed_bytes_from_slice, boxed_bytes_zeroed, secure_clone_and_zero, Zeroize, ZeroizingBytes,
+    };
+
+    #[cfg(not(feature = "std"))]
+    use alloc::format;
+
+    #[test]
+    fn boxed_byte_helpers_use_exact_length_storage() {
+        let zeroed = boxed_bytes_zeroed(17);
+        assert_eq!(zeroed.len(), 17);
+        assert!(zeroed.iter().all(|byte| *byte == 0));
+
+        let copied = boxed_bytes_from_slice(&[1, 2, 3, 4]);
+        assert_eq!(&*copied, &[1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn secure_clone_moves_secret_into_box_and_clears_source() {
+        let mut source = [0xA5; 8];
+        let copied = secure_clone_and_zero(&mut source);
+        assert_eq!(&*copied, &[0xA5; 8]);
+        assert_eq!(source, [0; 8]);
+    }
+
+    #[test]
+    fn zeroizing_bytes_can_be_cleared_in_place() {
+        let mut secret = ZeroizingBytes::new(boxed_bytes_from_slice(&[7, 8, 9]));
+        assert_eq!(format!("{secret:?}"), "Zeroizing([REDACTED])");
+        secret.zeroize();
+        assert_eq!(&**secret, &[0, 0, 0]);
     }
 }

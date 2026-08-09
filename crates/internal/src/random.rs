@@ -35,7 +35,7 @@ pub trait RngCore {
     }
 
     fn fill_bytes(&mut self, destination: &mut [u8]) {
-        self.try_fill_bytes(destination)
+        try_fill_bytes_zeroing_on_error(self, destination)
             .expect("caller-provided randomness source failed")
     }
 
@@ -54,12 +54,29 @@ impl<R: RngCore + ?Sized> RngCore for &mut R {
     }
 
     fn fill_bytes(&mut self, destination: &mut [u8]) {
-        (**self).fill_bytes(destination)
+        try_fill_bytes_zeroing_on_error(&mut **self, destination)
+            .expect("caller-provided randomness source failed")
     }
 
     fn try_fill_bytes(&mut self, destination: &mut [u8]) -> Result<(), Error> {
         (**self).try_fill_bytes(destination)
     }
+}
+
+/// Fill a destination and clear it completely if the RNG reports failure.
+///
+/// `RngCore` implementations are caller supplied and may write only part of a
+/// destination before returning an error. Secret constructors use this helper
+/// so those partial bytes never remain live on an error path.
+pub fn try_fill_bytes_zeroing_on_error<R: RngCore + ?Sized>(
+    rng: &mut R,
+    destination: &mut [u8],
+) -> Result<(), Error> {
+    let result = rng.try_fill_bytes(destination);
+    if result.is_err() {
+        destination.zeroize();
+    }
+    result
 }
 
 /// Marker for generators suitable for cryptographic use.
@@ -119,16 +136,12 @@ impl ChaCha20Rng {
 }
 
 impl RngCore for ChaCha20Rng {
-    fn fill_bytes(&mut self, destination: &mut [u8]) {
-        self.try_fill_bytes(destination)
-            .expect("ChaCha20Rng exhausted its IETF counter space")
-    }
-
     fn try_fill_bytes(&mut self, destination: &mut [u8]) -> Result<(), Error> {
         let mut written = 0;
         while written < destination.len() {
-            if self.offset == self.buffer.len() {
-                self.refill()?;
+            if self.offset == self.buffer.len() && self.refill().is_err() {
+                destination.zeroize();
+                return Err(Error);
             }
             let available = self.buffer.len() - self.offset;
             let take = core::cmp::min(available, destination.len() - written);
@@ -217,8 +230,37 @@ fn chacha20_block(key: &[u32; 8], counter: u32) -> [u8; 64] {
 
 #[cfg(test)]
 mod tests {
-    use super::{chacha20_block, ChaCha20Rng, RngCore};
+    use super::{chacha20_block, try_fill_bytes_zeroing_on_error, ChaCha20Rng, Error, RngCore};
     use crate::zeroing::Zeroize;
+
+    struct PartiallyFailingRng;
+
+    impl RngCore for PartiallyFailingRng {
+        fn try_fill_bytes(&mut self, destination: &mut [u8]) -> Result<(), Error> {
+            let written = core::cmp::min(3, destination.len());
+            destination[..written].fill(0xA5);
+            Err(Error)
+        }
+    }
+
+    #[test]
+    fn defensive_fill_erases_partial_rng_output_on_error() {
+        let mut rng = PartiallyFailingRng;
+        let mut destination = [0xCC; 8];
+        assert!(try_fill_bytes_zeroing_on_error(&mut rng, &mut destination).is_err());
+        assert_eq!(destination, [0; 8]);
+    }
+
+    #[test]
+    fn chacha_rng_erases_partial_output_when_counter_exhausts() {
+        let mut rng = ChaCha20Rng::from_seed([9; 32]);
+        rng.counter = u32::MAX;
+        rng.offset = rng.buffer.len();
+
+        let mut destination = [0xCC; 65];
+        assert!(rng.try_fill_bytes(&mut destination).is_err());
+        assert_eq!(destination, [0; 65]);
+    }
 
     #[test]
     fn zero_key_zero_nonce_block_matches_rfc_8439_primitive() {

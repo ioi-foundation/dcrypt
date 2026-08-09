@@ -28,8 +28,10 @@ The `internal` crate provides low-level utility functions and modules that are s
 3.  **Secure Memory Zeroing (`zeroing.rs`)**:
     *   **Purpose**: Offers utilities for securely clearing sensitive data from memory.
     *   **Key Functions**:
-        *   `secure_zero(data: &mut [u8])`: Uses `data.zeroize()` from the `zeroize` crate.
-        *   `secure_clone_and_zero(data: &mut [u8]) -> Vec<u8>`: Clones a slice and then zeroes the original.
+        *   `secure_zero(data: &mut [u8])`: Uses dcrypt's safe-Rust `Zeroize` implementation.
+        *   `boxed_bytes_zeroed` / `boxed_bytes_from_slice`: Create exact-size boxed byte storage before secret data is written.
+        *   `ZeroizingBytes`: An exact-size `Zeroizing<Box<[u8]>>` alias for secret-returning APIs.
+        *   `secure_clone_and_zero(data: &mut [u8]) -> Box<[u8]>`: Clones a slice into exact-size storage and then zeroes the original.
     *   **`ZeroGuard<'a>` Struct**: An RAII guard that ensures a mutable byte slice is zeroed when the guard goes out of scope.
 
 4.  **SIMD Utilities (`simd` module in `lib.rs`)** (conditional on `simd` feature):

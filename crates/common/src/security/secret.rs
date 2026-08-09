@@ -7,17 +7,11 @@
 use core::convert::{AsMut, AsRef};
 use core::fmt;
 use core::ops::{Deref, DerefMut};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop};
+use dcrypt_internal::zeroing::Zeroize;
 
-// Handle Vec import based on features
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-extern crate alloc;
-
-#[cfg(all(feature = "alloc", not(feature = "std")))]
-use alloc::{boxed::Box, vec, vec::Vec};
-
-#[cfg(feature = "std")]
-use std::{boxed::Box, vec::Vec};
+pub use dcrypt_api::types::SecretBytes as SecretBuffer;
+#[cfg(feature = "alloc")]
+pub use dcrypt_api::types::SecretVec;
 
 /// Trait for types that can be securely zeroed and cloned
 pub trait SecureZeroingType: Zeroize + Clone {
@@ -33,254 +27,13 @@ pub trait SecureZeroingType: Zeroize + Clone {
     }
 }
 
-/// Fixed-size secret buffer that guarantees zeroization
-///
-/// This type provides:
-/// - Automatic zeroization on drop
-/// - Secure cloning that preserves security properties
-/// - Type-safe size guarantees at compile time
-#[derive(Clone)]
-pub struct SecretBuffer<const N: usize> {
-    data: [u8; N],
-}
-
-impl<const N: usize> Zeroize for SecretBuffer<N> {
-    fn zeroize(&mut self) {
-        self.data.zeroize();
-    }
-}
-
-impl<const N: usize> ZeroizeOnDrop for SecretBuffer<N> {}
-
-impl<const N: usize> Drop for SecretBuffer<N> {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
-impl<const N: usize> SecretBuffer<N> {
-    /// Create a new secret buffer with the given data
-    pub fn new(data: [u8; N]) -> Self {
-        Self { data }
-    }
-
-    /// Create a zeroed secret buffer
-    pub fn zeroed() -> Self {
-        Self { data: [0u8; N] }
-    }
-
-    /// Get the length of the buffer
-    pub fn len(&self) -> usize {
-        N
-    }
-
-    /// Check if the buffer is empty (always false for non-zero N)
-    pub fn is_empty(&self) -> bool {
-        N == 0
-    }
-
-    /// Get a reference to the inner data
-    pub fn as_slice(&self) -> &[u8] {
-        &self.data
-    }
-
-    /// Get a mutable reference to the inner data
-    pub fn as_mut_slice(&mut self) -> &mut [u8] {
-        &mut self.data
-    }
-}
-
 impl<const N: usize> SecureZeroingType for SecretBuffer<N> {
     fn zeroed() -> Self {
         Self::zeroed()
     }
 
     fn secure_clone(&self) -> Self {
-        Self::new(self.data) // Fixed: removed .clone() since [u8; N] implements Copy
-    }
-}
-
-impl<const N: usize> AsRef<[u8]> for SecretBuffer<N> {
-    fn as_ref(&self) -> &[u8] {
-        &self.data
-    }
-}
-
-impl<const N: usize> AsMut<[u8]> for SecretBuffer<N> {
-    fn as_mut(&mut self) -> &mut [u8] {
-        &mut self.data
-    }
-}
-
-impl<const N: usize> fmt::Debug for SecretBuffer<N> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SecretBuffer<{}>([REDACTED])", N)
-    }
-}
-
-/// Variable-size secret vector that wipes storage it owns
-///
-/// This type provides:
-/// - Automatic zeroization on drop
-/// - Secure cloning that preserves security properties
-/// - Dynamic sizing with secure memory management
-#[cfg(feature = "alloc")]
-pub struct SecretVec {
-    data: Box<[u8]>,
-}
-
-#[cfg(feature = "alloc")]
-impl Zeroize for SecretVec {
-    fn zeroize(&mut self) {
-        self.data.zeroize();
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl ZeroizeOnDrop for SecretVec {}
-
-#[cfg(feature = "alloc")]
-impl Drop for SecretVec {
-    fn drop(&mut self) {
-        self.zeroize();
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl SecretVec {
-    /// Create a new secret vector with the given data.
-    ///
-    /// The current allocation and its spare capacity become protected by this
-    /// type. Allocations the caller freed before passing this `Vec` cannot be
-    /// recovered or retroactively wiped.
-    pub fn new(data: Vec<u8>) -> Self {
-        Self {
-            data: data.into_boxed_slice(),
-        }
-    }
-
-    /// Create a secret vector from a slice
-    pub fn from_slice(slice: &[u8]) -> Self {
-        Self::new(slice.to_vec())
-    }
-
-    /// Create an empty secret vector
-    pub fn empty() -> Self {
-        Self {
-            data: Vec::new().into_boxed_slice(),
-        }
-    }
-
-    /// Create a secret vector with the specified capacity
-    pub fn with_capacity(capacity: usize) -> Self {
-        let _ = capacity;
-        Self::empty()
-    }
-
-    /// Get the length of the vector
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    /// Check if the vector is empty
-    pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
-    }
-
-    /// Get a reference to the inner data
-    pub fn as_slice(&self) -> &[u8] {
-        &self.data
-    }
-
-    /// Get a mutable reference to the inner data
-    pub fn as_mut_slice(&mut self) -> &mut [u8] {
-        &mut self.data
-    }
-
-    /// Get the allocation capacity.
-    pub fn capacity(&self) -> usize {
-        self.data.len()
-    }
-
-    /// Extend the vector with additional data
-    pub fn extend_from_slice(&mut self, slice: &[u8]) {
-        let new_len = self
-            .data
-            .len()
-            .checked_add(slice.len())
-            .expect("SecretVec length overflow");
-        let mut replacement = vec![0u8; new_len].into_boxed_slice();
-        replacement[..self.data.len()].copy_from_slice(&self.data);
-        replacement[self.data.len()..].copy_from_slice(slice);
-        self.replace_and_zeroize(replacement);
-    }
-
-    /// Resize the vector to the specified length
-    pub fn resize(&mut self, new_len: usize, value: u8) {
-        if new_len <= self.data.len() {
-            self.truncate(new_len);
-            return;
-        }
-
-        let mut replacement = vec![value; new_len].into_boxed_slice();
-        replacement[..self.data.len()].copy_from_slice(&self.data);
-        self.replace_and_zeroize(replacement);
-    }
-
-    /// Truncate the vector to the specified length
-    pub fn truncate(&mut self, len: usize) {
-        if len >= self.data.len() {
-            return;
-        }
-
-        let replacement = self.data[..len].to_vec().into_boxed_slice();
-        self.replace_and_zeroize(replacement);
-    }
-
-    /// Remove all bytes while retaining a fully zeroed allocation.
-    pub fn clear(&mut self) {
-        self.replace_and_zeroize(Vec::new().into_boxed_slice());
-    }
-
-    /// Append one byte, securely replacing the allocation when it is full.
-    pub fn push(&mut self, value: u8) {
-        self.extend_from_slice(&[value]);
-    }
-
-    /// Remove and return the last byte, wiping its allocation slot first.
-    pub fn pop(&mut self) -> Option<u8> {
-        let value = self.data.last().copied()?;
-        self.truncate(self.data.len() - 1);
-        Some(value)
-    }
-
-    /// Reserve room for at least `additional` more bytes.
-    ///
-    /// Unlike `Vec::reserve`, this never asks the allocator to resize the live
-    /// secret allocation. It copies into a new allocation and wipes the old
-    /// allocation before releasing it.
-    pub fn reserve(&mut self, additional: usize) {
-        self.data
-            .len()
-            .checked_add(additional)
-            .expect("SecretVec length overflow");
-    }
-
-    /// Reduce capacity to the current length while wiping the old allocation.
-    pub fn shrink_to_fit(&mut self) {
-        // Storage is always exact-size.
-    }
-
-    fn replace_and_zeroize(&mut self, replacement: Box<[u8]>) {
-        self.data.zeroize();
-        self.data = replacement;
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl Clone for SecretVec {
-    fn clone(&self) -> Self {
-        Self::from_slice(&self.data)
+        self.clone()
     }
 }
 
@@ -292,34 +45,6 @@ impl SecureZeroingType for SecretVec {
 
     fn secure_clone(&self) -> Self {
         self.clone()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl AsRef<[u8]> for SecretVec {
-    fn as_ref(&self) -> &[u8] {
-        self.data.as_ref()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl AsMut<[u8]> for SecretVec {
-    fn as_mut(&mut self) -> &mut [u8] {
-        self.data.as_mut()
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl From<Vec<u8>> for SecretVec {
-    fn from(data: Vec<u8>) -> Self {
-        Self::new(data)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl fmt::Debug for SecretVec {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "SecretVec(len={}, [REDACTED])", self.data.len())
     }
 }
 
@@ -405,7 +130,7 @@ impl<T: Zeroize> DerefMut for EphemeralSecret<T> {
     }
 }
 
-impl<T: Zeroize + fmt::Debug> fmt::Debug for EphemeralSecret<T> {
+impl<T: Zeroize> fmt::Debug for EphemeralSecret<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "EphemeralSecret([REDACTED])")
     }
@@ -450,9 +175,6 @@ impl<T: Zeroize> DerefMut for ZeroizeGuard<'_, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[cfg(all(not(feature = "std"), feature = "alloc"))]
-    use alloc::vec;
 
     #[test]
     fn test_secret_buffer_basic() {
@@ -501,9 +223,7 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn secret_vec_uses_exact_size_storage() {
-        let mut raw = vec![0xA5; 64];
-        raw.truncate(4);
-        let secret = SecretVec::new(raw);
+        let secret = SecretVec::from_slice(&[0xA5; 4]);
 
         assert_eq!(secret.as_slice(), &[0xA5; 4]);
         assert_eq!(secret.capacity(), secret.len());
@@ -534,18 +254,9 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn secret_vec_growth_and_shrink_replace_allocations_securely() {
-        let mut raw = Vec::with_capacity(4);
-        raw.extend_from_slice(&[0x11; 4]);
-        let mut secret = SecretVec::new(raw);
+        let mut secret = SecretVec::from_slice(&[0x11; 4]);
         secret.extend_from_slice(&[0x22, 0x33]);
         assert_eq!(secret.capacity(), 6);
-        assert_eq!(secret.as_slice(), &[0x11, 0x11, 0x11, 0x11, 0x22, 0x33]);
-
-        secret.reserve(32);
-        assert_eq!(secret.capacity(), secret.len());
-
-        secret.shrink_to_fit();
-        assert_eq!(secret.capacity(), secret.len());
         assert_eq!(secret.as_slice(), &[0x11, 0x11, 0x11, 0x11, 0x22, 0x33]);
     }
 
@@ -578,13 +289,12 @@ mod tests {
 
     #[test]
     fn test_zeroize_guard() {
-        let mut value = vec![1u8, 2, 3, 4];
+        let mut value = [1u8, 2, 3, 4];
         {
             let guard = ZeroizeGuard::new(&mut value);
             // Simulate work with the value
-            assert_eq!(&**guard, &[1, 2, 3, 4]);
+            assert_eq!(&*guard, &[1, 2, 3, 4]);
         }
-        // Guard should have zeroized the value (which clears the Vec)
-        assert!(value.is_empty());
+        assert_eq!(value, [0; 4]);
     }
 }

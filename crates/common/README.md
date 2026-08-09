@@ -8,7 +8,7 @@ The `common` crate provides shared functionality, data structures, and security 
     This is the most critical part of the `common` crate. It defines types and traits for secure memory handling and cryptographic operations.
     *   **Secret Data Types**:
         *   `SecretBuffer<const N: usize>`: A fixed-size buffer that invokes zeroization on its owned bytes when dropped.
-        *   `SecretVec`: (Requires `alloc` feature) A variable-length vector that wipes removed bytes and old allocations as it changes size, then zeroizes its complete allocation on drop.
+        *   `SecretVec`: (Requires `alloc` feature) The exact-size boxed secret type from `dcrypt-api`, re-exported here. It wipes old allocations as it changes size and its current allocation on drop.
         *   `EphemeralSecret<T: Zeroize>`: Wraps a value and invokes its `Zeroize` implementation on drop.
         *   `ZeroizeGuard<'a, T: Zeroize>`: A guard that invokes `zeroize` on a mutable reference when the guard goes out of
             scope, useful for RAII-style cleanup.
