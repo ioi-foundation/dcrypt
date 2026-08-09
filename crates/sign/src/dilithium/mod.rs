@@ -15,9 +15,7 @@ use alloc::{format, string::ToString, vec::Vec};
 use core::{fmt, marker::PhantomData};
 use dcrypt_api::{Result as ApiResult, Signature as SignatureTrait};
 use dcrypt_internal::{CryptoRng, RngCore, Zeroize, ZeroizeOnDrop, Zeroizing};
-use dcrypt_params::pqc::dilithium::{
-    Dilithium2Params, Dilithium3Params, Dilithium5Params, DilithiumSchemeParams,
-};
+use dcrypt_params::pqc::ml_dsa::{MlDsa44Params, MlDsa65Params, MlDsa87Params, MlDsaSchemeParams};
 
 mod arithmetic;
 mod encoding;
@@ -104,9 +102,9 @@ impl MlDsaSecretKey {
     /// 64-byte `tr`; the returned key always retains its derived public key.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, SignError> {
         let public_key = match bytes.len() {
-            2560 => Dilithium2Params::validate_secret_key(bytes)?,
-            4032 => Dilithium3Params::validate_secret_key(bytes)?,
-            4896 => Dilithium5Params::validate_secret_key(bytes)?,
+            2560 => MlDsa44Params::validate_secret_key(bytes)?,
+            4032 => MlDsa65Params::validate_secret_key(bytes)?,
+            4896 => MlDsa87Params::validate_secret_key(bytes)?,
             _ => {
                 return Err(SignError::Deserialization(format!(
                     "invalid ML-DSA expanded private key size: {} bytes",
@@ -130,9 +128,9 @@ impl MlDsaSecretKey {
         public_key: &MlDsaPublicKey,
     ) -> Result<Self, SignError> {
         match bytes.len() {
-            2560 => Dilithium2Params::validate_key_pair(bytes, public_key.as_ref())?,
-            4032 => Dilithium3Params::validate_key_pair(bytes, public_key.as_ref())?,
-            4896 => Dilithium5Params::validate_key_pair(bytes, public_key.as_ref())?,
+            2560 => MlDsa44Params::validate_key_pair(bytes, public_key.as_ref())?,
+            4032 => MlDsa65Params::validate_key_pair(bytes, public_key.as_ref())?,
+            4896 => MlDsa87Params::validate_key_pair(bytes, public_key.as_ref())?,
             _ => {
                 return Err(SignError::Deserialization(format!(
                     "invalid ML-DSA expanded private key size: {} bytes",
@@ -171,9 +169,9 @@ impl MlDsaPublicKey {
     /// Decode and validate a final-FIPS-204 public key.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, SignError> {
         match bytes.len() {
-            1312 => Dilithium2Params::validate_public_key(bytes)?,
-            1952 => Dilithium3Params::validate_public_key(bytes)?,
-            2592 => Dilithium5Params::validate_public_key(bytes)?,
+            1312 => MlDsa44Params::validate_public_key(bytes)?,
+            1952 => MlDsa65Params::validate_public_key(bytes)?,
+            2592 => MlDsa87Params::validate_public_key(bytes)?,
             _ => {
                 return Err(SignError::Deserialization(format!(
                     "invalid ML-DSA public key size: {} bytes",
@@ -262,7 +260,7 @@ fn validate_hint_encoding(
 /// Internal adapter implemented only for the three parameter sets standardized
 /// by FIPS 204. It is public solely because it appears in a public trait impl.
 #[doc(hidden)]
-pub trait MlDsaBackend: DilithiumSchemeParams + Sized {
+pub trait MlDsaBackend: MlDsaSchemeParams + Sized {
     fn validate_public_key(bytes: &[u8]) -> Result<(), SignError> {
         encoding::unpack_public_key::<Self>(bytes).map(|_| ())
     }
@@ -299,12 +297,12 @@ pub trait MlDsaBackend: DilithiumSchemeParams + Sized {
     }
 }
 
-impl MlDsaBackend for Dilithium2Params {}
-impl MlDsaBackend for Dilithium3Params {}
-impl MlDsaBackend for Dilithium5Params {}
+impl MlDsaBackend for MlDsa44Params {}
+impl MlDsaBackend for MlDsa65Params {}
+impl MlDsaBackend for MlDsa87Params {}
 
 /// ML-DSA signature scheme parameterized by a final FIPS 204 parameter set.
-pub struct MlDsa<P: DilithiumSchemeParams + 'static> {
+pub struct MlDsa<P: MlDsaSchemeParams + 'static> {
     _params: PhantomData<P>,
 }
 
@@ -498,11 +496,11 @@ fn validate_hint_encoding_for_len(signature: &[u8]) -> Result<(), SignError> {
 }
 
 /// ML-DSA-44 (FIPS 204 security category 2).
-pub type MlDsa44 = MlDsa<Dilithium2Params>;
+pub type MlDsa44 = MlDsa<MlDsa44Params>;
 /// ML-DSA-65 (FIPS 204 security category 3).
-pub type MlDsa65 = MlDsa<Dilithium3Params>;
+pub type MlDsa65 = MlDsa<MlDsa65Params>;
 /// ML-DSA-87 (FIPS 204 security category 5).
-pub type MlDsa87 = MlDsa<Dilithium5Params>;
+pub type MlDsa87 = MlDsa<MlDsa87Params>;
 
 #[cfg(test)]
 mod tests;

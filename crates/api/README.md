@@ -132,17 +132,6 @@ impl AuthenticatedCipher for MyAeadCipher {
     const ALGORITHM_ID: &'static str = "MYAEAD";
 }
 
-// fn main() {
-//     let mut rng = rand::rngs::OsRng;
-//     let key = MyAeadCipher::generate_key(&mut rng).unwrap();
-//     let cipher = MyAeadCipher { key_material: SecretBytes::from_slice(key.as_ref()).unwrap() };
-//     let nonce = MyAeadCipher::generate_nonce(&mut rng).unwrap();
-//     let ciphertext = cipher.encrypt()
-//         .with_nonce(&nonce)
-//         .encrypt(b"hello")
-//         .unwrap();
-//     // ...
-// }
 ```
 
 This structure allows users to work with a consistent set of traits and types, regardless of the specific cryptographic algorithm being used, promoting safer and more maintainable cryptographic code.

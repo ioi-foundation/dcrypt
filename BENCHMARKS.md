@@ -161,7 +161,6 @@ the current ML-KEM or ML-DSA implementations.
 | `25` | 40.87 ms |
 | `256` | 22.58 µs |
 | `256_bits` | 396.75 ms |
-| `283_bits` | 382.14 ms |
 | `32` | 692.16 ns |
 | `32B` | 4.83 ms |
 | `32_bits` | 389.00 ms |
@@ -179,7 +178,6 @@ the current ML-KEM or ML-DSA implementations.
 | `8` | 471.74 µs |
 | `8_messages` | 37.73 µs |
 | `K-256` | 39.56 ms |
-| `OsRng` | 832.41 µs |
 | `P-256` | 539.86 ms |
 | `P-384` | 800.53 ms |
 | `P-521` | 459.18 ms |

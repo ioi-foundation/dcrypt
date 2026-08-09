@@ -4,11 +4,11 @@ use super::polyvec::{PolyVecK, PolyVecL};
 use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
 use alloc::format;
-use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
+use dcrypt_algorithms::poly::params::{MlDsaParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::ShakeXof256;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
-use dcrypt_params::pqc::dilithium::DilithiumSchemeParams;
+use dcrypt_params::pqc::ml_dsa::MlDsaSchemeParams;
 
 #[inline]
 fn coeff_from_half_byte(value: u8, eta: u32) -> Option<i32> {
@@ -24,7 +24,7 @@ pub fn sample_poly_rej_bounded(
     seed: &[u8; 64],
     nonce: u16,
     eta: u32,
-) -> Result<Polynomial<DilithiumParams>, SignError> {
+) -> Result<Polynomial<MlDsaParams>, SignError> {
     if eta != 2 && eta != 4 {
         return Err(SignError::Sampling(format!(
             "unsupported ML-DSA eta: {eta}"
@@ -36,16 +36,16 @@ pub fn sample_poly_rej_bounded(
     xof.update(&nonce.to_le_bytes())
         .map_err(SignError::from_algo)?;
 
-    let mut poly = Polynomial::<DilithiumParams>::zero();
+    let mut poly = Polynomial::<MlDsaParams>::zero();
     let mut coefficient = 0usize;
-    while coefficient < DilithiumParams::N {
+    while coefficient < MlDsaParams::N {
         let mut byte = [0u8; 1];
         xof.squeeze(&mut byte).map_err(SignError::from_algo)?;
         for half in [byte[0] & 0x0f, byte[0] >> 4] {
             if let Some(value) = coeff_from_half_byte(half, eta) {
                 poly.coeffs[coefficient] = centered_to_mod_q(value);
                 coefficient += 1;
-                if coefficient == DilithiumParams::N {
+                if coefficient == MlDsaParams::N {
                     break;
                 }
             }
@@ -55,7 +55,7 @@ pub fn sample_poly_rej_bounded(
 }
 
 /// FIPS 204 Algorithm 33, the `s1` half of `ExpandS`.
-pub fn sample_polyvecl_rej_bounded<P: DilithiumSchemeParams>(
+pub fn sample_polyvecl_rej_bounded<P: MlDsaSchemeParams>(
     seed: &[u8; 64],
     eta: u32,
 ) -> Result<PolyVecL<P>, SignError> {
@@ -69,7 +69,7 @@ pub fn sample_polyvecl_rej_bounded<P: DilithiumSchemeParams>(
 }
 
 /// FIPS 204 Algorithm 33, the `s2` half of `ExpandS`.
-pub fn sample_polyveck_rej_bounded<P: DilithiumSchemeParams>(
+pub fn sample_polyveck_rej_bounded<P: MlDsaSchemeParams>(
     seed: &[u8; 64],
     eta: u32,
 ) -> Result<PolyVecK<P>, SignError> {
@@ -86,7 +86,7 @@ pub fn sample_polyveck_rej_bounded<P: DilithiumSchemeParams>(
 ///
 /// Each polynomial uses `rho || IntegerToBytes(mu + r, 2)` as the XOF input and
 /// unpacks coefficients into the range `[-gamma1 + 1, gamma1]`.
-pub fn sample_polyvecl_uniform_gamma1<P: DilithiumSchemeParams>(
+pub fn sample_polyvecl_uniform_gamma1<P: MlDsaSchemeParams>(
     mask_seed: &[u8],
     mu: u16,
     gamma1: u32,
@@ -102,10 +102,10 @@ pub fn sample_polyvecl_uniform_gamma1<P: DilithiumSchemeParams>(
 
         match gamma1 {
             val if val == (1 << 17) => {
-                let mut buf = [0u8; DilithiumParams::N * 18 / 8];
+                let mut buf = [0u8; MlDsaParams::N * 18 / 8];
                 xof.squeeze(&mut buf).map_err(SignError::from_algo)?;
 
-                for chunk in 0..(DilithiumParams::N / 4) {
+                for chunk in 0..(MlDsaParams::N / 4) {
                     let off = 9 * chunk;
                     let t0 = (buf[off] as u32)
                         | ((buf[off + 1] as u32) << 8)
@@ -130,10 +130,10 @@ pub fn sample_polyvecl_uniform_gamma1<P: DilithiumSchemeParams>(
                 }
             }
             val if val == (1 << 19) => {
-                let mut buf = [0u8; DilithiumParams::N * 20 / 8];
+                let mut buf = [0u8; MlDsaParams::N * 20 / 8];
                 xof.squeeze(&mut buf).map_err(SignError::from_algo)?;
 
-                for chunk in 0..(DilithiumParams::N / 2) {
+                for chunk in 0..(MlDsaParams::N / 2) {
                     let off = 5 * chunk;
                     let t0 = (buf[off] as u32)
                         | ((buf[off + 1] as u32) << 8)
@@ -156,21 +156,21 @@ pub fn sample_polyvecl_uniform_gamma1<P: DilithiumSchemeParams>(
 
 #[inline(always)]
 fn centered_to_mod_q(value: i32) -> u32 {
-    (value as i64).rem_euclid(DilithiumParams::Q as i64) as u32
+    (value as i64).rem_euclid(MlDsaParams::Q as i64) as u32
 }
 
 /// FIPS 204 Algorithm 29, `SampleInBall`.
-pub fn sample_challenge_c<P: DilithiumSchemeParams>(
+pub fn sample_challenge_c<P: MlDsaSchemeParams>(
     c_tilde_seed: &[u8],
     tau: u32,
-) -> Result<Polynomial<DilithiumParams>, SignError> {
+) -> Result<Polynomial<MlDsaParams>, SignError> {
     if c_tilde_seed.len() != P::CHALLENGE_BYTES || tau as usize != P::TAU_PARAM {
         return Err(SignError::Sampling(
             "invalid SampleInBall parameters".into(),
         ));
     }
 
-    let mut c_poly = Polynomial::<DilithiumParams>::zero();
+    let mut c_poly = Polynomial::<MlDsaParams>::zero();
     let mut xof = ShakeXof256::new();
     xof.update(c_tilde_seed).map_err(SignError::from_algo)?;
 
@@ -178,7 +178,7 @@ pub fn sample_challenge_c<P: DilithiumSchemeParams>(
     xof.squeeze(&mut signs).map_err(SignError::from_algo)?;
 
     let tau = tau as usize;
-    for i in (DilithiumParams::N - tau)..DilithiumParams::N {
+    for i in (MlDsaParams::N - tau)..MlDsaParams::N {
         let mut byte = [0u8; 1];
         loop {
             xof.squeeze(&mut byte).map_err(SignError::from_algo)?;
@@ -189,9 +189,9 @@ pub fn sample_challenge_c<P: DilithiumSchemeParams>(
 
         let j = usize::from(byte[0]);
         c_poly.coeffs[i] = c_poly.coeffs[j];
-        let sign_index = i + tau - DilithiumParams::N;
+        let sign_index = i + tau - MlDsaParams::N;
         let negative = ((signs[sign_index / 8] >> (sign_index % 8)) & 1) != 0;
-        c_poly.coeffs[j] = if negative { DilithiumParams::Q - 1 } else { 1 };
+        c_poly.coeffs[j] = if negative { MlDsaParams::Q - 1 } else { 1 };
     }
 
     Ok(c_poly)

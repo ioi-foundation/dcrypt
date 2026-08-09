@@ -28,7 +28,7 @@ pub enum PostInvNtt {
     /// domain.
     Standard,
     /// Keep one Montgomery factor **R** → coefficients stay in Montgomery
-    /// domain (Dilithium).
+    /// domain (ML-DSA).
     Montgomery,
 }
 
@@ -38,7 +38,7 @@ pub trait NttModulus: Modulus {
     const ZETA: u32;
 
     /// Precomputed twiddle factors for forward NTT
-    /// CRITICAL: For Dilithium, these are stored in MONTGOMERY domain (ζ·R mod q)
+    /// CRITICAL: For ML-DSA, these are stored in MONTGOMERY domain (ζ·R mod q)
     /// exactly as in the FIPS-204 reference implementation.
     /// Do NOT convert them again - that would give ζ·R² mod q!
     const ZETAS: &'static [u32];
@@ -55,27 +55,27 @@ pub trait NttModulus: Modulus {
 
     /// Twist factors ψ_i = ω^(bitrev(i)) in STANDARD domain (length N)
     /// These are the N-th roots of the primitive 2N-th root of unity
-    /// Required for twisted/negacyclic NTT (Dilithium)
+    /// Required for twisted/negacyclic NTT (ML-DSA)
     /// NOTE: FIPS-204 reference implementation does NOT use these!
     const PSIS: &'static [u32];
 
     /// Inverse twist factors ψ_i^(-1) in STANDARD domain (length N)
-    /// Required for inverse twisted/negacyclic NTT (Dilithium)
+    /// Required for inverse twisted/negacyclic NTT (ML-DSA)
     /// NOTE: FIPS-204 reference implementation does NOT use these!
     const INV_PSIS: &'static [u32];
 
     /// How the coefficients should be post-processed after the inverse NTT.
     ///
     /// * `Standard`   → standard coefficient domain
-    /// * `Montgomery` → Dilithium style (`invntt_tomont`)
+    /// * `Montgomery` → ML-DSA style (`invntt_tomont`)
     const POST_INVNTT_MODE: PostInvNtt = PostInvNtt::Standard;
 }
 
-/// Example: Dilithium parameter sets
+/// Example: ML-DSA parameter sets
 #[derive(Clone, Debug)]
-pub struct Dilithium2Params;
+pub struct MlDsa44Params;
 
-impl Modulus for Dilithium2Params {
+impl Modulus for MlDsa44Params {
     const Q: u32 = 8380417; // 2^23 - 2^13 + 1
     const N: usize = 256;
 
@@ -106,7 +106,7 @@ impl Modulus for Dilithium2Params {
 //   — *do **not** use an offset-first (column-major) loop with this table!*
 // -----------------------------------------------------------------------------
 
-const DILITHIUM_ZETAS: [u32; 255] = [
+const ML_DSA_ZETAS: [u32; 255] = [
     25847, 5771523, 7861508, 237124, 7602457, 7504169, 466468, 1826347, 2353451, 8021166, 6288512,
     3119733, 5495562, 3111497, 2680103, 2725464, 1024112, 7300517, 3585928, 7830929, 7260833,
     2619752, 6271868, 6262231, 4520680, 6980856, 5102745, 1757237, 8360995, 4010497, 280005,
@@ -135,10 +135,10 @@ const DILITHIUM_ZETAS: [u32; 255] = [
     1976782,
 ];
 
-/// Dilithium twist factors ψ_i = ω^(bitrev(i)) in STANDARD domain
+/// ML-DSA twist factors ψ_i = ω^(bitrev(i)) in STANDARD domain
 /// These are the 512-th roots of unity needed for the twisted NTT
 /// NOTE: The FIPS-204 reference implementation does NOT use these!
-const DILITHIUM_PSIS: [u32; 256] = [
+const ML_DSA_PSIS: [u32; 256] = [
     1, 4808194, 3765607, 3761513, 5178923, 5496691, 5234739, 5178987, 7778734, 3542485, 2682288,
     2129892, 3764867, 7375178, 557458, 7159240, 5010068, 4317364, 2663378, 6705802, 4855975,
     7946292, 676590, 7044481, 5152541, 1714295, 2453983, 1460718, 7737789, 4795319, 2815639,
@@ -167,9 +167,9 @@ const DILITHIUM_PSIS: [u32; 256] = [
     1054478, 7648983,
 ];
 
-/// Dilithium inverse twist factors ψ_i^(-1) in STANDARD domain
+/// ML-DSA inverse twist factors ψ_i^(-1) in STANDARD domain
 /// NOTE: The FIPS-204 reference implementation does NOT use these!
-const DILITHIUM_INV_PSIS: [u32; 256] = [
+const ML_DSA_INV_PSIS: [u32; 256] = [
     1, 3572223, 4618904, 4614810, 3201430, 3145678, 2883726, 3201494, 1221177, 7822959, 1005239,
     4615550, 6250525, 5698129, 4837932, 601683, 6096684, 5564778, 3585098, 642628, 6919699,
     5926434, 6666122, 3227876, 1335936, 7703827, 434125, 3524442, 1674615, 5717039, 4063053,
@@ -198,11 +198,11 @@ const DILITHIUM_INV_PSIS: [u32; 256] = [
     2659525, 1935420, 8378664,
 ];
 
-/// General Dilithium parameter set used by the signature implementation
+/// General ML-DSA parameter set used by the signature implementation
 #[derive(Clone, Debug)]
-pub struct DilithiumParams;
+pub struct MlDsaParams;
 
-impl Modulus for DilithiumParams {
+impl Modulus for MlDsaParams {
     const Q: u32 = 8380417; // 2^23 - 2^13 + 1
     const N: usize = 256;
 
@@ -213,13 +213,13 @@ impl Modulus for DilithiumParams {
     const BARRETT_K: u32 = 55;
 }
 
-impl NttModulus for DilithiumParams {
+impl NttModulus for MlDsaParams {
     const ZETA: u32 = 1753; // primitive 512-th root of unity mod Q
 
-    // Use the Dilithium zeta table (in MONTGOMERY domain)
+    // Use the ML-DSA zeta table (in MONTGOMERY domain)
     // These are already in Montgomery form: ζ^(brv(k)) · R mod q
     // Do NOT convert them again!
-    const ZETAS: &'static [u32] = &DILITHIUM_ZETAS;
+    const ZETAS: &'static [u32] = &ML_DSA_ZETAS;
 
     /// N^-1 mod Q in Montgomery form: 256^-1 · R mod Q = 16_382
     /// This is the value used by the reference `invntt_tomont`.
@@ -236,33 +236,33 @@ impl NttModulus for DilithiumParams {
     const NEG_QINV: u32 = 4_236_238_847;
 
     // Add the twist factors (NOT used by FIPS-204 reference)
-    const PSIS: &'static [u32] = &DILITHIUM_PSIS;
-    const INV_PSIS: &'static [u32] = &DILITHIUM_INV_PSIS;
+    const PSIS: &'static [u32] = &ML_DSA_PSIS;
+    const INV_PSIS: &'static [u32] = &ML_DSA_INV_PSIS;
 
     // FIXED: Tests expect standard domain output from inverse NTT
     const POST_INVNTT_MODE: PostInvNtt = PostInvNtt::Standard;
 }
 
-/// Optional: Dilithium parameters with Montgomery output
+/// Optional: ML-DSA parameters with Montgomery output
 /// Use this when you need coefficients to stay in Montgomery domain after inverse NTT
 #[derive(Clone, Debug)]
-pub struct DilithiumParamsMont;
+pub struct MlDsaParamsMont;
 
-impl Modulus for DilithiumParamsMont {
+impl Modulus for MlDsaParamsMont {
     const Q: u32 = 8380417;
     const N: usize = 256;
     const BARRETT_MU: u128 = 4_299_165_187;
     const BARRETT_K: u32 = 55;
 }
 
-impl NttModulus for DilithiumParamsMont {
+impl NttModulus for MlDsaParamsMont {
     const ZETA: u32 = 1753;
-    const ZETAS: &'static [u32] = &DILITHIUM_ZETAS;
+    const ZETAS: &'static [u32] = &ML_DSA_ZETAS;
     const N_INV: u32 = 16_382;
     const MONT_R: u32 = 4_193_792;
     const NEG_QINV: u32 = 4_236_238_847;
-    const PSIS: &'static [u32] = &DILITHIUM_PSIS;
-    const INV_PSIS: &'static [u32] = &DILITHIUM_INV_PSIS;
+    const PSIS: &'static [u32] = &ML_DSA_PSIS;
+    const INV_PSIS: &'static [u32] = &ML_DSA_INV_PSIS;
 
     // This variant keeps Montgomery domain output
     const POST_INVNTT_MODE: PostInvNtt = PostInvNtt::Montgomery;
@@ -301,38 +301,38 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_dilithium_params() {
-        assert_eq!(Dilithium2Params::Q, 8380417);
-        assert_eq!(Dilithium2Params::N, 256);
-        assert!(is_prime(Dilithium2Params::Q));
-        assert_eq!(Dilithium2Params::BARRETT_MU, 4_299_165_187);
-        assert_eq!(Dilithium2Params::BARRETT_K, 55);
+    fn test_ml_dsa_params() {
+        assert_eq!(MlDsa44Params::Q, 8380417);
+        assert_eq!(MlDsa44Params::N, 256);
+        assert!(is_prime(MlDsa44Params::Q));
+        assert_eq!(MlDsa44Params::BARRETT_MU, 4_299_165_187);
+        assert_eq!(MlDsa44Params::BARRETT_K, 55);
     }
 
     #[test]
-    fn test_dilithium_general_params() {
-        assert_eq!(DilithiumParams::Q, 8380417);
-        assert_eq!(DilithiumParams::N, 256);
-        assert!(is_prime(DilithiumParams::Q));
-        assert!(is_power_of_two(DilithiumParams::N));
+    fn test_ml_dsa_general_params() {
+        assert_eq!(MlDsaParams::Q, 8380417);
+        assert_eq!(MlDsaParams::N, 256);
+        assert!(is_prime(MlDsaParams::Q));
+        assert!(is_power_of_two(MlDsaParams::N));
         // FIXED: Now expects Standard mode to match test expectations
-        assert_eq!(DilithiumParams::POST_INVNTT_MODE, PostInvNtt::Standard);
-        assert_eq!(DilithiumParams::BARRETT_MU, 4_299_165_187);
-        assert_eq!(DilithiumParams::BARRETT_K, 55);
+        assert_eq!(MlDsaParams::POST_INVNTT_MODE, PostInvNtt::Standard);
+        assert_eq!(MlDsaParams::BARRETT_MU, 4_299_165_187);
+        assert_eq!(MlDsaParams::BARRETT_K, 55);
     }
 
     #[test]
-    fn test_dilithium_constant_calculations() {
+    fn test_ml_dsa_constant_calculations() {
         // Verify N_INV = N^-1 * R mod Q
         // N^-1 mod Q = 8,347,681 (256^-1 mod 8,380,417)
         // R = 4,193,792 (2^32 mod 8,380,417)
         // N^-1 * R mod Q = 8,347,681 * 4,193,792 mod 8,380,417 = 16,382
         let n_inv_std = 8_347_681u64; // 256^-1 mod Q
-        let r = DilithiumParams::MONT_R as u64;
-        let q = DilithiumParams::Q as u64;
+        let r = MlDsaParams::MONT_R as u64;
+        let q = MlDsaParams::Q as u64;
         let expected_n_inv = (n_inv_std * r) % q;
         assert_eq!(expected_n_inv, 16_382);
-        assert_eq!(DilithiumParams::N_INV as u64, expected_n_inv);
+        assert_eq!(MlDsaParams::N_INV as u64, expected_n_inv);
 
         // Verify NEG_QINV = -Q⁻¹ mod 2³²
         // Q⁻¹ mod 2³² = 0x03802001 = 58728449
@@ -340,36 +340,36 @@ mod tests {
         let q_inv: u32 = 58728449; // Q⁻¹ mod 2³²
         let neg_qinv = (1u64 << 32) - (q_inv as u64);
         assert_eq!(neg_qinv, 4_236_238_847);
-        assert_eq!(DilithiumParams::NEG_QINV as u64, neg_qinv);
+        assert_eq!(MlDsaParams::NEG_QINV as u64, neg_qinv);
     }
 
     #[test]
     fn test_zetas_in_montgomery_domain() {
         // Verify that the zeta table is in Montgomery domain (column-wise order)
         // First column-wise zeta should be 25_847
-        assert_eq!(DilithiumParams::ZETAS[0], 25_847);
+        assert_eq!(MlDsaParams::ZETAS[0], 25_847);
 
         // (Optional additional sanity check, matching standard ζ^128·R mod q)
         let zeta_128_std = 4808194u64; // ζ^128 mod q in standard form
-        let mont_form = (zeta_128_std * DilithiumParams::MONT_R as u64) % DilithiumParams::Q as u64;
+        let mont_form = (zeta_128_std * MlDsaParams::MONT_R as u64) % MlDsaParams::Q as u64;
         assert_eq!(mont_form as u32, 25_847);
     }
 
     #[test]
     fn test_twist_factors() {
         // Verify PSIS and INV_PSIS are inverses
-        assert_eq!(DilithiumParams::PSIS.len(), 256);
-        assert_eq!(DilithiumParams::INV_PSIS.len(), 256);
+        assert_eq!(MlDsaParams::PSIS.len(), 256);
+        assert_eq!(MlDsaParams::INV_PSIS.len(), 256);
 
         // ψ_0 = 1 always
-        assert_eq!(DilithiumParams::PSIS[0], 1);
-        assert_eq!(DilithiumParams::INV_PSIS[0], 1);
+        assert_eq!(MlDsaParams::PSIS[0], 1);
+        assert_eq!(MlDsaParams::INV_PSIS[0], 1);
 
         // Check that ψ_i * ψ_i^(-1) ≡ 1 (mod q)
-        let q = DilithiumParams::Q as u64;
+        let q = MlDsaParams::Q as u64;
         for i in 0..10 {
-            let psi = DilithiumParams::PSIS[i] as u64;
-            let inv_psi = DilithiumParams::INV_PSIS[i] as u64;
+            let psi = MlDsaParams::PSIS[i] as u64;
+            let inv_psi = MlDsaParams::INV_PSIS[i] as u64;
             let product = (psi * inv_psi) % q;
             assert_eq!(product, 1, "ψ[{}] * ψ^(-1)[{}] should equal 1", i, i);
         }

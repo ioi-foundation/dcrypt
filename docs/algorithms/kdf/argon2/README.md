@@ -51,10 +51,11 @@ When a user creates a new password, you generate a random salt, hash the passwor
 ```rust
 use dcrypt::algorithms::kdf::{Argon2, Argon2Params, Argon2Type, PasswordHashFunction};
 use dcrypt::algorithms::types::{Salt, SecretBytes};
-use rand::rngs::OsRng;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-// 1. Define your Argon2 parameters.
-let salt = Argon2::<16>::generate_salt(&mut OsRng); // Generate a random 16-byte salt.
+fn hash_password<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::algorithms::Result<()> {
+// The application supplies a fresh cryptographic salt source.
+let salt = Argon2::<16>::generate_salt(rng)?;
 let params = Argon2Params {
     argon_type: Argon2Type::Argon2id,
     memory_cost: 65536, // 64 MB
@@ -77,6 +78,8 @@ let password_hash = argon2.hash_password(&password).unwrap();
 // The string contains the algorithm, version, parameters, salt, and hash.
 let hash_string = password_hash.to_string();
 println!("Stored Password Hash: {}", hash_string);
+Ok(())
+}
 ```
 
 #### Verifying a Password

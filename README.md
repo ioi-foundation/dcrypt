@@ -29,7 +29,7 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use dcrypt-owned safe-Rust key generation, signing, verification, sampling, arithmetic, and exact encodings. Public APIs support deterministic signing and hedged signing with caller-provided randomness and contexts. All 615 official ACVP cases pass exactly; independent implementations are confined to the excluded verification workspace. This is not a claim that dcrypt is formally verified, audited, or FIPS validated.
 2.  **Pure-Rust FIPS 203 (ML-KEM)**: Final-standard ML-KEM-512, ML-KEM-768, and ML-KEM-1024 use owned safe-Rust arithmetic, encoding, and SHA3/SHAKE primitives. All 240 official ACVP cases pass exactly; this project is not a FIPS-validated cryptographic module.
 3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + ML-KEM-768`) and hybrid Digital Signatures, designed to combine independent primitive families.
-4.  **BLS12-381 Pairing Engine**: A fully featured implementation of the pairing-friendly curve, including optimal Ate pairings and IETF-compliant **Hash-to-Curve**, essential for Zero-Knowledge Proofs and Signature Aggregation.
+4.  **BLS12-381 Pairing Engine**: Safe-Rust group arithmetic, optimal Ate pairings, strict point decoding, and RFC 9380 hash-to-curve for G1 and G2. These primitives are sufficient to build standard BLS ciphersuites, including Eth2-style minimum-public-key-size schemes, without an external hash-to-curve library. Applications remain responsible for the selected ciphersuite's KeyGen, domain separation, proof-of-possession, aggregation, and protocol validation rules.
 
 ## 🛡️ Key Design Principles
 
@@ -45,8 +45,8 @@ dcrypt introduces capabilities critical for the transition to quantum-safe and d
 Do not select `v1.2.3`; it contains critical defects. Do not select `v2.0.0` as
 a replacement; it has been withdrawn for violating the project's implementation
 policy. Earlier releases are unsupported and have not been cleared. The examples
-below describe the withdrawn `v2.0.0` API for development context only and are
-not a recommendation to deploy any currently published release.
+below describe the reviewed v3 API under development. They are not a
+recommendation to deploy any currently published release.
 
 ### Example 1: Hybrid Post-Quantum Key Exchange
 
@@ -82,15 +82,16 @@ fn exchange<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
 Standard symmetric encryption remains a core part of the library, featuring ergonomic key management.
 
 ```rust
-use dcrypt::symmetric::aes::{Aes256Gcm, Aes256Key};
-use dcrypt::symmetric::cipher::{SymmetricCipher, Aead};
+use dcrypt::internal::{CryptoRng, RngCore};
+use dcrypt::symmetric::{Aead, Aes256Gcm, Aes256Key, SymmetricCipher};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Generate a secure random key
-    let key = Aes256Key::generate();
+fn encrypt<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
+    // dcrypt never chooses an operating-system RNG. The application supplies
+    // the CSPRNG used for both key and nonce generation.
+    let key = Aes256Key::generate(rng)?;
     let cipher = Aes256Gcm::new(&key)?;
-    
-    let nonce = Aes256Gcm::generate_nonce();
+
+    let nonce = Aes256Gcm::generate_nonce(rng)?;
     let plaintext = b"Quantum resistance is futile... actually it's necessary.";
     let aad = Some(b"metadata".as_slice());
     
@@ -111,7 +112,7 @@ Perform bilinear pairings and hash-to-curve operations standard in decentralized
 
 ```rust
 use dcrypt::algorithms::ec::bls12_381::{
-    pairing, G1Projective, G2Affine, G2Projective, Scalar
+    pairing, Bls12_381Scalar, G1Projective, G2Affine, G2Projective,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -122,8 +123,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // hash_to_curve returns a projective point
     let point_g1 = G1Projective::hash_to_curve(msg, dst)?.to_affine();
 
-    // 2. Generate a secret scalar and public G2 point
-    let secret = Scalar::from(42u64); // In reality, use random generation
+    // Demonstration scalar only. A real BLS ciphersuite must run its specified
+    // KeyGen procedure and reject zero.
+    let secret = Bls12_381Scalar::from(42u64);
     let public_g2 = G2Affine::from(G2Projective::generator() * secret);
 
     // 3. Compute Pairing e(H(m), [s]G2)
@@ -163,7 +165,7 @@ The library is organized as a workspace of specialized crates to align type-safe
 *   **`dcrypt-symmetric`**: High-level AEADs, stream ciphers, and secure key management wrappers.
 *   **`dcrypt-pke`**: Public Key Encryption schemes, specifically **ECIES** (Elliptic Curve Integrated Encryption Scheme) over standard NIST curves.
 *   **`dcrypt-kem`**: Owned implementations of final FIPS 203 ML-KEM and ECDH-based KEMs.
-*   **`dcrypt-sign`**: Implementations of Digital Signatures (Dilithium, ECDSA, Ed25519, SPHINCS+ placeholders).
+*   **`dcrypt-sign`**: Implementations of final FIPS 204 ML-DSA, ECDSA, and Ed25519.
 *   **`dcrypt-hybrid`**: Ready-to-use combiners for KEMs and Signatures ensuring crypto-agility.
 *   **`dcrypt-tests`**: Contains the ACVP test harness and Constant-Time Verification Suite.
 

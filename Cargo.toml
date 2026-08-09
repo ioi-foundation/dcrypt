@@ -31,6 +31,7 @@ default = ["std", "traditional"]
 
 # Standard library support
 std = [
+    "alloc",
     "dcrypt-api/std",
     "dcrypt-common/std",
     "dcrypt-internal/std",
@@ -42,17 +43,35 @@ std = [
     "dcrypt-hybrid?/std"
 ]
 
-# Algorithm categories
-traditional = ["dep:dcrypt-algorithms", "dep:dcrypt-symmetric", "dcrypt-kem?/traditional", "dcrypt-sign?/traditional", "dep:dcrypt-pke"]
-post-quantum = ["dcrypt-kem?/post-quantum", "dcrypt-sign?/post-quantum"]
-hybrid = ["dep:dcrypt-hybrid", "traditional", "post-quantum"]
+# Algorithm categories. Category features activate the facade modules they
+# promise, rather than only forwarding flags to dependencies that might not be
+# enabled.
+traditional = [
+    "alloc",
+    "algorithms",
+    "symmetric",
+    "kem",
+    "dcrypt-kem/traditional",
+    "sign",
+    "dcrypt-sign/traditional",
+    "pke",
+]
+post-quantum = [
+    "alloc",
+    "algorithms",
+    "kem",
+    "dcrypt-kem/post-quantum",
+    "sign",
+    "dcrypt-sign/post-quantum",
+]
+hybrid = ["alloc", "dep:dcrypt-hybrid", "traditional", "post-quantum"]
 
 # Individual components
-algorithms = ["dep:dcrypt-algorithms"]
-symmetric = ["dep:dcrypt-symmetric"]
-kem = ["dep:dcrypt-kem"]
-sign = ["dep:dcrypt-sign"]
-pke = ["dep:dcrypt-pke"]
+algorithms = ["alloc", "dep:dcrypt-algorithms"]
+symmetric = ["alloc", "dep:dcrypt-symmetric"]
+kem = ["alloc", "dep:dcrypt-kem"]
+sign = ["alloc", "dep:dcrypt-sign"]
+pke = ["alloc", "dep:dcrypt-pke"]
 
 # Other features
 alloc = [

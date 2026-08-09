@@ -10,7 +10,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "alloc")]
 mod ntt_benchmarks {
     use criterion::{black_box, BenchmarkId, Criterion};
-    use dcrypt_algorithms::poly::params::DilithiumParams;
+    use dcrypt_algorithms::poly::params::MlDsaParams;
     use dcrypt_algorithms::poly::prelude::*;
     use dcrypt_algorithms::poly::sampling::{DefaultSamplers, UniformSampler};
     use dcrypt_internal::random::ChaCha20Rng;
@@ -37,13 +37,13 @@ mod ntt_benchmarks {
         const INV_PSIS: &'static [u32] = &[];
     }
 
-    /// Benchmark forward NTT for Dilithium
-    pub fn bench_dilithium_forward_ntt(c: &mut Criterion) {
-        let mut group = c.benchmark_group("dilithium_ntt");
+    /// Benchmark forward NTT for ML-DSA
+    pub fn bench_ml_dsa_forward_ntt(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ml_dsa_ntt");
         let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a random polynomial
-        let poly = <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
+        let poly = <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
             .expect("Failed to sample polynomial");
 
         group.bench_function("forward", |b| {
@@ -60,15 +60,14 @@ mod ntt_benchmarks {
         group.finish();
     }
 
-    /// Benchmark inverse NTT for Dilithium
-    pub fn bench_dilithium_inverse_ntt(c: &mut Criterion) {
-        let mut group = c.benchmark_group("dilithium_ntt");
+    /// Benchmark inverse NTT for ML-DSA
+    pub fn bench_ml_dsa_inverse_ntt(c: &mut Criterion) {
+        let mut group = c.benchmark_group("ml_dsa_ntt");
         let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
         // Create a polynomial in NTT domain
-        let mut poly =
-            <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
-                .expect("Failed to sample polynomial");
+        let mut poly = <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
+            .expect("Failed to sample polynomial");
         poly.ntt_inplace().expect("NTT failed");
 
         group.bench_function("inverse", |b| {
@@ -139,19 +138,19 @@ mod ntt_benchmarks {
         let mut group = c.benchmark_group("ntt_multiplication");
         let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
-        // Dilithium multiplication
+        // ML-DSA multiplication
         {
             let mut poly_a =
-                <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
+                <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
                     .expect("Failed to sample polynomial");
             let mut poly_b =
-                <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
+                <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
                     .expect("Failed to sample polynomial");
 
             poly_a.ntt_inplace().expect("NTT failed");
             poly_b.ntt_inplace().expect("NTT failed");
 
-            group.bench_function("dilithium_pointwise", |b| {
+            group.bench_function("ml_dsa_pointwise", |b| {
                 b.iter(|| {
                     let result = poly_a.ntt_mul(&poly_b);
                     black_box(result)
@@ -187,16 +186,14 @@ mod ntt_benchmarks {
         let mut group = c.benchmark_group("full_polynomial_multiplication");
         let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
-        // Dilithium
+        // ML-DSA
         {
-            let poly_a =
-                <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
-                    .expect("Failed to sample polynomial");
-            let poly_b =
-                <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
-                    .expect("Failed to sample polynomial");
+            let poly_a = <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
+                .expect("Failed to sample polynomial");
+            let poly_b = <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
+                .expect("Failed to sample polynomial");
 
-            group.bench_function("dilithium_ntt_based", |b| {
+            group.bench_function("ml_dsa_ntt_based", |b| {
                 b.iter_batched(
                     || (poly_a.clone(), poly_b.clone()),
                     |(mut a, mut b)| {
@@ -210,7 +207,7 @@ mod ntt_benchmarks {
                 )
             });
 
-            group.bench_function("dilithium_schoolbook", |b| {
+            group.bench_function("ml_dsa_schoolbook", |b| {
                 b.iter_batched(
                     || (poly_a.clone(), poly_b.clone()),
                     |(a, b)| {
@@ -264,11 +261,11 @@ mod ntt_benchmarks {
     pub fn bench_montgomery_operations(c: &mut Criterion) {
         let mut group = c.benchmark_group("montgomery_operations");
 
-        // Dilithium Montgomery reduction
-        group.bench_function("dilithium_montgomery_reduce", |b| {
+        // ML-DSA Montgomery reduction
+        group.bench_function("ml_dsa_montgomery_reduce", |b| {
             let a: u64 = 0x12345678_9ABCDEF0;
             b.iter(|| {
-                let result = montgomery_reduce::<DilithiumParams>(black_box(a));
+                let result = montgomery_reduce::<MlDsaParams>(black_box(a));
                 black_box(result)
             })
         });
@@ -294,12 +291,11 @@ mod ntt_benchmarks {
         let sizes = vec![("n256", 256)];
 
         for (label, _size) in sizes {
-            // Dilithium
-            let poly =
-                <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
-                    .expect("Failed to sample polynomial");
+            // ML-DSA
+            let poly = <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
+                .expect("Failed to sample polynomial");
 
-            group.bench_with_input(BenchmarkId::new("dilithium", label), &poly, |b, p| {
+            group.bench_with_input(BenchmarkId::new("ml_dsa", label), &poly, |b, p| {
                 b.iter_batched(
                     || p.clone(),
                     |mut poly| {
@@ -335,14 +331,14 @@ mod ntt_benchmarks {
         let mut group = c.benchmark_group("ntt_roundtrip");
         let mut rng = ChaCha20Rng::from_seed([42u8; 32]);
 
-        // Dilithium roundtrip
-        let poly_dilithium =
-            <DefaultSamplers as UniformSampler<DilithiumParams>>::sample_uniform(&mut rng)
+        // ML-DSA roundtrip
+        let poly_ml_dsa =
+            <DefaultSamplers as UniformSampler<MlDsaParams>>::sample_uniform(&mut rng)
                 .expect("Failed to sample polynomial");
 
-        group.bench_function("dilithium", |b| {
+        group.bench_function("ml_dsa", |b| {
             b.iter_batched(
-                || poly_dilithium.clone(),
+                || poly_ml_dsa.clone(),
                 |mut p| {
                     p.ntt_inplace().expect("NTT failed");
                     p.from_ntt_inplace().expect("Inverse NTT failed");
@@ -376,8 +372,8 @@ mod ntt_benchmarks {
 // Feature-gated benchmark runner
 #[cfg(feature = "alloc")]
 fn run_ntt_benchmarks(c: &mut Criterion) {
-    ntt_benchmarks::bench_dilithium_forward_ntt(c);
-    ntt_benchmarks::bench_dilithium_inverse_ntt(c);
+    ntt_benchmarks::bench_ml_dsa_forward_ntt(c);
+    ntt_benchmarks::bench_ml_dsa_inverse_ntt(c);
     ntt_benchmarks::bench_generic_3329_forward_ntt(c);
     ntt_benchmarks::bench_generic_3329_inverse_ntt(c);
     ntt_benchmarks::bench_ntt_multiplication(c);

@@ -271,20 +271,20 @@ fn decode_framed<'a>(bytes: &'a [u8], expected_label: &[u8]) -> Result<(&'a [u8]
     Ok((first, second))
 }
 
-fn read_u32(bytes: &[u8], pos: &mut usize, field: &'static str) -> Result<u32> {
+fn read_u32(bytes: &[u8], pos: &mut usize, _field: &'static str) -> Result<u32> {
     let end = pos
         .checked_add(4)
         .ok_or_else(|| Error::SerializationError {
             context: "Hybrid signature decoding",
             #[cfg(feature = "std")]
-            message: format!("{field} offset overflows the platform address space"),
+            message: format!("{_field} offset overflows the platform address space"),
         })?;
     let len_bytes = bytes
         .get(*pos..end)
         .ok_or_else(|| Error::SerializationError {
             context: "Hybrid signature decoding",
             #[cfg(feature = "std")]
-            message: format!("Missing {field}"),
+            message: format!("Missing {_field}"),
         })?;
     *pos = end;
     Ok(u32::from_be_bytes(

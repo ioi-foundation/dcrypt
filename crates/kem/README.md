@@ -2,8 +2,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/dcrypt-kem.svg)](https://crates.io/crates/dcrypt-kem)
 [![Docs.rs](https://docs.rs/dcrypt-kem/badge.svg)](https://docs.rs/dcrypt-kem)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/your-repo/your-workflow.yml?branch=main)](https://github.com/your-repo/action)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 The `dcrypt-kem` crate provides a unified interface for various Key Encapsulation Mechanisms (KEMs), including both traditional and post-quantum cryptographic algorithms. It is designed with a strong focus on security, type safety, and ease of use, leveraging the `dcrypt::api` trait system.
 
@@ -46,7 +45,7 @@ Add the main `dcrypt` crate to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-dcrypt = "0.12.0-beta.1"
+dcrypt = { version = "=3.0.0", default-features = false, features = ["std", "traditional", "post-quantum"] }
 ```
 
 ## Usage Example
@@ -113,9 +112,10 @@ fn establish<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
 
 The `dcrypt-kem` crate provides the following features:
 
--   `std` (default): Enables functionality that depends on the Rust standard library.
+-   `std` (default): Enables standard-library support and `alloc`.
 -   `alloc`: Enables usage of heap-allocated types. This is required for `no_std` environments that have a heap allocator.
--   `no_std`: Disables `std` support for use in bare-metal and embedded environments.
+-   `no_std`: Compatibility spelling for the allocation-backed profile without `std`.
+-   `traditional` (default): Enables the ECDH KEM surface.
 -   `post-quantum`: Enables the final FIPS 203 ML-KEM surface and forwards `alloc`.
 
 ## Benchmarks

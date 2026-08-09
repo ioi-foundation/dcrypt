@@ -127,7 +127,7 @@ pub mod poly;
 #[cfg(feature = "alloc")]
 pub use poly::{
     ntt::{montgomery_reduce, CooleyTukeyNtt, InverseNttOperator, NttOperator},
-    params::{DilithiumParams, Modulus, NttModulus},
+    params::{MlDsaParams, Modulus, NttModulus},
     polynomial::Polynomial,
     prelude,
     sampling::{CbdSampler, DefaultSamplers, UniformSampler},

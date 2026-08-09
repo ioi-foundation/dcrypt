@@ -13,9 +13,12 @@
 //!
 //! ## Features
 //!
-//! - `traditional` (default): Traditional cryptographic algorithms
-//! - `post-quantum`: Post-quantum cryptographic algorithms  
+//! - `traditional` (default): symmetric primitives plus ECDH, ECIES, ECDSA,
+//!   and Ed25519
+//! - `post-quantum`: final FIPS 203 ML-KEM and FIPS 204 ML-DSA
 //! - `hybrid`: Hybrid constructions combining traditional and post-quantum
+//!   primitives (and therefore enables both categories)
+//! - `alloc`: allocation-backed APIs without the standard library
 //! - `full`: All features enabled
 //!
 //! ## Crate Structure
@@ -32,11 +35,11 @@
 //! ## Example Usage
 //!
 //! ```rust,no_run
-//! # #[cfg(feature = "sign")]
+//! # #[cfg(feature = "post-quantum")]
 //! # {
-//! // Using through the main crate (requires 'sign' feature)
+//! // The category feature activates and re-exports the required crates.
 //! use dcrypt::api::Signature;
-//! use dcrypt::sign::dilithium::MlDsa44;
+//! use dcrypt::sign::mldsa::MlDsa44;
 //! # }
 //!
 //! // Or using the prelude (always available)
@@ -114,7 +117,7 @@ pub mod prelude {
     // Note: Specific algorithm implementations should be imported directly from their modules
     // For example:
     // - use dcrypt::kem::ecdh::p256::{EcdhP256PublicKey, EcdhP256SecretKey};
-    // - use dcrypt::sign::dilithium::MlDsa44;
+    // - use dcrypt::sign::mldsa::MlDsa44;
     // - use dcrypt::pke::ecies::p256::{EciesP256PublicKey, EciesP256Ciphertext};
 }
 
@@ -122,7 +125,7 @@ pub mod prelude {
 #[cfg(test)]
 mod tests {
     #[test]
-    #[cfg(feature = "sign")]
+    #[cfg(all(feature = "sign", feature = "traditional"))]
     fn test_sign_imports() {
         // This should compile if the imports are working
         use crate::api::Signature as SignatureTrait;
@@ -142,5 +145,35 @@ mod tests {
         // The imports above check module resolution; this checks the core API
         // re-export as a concrete type rather than treating an enum as a value.
         let _ = core::mem::size_of::<api::Error>();
+    }
+
+    #[test]
+    #[cfg(feature = "traditional")]
+    fn traditional_category_exposes_promised_modules() {
+        use crate::{algorithms, kem, pke, sign, symmetric};
+
+        let _ = core::mem::size_of::<algorithms::Sha256>();
+        let _ = core::mem::size_of::<kem::EcdhP256>();
+        let _ = core::mem::size_of::<pke::EciesP256>();
+        let _ = core::mem::size_of::<sign::EcdsaP256>();
+        let _ = core::mem::size_of::<symmetric::Aes256Gcm>();
+    }
+
+    #[test]
+    #[cfg(feature = "post-quantum")]
+    fn post_quantum_category_exposes_promised_modules() {
+        use crate::{kem, sign};
+
+        let _ = core::mem::size_of::<kem::MlKem768>();
+        let _ = core::mem::size_of::<sign::MlDsa65>();
+    }
+
+    #[test]
+    #[cfg(feature = "hybrid")]
+    fn hybrid_category_exposes_promised_modules() {
+        use crate::hybrid::{kem::EcdhP256MlKem768, sign::EcdsaMlDsa65Hybrid};
+
+        let _ = core::mem::size_of::<EcdhP256MlKem768>();
+        let _ = core::mem::size_of::<EcdsaMlDsa65Hybrid>();
     }
 }

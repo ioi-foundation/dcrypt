@@ -1,10 +1,4 @@
-//! Constants for post-quantum cryptographic algorithms
+//! Constants for the post-quantum algorithms implemented by dcrypt.
 
-pub mod dilithium;
-pub mod falcon;
-pub mod mceliece;
+pub mod ml_dsa;
 pub mod ml_kem;
-pub mod ntru;
-pub mod rainbow;
-pub mod saber;
-pub mod sphincs;

@@ -61,8 +61,6 @@ fn categorize(id: &str) -> Category {
     if id_lower.contains("ml_kem")
         || id_lower.contains("ml-kem")
         || id_lower.contains("ecdh")
-        || id_lower.contains("mceliece")
-        || id_lower.contains("saber")
         || id_lower.contains("encaps")
         || id_lower.contains("decaps")
         || id_lower.contains("kem")
@@ -71,13 +69,10 @@ fn categorize(id: &str) -> Category {
     }
 
     // 2. Signatures
-    if id_lower.contains("dilithium")
-        || id_lower.contains("falcon")
-        || id_lower.contains("sphincs")
+    if id_lower.contains("ml_dsa")
+        || id_lower.contains("ml-dsa")
         || id_lower.contains("ed25519")
-        || id_lower.contains("rainbow")
         || id_lower.contains("ecdsa")
-        || id_lower.contains("rsa")
         || id_lower.contains("sign")
         || id_lower.contains("verify")
     {

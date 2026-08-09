@@ -65,11 +65,11 @@ Argon2 is the state-of-the-art for password hashing. The `PasswordHashFunction` 
 ```rust
 use dcrypt::algorithms::kdf::{Argon2, Argon2Params, Argon2Type, PasswordHashFunction};
 use dcrypt::algorithms::types::{Salt, SecretBytes};
-use rand::rngs::OsRng;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-fn hash_a_password() {
+fn hash_a_password<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::algorithms::Result<()> {
     // 1. Define Argon2 parameters. These should be tuned for your specific application.
-    let salt = Argon2::<16>::generate_salt(&mut OsRng); // Generate a random 16-byte salt
+    let salt = Argon2::<16>::generate_salt(rng)?;
     let params = Argon2Params {
         argon_type: Argon2Type::Argon2id,
         memory_cost: 65536, // 64 MB
@@ -91,6 +91,7 @@ fn hash_a_password() {
     // 5. The result can be serialized to the PHC string format for storage.
     let hash_string = password_hash.to_string();
     println!("Stored Password Hash: {}", hash_string);
+    Ok(())
 }
 ```
 

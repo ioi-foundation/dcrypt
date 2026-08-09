@@ -44,12 +44,11 @@ The API is consistent across all supported curves. Here is an example using `Ecd
 ```rust
 use dcrypt::sign::ecdsa::EcdsaP256;
 use dcrypt::api::Signature;
-use rand::rngs::OsRng;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-fn main() -> dcrypt::api::Result<()> {
-    // 1. Generate a new keypair using a cryptographically secure RNG.
-    let mut rng = OsRng;
-    let (public_key, secret_key) = EcdsaP256::keypair(&mut rng)?;
+fn sign_and_verify<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::api::Result<()> {
+    // The application supplies the cryptographic RNG used for key generation.
+    let (public_key, secret_key) = EcdsaP256::keypair(rng)?;
 
     // 2. Define the message to be signed.
     let message = b"This message will be signed with ECDSA P-256.";
@@ -58,18 +57,14 @@ fn main() -> dcrypt::api::Result<()> {
     // The signature nonce 'k' is generated deterministically (RFC 6979)
     // with additional entropy for enhanced security.
     let signature = EcdsaP256::sign(message, &secret_key)?;
-    println!("Signature generated successfully.");
 
     // 4. Verify the signature using the public key.
     let verification_result = EcdsaP256::verify(message, &signature, &public_key);
     assert!(verification_result.is_ok());
-    println!("Signature is valid! ✅");
 
     // 5. Demonstrate that verification fails with a different message.
     let tampered_message = b"This is not the original message.";
     assert!(EcdsaP256::verify(tampered_message, &signature, &public_key).is_err());
-    println!("Verification correctly failed for tampered message. ❌");
-
     Ok(())
 }
 ```

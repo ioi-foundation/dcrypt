@@ -158,7 +158,7 @@ impl<M: Modulus> Polynomial<M> {
         result
     }
 
-    /// Schoolbook polynomial multiplication with NEGACYCLIC reduction for Dilithium
+    /// Schoolbook polynomial multiplication with NEGACYCLIC reduction for ML-DSA
     /// In ring `R_q[x]/(x^N + 1)`, when degree >= N, we have `x^N ≡ -1`
     pub fn schoolbook_mul(&self, other: &Self) -> Self {
         let mut result = Self::zero();
@@ -166,7 +166,7 @@ impl<M: Modulus> Polynomial<M> {
         let q = M::Q as u64;
 
         // Use a temporary array to accumulate products without modular reduction
-        // This prevents overflow: max value is n * (q-1)^2 < 2^64 for Dilithium
+        // This prevents overflow: max value is n * (q-1)^2 < 2^64 for ML-DSA
         let mut tmp = vec![0u64; 2 * n];
 
         // Step 1: Compute full convolution without modular reduction
@@ -413,35 +413,35 @@ mod tests {
     }
 
     #[test]
-    fn test_dilithium_negacyclic() {
-        // Test with Dilithium-like parameters
+    fn test_ml_dsa_negacyclic() {
+        // Test with ML-DSA-like parameters
         #[derive(Clone)]
-        struct DilithiumTestModulus;
-        impl Modulus for DilithiumTestModulus {
-            const Q: u32 = 8380417; // Dilithium's Q
+        struct MlDsaTestModulus;
+        impl Modulus for MlDsaTestModulus {
+            const Q: u32 = 8380417; // ML-DSA's Q
             const N: usize = 4; // Small for testing, but same negacyclic property
         }
 
         // Test that x^N = -1 in the ring
-        let mut x_to_n_minus_1 = Polynomial::<DilithiumTestModulus>::zero();
+        let mut x_to_n_minus_1 = Polynomial::<MlDsaTestModulus>::zero();
         x_to_n_minus_1.coeffs[3] = 1; // x^3
 
-        let mut x = Polynomial::<DilithiumTestModulus>::zero();
+        let mut x = Polynomial::<MlDsaTestModulus>::zero();
         x.coeffs[1] = 1; // x
 
         let result = x_to_n_minus_1.schoolbook_mul(&x);
         // x^3 * x = x^4 = -1 mod q = q-1
-        assert_eq!(result.coeffs[0], DilithiumTestModulus::Q - 1);
+        assert_eq!(result.coeffs[0], MlDsaTestModulus::Q - 1);
         assert_eq!(result.coeffs[1], 0);
         assert_eq!(result.coeffs[2], 0);
         assert_eq!(result.coeffs[3], 0);
 
         // Test with sparse polynomial (like challenge polynomial c)
-        let mut sparse = Polynomial::<DilithiumTestModulus>::zero();
+        let mut sparse = Polynomial::<MlDsaTestModulus>::zero();
         sparse.coeffs[0] = 1; // +1
-        sparse.coeffs[2] = DilithiumTestModulus::Q - 1; // -1
+        sparse.coeffs[2] = MlDsaTestModulus::Q - 1; // -1
 
-        let dense = Polynomial::<DilithiumTestModulus>::from_coeffs(&[100, 200, 300, 400]).unwrap();
+        let dense = Polynomial::<MlDsaTestModulus>::from_coeffs(&[100, 200, 300, 400]).unwrap();
         let result = sparse.schoolbook_mul(&dense);
 
         // (1 - x^2) * (100 + 200x + 300x^2 + 400x^3)

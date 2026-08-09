@@ -1,16 +1,16 @@
 // arithmetic.rs
-//! Arithmetic functions crucial for Dilithium, implementing FIPS 204 algorithms.
+//! Arithmetic used by the FIPS 204 ML-DSA algorithms.
 //!
 //! All functions are spec-compliant with FIPS 204, matching the reference implementation exactly.
 
 use super::polyvec::{PolyVecK, PolyVecL};
 use crate::error::Error as SignError;
-use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
+use dcrypt_algorithms::poly::params::{MlDsaParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_internal::{Choice, ConditionallySelectable, ConstantTimeEq};
-use dcrypt_params::pqc::dilithium::{DilithiumSchemeParams, DILITHIUM_N, DILITHIUM_Q};
+use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N, ML_DSA_Q};
 
-/// Dilithium modulus Q
+/// ML-DSA modulus q.
 const Q: i32 = 8_380_417;
 
 #[inline(always)]
@@ -63,14 +63,14 @@ fn ct_abs_i32(value: i32) -> u32 {
 /// high-bit values, and for ML-DSA-65/87 it gives 16.
 #[inline]
 pub(crate) const fn buckets(alpha: u32) -> u32 {
-    (DILITHIUM_Q - 1) / alpha
+    (ML_DSA_Q - 1) / alpha
 }
 
 /// Interpret a coefficient in [0,q) as a signed value in (-q/2, q/2].
 #[inline]
 pub(crate) fn to_centered(v: u32) -> i32 {
-    let negative = v as i32 - DilithiumParams::Q as i32;
-    ct_select_i32(v as i32, negative, ct_gt_u32(v, DilithiumParams::Q / 2))
+    let negative = v as i32 - MlDsaParams::Q as i32;
+    ct_select_i32(v as i32, negative, ct_gt_u32(v, MlDsaParams::Q / 2))
 }
 
 /// Generic schoolbook multiplication that handles all coefficient interpretation cases.
@@ -82,21 +82,21 @@ pub(crate) fn to_centered(v: u32) -> i32 {
 /// - a_centered: If true, interpret a's coefficients as centered (Q-1 represents -1)
 /// - b_centered: If true, interpret b's coefficients as centered
 pub fn schoolbook_mul_generic(
-    a: &Polynomial<DilithiumParams>,
-    b: &Polynomial<DilithiumParams>,
+    a: &Polynomial<MlDsaParams>,
+    b: &Polynomial<MlDsaParams>,
     a_centered: bool,
     b_centered: bool,
-) -> Polynomial<DilithiumParams> {
-    let mut result = Polynomial::<DilithiumParams>::zero();
+) -> Polynomial<MlDsaParams> {
+    let mut result = Polynomial::<MlDsaParams>::zero();
 
-    for i in 0..DILITHIUM_N {
+    for i in 0..ML_DSA_N {
         let a_i = if a_centered {
             to_centered(a.coeffs[i]) as i64
         } else {
             a.coeffs[i] as i64
         };
 
-        for j in 0..DILITHIUM_N {
+        for j in 0..ML_DSA_N {
             let b_j = if b_centered {
                 to_centered(b.coeffs[j]) as i64
             } else {
@@ -104,15 +104,15 @@ pub fn schoolbook_mul_generic(
             };
 
             let prod = a_i * b_j;
-            let idx = (i + j) % DILITHIUM_N;
+            let idx = (i + j) % ML_DSA_N;
 
             // Handle wrap-around with negation for X^n + 1
-            if i + j >= DILITHIUM_N {
+            if i + j >= ML_DSA_N {
                 result.coeffs[idx] =
-                    ((result.coeffs[idx] as i64 - prod).rem_euclid(DILITHIUM_Q as i64)) as u32;
+                    ((result.coeffs[idx] as i64 - prod).rem_euclid(ML_DSA_Q as i64)) as u32;
             } else {
                 result.coeffs[idx] =
-                    ((result.coeffs[idx] as i64 + prod).rem_euclid(DILITHIUM_Q as i64)) as u32;
+                    ((result.coeffs[idx] as i64 + prod).rem_euclid(ML_DSA_Q as i64)) as u32;
             }
         }
     }
@@ -129,9 +129,9 @@ pub fn schoolbook_mul_generic(
 /// This is specifically needed for computing c·t₁·2ᵈ during verification,
 /// where the challenge must be interpreted as centered but t₁·2ᵈ is in standard form.
 pub fn challenge_poly_mul(
-    c: &Polynomial<DilithiumParams>,
-    standard_poly: &Polynomial<DilithiumParams>,
-) -> Polynomial<DilithiumParams> {
+    c: &Polynomial<MlDsaParams>,
+    standard_poly: &Polynomial<MlDsaParams>,
+) -> Polynomial<MlDsaParams> {
     // Use generic function with c centered, standard_poly non-centered
     schoolbook_mul_generic(c, standard_poly, true, false)
 }
@@ -140,7 +140,7 @@ pub fn challenge_poly_mul(
 /// Decomposes r ∈ Z_q into (r0, r1) such that r ≡ r1·2^d + r0 (mod q)
 /// where r0 ∈ (-2^(d-1), 2^(d-1)]
 pub fn power2round(r: u32, d: u32) -> (i32, u32) {
-    let q = DilithiumParams::Q;
+    let q = MlDsaParams::Q;
     let r_plus = r % q;
     let half = 1 << (d - 1);
 
@@ -207,7 +207,7 @@ pub fn w1_encode_gamma(r1_gamma: u32) -> u32 {
 /// Compute the number of bits needed to represent w1 coefficients.
 /// This is b = bitlen((q-1)/(2γ₂) - 1) as per FIPS 204 Algorithm 28.
 #[inline]
-pub fn w1_bits_needed<P: DilithiumSchemeParams>() -> u32 {
+pub fn w1_bits_needed<P: MlDsaSchemeParams>() -> u32 {
     let m = buckets(2 * P::GAMMA2_PARAM);
     32 - (m - 1).leading_zeros()
 }
@@ -228,7 +228,7 @@ pub fn w1_bits_needed<P: DilithiumSchemeParams>() -> u32 {
 /// - r₀ > 0   → rotate UP (+1 mod m)
 /// - r₀ ≤ 0   → rotate DOWN (-1 mod m)
 #[inline]
-pub fn use_hint_coeff<P: DilithiumSchemeParams>(hint_bit: bool, r_coeff: u32) -> u32 {
+pub fn use_hint_coeff<P: MlDsaSchemeParams>(hint_bit: bool, r_coeff: u32) -> u32 {
     let gamma2 = P::GAMMA2_PARAM;
     let alpha = 2 * gamma2;
     let m = buckets(alpha);
@@ -240,7 +240,7 @@ pub fn use_hint_coeff<P: DilithiumSchemeParams>(hint_bit: bool, r_coeff: u32) ->
 
 /// Checks if the infinity norm of a polynomial is at most `bound`.
 /// Coefficients are centered in (-Q/2, Q/2]
-pub(crate) fn check_norm_poly_ct(poly: &Polynomial<DilithiumParams>, bound: u32) -> Choice {
+pub(crate) fn check_norm_poly_ct(poly: &Polynomial<MlDsaParams>, bound: u32) -> Choice {
     let mut valid = Choice::from(1u8);
     for &coeff in poly.coeffs.iter() {
         let centered = to_centered(coeff);
@@ -250,7 +250,7 @@ pub(crate) fn check_norm_poly_ct(poly: &Polynomial<DilithiumParams>, bound: u32)
 }
 
 /// Checks if the infinity norm of all polynomials in a PolyVecL is at most `bound`.
-pub(crate) fn check_norm_polyvec_l_ct<P: DilithiumSchemeParams>(
+pub(crate) fn check_norm_polyvec_l_ct<P: MlDsaSchemeParams>(
     pv: &PolyVecL<P>,
     bound: u32,
 ) -> Choice {
@@ -262,7 +262,7 @@ pub(crate) fn check_norm_polyvec_l_ct<P: DilithiumSchemeParams>(
 }
 
 /// Checks if the infinity norm of all polynomials in a PolyVecK is at most `bound`.
-pub(crate) fn check_norm_polyvec_k_ct<P: DilithiumSchemeParams>(
+pub(crate) fn check_norm_polyvec_k_ct<P: MlDsaSchemeParams>(
     pv: &PolyVecK<P>,
     bound: u32,
 ) -> Choice {
@@ -274,7 +274,7 @@ pub(crate) fn check_norm_polyvec_k_ct<P: DilithiumSchemeParams>(
 }
 
 /// Applies `Power2Round` element-wise to a PolyVecK.
-pub fn power2round_polyvec<P: DilithiumSchemeParams>(
+pub fn power2round_polyvec<P: MlDsaSchemeParams>(
     pv: &PolyVecK<P>,
     d_param: u32,
 ) -> (PolyVecK<P>, PolyVecK<P>) {
@@ -282,11 +282,11 @@ pub fn power2round_polyvec<P: DilithiumSchemeParams>(
     let mut pv1 = PolyVecK::<P>::zero();
 
     for i in 0..P::K_DIM {
-        for j in 0..DilithiumParams::N {
+        for j in 0..MlDsaParams::N {
             let (r0_signed, r1) = power2round(pv.polys[i].coeffs[j], d_param);
             // Store r0 as positive representative in [0, Q-1]
             pv0.polys[i].coeffs[j] =
-                ((r0_signed + DilithiumParams::Q as i32) % DilithiumParams::Q as i32) as u32;
+                ((r0_signed + MlDsaParams::Q as i32) % MlDsaParams::Q as i32) as u32;
             pv1.polys[i].coeffs[j] = r1;
         }
     }
@@ -295,11 +295,11 @@ pub fn power2round_polyvec<P: DilithiumSchemeParams>(
 }
 
 /// Applies `HighBits` element-wise to a PolyVecK.
-pub fn highbits_polyvec<P: DilithiumSchemeParams>(pv: &PolyVecK<P>, alpha: u32) -> PolyVecK<P> {
+pub fn highbits_polyvec<P: MlDsaSchemeParams>(pv: &PolyVecK<P>, alpha: u32) -> PolyVecK<P> {
     let mut res = PolyVecK::<P>::zero();
 
     for i in 0..P::K_DIM {
-        for j in 0..DilithiumParams::N {
+        for j in 0..MlDsaParams::N {
             res.polys[i].coeffs[j] = highbits(pv.polys[i].coeffs[j], alpha);
         }
     }
@@ -308,15 +308,15 @@ pub fn highbits_polyvec<P: DilithiumSchemeParams>(pv: &PolyVecK<P>, alpha: u32) 
 }
 
 /// Applies `LowBits` element-wise to a PolyVecK.
-pub fn lowbits_polyvec<P: DilithiumSchemeParams>(pv: &PolyVecK<P>, alpha: u32) -> PolyVecK<P> {
+pub fn lowbits_polyvec<P: MlDsaSchemeParams>(pv: &PolyVecK<P>, alpha: u32) -> PolyVecK<P> {
     let mut res = PolyVecK::<P>::zero();
 
     for i in 0..P::K_DIM {
-        for j in 0..DilithiumParams::N {
+        for j in 0..MlDsaParams::N {
             let r0_signed = lowbits(pv.polys[i].coeffs[j], alpha);
             // Convert from signed (−γ2, γ2] to canonical mod q representation [0, Q)
             res.polys[i].coeffs[j] =
-                ((r0_signed + DilithiumParams::Q as i32) % DilithiumParams::Q as i32) as u32;
+                ((r0_signed + MlDsaParams::Q as i32) % MlDsaParams::Q as i32) as u32;
         }
     }
 
@@ -327,7 +327,7 @@ pub fn lowbits_polyvec<P: DilithiumSchemeParams>(pv: &PolyVecK<P>, alpha: u32) -
 ///
 /// The inputs match the standard directly: `z_polyvec` is the additive offset and
 /// `r_polyvec` is the base vector whose high bits will be adjusted by `UseHint`.
-pub(crate) fn make_hint_polyveck_ct<P: DilithiumSchemeParams>(
+pub(crate) fn make_hint_polyveck_ct<P: MlDsaSchemeParams>(
     z_polyvec: &PolyVecK<P>,
     r_polyvec: &PolyVecK<P>,
 ) -> (PolyVecK<P>, usize) {
@@ -335,19 +335,19 @@ pub(crate) fn make_hint_polyveck_ct<P: DilithiumSchemeParams>(
     let mut hint_count: usize = 0;
 
     for i in 0..P::K_DIM {
-        for j in 0..DILITHIUM_N {
+        for j in 0..ML_DSA_N {
             let r = r_polyvec.polys[i].coeffs[j];
             let z = z_polyvec.polys[i].coeffs[j];
 
             let z_signed = to_centered(z) as i64;
             let sum = r as i64 + z_signed;
-            let with_q = sum + DilithiumParams::Q as i64;
+            let with_q = sum + MlDsaParams::Q as i64;
             let non_negative = ct_select_i64(sum, with_q, ct_lt_i64(sum, 0));
-            let reduced = non_negative - DilithiumParams::Q as i64;
+            let reduced = non_negative - MlDsaParams::Q as i64;
             let r_plus_z = ct_select_i64(
                 non_negative,
                 reduced,
-                !ct_lt_u64(non_negative as u64, DilithiumParams::Q as u64),
+                !ct_lt_u64(non_negative as u64, MlDsaParams::Q as u64),
             ) as u32;
 
             let r1 = highbits(r, 2 * P::GAMMA2_PARAM);
@@ -368,14 +368,14 @@ pub(crate) fn make_hint_polyveck_ct<P: DilithiumSchemeParams>(
 /// Parameters:
 /// - h_polyvec: Hint vector (0/1 coefficients)
 /// - w_prime_polyvec: w' = Az - ct1*2^d (the combined value)
-pub fn use_hint_polyveck<P: DilithiumSchemeParams>(
+pub fn use_hint_polyveck<P: MlDsaSchemeParams>(
     h_polyvec: &PolyVecK<P>,       // Hint vector (0/1 coefficients)
     w_prime_polyvec: &PolyVecK<P>, // w' = Az - ct1*2^d (the combined value)
 ) -> Result<PolyVecK<P>, SignError> {
     let mut corrected_pv = PolyVecK::<P>::zero();
 
     for i in 0..P::K_DIM {
-        for j in 0..DilithiumParams::N {
+        for j in 0..MlDsaParams::N {
             let hint_bit = h_polyvec.polys[i].coeffs[j] == 1;
             let w_prime_coeff = w_prime_polyvec.polys[i].coeffs[j];
 

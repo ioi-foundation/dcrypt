@@ -1,14 +1,14 @@
 //! Essential tests for Number Theoretic Transform implementation
 
-use super::super::params::DilithiumParams;
+use super::super::params::MlDsaParams;
 use super::super::polynomial::Polynomial;
 use super::*;
 
 /// Test NTT linearity property: NTT(a + b) = NTT(a) + NTT(b)
 #[test]
 fn test_ntt_linearity() {
-    let mut poly_a = Polynomial::<DilithiumParams>::zero();
-    let mut poly_b = Polynomial::<DilithiumParams>::zero();
+    let mut poly_a = Polynomial::<MlDsaParams>::zero();
+    let mut poly_b = Polynomial::<MlDsaParams>::zero();
 
     poly_a.coeffs[0] = 102071;
     poly_a.coeffs[1] = 96744;
@@ -32,7 +32,7 @@ fn test_ntt_linearity() {
 
     let ntt_sum_computed = ntt_a.add(&ntt_b);
 
-    for i in 0..DilithiumParams::N {
+    for i in 0..MlDsaParams::N {
         assert_eq!(
             ntt_sum_direct.coeffs[i], ntt_sum_computed.coeffs[i],
             "Linearity violation at coefficient {}",
@@ -41,10 +41,10 @@ fn test_ntt_linearity() {
     }
 }
 
-/// Test NTT roundtrip for Dilithium
+/// Test NTT roundtrip for ML-DSA
 #[test]
-fn test_ntt_roundtrip_dilithium() {
-    let mut poly = Polynomial::<DilithiumParams>::zero();
+fn test_ntt_roundtrip_ml_dsa() {
+    let mut poly = Polynomial::<MlDsaParams>::zero();
     poly.coeffs[0] = 12345;
     poly.coeffs[1] = 67890;
     poly.coeffs[2] = 111213;
@@ -57,7 +57,7 @@ fn test_ntt_roundtrip_dilithium() {
     poly.ntt_inplace().unwrap();
     poly.from_ntt_inplace().unwrap();
 
-    for i in 0..DilithiumParams::N {
+    for i in 0..MlDsaParams::N {
         assert_eq!(
             poly.coeffs[i], original.coeffs[i],
             "Roundtrip failed at coefficient {}",
@@ -69,8 +69,8 @@ fn test_ntt_roundtrip_dilithium() {
 /// Test convolution property
 #[test]
 fn test_ntt_convolution_property() {
-    let mut poly_a = Polynomial::<DilithiumParams>::zero();
-    let mut poly_b = Polynomial::<DilithiumParams>::zero();
+    let mut poly_a = Polynomial::<MlDsaParams>::zero();
+    let mut poly_b = Polynomial::<MlDsaParams>::zero();
 
     poly_a.coeffs[0] = 1;
     poly_a.coeffs[1] = 2;
@@ -103,28 +103,28 @@ fn test_ntt_convolution_property() {
 fn test_montgomery_arithmetic() {
     let a = 1000u64;
     let b = 2000u64;
-    let product = a * b * DilithiumParams::MONT_R as u64;
-    let reduced = montgomery_reduce::<DilithiumParams>(product);
-    let expected = ((a * b) % DilithiumParams::Q as u64) as u32;
+    let product = a * b * MlDsaParams::MONT_R as u64;
+    let reduced = montgomery_reduce::<MlDsaParams>(product);
+    let expected = ((a * b) % MlDsaParams::Q as u64) as u32;
     assert_eq!(reduced, expected);
 
-    let a_mont = to_montgomery::<DilithiumParams>(1000);
-    let b_mont = to_montgomery::<DilithiumParams>(2000);
-    let mont_result = montgomery_mul::<DilithiumParams>(a_mont, b_mont);
+    let a_mont = to_montgomery::<MlDsaParams>(1000);
+    let b_mont = to_montgomery::<MlDsaParams>(2000);
+    let mont_result = montgomery_mul::<MlDsaParams>(a_mont, b_mont);
 
-    let expected_std = ((1000u64 * 2000u64) % DilithiumParams::Q as u64) as u32;
-    let expected_mont = to_montgomery::<DilithiumParams>(expected_std);
+    let expected_std = ((1000u64 * 2000u64) % MlDsaParams::Q as u64) as u32;
+    let expected_mont = to_montgomery::<MlDsaParams>(expected_std);
     assert_eq!(mont_result, expected_mont);
 }
 
 /// Test edge cases
 #[test]
 fn test_edge_cases() {
-    let mut poly = Polynomial::<DilithiumParams>::zero();
+    let mut poly = Polynomial::<MlDsaParams>::zero();
 
     poly.coeffs[0] = 0;
-    poly.coeffs[1] = DilithiumParams::Q - 1;
-    poly.coeffs[2] = DilithiumParams::Q / 2;
+    poly.coeffs[1] = MlDsaParams::Q - 1;
+    poly.coeffs[2] = MlDsaParams::Q / 2;
     poly.coeffs[3] = 1;
 
     let original = poly.clone();
@@ -144,12 +144,12 @@ fn test_edge_cases() {
 /// Test zero polynomial
 #[test]
 fn test_zero_polynomial() {
-    let mut poly = Polynomial::<DilithiumParams>::zero();
+    let mut poly = Polynomial::<MlDsaParams>::zero();
 
     poly.ntt_inplace().unwrap();
     poly.from_ntt_inplace().unwrap();
 
-    for i in 0..DilithiumParams::N {
+    for i in 0..MlDsaParams::N {
         assert_eq!(poly.coeffs[i], 0);
     }
 }
@@ -157,7 +157,7 @@ fn test_zero_polynomial() {
 /// Test constant polynomial
 #[test]
 fn test_constant_polynomial() {
-    let mut poly = Polynomial::<DilithiumParams>::zero();
+    let mut poly = Polynomial::<MlDsaParams>::zero();
 
     let constant = 42;
     for c in poly.as_mut_coeffs_slice() {
@@ -169,7 +169,7 @@ fn test_constant_polynomial() {
     poly.ntt_inplace().unwrap();
     poly.from_ntt_inplace().unwrap();
 
-    for i in 0..DilithiumParams::N {
+    for i in 0..MlDsaParams::N {
         assert_eq!(poly.coeffs[i], original.coeffs[i]);
     }
 }
@@ -177,14 +177,14 @@ fn test_constant_polynomial() {
 /// Test impulse response
 #[test]
 fn test_impulse_response() {
-    let mut poly = Polynomial::<DilithiumParams>::zero();
+    let mut poly = Polynomial::<MlDsaParams>::zero();
     poly.coeffs[0] = 1;
 
     poly.ntt_inplace().unwrap();
     poly.from_ntt_inplace().unwrap();
 
     assert_eq!(poly.coeffs[0], 1);
-    for i in 1..DilithiumParams::N {
+    for i in 1..MlDsaParams::N {
         assert_eq!(poly.coeffs[i], 0);
     }
 }
@@ -192,11 +192,11 @@ fn test_impulse_response() {
 /// Test domain conversions
 #[test]
 fn test_domain_conversions() {
-    let test_values = [0, 1, 100, 1000, 10000, 100000, DilithiumParams::Q - 1];
+    let test_values = [0, 1, 100, 1000, 10000, 100000, MlDsaParams::Q - 1];
 
     for &val in &test_values {
-        let mont = to_montgomery::<DilithiumParams>(val);
-        let back = montgomery_reduce::<DilithiumParams>(mont as u64);
+        let mont = to_montgomery::<MlDsaParams>(val);
+        let back = montgomery_reduce::<MlDsaParams>(mont as u64);
         assert_eq!(back, val);
     }
 }
@@ -204,8 +204,8 @@ fn test_domain_conversions() {
 /// Test NTT multiplication
 #[test]
 fn test_ntt_multiplication() {
-    let mut poly_a = Polynomial::<DilithiumParams>::zero();
-    let mut poly_b = Polynomial::<DilithiumParams>::zero();
+    let mut poly_a = Polynomial::<MlDsaParams>::zero();
+    let mut poly_b = Polynomial::<MlDsaParams>::zero();
 
     poly_a.coeffs[0] = 100;
     poly_a.coeffs[1] = 200;
@@ -240,7 +240,7 @@ fn test_polynomial_patterns() {
     ];
 
     for pattern in test_patterns {
-        let mut poly = Polynomial::<DilithiumParams>::zero();
+        let mut poly = Polynomial::<MlDsaParams>::zero();
 
         for (idx, val) in &pattern {
             poly.coeffs[*idx] = *val;
@@ -251,7 +251,7 @@ fn test_polynomial_patterns() {
         poly.ntt_inplace().unwrap();
         poly.from_ntt_inplace().unwrap();
 
-        for i in 0..DilithiumParams::N {
+        for i in 0..MlDsaParams::N {
             assert_eq!(poly.coeffs[i], original.coeffs[i]);
         }
     }
@@ -261,8 +261,8 @@ fn test_polynomial_patterns() {
 mod arithmetic_tests {
     use super::*;
 
-    struct DilithiumMod;
-    impl Modulus for DilithiumMod {
+    struct MlDsaMod;
+    impl Modulus for MlDsaMod {
         const Q: u32 = 8_380_417;
         const N: usize = 256;
         const BARRETT_MU: u128 = 4_299_165_187;
@@ -282,18 +282,18 @@ mod arithmetic_tests {
         let test_values = [
             0,
             1,
-            DilithiumMod::Q - 1,
-            DilithiumMod::Q,
-            3 * DilithiumMod::Q,
-            8 * DilithiumMod::Q - 1,
+            MlDsaMod::Q - 1,
+            MlDsaMod::Q,
+            3 * MlDsaMod::Q,
+            8 * MlDsaMod::Q - 1,
             u32::MAX,
         ];
 
         for &x in &test_values {
-            let reduced = reduce_to_q::<DilithiumMod>(x);
-            let expected = x % DilithiumMod::Q;
+            let reduced = reduce_to_q::<MlDsaMod>(x);
+            let expected = x % MlDsaMod::Q;
             assert_eq!(reduced, expected);
-            assert!(reduced < DilithiumMod::Q);
+            assert!(reduced < MlDsaMod::Q);
         }
 
         let small_modulus_test_values = [
@@ -316,18 +316,18 @@ mod arithmetic_tests {
 
     #[test]
     fn test_modular_arithmetic_edge_cases() {
-        let x = 3 * DilithiumMod::Q;
-        let reduced = reduce_to_q::<DilithiumMod>(x);
+        let x = 3 * MlDsaMod::Q;
+        let reduced = reduce_to_q::<MlDsaMod>(x);
         assert_eq!(reduced, 0);
 
         let wrapped = u32::MAX - 1000;
-        let reduced = reduce_to_q::<DilithiumMod>(wrapped);
-        assert!(reduced < DilithiumMod::Q);
+        let reduced = reduce_to_q::<MlDsaMod>(wrapped);
+        assert!(reduced < MlDsaMod::Q);
 
         for i in 0..10 {
-            let x = DilithiumMod::Q * i + (DilithiumMod::Q - 1);
-            let reduced = reduce_to_q::<DilithiumMod>(x);
-            assert_eq!(reduced, DilithiumMod::Q - 1);
+            let x = MlDsaMod::Q * i + (MlDsaMod::Q - 1);
+            let reduced = reduce_to_q::<MlDsaMod>(x);
+            assert_eq!(reduced, MlDsaMod::Q - 1);
         }
 
         let x_small = 3 * SmallMod::Q;

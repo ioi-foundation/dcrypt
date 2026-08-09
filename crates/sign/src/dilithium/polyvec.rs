@@ -1,8 +1,8 @@
-//! Polynomial vector types and operations specific to Dilithium.
+//! Polynomial vector types and operations for ML-DSA.
 //!
 //! IMPORTANT: This module uses TWO different parameter sets:
-//! 1. `algorithms::poly::params::DilithiumParams` - Contains NTT constants for polynomial arithmetic
-//! 2. `params::pqc::dilithium::DilithiumSchemeParams` - Contains signature scheme parameters
+//! 1. `algorithms::poly::params::MlDsaParams` - Contains NTT constants for polynomial arithmetic
+//! 2. `params::pqc::ml_dsa::MlDsaSchemeParams` - Contains signature scheme parameters
 //!
 //! The polynomial type MUST use the algorithms version to get correct NTT scaling factors!
 
@@ -11,30 +11,30 @@ use crate::error::Error as SignError;
 use alloc::vec::Vec;
 use core::marker::PhantomData;
 use dcrypt_algorithms::error::Result as AlgoResult;
-use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
+use dcrypt_algorithms::poly::params::{MlDsaParams, Modulus};
 use dcrypt_algorithms::poly::polynomial::Polynomial;
 use dcrypt_algorithms::xof::shake::ShakeXof128;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use dcrypt_internal::{Choice, ConditionallySelectable, Zeroize};
-use dcrypt_params::pqc::dilithium::DilithiumSchemeParams;
+use dcrypt_params::pqc::ml_dsa::MlDsaSchemeParams;
 
 // Montgomery reduce is available from algorithms::poly::ntt when needed
 
 /// A vector of polynomials of length L (columns of A).
 #[derive(Debug)]
-pub struct PolyVecL<P: DilithiumSchemeParams> {
-    pub(crate) polys: Vec<Polynomial<DilithiumParams>>,
+pub struct PolyVecL<P: MlDsaSchemeParams> {
+    pub(crate) polys: Vec<Polynomial<MlDsaParams>>,
     _params: PhantomData<P>,
 }
 
 /// A vector of polynomials of length K (rows of A).
 #[derive(Debug)]
-pub struct PolyVecK<P: DilithiumSchemeParams> {
-    pub(crate) polys: Vec<Polynomial<DilithiumParams>>,
+pub struct PolyVecK<P: MlDsaSchemeParams> {
+    pub(crate) polys: Vec<Polynomial<MlDsaParams>>,
     _params: PhantomData<P>,
 }
 
-impl<P: DilithiumSchemeParams> Clone for PolyVecL<P> {
+impl<P: MlDsaSchemeParams> Clone for PolyVecL<P> {
     fn clone(&self) -> Self {
         Self {
             polys: self.polys.clone(),
@@ -42,7 +42,7 @@ impl<P: DilithiumSchemeParams> Clone for PolyVecL<P> {
         }
     }
 }
-impl<P: DilithiumSchemeParams> Clone for PolyVecK<P> {
+impl<P: MlDsaSchemeParams> Clone for PolyVecK<P> {
     fn clone(&self) -> Self {
         Self {
             polys: self.polys.clone(),
@@ -51,14 +51,14 @@ impl<P: DilithiumSchemeParams> Clone for PolyVecK<P> {
     }
 }
 
-impl<P: DilithiumSchemeParams> Zeroize for PolyVecL<P> {
+impl<P: MlDsaSchemeParams> Zeroize for PolyVecL<P> {
     fn zeroize(&mut self) {
         for poly in self.polys.iter_mut() {
             poly.coeffs.as_mut_slice().zeroize(); // Zeroes in place, length intact
         }
     }
 }
-impl<P: DilithiumSchemeParams> Zeroize for PolyVecK<P> {
+impl<P: MlDsaSchemeParams> Zeroize for PolyVecK<P> {
     fn zeroize(&mut self) {
         for poly in self.polys.iter_mut() {
             poly.coeffs.as_mut_slice().zeroize(); // Zeroes in place, length intact
@@ -66,12 +66,12 @@ impl<P: DilithiumSchemeParams> Zeroize for PolyVecK<P> {
     }
 }
 
-impl<P: DilithiumSchemeParams> PolyVecL<P> {
+impl<P: MlDsaSchemeParams> PolyVecL<P> {
     /// Creates a new PolyVecL with all coefficients = 0.
     pub fn zero() -> Self {
         let mut polys = Vec::with_capacity(P::L_DIM);
         for _ in 0..P::L_DIM {
-            polys.push(Polynomial::<DilithiumParams>::zero());
+            polys.push(Polynomial::<MlDsaParams>::zero());
         }
         Self {
             polys,
@@ -96,8 +96,8 @@ impl<P: DilithiumSchemeParams> PolyVecL<P> {
     }
 
     /// Point-wise product and accumulate into one Polynomial (all in NTT domain).
-    pub fn pointwise_dot_product(&self, other: &PolyVecL<P>) -> Polynomial<DilithiumParams> {
-        let mut acc = Polynomial::<DilithiumParams>::zero();
+    pub fn pointwise_dot_product(&self, other: &PolyVecL<P>) -> Polynomial<MlDsaParams> {
+        let mut acc = Polynomial::<MlDsaParams>::zero();
         for i in 0..P::L_DIM {
             let prod = self.polys[i].ntt_mul(&other.polys[i]);
             acc = acc.add(&prod);
@@ -108,7 +108,7 @@ impl<P: DilithiumSchemeParams> PolyVecL<P> {
     pub fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         let mut out = Self::zero();
         for i in 0..P::L_DIM {
-            for j in 0..DilithiumParams::N {
+            for j in 0..MlDsaParams::N {
                 out.polys[i].coeffs[j] =
                     u32::conditional_select(&a.polys[i].coeffs[j], &b.polys[i].coeffs[j], choice);
             }
@@ -117,12 +117,12 @@ impl<P: DilithiumSchemeParams> PolyVecL<P> {
     }
 }
 
-impl<P: DilithiumSchemeParams> PolyVecK<P> {
+impl<P: MlDsaSchemeParams> PolyVecK<P> {
     /// Creates a new PolyVecK with all coefficients = 0.
     pub fn zero() -> Self {
         let mut polys = Vec::with_capacity(P::K_DIM);
         for _ in 0..P::K_DIM {
-            polys.push(Polynomial::<DilithiumParams>::zero());
+            polys.push(Polynomial::<MlDsaParams>::zero());
         }
         Self {
             polys,
@@ -161,12 +161,12 @@ impl<P: DilithiumSchemeParams> PolyVecK<P> {
     pub fn neg_mod_q(&self) -> Self {
         let mut res = Self::zero();
         for i in 0..P::K_DIM {
-            for j in 0..DilithiumParams::N {
+            for j in 0..MlDsaParams::N {
                 let coeff = self.polys[i].coeffs[j];
                 res.polys[i].coeffs[j] = if coeff == 0 {
                     0
                 } else {
-                    DilithiumParams::Q - coeff
+                    MlDsaParams::Q - coeff
                 };
             }
         }
@@ -185,7 +185,7 @@ impl<P: DilithiumSchemeParams> PolyVecK<P> {
     pub fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         let mut out = Self::zero();
         for i in 0..P::K_DIM {
-            for j in 0..DilithiumParams::N {
+            for j in 0..MlDsaParams::N {
                 out.polys[i].coeffs[j] =
                     u32::conditional_select(&a.polys[i].coeffs[j], &b.polys[i].coeffs[j], choice);
             }
@@ -196,7 +196,7 @@ impl<P: DilithiumSchemeParams> PolyVecK<P> {
 
 /// Matrix‐vector multiply: Â (K×L) × vec_l̂ (L). All in NTT domain.
 /// Returns a K‐vector in NTT domain.
-pub fn matrix_polyvecl_mul<P: DilithiumSchemeParams>(
+pub fn matrix_polyvecl_mul<P: MlDsaSchemeParams>(
     matrix_a_hat: &[PolyVecL<P>], // K rows, each has L polys in NTT domain
     vector_l_hat: &PolyVecL<P>,   // L polys in NTT domain
 ) -> PolyVecK<P> {
@@ -213,7 +213,7 @@ pub fn matrix_polyvecl_mul<P: DilithiumSchemeParams>(
 ///
 /// The returned coefficient arrays are already elements of `Tq` (the NTT
 /// representation). They must not be transformed again before pointwise use.
-pub fn expand_matrix_a<P: DilithiumSchemeParams>(
+pub fn expand_matrix_a<P: MlDsaSchemeParams>(
     rho_seed: &[u8; 32], // always 32 bytes
 ) -> Result<Vec<PolyVecL<P>>, SignError> {
     let mut matrix_a = Vec::with_capacity(P::K_DIM);
@@ -226,11 +226,11 @@ pub fn expand_matrix_a<P: DilithiumSchemeParams>(
             xof.update(&[j as u8]).map_err(SignError::from_algo)?;
             xof.update(&[i as u8]).map_err(SignError::from_algo)?;
 
-            let mut poly = Polynomial::<DilithiumParams>::zero();
+            let mut poly = Polynomial::<MlDsaParams>::zero();
             let mut ctr = 0;
             let mut temp_buf = [0u8; 3];
 
-            while ctr < DilithiumParams::N {
+            while ctr < MlDsaParams::N {
                 xof.squeeze(&mut temp_buf).map_err(SignError::from_algo)?;
                 // CoeffFromThreeBytes clears the top bit and interprets the
                 // remaining 23 bits in little-endian order.
@@ -238,7 +238,7 @@ pub fn expand_matrix_a<P: DilithiumSchemeParams>(
                     | (u32::from(temp_buf[1]) << 8)
                     | (u32::from(temp_buf[2] & 0x7f) << 16);
 
-                if candidate < DilithiumParams::Q {
+                if candidate < MlDsaParams::Q {
                     poly.coeffs[ctr] = candidate;
                     ctr += 1;
                 }

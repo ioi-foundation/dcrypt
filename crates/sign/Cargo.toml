@@ -26,8 +26,8 @@ no_std = [
     "dcrypt-internal/no_std"
 ]
 alloc = ["dcrypt-api/alloc", "dcrypt-common/alloc", "dcrypt-internal/alloc", "dcrypt-algorithms/alloc"]
-traditional = []  # Feature flag for traditional signatures (ECDSA and EdDSA)
-post-quantum = [] # Feature flag for post-quantum signatures (ML-DSA)
+traditional = ["alloc"] # ECDSA and Ed25519
+post-quantum = ["alloc"] # FIPS 204 ML-DSA
 
 [dependencies]
 dcrypt-api = { path = "../api", version = "=2.0.0", default-features = false }

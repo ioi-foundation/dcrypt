@@ -1,19 +1,19 @@
-//! Constants for Module-Lattice-Based Digital Signature Algorithm (ML-DSA)
+//! Final FIPS 204 ML-DSA parameter constants.
 //!
 //! This module implements the parameter sets defined in FIPS 204 (August 2024)
 //! "Module-Lattice-Based Digital Signature Standard"
 //! <https://doi.org/10.6028/NIST.FIPS.204>
 //!
 //! All constants in this file are taken directly from the final FIPS 204 standard,
-//! NOT from earlier CRYSTALS-Dilithium submissions or draft specifications.
+//! NOT from earlier CRYSTALS-ML-DSA submissions or draft specifications.
 
-/// Dilithium polynomial degree (n = 256)
+/// ML-DSA polynomial degree (n = 256)
 /// FIPS 204, Table 1: Common to all ML-DSA parameter sets
-pub const DILITHIUM_N: usize = 256;
+pub const ML_DSA_N: usize = 256;
 
-/// Dilithium modulus (q = 8380417 = 2²³ - 2¹³ + 1)
+/// ML-DSA modulus (q = 8380417 = 2²³ - 2¹³ + 1)
 /// FIPS 204, Table 1: Common to all ML-DSA parameter sets
-pub const DILITHIUM_Q: u32 = 8380417;
+pub const ML_DSA_Q: u32 = 8380417;
 
 /// FIPS 204 Appendix C, Table 3 minimum allowable loop limit for `ML-DSA.Sign_internal`.
 ///
@@ -24,15 +24,15 @@ pub const DILITHIUM_Q: u32 = 8380417;
 pub const FIPS204_SIGN_INTERNAL_MIN_LOOP_LIMIT: u16 = 814;
 
 /// Common trait for ML-DSA parameter sets as defined in FIPS 204
-pub trait DilithiumSchemeParams: Send + Sync + 'static {
+pub trait MlDsaSchemeParams: Send + Sync + 'static {
     /// Algorithm name (ML-DSA-44, ML-DSA-65, ML-DSA-87)
     const NAME: &'static str;
 
     // Ring parameters (FIPS 204, Section 3)
     /// Polynomial degree n = 256 (FIPS 204, Table 1)
-    const N: usize = DILITHIUM_N;
+    const N: usize = ML_DSA_N;
     /// Prime modulus q = 2²³ - 2¹³ + 1 (FIPS 204, Table 1)
-    const Q: u32 = DILITHIUM_Q;
+    const Q: u32 = ML_DSA_Q;
     /// Dropped bits parameter d (FIPS 204, Table 1)
     const D_PARAM: u32;
 
@@ -108,7 +108,7 @@ pub trait DilithiumSchemeParams: Send + Sync + 'static {
 
 /// Structure containing ML-DSA-44 parameters
 /// FIPS 204, Table 1: ML-DSA-44 (NIST security category 2)
-pub struct Dilithium2Params {
+pub struct MlDsa44Params {
     /// Polynomial degree n = 256
     pub n: usize,
 
@@ -142,9 +142,9 @@ pub struct Dilithium2Params {
 
 /// ML-DSA-44 parameter set (FIPS 204, Table 1)
 /// Targets NIST security category 2 (collision resistance of SHA-256)
-pub const DILITHIUM2: Dilithium2Params = Dilithium2Params {
-    n: DILITHIUM_N,
-    q: DILITHIUM_Q,
+pub const ML_DSA_44: MlDsa44Params = MlDsa44Params {
+    n: ML_DSA_N,
+    q: ML_DSA_Q,
     d: 13,
     k: 4,
     l: 4,
@@ -155,7 +155,7 @@ pub const DILITHIUM2: Dilithium2Params = Dilithium2Params {
     signature_size: 2420,  // Updated: 32 + 2304 + 80 + 4 = 2420 bytes
 };
 
-impl DilithiumSchemeParams for Dilithium2Params {
+impl MlDsaSchemeParams for MlDsa44Params {
     const NAME: &'static str = "ML-DSA-44";
     const D_PARAM: u32 = 13;
     const K_DIM: usize = 4;
@@ -166,7 +166,7 @@ impl DilithiumSchemeParams for Dilithium2Params {
     const GAMMA1_PARAM: u32 = 1 << 17; // 2¹⁷ = 131072
     const GAMMA1_BITS: usize = 18; // ceil(log₂(2·2¹⁷)) = 18
                                    // γ₂ = (q − 1)/88 = 95232 (FIPS 204, Table 1, ML-DSA-44)
-    const GAMMA2_PARAM: u32 = (DILITHIUM_Q - 1) / 88; // = 95232
+    const GAMMA2_PARAM: u32 = (ML_DSA_Q - 1) / 88; // = 95232
     const BETA_PARAM: u32 = 78; // β = τ·η = 39·2 = 78
                                 // FIXED: OMEGA must be 80 for ML-DSA-44 per FIPS 204 Table 1
     const OMEGA_PARAM: u32 = 80;
@@ -187,7 +187,7 @@ impl DilithiumSchemeParams for Dilithium2Params {
 
 /// Structure containing ML-DSA-65 parameters
 /// FIPS 204, Table 1: ML-DSA-65 (NIST security category 3)
-pub struct Dilithium3Params {
+pub struct MlDsa65Params {
     /// Polynomial degree n = 256
     pub n: usize,
 
@@ -221,9 +221,9 @@ pub struct Dilithium3Params {
 
 /// ML-DSA-65 parameter set (FIPS 204, Table 1)
 /// Targets NIST security category 3 (collision resistance of SHA-384)
-pub const DILITHIUM3: Dilithium3Params = Dilithium3Params {
-    n: DILITHIUM_N,
-    q: DILITHIUM_Q,
+pub const ML_DSA_65: MlDsa65Params = MlDsa65Params {
+    n: ML_DSA_N,
+    q: ML_DSA_Q,
     d: 13,
     k: 6,
     l: 5,
@@ -234,7 +234,7 @@ pub const DILITHIUM3: Dilithium3Params = Dilithium3Params {
     signature_size: 3309,  // FIPS 204 final value
 };
 
-impl DilithiumSchemeParams for Dilithium3Params {
+impl MlDsaSchemeParams for MlDsa65Params {
     const NAME: &'static str = "ML-DSA-65";
     const D_PARAM: u32 = 13;
     const K_DIM: usize = 6;
@@ -245,7 +245,7 @@ impl DilithiumSchemeParams for Dilithium3Params {
     const GAMMA1_PARAM: u32 = 1 << 19; // 2¹⁹ = 524288
     const GAMMA1_BITS: usize = 20; // ceil(log₂(2·2¹⁹)) = 20
                                    // CORRECTED: γ₂ = (q − 1)/32 = 261888 (FIPS 204, Table 1, ML-DSA-65)
-    const GAMMA2_PARAM: u32 = (DILITHIUM_Q - 1) / 32; // = 261888
+    const GAMMA2_PARAM: u32 = (ML_DSA_Q - 1) / 32; // = 261888
     const BETA_PARAM: u32 = 196; // β = τ·η = 49·4 = 196
                                  // CORRECTED: OMEGA must be 55 for ML-DSA-65 per FIPS 204 Table 1
     const OMEGA_PARAM: u32 = 55;
@@ -266,7 +266,7 @@ impl DilithiumSchemeParams for Dilithium3Params {
 
 /// Structure containing ML-DSA-87 parameters
 /// FIPS 204, Table 1: ML-DSA-87 (NIST security category 5)
-pub struct Dilithium5Params {
+pub struct MlDsa87Params {
     /// Polynomial degree n = 256
     pub n: usize,
 
@@ -300,9 +300,9 @@ pub struct Dilithium5Params {
 
 /// ML-DSA-87 parameter set (FIPS 204, Table 1)
 /// Targets NIST security category 5 (collision resistance of SHA-512)
-pub const DILITHIUM5: Dilithium5Params = Dilithium5Params {
-    n: DILITHIUM_N,
-    q: DILITHIUM_Q,
+pub const ML_DSA_87: MlDsa87Params = MlDsa87Params {
+    n: ML_DSA_N,
+    q: ML_DSA_Q,
     d: 13,
     k: 8,
     l: 7,
@@ -313,7 +313,7 @@ pub const DILITHIUM5: Dilithium5Params = Dilithium5Params {
     signature_size: 4627,  // FIPS 204 final value
 };
 
-impl DilithiumSchemeParams for Dilithium5Params {
+impl MlDsaSchemeParams for MlDsa87Params {
     const NAME: &'static str = "ML-DSA-87";
     const D_PARAM: u32 = 13;
     const K_DIM: usize = 8;
@@ -324,8 +324,8 @@ impl DilithiumSchemeParams for Dilithium5Params {
     const GAMMA1_PARAM: u32 = 1 << 19; // 2¹⁹ = 524288
     const GAMMA1_BITS: usize = 20; // ceil(log₂(2·2¹⁹)) = 20
                                    // γ₂ = (q − 1)/32 = 261888 (FIPS 204, Table 1, ML-DSA-87)
-    const GAMMA2_PARAM: u32 = (DILITHIUM_Q - 1) / 32; // = 261888
-                                                      // β = τ·η = 60·2 = 120 (FIPS 204, Table 1, ML-DSA-87)
+    const GAMMA2_PARAM: u32 = (ML_DSA_Q - 1) / 32; // = 261888
+                                                   // β = τ·η = 60·2 = 120 (FIPS 204, Table 1, ML-DSA-87)
     const BETA_PARAM: u32 = 120; // Corrected from earlier drafts
                                  // FIPS 204, Table 1 specifies Ω = 75 for ML-DSA-87.
     const OMEGA_PARAM: u32 = 75;

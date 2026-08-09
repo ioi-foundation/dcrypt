@@ -8,6 +8,7 @@
 
 extern crate alloc;
 
+#[cfg(feature = "traditional")]
 macro_rules! impl_zeroize_tuple {
     ($type:ty) => {
         impl dcrypt_internal::zeroing::Zeroize for $type {
@@ -18,6 +19,7 @@ macro_rules! impl_zeroize_tuple {
     };
 }
 
+#[cfg(feature = "traditional")]
 macro_rules! impl_zeroize_on_drop_tuple {
     ($type:ty) => {
         impl_zeroize_tuple!($type);
@@ -53,12 +55,14 @@ pub(crate) mod test_rng {
     impl CryptoRng for TestRng {}
 }
 
+#[cfg(feature = "traditional")]
 pub mod ecdh;
 pub mod error;
-#[cfg(feature = "alloc")]
+#[cfg(feature = "post-quantum")]
 pub mod ml_kem;
 
 // Re-exports
+#[cfg(feature = "traditional")]
 pub use ecdh::{EcdhK256, EcdhP224, EcdhP256, EcdhP384, EcdhP521};
-#[cfg(feature = "alloc")]
+#[cfg(feature = "post-quantum")]
 pub use ml_kem::{MlKem1024, MlKem512, MlKem768};

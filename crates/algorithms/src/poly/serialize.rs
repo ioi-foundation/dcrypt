@@ -178,7 +178,7 @@ impl DefaultCoefficientSerde {
         Ok(poly)
     }
 
-    /// Optimized packing for 13-bit coefficients (Dilithium)
+    /// Optimized packing for 13-bit coefficients (ML-DSA)
     pub fn pack_13bit<M: Modulus>(poly: &Polynomial<M>) -> Result<Vec<u8>> {
         let n = M::N;
         let mut packed = vec![0u8; (n * 13) / 8];
@@ -256,8 +256,8 @@ mod tests {
     fn test_bytes_required() {
         assert_eq!(bytes_required(10, 256), 320);
         assert_eq!(bytes_required(12, 256), 384);
-        assert_eq!(bytes_required(13, 256), 416); // Dilithium
-        assert_eq!(bytes_required(23, 256), 736); // Dilithium signature
+        assert_eq!(bytes_required(13, 256), 416); // ML-DSA
+        assert_eq!(bytes_required(23, 256), 736); // ML-DSA signature
     }
 
     #[test]

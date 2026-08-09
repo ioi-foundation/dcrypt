@@ -1,41 +1,21 @@
-# Post-Quantum Cryptography (PQC) Parameters (`params/pqc`)
+# Post-quantum parameters
 
-This module within the `params` crate centralizes constants and parameter sets for various Post-Quantum Cryptography (PQC) algorithms. Many of these parameters are aligned with the specifications from the NIST Post-Quantum Cryptography Standardization project.
+`dcrypt_params::pqc` exposes parameters only for the final NIST standards that
+dcrypt implements:
 
-Having these parameters in a dedicated location ensures consistency and ease of reference for PQC algorithm implementations throughout the dcrypt ecosystem.
+- `ml_kem`: FIPS 203 ML-KEM-512, ML-KEM-768, and ML-KEM-1024.
+- `ml_dsa`: FIPS 204 ML-DSA-44, ML-DSA-65, and ML-DSA-87.
 
-## PQC Algorithm Parameter Sets
+The modules include polynomial dimensions, moduli, sampling and compression
+parameters, and exact serialized sizes. They do not contain cryptographic
+implementations; those live in `dcrypt-kem` and `dcrypt-sign`.
 
-1.  **ML-KEM (`ml_kem.rs`)**:
-    *   Defines final FIPS 203 `MlKem512Params`, `MlKem768Params`, and `MlKem1024Params` structures and their `ML_KEM_512`, `ML_KEM_768`, and `ML_KEM_1024` constants.
-    *   Parameters include polynomial degree (`n`), modulus (`q`), dimension (`k`), error distribution parameters (`eta1`, `eta2`), compression bits (`du`, `dv`), and sizes for public key, secret key, ciphertext, and shared secret.
+```rust
+use dcrypt_params::pqc::ml_dsa::{ML_DSA_44, ML_DSA_N, ML_DSA_Q};
+use dcrypt_params::pqc::ml_kem::{ML_KEM_512, ML_KEM_N, ML_KEM_Q};
 
-2.  **Dilithium (`dilithium.rs`)**:
-    *   Defines `Dilithium2Params`, `Dilithium3Params`, `Dilithium5Params` structs and `const` instances.
-    *   Parameters include polynomial degree (`n`), modulus (`q`), dropped bits (`d`), matrix dimensions (`k`, `l`), infinity norm bound (`eta`), challenge sparsity (`tau`), and key/signature sizes.
-
-3.  **NTRU (`ntru.rs`)**:
-    *   Defines `NtruHpsParams` (for NTRU-HPS variants like 2048-509, 2048-677, 4096-821) and `NtruHrssParams` (for NTRU-HRSS-701).
-    *   Parameters include polynomial degree (`n`), modulus (`q`), padding parameter (`p`), private key weight (`d` for HPS), and key/ciphertext/shared secret sizes.
-
-4.  **SABER (`saber.rs`)**:
-    *   Defines `LightSaberParams`, `SaberParams`, `FireSaberParams` structs and `const` instances.
-    *   Parameters include polynomial degree (`n`), modulus (`q`), encoding modulus (`p`), dimension (`l`), rounding modulus (`t`), compression bits (`eq`, `ep`, `et`), and key/ciphertext/shared secret sizes.
-
-5.  **SPHINCS+ (`sphincs.rs`)**:
-    *   Defines `SphincsSha256Params` and `SphincsShakeParams` for different underlying hash functions, with variants for "-128s", "-128f", "-192s", "-192f".
-    *   Parameters include security level, hypertree height (`h`), number of layers (`d`), Winternitz parameter (`w`), FORS tree count (`k`) and height (`t`), and key/signature sizes.
-
-6.  **Falcon (`falcon.rs`)**:
-    *   Defines `Falcon512Params` and `Falcon1024Params` structs and `const` instances.
-    *   Parameters include polynomial degree (`n`), modulus (`q`), signature standard deviation (`sigma`), and key/signature sizes.
-
-7.  **Classic McEliece (`mceliece.rs`)**:
-    *   Defines `McEliece348864Params`, `McEliece460896Params`, `McEliece6960119Params` structs and `const` instances.
-    *   Parameters include code length (`n`), code dimension (`k`), error correction capability (`t`), and key/ciphertext/shared secret sizes.
-
-8.  **Rainbow (`rainbow.rs`)**:
-    *   Defines `RainbowIParams`, `RainbowIIIParams`, `RainbowVParams` structs and `const` instances.
-    *   Parameters include number of variables (`v`), oil variables per layer (`o`), equations for central map (`l`), field size (`q`), and key/signature sizes.
-
-These parameter sets are crucial for the correct implementation and interoperability of the PQC algorithms. They provide the specific numerical values that define each scheme's variant and security level.
+assert_eq!((ML_DSA_N, ML_DSA_Q), (256, 8_380_417));
+assert_eq!(ML_DSA_44.public_key_size, 1_312);
+assert_eq!((ML_KEM_N, ML_KEM_Q), (256, 3_329));
+assert_eq!(ML_KEM_512.ciphertext_size, 768);
+```

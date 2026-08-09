@@ -1,4 +1,4 @@
-//! Core implementation of Dilithium key generation, signing, and verification per FIPS 204.
+//! Core ML-DSA key generation, signing, and verification per FIPS 204.
 //!
 //! Implements lattice-based signatures using Fiat-Shamir with Aborts.
 //! Security based on Module-LWE and Module-SIS problems.
@@ -36,15 +36,15 @@ use super::sampling::{
 use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::ToString, vec, vec::Vec};
-use dcrypt_algorithms::poly::params::{DilithiumParams, Modulus};
+use dcrypt_algorithms::poly::params::{MlDsaParams, Modulus};
 use dcrypt_algorithms::xof::shake::ShakeXof256;
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use dcrypt_internal::{
     Choice, ConditionallySelectable, ConstantTimeEq, CryptoRng, RngCore, Zeroize, Zeroizing,
 };
-use dcrypt_params::pqc::dilithium::{DilithiumSchemeParams, DILITHIUM_N};
+use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N};
 
-struct SigningAttempt<P: DilithiumSchemeParams> {
+struct SigningAttempt<P: MlDsaSchemeParams> {
     c_tilde_seed: Vec<u8>,
     z_vec: PolyVecL<P>,
     h_hint_poly: PolyVecK<P>,
@@ -86,7 +86,7 @@ fn prepare_signing_inputs<P>(
     supplied_mu: Option<&[u8; 64]>,
 ) -> Result<SigningInputs<P>, SignError>
 where
-    P: DilithiumSchemeParams,
+    P: MlDsaSchemeParams,
 {
     let (rho_seed, k_seed, tr_hash, s1_vec, s2_vec, t0_vec) = unpack_secret_key::<P>(sk_bytes)?;
 
@@ -142,7 +142,7 @@ fn evaluate_signing_attempt<P>(
     attempt_index: u16,
 ) -> Result<SigningAttempt<P>, SignError>
 where
-    P: DilithiumSchemeParams,
+    P: MlDsaSchemeParams,
 {
     let kappa = attempt_index.wrapping_mul(P::L_DIM as u16);
     let mut y_vec = sample_polyvecl_uniform_gamma1::<P>(rho_double_prime, kappa, P::GAMMA1_PARAM)?;
@@ -231,7 +231,7 @@ where
 /// FIPS 204 Algorithm 1, with caller-supplied randomness.
 pub(crate) fn keypair_internal<P, R>(rng: &mut R) -> Result<(Vec<u8>, Vec<u8>), SignError>
 where
-    P: DilithiumSchemeParams,
+    P: MlDsaSchemeParams,
     R: RngCore + CryptoRng,
 {
     let mut xi = Zeroizing::new([0u8; 32]);
@@ -241,7 +241,7 @@ where
 }
 
 /// FIPS 204 Algorithm 6, exposed within the crate for exact ACVP replay.
-pub(crate) fn keypair_from_seed_internal<P: DilithiumSchemeParams>(
+pub(crate) fn keypair_from_seed_internal<P: MlDsaSchemeParams>(
     xi: &[u8; 32],
 ) -> Result<(Vec<u8>, Vec<u8>), SignError> {
     let mut xof = ShakeXof256::new();
@@ -296,7 +296,7 @@ pub(crate) fn keypair_from_seed_internal<P: DilithiumSchemeParams>(
 /// then requires the original expanded-key bytes to equal the canonical
 /// re-encoding. In particular, malformed or incoherent `t0` values cannot be
 /// accepted merely because a trial signature happens to verify.
-pub(crate) fn validate_secret_key_internal<P: DilithiumSchemeParams>(
+pub(crate) fn validate_secret_key_internal<P: MlDsaSchemeParams>(
     sk_bytes: &[u8],
 ) -> Result<Vec<u8>, SignError> {
     let (rho, mut k_seed, mut stored_tr, mut s1, mut s2, mut stored_t0) =
@@ -341,7 +341,7 @@ pub(crate) fn validate_secret_key_internal<P: DilithiumSchemeParams>(
     }
 }
 
-pub(crate) fn validate_key_pair_internal<P: DilithiumSchemeParams>(
+pub(crate) fn validate_key_pair_internal<P: MlDsaSchemeParams>(
     sk_bytes: &[u8],
     pk_bytes: &[u8],
 ) -> Result<(), SignError> {
@@ -365,7 +365,7 @@ pub(crate) fn sign_internal<P>(
     supplied_mu: Option<&[u8; 64]>,
 ) -> Result<Vec<u8>, SignError>
 where
-    P: DilithiumSchemeParams,
+    P: MlDsaSchemeParams,
 {
     let (rho_double_prime, matrix_a_hat, mu, s1_hat_vec, s2_hat_vec, t0_hat_vec) =
         prepare_signing_inputs::<P>(formatted_message, sk_bytes, randomizer, supplied_mu)?;
@@ -428,7 +428,7 @@ pub(crate) fn verify_internal<P>(
     supplied_mu: Option<&[u8; 64]>,
 ) -> Result<(), SignError>
 where
-    P: DilithiumSchemeParams,
+    P: MlDsaSchemeParams,
 {
     // Step 1: Unpack public key (ρ, t1)
     let (rho_seed, t1_vec) = unpack_public_key::<P>(pk_bytes)?;
@@ -476,7 +476,7 @@ where
     let mut t1_scaled = t1_vec.clone();
     for poly in t1_scaled.polys.iter_mut() {
         for coeff in poly.coeffs.iter_mut() {
-            *coeff = ((*coeff as u64 * two_d as u64) % DilithiumParams::Q as u64) as u32;
+            *coeff = ((*coeff as u64 * two_d as u64) % MlDsaParams::Q as u64) as u32;
         }
     }
 
@@ -488,9 +488,9 @@ where
 
     // Ensure coefficients are in [0, q)
     for i in 0..P::K_DIM {
-        for j in 0..DILITHIUM_N {
+        for j in 0..ML_DSA_N {
             let val = w_prime_vec.polys[i].coeffs[j];
-            w_prime_vec.polys[i].coeffs[j] = val % DilithiumParams::Q;
+            w_prime_vec.polys[i].coeffs[j] = val % MlDsaParams::Q;
         }
     }
 

@@ -1,8 +1,5 @@
-//! Constants for traditional cryptographic algorithms
+//! Constants for the traditional algorithms implemented by dcrypt.
 
-pub mod dh;
-pub mod dsa;
 pub mod ecdh;
 pub mod ecdsa;
 pub mod ed25519;
-pub mod rsa;

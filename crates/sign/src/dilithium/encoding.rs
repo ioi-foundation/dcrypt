@@ -1,4 +1,4 @@
-//! Serialization functions for Dilithium per FIPS 204
+//! Serialization functions for ML-DSA per FIPS 204.
 //!
 //! Key aspects:
 //! - FIPS-204 compliant HintBitPack/HintBitUnpack encoding that matches final spec.
@@ -14,13 +14,13 @@ use alloc::{format, vec, vec::Vec};
 use dcrypt_algorithms::poly::serialize::{
     CoefficientPacker, CoefficientUnpacker, DefaultCoefficientSerde,
 };
-use dcrypt_params::pqc::dilithium::{DilithiumSchemeParams, DILITHIUM_N, DILITHIUM_Q};
+use dcrypt_params::pqc::ml_dsa::{MlDsaSchemeParams, ML_DSA_N, ML_DSA_Q};
 
 #[inline]
 fn centered_coefficient(coefficient: u32) -> i32 {
-    let reduced = coefficient % DILITHIUM_Q;
-    if reduced > DILITHIUM_Q / 2 {
-        reduced as i32 - DILITHIUM_Q as i32
+    let reduced = coefficient % ML_DSA_Q;
+    if reduced > ML_DSA_Q / 2 {
+        reduced as i32 - ML_DSA_Q as i32
     } else {
         reduced as i32
     }
@@ -28,7 +28,7 @@ fn centered_coefficient(coefficient: u32) -> i32 {
 
 #[inline]
 fn signed_to_mod_q(value: i32) -> u32 {
-    (value as i64).rem_euclid(DILITHIUM_Q as i64) as u32
+    (value as i64).rem_euclid(ML_DSA_Q as i64) as u32
 }
 
 // ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ fn signed_to_mod_q(value: i32) -> u32 {
 // ---------------------------------------------------------------------------
 
 /// Packs the hint vector *h* using the final FIPS‑204 "HintBitPack" layout
-fn pack_hints_bitpacked<P: DilithiumSchemeParams>(
+fn pack_hints_bitpacked<P: MlDsaSchemeParams>(
     h_hint_poly: &PolyVecK<P>,
 ) -> Result<Vec<u8>, SignError> {
     let omega = P::OMEGA_PARAM as usize;
@@ -71,7 +71,7 @@ fn pack_hints_bitpacked<P: DilithiumSchemeParams>(
 }
 
 /// Inverse of `pack_hints_bitpacked` (Algorithm 25)
-fn unpack_hints_bitpacked<P: DilithiumSchemeParams>(
+fn unpack_hints_bitpacked<P: MlDsaSchemeParams>(
     bytes: &[u8],
 ) -> Result<(PolyVecK<P>, usize), SignError> {
     let omega = P::OMEGA_PARAM as usize;
@@ -119,7 +119,7 @@ fn unpack_hints_bitpacked<P: DilithiumSchemeParams>(
 }
 
 /// Packs public key (ρ, t1) according to Algorithm 13.
-pub fn pack_public_key<P: DilithiumSchemeParams>(
+pub fn pack_public_key<P: MlDsaSchemeParams>(
     rho_seed: &[u8; 32], // SEED_RHO_BYTES is always 32
     t1_vec: &PolyVecK<P>,
 ) -> Result<Vec<u8>, SignError> {
@@ -147,7 +147,7 @@ pub fn pack_public_key<P: DilithiumSchemeParams>(
 }
 
 /// Unpacks public key from bytes according to Algorithm 14.
-pub fn unpack_public_key<P: DilithiumSchemeParams>(
+pub fn unpack_public_key<P: MlDsaSchemeParams>(
     pk_bytes: &[u8],
 ) -> Result<([u8; 32], PolyVecK<P>), SignError> {
     if pk_bytes.len() != P::PUBLIC_KEY_BYTES {
@@ -165,7 +165,7 @@ pub fn unpack_public_key<P: DilithiumSchemeParams>(
     // Unpack t1
     let mut t1_vec = PolyVecK::<P>::zero();
     let mut offset = P::SEED_RHO_BYTES;
-    let bytes_per_poly = DILITHIUM_N * 10 / 8; // 320 bytes
+    let bytes_per_poly = ML_DSA_N * 10 / 8; // 320 bytes
 
     for i in 0..P::K_DIM {
         let poly_bytes = &pk_bytes[offset..offset + bytes_per_poly];
@@ -179,7 +179,7 @@ pub fn unpack_public_key<P: DilithiumSchemeParams>(
 
 /// Packs secret key (ρ, K, tr, s1, s2, t0) according to Algorithm 15.
 /// FIPS 204 compliant format only.
-pub fn pack_secret_key<P: DilithiumSchemeParams>(
+pub fn pack_secret_key<P: MlDsaSchemeParams>(
     rho_seed: &[u8; 32], // SEED_RHO_BYTES is always 32
     k_seed: &[u8; 32],
     tr_hash: &[u8; 64],
@@ -272,7 +272,7 @@ pub type UnpackedSecretKey<P> = (
 
 /// Unpacks secret key from bytes according to Algorithm 16.
 /// FIPS 204 compliant format only.
-pub fn unpack_secret_key<P: DilithiumSchemeParams>(
+pub fn unpack_secret_key<P: MlDsaSchemeParams>(
     sk_bytes: &[u8],
 ) -> Result<UnpackedSecretKey<P>, SignError> {
     if sk_bytes.len() != P::SECRET_KEY_BYTES {
@@ -300,8 +300,8 @@ pub fn unpack_secret_key<P: DilithiumSchemeParams>(
 
     // Calculate sizes
     let eta_bits = if P::ETA_S1S2 == 2 { 3 } else { 4 };
-    let bytes_per_s_poly = DILITHIUM_N * eta_bits / 8;
-    let bytes_per_t0_poly = DILITHIUM_N * P::D_PARAM as usize / 8;
+    let bytes_per_s_poly = ML_DSA_N * eta_bits / 8;
+    let bytes_per_t0_poly = ML_DSA_N * P::D_PARAM as usize / 8;
 
     // Unpack s1
     let mut s1_vec = PolyVecL::<P>::zero();
@@ -368,7 +368,7 @@ pub fn unpack_secret_key<P: DilithiumSchemeParams>(
 
 /// Packs signature (c̃, z, h) according to FIPS 204 Algorithm 17 with variable challenge size
 /// Uses Z_BITS instead of GAMMA1_BITS for packing z coefficients
-pub fn pack_signature<P: DilithiumSchemeParams>(
+pub fn pack_signature<P: MlDsaSchemeParams>(
     c_tilde_seed: &[u8], // Now variable size: 32/48/64 bytes
     z_vec: &PolyVecL<P>,
     h_hint_poly: &PolyVecK<P>,
@@ -425,12 +425,10 @@ pub fn pack_signature<P: DilithiumSchemeParams>(
 
 /// Packs w1 for computing challenge hash using FIPS 204 final w1Encode.
 /// Packs full gamma-bucket indices: 6 bits for ML-DSA-44, 4 bits for ML-DSA-65/87.
-pub fn pack_polyveck_w1<P: DilithiumSchemeParams>(
-    w1_vec: &PolyVecK<P>,
-) -> Result<Vec<u8>, SignError> {
+pub fn pack_polyveck_w1<P: MlDsaSchemeParams>(w1_vec: &PolyVecK<P>) -> Result<Vec<u8>, SignError> {
     let bits_per_coeff = w1_bits_needed::<P>();
-    let maximum = (DILITHIUM_Q - 1) / (2 * P::GAMMA2_PARAM) - 1;
-    let mut packed = Vec::with_capacity(P::K_DIM * DILITHIUM_N * bits_per_coeff as usize / 8);
+    let maximum = (ML_DSA_Q - 1) / (2 * P::GAMMA2_PARAM) - 1;
+    let mut packed = Vec::with_capacity(P::K_DIM * ML_DSA_N * bits_per_coeff as usize / 8);
     for poly in &w1_vec.polys {
         for &coeff in &poly.coeffs {
             if coeff > maximum {
@@ -452,7 +450,7 @@ pub type UnpackedSignature<P> = (Vec<u8>, PolyVecL<P>, PolyVecK<P>);
 
 /// Unpacks signature from bytes according to FIPS 204 Algorithm 18 with variable challenge size
 /// Uses Z_BITS instead of GAMMA1_BITS for unpacking z coefficients
-pub fn unpack_signature<P: DilithiumSchemeParams>(
+pub fn unpack_signature<P: MlDsaSchemeParams>(
     sig_bytes: &[u8],
 ) -> Result<UnpackedSignature<P>, SignError> {
     if sig_bytes.len() != P::SIGNATURE_SIZE {
@@ -473,7 +471,7 @@ pub fn unpack_signature<P: DilithiumSchemeParams>(
     // Unpack z
     let mut z_vec = PolyVecL::<P>::zero();
     // Use Z_BITS instead of GAMMA1_BITS
-    let bytes_per_z_poly = DILITHIUM_N * P::Z_BITS / 8;
+    let bytes_per_z_poly = ML_DSA_N * P::Z_BITS / 8;
 
     for i in 0..P::L_DIM {
         let poly_bytes = &sig_bytes[offset..offset + bytes_per_z_poly];
@@ -498,17 +496,17 @@ pub fn unpack_signature<P: DilithiumSchemeParams>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dcrypt_params::pqc::dilithium::Dilithium2Params;
+    use dcrypt_params::pqc::ml_dsa::MlDsa44Params;
 
     #[test]
     fn test_roundtrip_hints_basic() {
         // Test basic roundtrip with hints in different polynomials
-        let mut h = PolyVecK::<Dilithium2Params>::zero();
+        let mut h = PolyVecK::<MlDsa44Params>::zero();
         h.polys[1].coeffs[5] = 1;
         h.polys[2].coeffs[20] = 1;
 
-        let packed = pack_hints_bitpacked::<Dilithium2Params>(&h).unwrap();
-        let (unpacked, cnt) = unpack_hints_bitpacked::<Dilithium2Params>(&packed).unwrap();
+        let packed = pack_hints_bitpacked::<MlDsa44Params>(&h).unwrap();
+        let (unpacked, cnt) = unpack_hints_bitpacked::<MlDsa44Params>(&packed).unwrap();
 
         assert_eq!(cnt, 2, "Hint count mismatch");
         assert_eq!(
@@ -521,7 +519,7 @@ mod tests {
         );
 
         // Verify no spurious hints
-        for i in 0..Dilithium2Params::K_DIM {
+        for i in 0..MlDsa44Params::K_DIM {
             for j in 0..256 {
                 if !((i == 1 && j == 5) || (i == 2 && j == 20)) {
                     assert_eq!(

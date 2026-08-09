@@ -56,11 +56,11 @@ When hashing a new password, you should generate a random salt for each user and
 use dcrypt::algorithms::kdf::{Pbkdf2, Pbkdf2Params, PasswordHashFunction};
 use dcrypt::algorithms::hash::Sha256;
 use dcrypt::algorithms::types::{Salt, SecretBytes};
-use rand::rngs::OsRng;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-fn hash_user_password() {
+fn hash_user_password<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::algorithms::Result<()> {
     // 1. Define PBKDF2 parameters.
-    let salt = Pbkdf2::<Sha256, 16>::generate_salt(&mut OsRng); // Generate a random 16-byte salt.
+    let salt = Pbkdf2::<Sha256, 16>::generate_salt(rng)?;
     let params = Pbkdf2Params {
         iterations: 600_000,
         salt,
@@ -82,6 +82,7 @@ fn hash_user_password() {
     println!("Stored Password Hash: {}", hash_string);
 
     // In a real application, you would store this string in your database.
+    Ok(())
 }
 ```
 

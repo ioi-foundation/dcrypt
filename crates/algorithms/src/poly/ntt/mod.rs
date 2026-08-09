@@ -3,7 +3,7 @@
 //! Generic NTT/iNTT for polynomials over finite fields, with full
 //! FIPS-204 compliance for ML-DSA and a generic cyclic-transform fallback.
 //!
-//! ## Dilithium (FIPS-204)
+//! ## ML-DSA (FIPS-204)
 //! - Forward NTT: Algorithm 41 (DIF with standard domain I/O)
 //! - Inverse NTT: Algorithm 42 (GS with standard domain I/O)
 //! - Twiddle factors: Precomputed in Montgomery form (ζ·R mod q)
@@ -37,7 +37,7 @@ fn pow_mod<M: Modulus>(mut base: u32, mut exp: u32) -> u32 {
 pub trait NttOperator<M: NttModulus> {
     /// Performs forward NTT on polynomial in-place
     ///
-    /// # Dilithium (FIPS-204)
+    /// # ML-DSA (FIPS-204)
     /// - Implements Algorithm 41 (DIF)
     /// - Input: coefficients in standard domain
     /// - Output: coefficients in standard domain
@@ -52,7 +52,7 @@ pub trait NttOperator<M: NttModulus> {
 pub trait InverseNttOperator<M: NttModulus> {
     /// Performs inverse NTT on polynomial in-place
     ///
-    /// # Dilithium (FIPS-204)
+    /// # ML-DSA (FIPS-204)
     /// - Implements Algorithm 42 (GS)
     /// - Input: coefficients in standard domain
     /// - Output: standard or Montgomery domain based on POST_INVNTT_MODE
@@ -170,9 +170,9 @@ impl<M: NttModulus> NttOperator<M> for CooleyTukeyNtt {
         }
 
         let coeffs = poly.as_mut_coeffs_slice();
-        let is_dilithium = !M::ZETAS.is_empty(); // FIXED: Use is_empty()
+        let is_ml_dsa = !M::ZETAS.is_empty(); // FIXED: Use is_empty()
 
-        if is_dilithium {
+        if is_ml_dsa {
             // FIPS-204 Algorithm 41: Forward NTT
             // Decimation-in-Frequency (DIF) with row-major twiddle traversal
             // Input: standard domain, Output: standard domain
@@ -202,7 +202,7 @@ impl<M: NttModulus> NttOperator<M> for CooleyTukeyNtt {
                 len >>= 1;
             }
 
-            // Reduce all coefficients to [0, Q) for Dilithium compatibility
+            // Reduce all coefficients to [0, Q) for ML-DSA compatibility
             for c in coeffs.iter_mut() {
                 *c = reduce_to_q::<M>(*c);
             }
@@ -251,9 +251,9 @@ impl<M: NttModulus> InverseNttOperator<M> for CooleyTukeyNtt {
         }
 
         let coeffs = poly.as_mut_coeffs_slice();
-        let is_dilithium = !M::ZETAS.is_empty(); // FIXED: Use is_empty()
+        let is_ml_dsa = !M::ZETAS.is_empty(); // FIXED: Use is_empty()
 
-        if is_dilithium {
+        if is_ml_dsa {
             // FIPS-204 Algorithm 42: Inverse NTT
             // Gentleman-Sande (GS) with row-major traversal
 
@@ -368,15 +368,15 @@ impl<M: NttModulus> Polynomial<M> {
     /// Pointwise multiplication in NTT domain
     ///
     /// Both polynomials must already be in NTT domain.
-    /// For Dilithium: inputs/output in standard domain (post-NTT)
+    /// For ML-DSA: inputs/output in standard domain (post-NTT)
     /// For the generic fallback: inputs/output in Montgomery domain
     pub fn ntt_mul(&self, other: &Self) -> Self {
         let mut result = Self::zero();
         let n = M::N;
-        let is_dilithium = !M::ZETAS.is_empty(); // FIXED: Use is_empty()
+        let is_ml_dsa = !M::ZETAS.is_empty(); // FIXED: Use is_empty()
 
-        if is_dilithium {
-            // Dilithium: coefficients are in standard domain after NTT
+        if is_ml_dsa {
+            // ML-DSA: coefficients are in standard domain after NTT
             // Use standard multiplication
             for i in 0..n {
                 result.coeffs[i] =

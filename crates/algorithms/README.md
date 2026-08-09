@@ -1,8 +1,8 @@
-# docs/algorithms/README.md
+# dcrypt-algorithms
 
 [![Crates.io](https://img.shields.io/crates/v/dcrypt-algorithms.svg)](https://crates.io/crates/dcrypt-algorithms)
 [![Docs.rs](https://docs.rs/dcrypt-algorithms/badge.svg)](https://docs.rs/dcrypt-algorithms)
-[![License](https://img.shields.io/crates/l/dcrypt-algorithms.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/crates/l/dcrypt-algorithms.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 `dcrypt-algorithms` is a Rust crate providing a range of cryptographic
 primitives and type-oriented adapters. `v1.2.3` is confirmed
@@ -20,9 +20,10 @@ This library provides low-level cryptographic implementations intended to be use
 *   **Security review:** Secret-bearing paths are expected to follow the workspace constant-time and zeroization policies, but not every current implementation has completed the required dynamic review.
 *   **Correctness:** Selected algorithms have NIST/RFC known-answer coverage. Self-roundtrips and vector tests are evidence of interoperability, not certification or a security audit.
 *   **Type Safety:** A strong type system is used to prevent common cryptographic mistakes at compile time. Keys, nonces, and other cryptographic types are bound to the algorithms they are intended for.
-*   **Feature-oriented builds:** The crate exposes `std` and `alloc` feature
-    boundaries. A complete standalone `no_std` algorithms build is not currently
-    a validated configuration; check the exact primitive and target.
+*   **Feature-oriented builds:** The crate exposes `std` and allocation-backed
+    `no_std` profiles. Release validation checks the supported feature profiles
+    on their declared targets; consumers must still validate their exact target
+    and panic strategy.
 *   **Modern Cryptography:** Includes a selection of modern, post-quantum and pairing-friendly primitives alongside traditional, widely-adopted standards.
 
 ## Features
@@ -63,7 +64,11 @@ The crate provides a broad range of cryptographic primitives, categorized as fol
     approximately 112-bit security and is retained for transition and
     interoperability, not as the preferred choice for new high-security uses.
 *   **Koblitz Curve:** `secp256k1`.
-*   **Pairing-Friendly Curve:** BLS12-381, including G1/G2 operations and optimal Ate pairing.
+*   **Pairing-Friendly Curve:** BLS12-381, including G1/G2 operations, strict
+    decoding, RFC 9380 hash-to-curve, and optimal Ate pairing. These are the
+    building blocks for standard BLS ciphersuites, including Eth2-style
+    schemes; protocol-level KeyGen, DST, aggregation, and proof-of-possession
+    rules remain the caller's responsibility.
 
 ### Post-Quantum Primitives
 *   **Lattice-Based Math:** Includes generic polynomial support used by the owned final FIPS 204 ML-DSA implementation. ML-KEM uses its distinct seven-layer transform in `dcrypt-kem`.
@@ -127,33 +132,31 @@ assert_eq!(digest, digest2);
 
 ```rust
 use dcrypt::algorithms::ec::p256;
-use rand::rngs::OsRng;
+use dcrypt::internal::{CryptoRng, RngCore};
 
-// 1. Alice generates a keypair.
-let (alice_sk, alice_pk) = p256::generate_keypair(&mut OsRng).unwrap();
+fn exchange<R: CryptoRng + RngCore>(rng: &mut R) -> dcrypt::algorithms::Result<()> {
+    let (alice_sk, alice_pk) = p256::generate_keypair(rng)?;
+    let (bob_sk, bob_pk) = p256::generate_keypair(rng)?;
 
-// 2. Bob generates a keypair.
-let (bob_sk, bob_pk) = p256::generate_keypair(&mut OsRng).unwrap();
+    let alice_shared_secret = p256::scalar_mult(&alice_sk, &bob_pk)?;
+    let bob_shared_secret = p256::scalar_mult(&bob_sk, &alice_pk)?;
+    assert_eq!(alice_shared_secret, bob_shared_secret);
 
-// 3. Alice and Bob compute their shared secrets.
-let alice_shared_secret = p256::scalar_mult(&alice_sk, &bob_pk).unwrap();
-let bob_shared_secret = p256::scalar_mult(&bob_sk, &alice_pk).unwrap();
-
-// Both secrets will be the same elliptic curve point.
-assert_eq!(alice_shared_secret, bob_shared_secret);
-
-// They can then use a KDF on the x-coordinate to derive a symmetric key.
-let key_material = alice_shared_secret.x_coordinate_bytes();
-let derived_key = p256::kdf_hkdf_sha256_for_ecdh_kem(&key_material, Some(b"ecdh-example")).unwrap();
+    let key_material = alice_shared_secret.x_coordinate_bytes();
+    let _derived_key = p256::kdf_hkdf_sha256_for_ecdh_kem(
+        &key_material,
+        Some(b"ecdh-example"),
+    )?;
+    Ok(())
+}
 ```
 
 ## `no_std` Support
 
-The manifest retains granular `alloc` and algorithm feature flags for ongoing
-portability work. A complete standalone `no_std` configuration is not currently
-a release-gated or supported build. Do not infer support from the presence of a
-feature name; validate the exact primitive, dependency graph, target, and panic
-strategy before use.
+Allocation-backed `no_std` builds disable defaults and select `alloc` plus the
+required algorithm features. The release gate compiles the declared profiles;
+validate the exact primitive, target, allocator, and panic strategy used by the
+application.
 
 ## Benchmarks
 

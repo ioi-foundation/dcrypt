@@ -9,7 +9,7 @@ license.workspace = true
 publish = true
 
 [features]
-default = ["std"]
+default = ["std", "traditional", "post-quantum"]
 std = [
     "dcrypt-api/std", 
     "dcrypt-common/std", 
@@ -29,7 +29,7 @@ alloc = [
     "dcrypt-internal/alloc",
     "dcrypt-algorithms/alloc",
 ]
-traditional = []  # Feature flag for traditional KEMs (ECDH, RSA, etc.)
+traditional = ["alloc"] # ECDH KEMs
 post-quantum = ["alloc"] # FIPS 203 ML-KEM
 
 [dependencies]

@@ -5,17 +5,18 @@
 //! along with a salt value and repeats the process many times to produce a
 //! derived key, which can then be used as a cryptographic key in subsequent operations.
 
-#[cfg(feature = "alloc")]
-use crate::alloc_prelude::*;
-
 use crate::error::{validate, Error, Result};
 use crate::hash::HashFunction;
+#[cfg(feature = "std")]
 use crate::kdf::common::constant_time_eq;
-use crate::kdf::{KdfAlgorithm, KdfOperation, PasswordHash, SecurityLevel};
-use crate::kdf::{KeyDerivationFunction, ParamProvider, PasswordHashFunction};
+use crate::kdf::{KdfAlgorithm, KdfOperation, KeyDerivationFunction, ParamProvider, SecurityLevel};
+#[cfg(feature = "std")]
+use crate::kdf::{PasswordHash, PasswordHashFunction};
 use crate::mac::hmac::Hmac;
 use crate::types::salt::Pbkdf2Compatible;
-use crate::types::{ByteSerializable, Salt, SecretBytes};
+use crate::types::Salt;
+#[cfg(feature = "std")]
+use crate::types::{ByteSerializable, SecretBytes};
 
 // Import security types
 use dcrypt_common::security::SecretVec;
@@ -31,14 +32,9 @@ use std::time::{Duration, Instant};
 use std::vec::Vec;
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
-use alloc::collections::BTreeMap;
-#[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::string::String;
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
-
-#[cfg(not(feature = "std"))]
-use core::time::Duration;
 
 use core::marker::PhantomData;
 use dcrypt_internal::random::{CryptoRng, RngCore};
