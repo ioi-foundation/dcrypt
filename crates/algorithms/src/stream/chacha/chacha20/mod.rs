@@ -83,7 +83,7 @@ impl ChaCha20 {
         Nonce<N>: ChaCha20Compatible,
     {
         // Initialize state with constants and key
-        let mut state = [0u32; 16];
+        let mut state = Zeroizing::new([0u32; 16]);
 
         // "expand 32-byte k" in little-endian
         state[0] = 0x61707865;
@@ -108,13 +108,12 @@ impl ChaCha20 {
         state[15] = u32::from_le_bytes(nonce_bytes[8..12].try_into().expect("four bytes"));
 
         let instance = Self {
-            state,
+            state: state.into_inner(),
             buffer: [0; CHACHA20_BLOCK_SIZE],
             position: CHACHA20_BLOCK_SIZE, // Force initial keystream generation
             counter,
             exhausted: false,
         };
-        state.zeroize();
         instance
     }
 

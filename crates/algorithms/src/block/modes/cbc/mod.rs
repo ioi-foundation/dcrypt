@@ -122,14 +122,14 @@ impl<B: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> Cbc<B> {
 
         // Process the ciphertext in blocks
         for chunk in ciphertext.chunks(block_size) {
-            let mut block = [0u8; 16]; // AES block size is 16 bytes
+            let mut block = Zeroizing::new([0u8; 16]); // AES block size is 16 bytes
             block[..chunk.len()].copy_from_slice(chunk);
 
             // Save current ciphertext block
-            let current_block = block;
+            let current_block = *block;
 
             // Decrypt the block
-            self.cipher.decrypt_block(&mut block)?;
+            self.cipher.decrypt_block(&mut block[..])?;
 
             // XOR with previous ciphertext block (or IV for the first block)
             for i in 0..block_size {
@@ -141,7 +141,6 @@ impl<B: BlockCipher + CipherAlgorithm + Zeroize + ZeroizeOnDrop> Cbc<B> {
                 .copy_from_slice(&block[..block_size]);
             plaintext_offset += block_size;
             prev_block = current_block.to_vec();
-            block.zeroize();
         }
 
         Ok(plaintext.into_inner().into_vec())
