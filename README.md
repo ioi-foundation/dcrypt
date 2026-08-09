@@ -26,7 +26,7 @@ correctness, side-channel resistance, or suitability for production.
 
 dcrypt introduces capabilities critical for the transition to quantum-safe and decentralized computing:
 
-1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use libcrux's portable backend, with exact encodings and formally verified arithmetic/NTT/serialization components. The public wrapper exposes randomized pure ML-DSA with empty context; backend-level tests cover the broader official ACVP interfaces and expected results, using a separate test-only implementation for supplied `mu`. This is not a claim that dcrypt as a whole is formally verified, audited, or FIPS validated.
+1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use dcrypt-owned safe-Rust key generation, signing, verification, sampling, arithmetic, and exact encodings. Public APIs support deterministic signing and hedged signing with caller-provided randomness and contexts. All 615 official ACVP cases pass exactly; independent implementations are confined to the excluded verification workspace. This is not a claim that dcrypt is formally verified, audited, or FIPS validated.
 2.  **FIPS 203 / ML-KEM API**: ML-KEM parameter sets are available for testing and integration; this project is not a FIPS-validated cryptographic module.
 3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + Kyber-768`) and hybrid Digital Signatures, designed to combine independent primitive families.
 4.  **BLS12-381 Pairing Engine**: A fully featured implementation of the pairing-friendly curve, including optimal Ate pairings and IETF-compliant **Hash-to-Curve**, essential for Zero-Knowledge Proofs and Signature Aggregation.
@@ -180,7 +180,7 @@ The repository contains a custom statistical regression engine (`dcrypt-tests/sr
 
 ### Standards testing
 *   **ACVP Test Harness**: Includes an ACVP JSON test harness for supported parameter sets. Passing vectors is a correctness gate, not NIST validation or certification.
-*   **ML-DSA Interoperability**: Runtime key generation, signing, verification, and paired expanded-key validation use libcrux's portable backend. Wrapper-level tests cross-import keys and signatures with the independent `fips204` API and pin official NIST ACVP key-generation outputs; that implementation is a development dependency only. Because libcrux does not expose public-key derivation from a bare expanded key, callers that need the associated public key must import the pair with `from_bytes_with_public_key`.
+*   **ML-DSA Interoperability**: Runtime key generation, signing, verification, and complete expanded-key validation use only the dcrypt-owned implementation. The official key-generation, signature-generation, and signature-verification ACVP results are checked exactly. A separate non-published workspace performs bidirectional and byte-for-byte tests against `fips204`, libcrux, and RustCrypto. Bare expanded keys are validated coherently and retain their derived public key; paired import additionally rejects a mismatched public key.
 *   **No certification claim**: dcrypt is not a FIPS-validated cryptographic module. Each algorithm and encoding must be assessed independently.
 
 ## 📄 License

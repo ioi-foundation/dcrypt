@@ -1,13 +1,9 @@
 //! FIPS 204 Module-Lattice-Based Digital Signature Algorithm (ML-DSA).
 //!
-//! Key generation, signing, and verification use the portable
-//! [`libcrux_ml_dsa`] backend. Its field arithmetic, NTT polynomial arithmetic,
-//! and serialization have machine-checked proofs. Dcrypt supplies its existing
-//! high-level wrapper types and the [`dcrypt_api::Signature`] adapter. Public
-//! keys, expanded private keys, and signatures use Algorithms 22, 24, and 26 of
-//! final FIPS 204 exactly. Expanded-key interoperability is checked against an
-//! independent implementation in tests; no secondary implementation processes
-//! untrusted keys at runtime.
+//! Key generation, signing, verification, sampling, arithmetic, and encoding
+//! are implemented in safe Rust in this crate. Public keys, expanded private
+//! keys, and signatures use Algorithms 22, 24, and 26 of final FIPS 204.
+//! Independent implementations are used only as verification-workspace oracles.
 //!
 //! The historical `Dilithium2`, `Dilithium3`, and `Dilithium5` type names remain
 //! as source-compatible aliases for `MlDsa44`, `MlDsa65`, and `MlDsa87`. They do
@@ -17,13 +13,18 @@ use crate::error::Error as SignError;
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::ToString, vec::Vec};
 use core::{fmt, marker::PhantomData};
-use dcrypt_algorithms::hash::{HashFunction, Shake256};
 use dcrypt_api::{Result as ApiResult, Signature as SignatureTrait};
 use dcrypt_params::pqc::dilithium::{
     Dilithium2Params, Dilithium3Params, Dilithium5Params, DilithiumSchemeParams,
 };
 use rand::{CryptoRng, RngCore};
-use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use zeroize::{Zeroize, ZeroizeOnDrop};
+
+mod arithmetic;
+mod encoding;
+mod polyvec;
+mod sampling;
+mod sign;
 
 /// ML-DSA public key encoded with FIPS 204 Algorithm 22 (`pkEncode`).
 #[derive(Clone, Debug, Zeroize)]
@@ -90,16 +91,12 @@ impl AsMut<[u8]> for DilithiumSignatureData {
 }
 
 impl DilithiumSecretKey {
-    /// Decode a syntactically valid final-FIPS-204 expanded private key.
+    /// Decode and fully validate a final-FIPS-204 expanded private key.
     ///
-    /// An expanded private-key encoding does not carry enough information for
-    /// this backend to derive and validate its public key without reintroducing
-    /// a second secret-arithmetic implementation. Use
-    /// [`Self::from_bytes_with_public_key`] when the corresponding public key is
-    /// available. A key decoded with this method can sign, but
-    /// [`Self::public_key`] returns an error instead of guessing or panicking.
+    /// Validation recomputes `A*s1+s2`, `t1`, `t0`, the public key, and the
+    /// 64-byte `tr`; the returned key always retains its derived public key.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, SignError> {
-        match bytes.len() {
+        let public_key = match bytes.len() {
             2560 => Dilithium2Params::validate_secret_key(bytes)?,
             4032 => Dilithium3Params::validate_secret_key(bytes)?,
             4896 => Dilithium5Params::validate_secret_key(bytes)?,
@@ -109,19 +106,18 @@ impl DilithiumSecretKey {
                     bytes.len()
                 )))
             }
-        }
+        };
 
         Ok(Self {
             bytes: bytes.to_vec(),
-            public_key: None,
+            public_key: Some(public_key),
         })
     }
 
     /// Decode an expanded private key and validate it against its public key.
     ///
-    /// Besides the exact FIPS 204 encodings, this checks the stored 64-byte
-    /// `tr`, then performs a deterministic sign/verify coherence check through
-    /// the libcrux backend. This is the preferred import API.
+    /// Besides validating the expanded key itself, this requires the supplied
+    /// public key to equal the public key derived from all secret components.
     pub fn from_bytes_with_public_key(
         bytes: &[u8],
         public_key: &DilithiumPublicKey,
@@ -259,288 +255,182 @@ fn validate_hint_encoding(
 /// Internal adapter implemented only for the three parameter sets standardized
 /// by FIPS 204. It is public solely because it appears in a public trait impl.
 #[doc(hidden)]
-pub trait MlDsaBackend: DilithiumSchemeParams {
-    fn validate_public_key(bytes: &[u8]) -> Result<(), SignError>;
-    fn validate_secret_key(bytes: &[u8]) -> Result<(), SignError>;
-    fn validate_key_pair(secret_key: &[u8], public_key: &[u8]) -> Result<(), SignError>;
-    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Vec<u8>, Vec<u8>), SignError>;
-    fn sign_with_rng<R: CryptoRng + RngCore>(
-        message: &[u8],
-        secret_key: &[u8],
-        rng: &mut R,
-    ) -> Result<Vec<u8>, SignError>;
-    fn verify(message: &[u8], signature: &[u8], public_key: &[u8]) -> Result<(), SignError>;
-}
-
-fn fixed_array<const N: usize>(bytes: &[u8], what: &str) -> Result<[u8; N], SignError> {
-    bytes.try_into().map_err(|_| {
-        SignError::Deserialization(format!(
-            "invalid {what} size: expected {N}, got {}",
-            bytes.len()
-        ))
-    })
-}
-
-fn validate_expanded_secret_encoding(
-    bytes: &[u8],
-    eta: u16,
-    k: usize,
-    l: usize,
-) -> Result<(), SignError> {
-    let bits_per_coefficient = if eta == 2 { 3 } else { 4 };
-    let packed_secret_len = (k + l) * 256 * bits_per_coefficient / 8;
-    let packed_secret = bytes
-        .get(128..128 + packed_secret_len)
-        .ok_or_else(|| SignError::InvalidKey("truncated ML-DSA private key".to_string()))?;
-    let maximum = eta * 2;
-
-    for coefficient in 0..((k + l) * 256) {
-        let bit_offset = coefficient * bits_per_coefficient;
-        let byte_offset = bit_offset / 8;
-        let shift = bit_offset % 8;
-        let mut window = u32::from(packed_secret[byte_offset]);
-        if let Some(&next) = packed_secret.get(byte_offset + 1) {
-            window |= u32::from(next) << 8;
-        }
-        let value = (window >> shift) & ((1u32 << bits_per_coefficient) - 1);
-        if value > u32::from(maximum) {
-            return Err(SignError::InvalidKey(
-                "ML-DSA private key contains an out-of-range s1/s2 coefficient".to_string(),
-            ));
-        }
+pub trait MlDsaBackend: DilithiumSchemeParams + Sized {
+    fn validate_public_key(bytes: &[u8]) -> Result<(), SignError> {
+        encoding::unpack_public_key::<Self>(bytes).map(|_| ())
     }
 
-    Ok(())
+    fn validate_secret_key(bytes: &[u8]) -> Result<Vec<u8>, SignError> {
+        sign::validate_secret_key_internal::<Self>(bytes)
+    }
+
+    fn validate_key_pair(secret_key: &[u8], public_key: &[u8]) -> Result<(), SignError> {
+        Self::validate_public_key(public_key)?;
+        sign::validate_key_pair_internal::<Self>(secret_key, public_key)
+    }
+
+    fn keypair<R: CryptoRng + RngCore>(rng: &mut R) -> Result<(Vec<u8>, Vec<u8>), SignError> {
+        sign::keypair_internal::<Self, R>(rng)
+    }
+
+    fn sign_internal(
+        formatted_message: &[u8],
+        secret_key: &[u8],
+        randomizer: &[u8; 32],
+        supplied_mu: Option<&[u8; 64]>,
+    ) -> Result<Vec<u8>, SignError> {
+        sign::sign_internal::<Self>(formatted_message, secret_key, randomizer, supplied_mu)
+    }
+
+    fn verify_internal(
+        formatted_message: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+        supplied_mu: Option<&[u8; 64]>,
+    ) -> Result<(), SignError> {
+        sign::verify_internal::<Self>(formatted_message, signature, public_key, supplied_mu)
+    }
 }
 
-macro_rules! impl_mldsa_backend {
-    (
-        $params:ty,
-        $module:ident,
-        $verification_key:ident,
-        $signing_key:ident,
-        $signature:ident,
-        $pk_len:expr,
-        $sk_len:expr,
-        $sig_len:expr,
-        $eta:expr,
-        $k:expr,
-        $l:expr
-    ) => {
-        impl MlDsaBackend for $params {
-            fn validate_public_key(bytes: &[u8]) -> Result<(), SignError> {
-                // pkEncode uses rho followed by fixed-width t1 coefficients, so
-                // every exactly sized bit string is a canonical syntactic
-                // encoding. Semantic validity is enforced during verification.
-                let _ = fixed_array::<$pk_len>(bytes, "ML-DSA public key")?;
-                Ok(())
-            }
-
-            fn validate_secret_key(bytes: &[u8]) -> Result<(), SignError> {
-                let encoded = Zeroizing::new(fixed_array::<$sk_len>(
-                    bytes,
-                    "ML-DSA expanded private key",
-                )?);
-                validate_expanded_secret_encoding(encoded.as_ref(), $eta, $k, $l)?;
-                Ok(())
-            }
-
-            fn validate_key_pair(
-                secret_key: &[u8],
-                public_key: &[u8],
-            ) -> Result<(), SignError> {
-                Self::validate_secret_key(secret_key)?;
-                Self::validate_public_key(public_key)?;
-
-                let encoded_secret = Zeroizing::new(fixed_array::<$sk_len>(
-                    secret_key,
-                    "ML-DSA expanded private key",
-                )?);
-                let encoded_public = fixed_array::<$pk_len>(public_key, "ML-DSA public key")?;
-                let expected_tr = Shake256::digest(&encoded_public)
-                    .map_err(|error| SignError::Hashing(error.to_string()))?;
-                if encoded_secret[64..128] != expected_tr.as_ref()[..] {
-                    return Err(SignError::InvalidKey(
-                        "ML-DSA private key tr does not match SHAKE256(pk, 64)".to_string(),
-                    ));
-                }
-
-                let mut secret =
-                    libcrux_ml_dsa::$module::$signing_key::new(*encoded_secret);
-                let validation_signature = libcrux_ml_dsa::$module::portable::sign(
-                    &secret,
-                    b"dcrypt ML-DSA expanded-key import validation",
-                    &[],
-                    [0xA5; libcrux_ml_dsa::SIGNING_RANDOMNESS_SIZE],
-                );
-                secret.as_mut_slice().zeroize();
-                let validation_signature = validation_signature.map_err(|details| {
-                    SignError::InvalidKey(format!(
-                        "ML-DSA expanded key cannot produce a validation signature: {details:?}"
-                    ))
-                })?;
-
-                let public =
-                    libcrux_ml_dsa::$module::$verification_key::new(encoded_public);
-                libcrux_ml_dsa::$module::portable::verify(
-                    &public,
-                    b"dcrypt ML-DSA expanded-key import validation",
-                    &[],
-                    &validation_signature,
-                )
-                .map_err(|details| {
-                    SignError::InvalidKey(format!(
-                        "ML-DSA expanded private/public key mismatch: {details:?}"
-                    ))
-                })
-            }
-
-            fn keypair<R: CryptoRng + RngCore>(
-                rng: &mut R,
-            ) -> Result<(Vec<u8>, Vec<u8>), SignError> {
-                let mut seed = Zeroizing::new([
-                    0u8;
-                    libcrux_ml_dsa::KEY_GENERATION_RANDOMNESS_SIZE
-                ]);
-                rng.try_fill_bytes(seed.as_mut()).map_err(|details| {
-                    SignError::KeyGeneration {
-                        algorithm: <$params>::NAME,
-                        details: details.to_string(),
-                    }
-                })?;
-
-                let mut keypair =
-                    libcrux_ml_dsa::$module::portable::generate_key_pair(*seed);
-                let public = keypair.verification_key.as_slice().to_vec();
-                let secret = keypair.signing_key.as_slice().to_vec();
-                keypair.signing_key.as_mut_slice().zeroize();
-                Ok((public, secret))
-            }
-
-            fn sign_with_rng<R: CryptoRng + RngCore>(
-                message: &[u8],
-                secret_key: &[u8],
-                rng: &mut R,
-            ) -> Result<Vec<u8>, SignError> {
-                let encoded = Zeroizing::new(fixed_array::<$sk_len>(
-                    secret_key,
-                    "ML-DSA expanded private key",
-                )?);
-                let mut randomness =
-                    Zeroizing::new([0u8; libcrux_ml_dsa::SIGNING_RANDOMNESS_SIZE]);
-                rng.try_fill_bytes(randomness.as_mut()).map_err(|details| {
-                    SignError::SignatureGeneration {
-                        algorithm: <$params>::NAME,
-                        details: details.to_string(),
-                    }
-                })?;
-
-                let mut secret =
-                    libcrux_ml_dsa::$module::$signing_key::new(*encoded);
-                let signature = libcrux_ml_dsa::$module::portable::sign(
-                    &secret,
-                    message,
-                    &[],
-                    *randomness,
-                );
-                secret.as_mut_slice().zeroize();
-                let signature = signature.map_err(|details| {
-                    SignError::SignatureGeneration {
-                        algorithm: <$params>::NAME,
-                        details: format!("{details:?}"),
-                    }
-                })?;
-                Ok(signature.as_slice().to_vec())
-            }
-
-            fn verify(
-                message: &[u8],
-                signature: &[u8],
-                public_key: &[u8],
-            ) -> Result<(), SignError> {
-                let encoded_key = fixed_array::<$pk_len>(public_key, "ML-DSA public key")?;
-                let encoded_signature = fixed_array::<$sig_len>(signature, "ML-DSA signature")?;
-                let public =
-                    libcrux_ml_dsa::$module::$verification_key::new(encoded_key);
-                let signature =
-                    libcrux_ml_dsa::$module::$signature::new(encoded_signature);
-
-                libcrux_ml_dsa::$module::portable::verify(
-                    &public,
-                    message,
-                    &[],
-                    &signature,
-                )
-                .map_err(|details| SignError::Verification {
-                        algorithm: <$params>::NAME,
-                        details: format!("ML-DSA signature verification failed: {details:?}"),
-                    })
-            }
-        }
-    };
-}
-
-impl_mldsa_backend!(
-    Dilithium2Params,
-    ml_dsa_44,
-    MLDSA44VerificationKey,
-    MLDSA44SigningKey,
-    MLDSA44Signature,
-    1312,
-    2560,
-    2420,
-    2,
-    4,
-    4
-);
-impl_mldsa_backend!(
-    Dilithium3Params,
-    ml_dsa_65,
-    MLDSA65VerificationKey,
-    MLDSA65SigningKey,
-    MLDSA65Signature,
-    1952,
-    4032,
-    3309,
-    4,
-    6,
-    5
-);
-impl_mldsa_backend!(
-    Dilithium5Params,
-    ml_dsa_87,
-    MLDSA87VerificationKey,
-    MLDSA87SigningKey,
-    MLDSA87Signature,
-    2592,
-    4896,
-    4627,
-    2,
-    8,
-    7
-);
+impl MlDsaBackend for Dilithium2Params {}
+impl MlDsaBackend for Dilithium3Params {}
+impl MlDsaBackend for Dilithium5Params {}
 
 /// ML-DSA signature scheme parameterized by a final FIPS 204 parameter set.
 pub struct Dilithium<P: DilithiumSchemeParams + 'static> {
     _params: PhantomData<P>,
 }
 
+fn format_pure_message(message: &[u8], context: &[u8]) -> Result<Vec<u8>, SignError> {
+    if context.len() > u8::MAX as usize {
+        return Err(SignError::InvalidParameter(format!(
+            "ML-DSA context is {} bytes; maximum is 255",
+            context.len()
+        )));
+    }
+    let mut formatted = Vec::with_capacity(2 + context.len() + message.len());
+    formatted.push(0);
+    formatted.push(context.len() as u8);
+    formatted.extend_from_slice(context);
+    formatted.extend_from_slice(message);
+    Ok(formatted)
+}
+
 impl<P> Dilithium<P>
 where
     P: MlDsaBackend + Send + Sync + 'static,
 {
-    /// Generate a randomized FIPS 204 signature with an explicit caller RNG.
-    ///
-    /// The [`dcrypt_api::Signature::sign`] implementation delegates to this
-    /// method with the operating system RNG.
+    /// Generate a hedged FIPS 204 pure signature with an explicit caller RNG.
     pub fn sign_with_rng<R: CryptoRng + RngCore>(
         message: &[u8],
         secret_key: &DilithiumSecretKey,
         rng: &mut R,
     ) -> ApiResult<DilithiumSignatureData> {
-        let signature =
-            P::sign_with_rng(message, secret_key.as_ref(), rng).map_err(dcrypt_api::Error::from)?;
+        Self::sign_with_context_rng(message, &[], secret_key, rng)
+    }
+
+    /// Generate a hedged FIPS 204 pure signature with a context and caller RNG.
+    pub fn sign_with_context_rng<R: CryptoRng + RngCore>(
+        message: &[u8],
+        context: &[u8],
+        secret_key: &DilithiumSecretKey,
+        rng: &mut R,
+    ) -> ApiResult<DilithiumSignatureData> {
+        let formatted = format_pure_message(message, context).map_err(dcrypt_api::Error::from)?;
+        let mut randomizer = [0u8; 32];
+        rng.try_fill_bytes(&mut randomizer)
+            .map_err(|error| dcrypt_api::Error::from(SignError::Rng(error.to_string())))?;
+        let result = P::sign_internal(&formatted, secret_key.as_ref(), &randomizer, None)
+            .map(DilithiumSignatureData)
+            .map_err(dcrypt_api::Error::from);
+        randomizer.zeroize();
+        result
+    }
+
+    /// Generate the optional deterministic FIPS 204 pure signature.
+    pub fn sign_deterministic(
+        message: &[u8],
+        secret_key: &DilithiumSecretKey,
+    ) -> ApiResult<DilithiumSignatureData> {
+        Self::sign_deterministic_with_context(message, &[], secret_key)
+    }
+
+    /// Generate the optional deterministic FIPS 204 pure signature with context.
+    pub fn sign_deterministic_with_context(
+        message: &[u8],
+        context: &[u8],
+        secret_key: &DilithiumSecretKey,
+    ) -> ApiResult<DilithiumSignatureData> {
+        let formatted = format_pure_message(message, context).map_err(dcrypt_api::Error::from)?;
+        let signature = P::sign_internal(&formatted, secret_key.as_ref(), &[0u8; 32], None)
+            .map_err(dcrypt_api::Error::from)?;
         Ok(DilithiumSignatureData(signature))
+    }
+
+    /// Verify a pure FIPS 204 signature with an explicit context.
+    pub fn verify_with_context(
+        message: &[u8],
+        context: &[u8],
+        signature: &DilithiumSignatureData,
+        public_key: &DilithiumPublicKey,
+    ) -> ApiResult<()> {
+        validate_hint_encoding_for_len(signature.as_ref()).map_err(dcrypt_api::Error::from)?;
+        let formatted = format_pure_message(message, context).map_err(dcrypt_api::Error::from)?;
+        P::verify_internal(&formatted, signature.as_ref(), public_key.as_ref(), None)
+            .map_err(dcrypt_api::Error::from)
+    }
+
+    /// ACVP/internal interface: sign an already formatted `M'` with exact `rnd`.
+    #[doc(hidden)]
+    pub fn sign_internal_with_randomizer(
+        formatted_message: &[u8],
+        secret_key: &DilithiumSecretKey,
+        randomizer: &[u8; 32],
+    ) -> ApiResult<DilithiumSignatureData> {
+        P::sign_internal(formatted_message, secret_key.as_ref(), randomizer, None)
+            .map(DilithiumSignatureData)
+            .map_err(dcrypt_api::Error::from)
+    }
+
+    /// ACVP/internal interface: sign an externally supplied 64-byte `mu`.
+    #[doc(hidden)]
+    pub fn sign_mu_with_randomizer(
+        mu: &[u8; 64],
+        secret_key: &DilithiumSecretKey,
+        randomizer: &[u8; 32],
+    ) -> ApiResult<DilithiumSignatureData> {
+        P::sign_internal(&[], secret_key.as_ref(), randomizer, Some(mu))
+            .map(DilithiumSignatureData)
+            .map_err(dcrypt_api::Error::from)
+    }
+
+    /// ACVP/internal interface: verify an already formatted `M'`.
+    #[doc(hidden)]
+    pub fn verify_internal_message(
+        formatted_message: &[u8],
+        signature: &DilithiumSignatureData,
+        public_key: &DilithiumPublicKey,
+    ) -> ApiResult<()> {
+        validate_hint_encoding_for_len(signature.as_ref()).map_err(dcrypt_api::Error::from)?;
+        P::verify_internal(
+            formatted_message,
+            signature.as_ref(),
+            public_key.as_ref(),
+            None,
+        )
+        .map_err(dcrypt_api::Error::from)
+    }
+
+    /// ACVP/internal interface: verify against an externally supplied `mu`.
+    #[doc(hidden)]
+    pub fn verify_mu(
+        mu: &[u8; 64],
+        signature: &DilithiumSignatureData,
+        public_key: &DilithiumPublicKey,
+    ) -> ApiResult<()> {
+        validate_hint_encoding_for_len(signature.as_ref()).map_err(dcrypt_api::Error::from)?;
+        P::verify_internal(&[], signature.as_ref(), public_key.as_ref(), Some(mu))
+            .map_err(dcrypt_api::Error::from)
     }
 }
 
@@ -577,7 +467,7 @@ where
     }
 
     fn sign(message: &[u8], secret_key: &Self::SecretKey) -> ApiResult<Self::SignatureData> {
-        Self::sign_with_rng(message, secret_key, &mut rand::rngs::OsRng)
+        Self::sign_deterministic(message, secret_key)
     }
 
     fn verify(
@@ -585,8 +475,7 @@ where
         signature: &Self::SignatureData,
         public_key: &Self::PublicKey,
     ) -> ApiResult<()> {
-        validate_hint_encoding_for_len(signature.as_ref()).map_err(dcrypt_api::Error::from)?;
-        P::verify(message, signature.as_ref(), public_key.as_ref()).map_err(dcrypt_api::Error::from)
+        Self::verify_with_context(message, &[], signature, public_key)
     }
 }
 

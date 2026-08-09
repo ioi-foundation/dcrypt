@@ -1,6 +1,5 @@
 use super::*;
 use dcrypt_algorithms::hash::{HashFunction, Sha256, Shake256};
-use fips204::traits::{SerDes, Signer, Verifier};
 use rand::{CryptoRng, Error as RngError, RngCore};
 use rand_chacha::{rand_core::SeedableRng, ChaCha20Rng};
 
@@ -92,11 +91,11 @@ macro_rules! roundtrip_test {
 }
 
 #[test]
-fn unpaired_expanded_key_import_never_guesses_a_public_key() {
+fn expanded_key_import_derives_and_validates_public_key() {
     let mut rng = ChaCha20Rng::from_seed([0x35; 32]);
-    let (_, secret) = MlDsa44::keypair(&mut rng).unwrap();
+    let (public, secret) = MlDsa44::keypair(&mut rng).unwrap();
     let imported = DilithiumSecretKey::from_bytes(secret.as_ref()).unwrap();
-    assert!(imported.public_key().is_err());
+    assert_eq!(imported.public_key().unwrap().as_ref(), public.as_ref());
 }
 
 #[test]
@@ -114,6 +113,84 @@ fn paired_import_rejects_incoherent_t0_without_panicking() {
 roundtrip_test!(ml_dsa_44_roundtrip, MlDsa44, 1312, 2560, 2420, "ML-DSA-44");
 roundtrip_test!(ml_dsa_65_roundtrip, MlDsa65, 1952, 4032, 3309, "ML-DSA-65");
 roundtrip_test!(ml_dsa_87_roundtrip, MlDsa87, 2592, 4896, 4627, "ML-DSA-87");
+
+#[test]
+fn signing_interfaces_bind_context_randomizer_and_supplied_mu() {
+    let mut key_rng = ChaCha20Rng::from_seed([0x51; 32]);
+    let (public, secret) = MlDsa44::keypair(&mut key_rng).unwrap();
+    let context = b"application domain";
+
+    let deterministic =
+        MlDsa44::sign_deterministic_with_context(MESSAGE, context, &secret).unwrap();
+    let deterministic_again =
+        MlDsa44::sign_deterministic_with_context(MESSAGE, context, &secret).unwrap();
+    assert_eq!(deterministic.as_ref(), deterministic_again.as_ref());
+    assert!(MlDsa44::verify_with_context(MESSAGE, context, &deterministic, &public).is_ok());
+    assert!(
+        MlDsa44::verify_with_context(MESSAGE, b"wrong domain", &deterministic, &public).is_err()
+    );
+
+    let mut signing_rng = ChaCha20Rng::from_seed([0x52; 32]);
+    let randomized =
+        MlDsa44::sign_with_context_rng(MESSAGE, context, &secret, &mut signing_rng).unwrap();
+    assert_ne!(randomized.as_ref(), deterministic.as_ref());
+    assert!(MlDsa44::verify_with_context(MESSAGE, context, &randomized, &public).is_ok());
+
+    let mut formatted = Vec::with_capacity(2 + context.len() + MESSAGE.len());
+    formatted.extend_from_slice(&[0, context.len() as u8]);
+    formatted.extend_from_slice(context);
+    formatted.extend_from_slice(MESSAGE);
+    let internal =
+        MlDsa44::sign_internal_with_randomizer(&formatted, &secret, &[0x5a; 32]).unwrap();
+    assert!(MlDsa44::verify_internal_message(&formatted, &internal, &public).is_ok());
+    assert!(MlDsa44::verify_with_context(MESSAGE, context, &internal, &public).is_ok());
+
+    let mu = [0x33; 64];
+    let mu_signature = MlDsa44::sign_mu_with_randomizer(&mu, &secret, &[0x6b; 32]).unwrap();
+    assert!(MlDsa44::verify_mu(&mu, &mu_signature, &public).is_ok());
+    let mut wrong_mu = mu;
+    wrong_mu[0] ^= 1;
+    assert!(MlDsa44::verify_mu(&wrong_mu, &mu_signature, &public).is_err());
+
+    let oversized_context = [0u8; 256];
+    assert!(
+        MlDsa44::sign_deterministic_with_context(MESSAGE, &oversized_context, &secret).is_err()
+    );
+    assert!(
+        MlDsa44::verify_with_context(MESSAGE, &oversized_context, &deterministic, &public,)
+            .is_err()
+    );
+}
+
+#[test]
+fn expanded_key_decoder_rejects_malformed_or_incoherent_components() {
+    let mut rng = ChaCha20Rng::from_seed([0x62; 32]);
+    let (public, secret) = MlDsa44::keypair(&mut rng).unwrap();
+
+    let mut malformed_tr = secret.as_ref().to_vec();
+    malformed_tr[64] ^= 1;
+    assert!(DilithiumSecretKey::from_bytes(&malformed_tr).is_err());
+
+    // For eta=2 each secret coefficient occupies three bits and only encoded
+    // values 0..=4 are canonical. Seven must be rejected before coherence work.
+    let mut noncanonical_s1 = secret.as_ref().to_vec();
+    noncanonical_s1[128] = (noncanonical_s1[128] & !0x07) | 0x07;
+    assert!(DilithiumSecretKey::from_bytes(&noncanonical_s1).is_err());
+
+    let mut incoherent_s1 = secret.as_ref().to_vec();
+    incoherent_s1[128] ^= 1;
+    assert!(DilithiumSecretKey::from_bytes(&incoherent_s1).is_err());
+
+    let mut incoherent_t0 = secret.as_ref().to_vec();
+    incoherent_t0[128 + 8 * 96] ^= 1;
+    assert!(DilithiumSecretKey::from_bytes(&incoherent_t0).is_err());
+
+    let (different_public, _) = MlDsa44::keypair(&mut rng).unwrap();
+    assert!(
+        DilithiumSecretKey::from_bytes_with_public_key(secret.as_ref(), &different_public).is_err()
+    );
+    assert!(DilithiumSecretKey::from_bytes_with_public_key(secret.as_ref(), &public).is_ok());
+}
 
 macro_rules! nist_keygen_kat {
     (
@@ -220,72 +297,22 @@ fn verify_rechecks_signature_canonicality_after_mutation() {
     assert!(MlDsa44::verify(MESSAGE, &signature, &public).is_err());
 }
 
-macro_rules! interoperability_test {
-    (
-        $name:ident,
-        $scheme:ty,
-        $module:ident,
-        $pk_len:expr,
-        $sk_len:expr,
-        $sig_len:expr
-    ) => {
-        #[test]
-        fn $name() {
-            let mut rng = ChaCha20Rng::from_seed([0x73; 32]);
-            let (dcrypt_public, dcrypt_secret) = <$scheme>::keypair(&mut rng).unwrap();
+#[test]
+fn verification_rejects_a_canonical_encoding_with_out_of_range_z() {
+    let mut rng = ChaCha20Rng::from_seed([0x1a; 32]);
+    let (public, secret) = MlDsa44::keypair(&mut rng).unwrap();
+    let signature = MlDsa44::sign_deterministic(MESSAGE, &secret).unwrap();
+    let mut encoded = signature.as_ref().to_vec();
 
-            let backend_public = fips204::$module::PublicKey::try_from_bytes(
-                <[u8; $pk_len]>::try_from(dcrypt_public.as_ref()).unwrap(),
-            )
-            .unwrap();
-            let backend_secret = fips204::$module::PrivateKey::try_from_bytes(
-                <[u8; $sk_len]>::try_from(dcrypt_secret.as_ref()).unwrap(),
-            )
-            .unwrap();
-
-            let dcrypt_signature =
-                <$scheme>::sign_with_rng(MESSAGE, &dcrypt_secret, &mut rng).unwrap();
-            let backend_signature = <[u8; $sig_len]>::try_from(dcrypt_signature.as_ref()).unwrap();
-            assert!(backend_public.verify(MESSAGE, &backend_signature, &[]));
-
-            let independent_signature = backend_secret
-                .try_sign_with_rng(&mut rng, MESSAGE, &[])
-                .unwrap();
-            let wrapped_signature =
-                DilithiumSignatureData::from_bytes(&independent_signature).unwrap();
-            assert!(<$scheme>::verify(MESSAGE, &wrapped_signature, &dcrypt_public).is_ok());
-            assert_eq!(
-                backend_secret.get_public_key().into_bytes().as_slice(),
-                dcrypt_public.as_ref()
-            );
-        }
-    };
+    // The first ML-DSA-44 z coefficient begins after the 32-byte challenge.
+    // Encoding it as zero decodes to +gamma1: structurally canonical, but
+    // outside the verification bound gamma1-beta.
+    encoded[32] = 0;
+    encoded[33] = 0;
+    encoded[34] &= !0x03;
+    let malformed = DilithiumSignatureData::from_bytes(&encoded).unwrap();
+    assert!(MlDsa44::verify(MESSAGE, &malformed, &public).is_err());
 }
-
-interoperability_test!(
-    fips204_interoperability_44,
-    MlDsa44,
-    ml_dsa_44,
-    1312,
-    2560,
-    2420
-);
-interoperability_test!(
-    fips204_interoperability_65,
-    MlDsa65,
-    ml_dsa_65,
-    1952,
-    4032,
-    3309
-);
-interoperability_test!(
-    fips204_interoperability_87,
-    MlDsa87,
-    ml_dsa_87,
-    2592,
-    4896,
-    4627
-);
 
 #[test]
 fn old_32_byte_tr_plus_padding_private_key_fails_paired_import() {

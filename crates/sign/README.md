@@ -19,15 +19,16 @@ workspace `SECURITY.md` before use.
 ## Features
 
 -   **Unified API**: All signature schemes implement the `dcrypt-api::Signature` trait for consistent usage.
--   **Post-Quantum Cryptography**: Includes final FIPS 204 ML-DSA through libcrux's portable backend for key generation, signing, verification, and paired expanded-key validation. Its arithmetic/NTT/serialization components are formally verified; this does not make dcrypt audited or FIPS validated. The independent implementation is used only by differential tests.
+-   **Post-Quantum Cryptography**: Includes dcrypt-owned safe-Rust final FIPS 204 ML-DSA for key generation, deterministic or caller-randomized signing, verification, and complete expanded-key validation. Independent implementations are isolated to the non-published verification workspace.
 -   **Traditional Cryptography**: Provides implementations for industry-standard algorithms:
     -   ECDSA over NIST curves P-192, P-224, P-256, P-384, and P-521, with strict DER and low-`s` policy.
     -   Ed25519 with RFC 8032 encoding and strict verification behavior.
 -   **Security Focused**:
     -   Automatic zeroization of secret key material on drop to mitigate data remanence.
     -   Deterministic signing for Ed25519 and deterministic nonce generation (RFC 6979) for ECDSA to enhance security against fault attacks and weak RNGs.
-    -   Ed25519 and ML-DSA delegate secret arithmetic to maintained backends;
-        constant-time behavior remains backend-, target-, and operation-specific.
+    -   Secret-dependent ML-DSA signing work uses the fixed public rejection
+        window required by the release policy; target-specific compiler and
+        timing validation remains necessary.
 -   **Selective Compilation**: The historical family feature flags remain, but release builds must verify the actual dependency graph and enabled code paths.
 -   **Placeholders**: Falcon, Rainbow, and SPHINCS+ names are placeholders and must not be treated as usable signature schemes.
 
@@ -86,7 +87,7 @@ fn main() -> dcrypt::api::Result<()> {
 
     // 2. Sign the message with the secret key
     println!("Signing message...");
-    let signature = MlDsa44::sign(message, &sk)?;
+    let signature = MlDsa44::sign_with_rng(message, &sk, &mut rng)?;
     println!("Signature generated successfully.");
 
     // 3. Verify the signature with the public key

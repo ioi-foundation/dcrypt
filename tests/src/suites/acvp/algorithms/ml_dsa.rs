@@ -18,12 +18,9 @@ use dcrypt_api::Signature;
 use dcrypt_sign::dilithium::{
     DilithiumPublicKey, DilithiumSecretKey, DilithiumSignatureData, MlDsa44, MlDsa65, MlDsa87,
 };
-use ml_dsa::common::{array::Array, typenum::U64};
 use once_cell::sync::Lazy;
-use rand::{CryptoRng, Error as RngError, RngCore, SeedableRng};
-use rand_chacha::ChaCha20Rng;
+use rand::{CryptoRng, Error as RngError, RngCore};
 use std::{collections::HashMap, fs, path::Path};
-use zeroize::Zeroize;
 
 #[derive(Clone, Copy)]
 enum ParameterSet {
@@ -128,55 +125,6 @@ impl RngCore for ReplayRng {
 }
 
 impl CryptoRng for ReplayRng {}
-
-/// rand_core 0.10 adapter used only by RustCrypto's ACVP-only supplied-`mu`
-/// interface. The production ML-DSA implementation remains libcrux.
-struct ReplayRng10 {
-    bytes: [u8; 32],
-    position: usize,
-}
-
-impl ReplayRng10 {
-    fn new(bytes: [u8; 32]) -> Self {
-        Self { bytes, position: 0 }
-    }
-
-    fn take(&mut self, destination: &mut [u8]) {
-        let end = self
-            .position
-            .checked_add(destination.len())
-            .expect("ACVP replay RNG position overflow");
-        destination.copy_from_slice(
-            self.bytes
-                .get(self.position..end)
-                .expect("ACVP replay RNG exhausted"),
-        );
-        self.position = end;
-    }
-}
-
-impl rand_core_10::TryRng for ReplayRng10 {
-    type Error = core::convert::Infallible;
-
-    fn try_next_u32(&mut self) -> core::result::Result<u32, Self::Error> {
-        let mut bytes = [0u8; 4];
-        self.take(&mut bytes);
-        Ok(u32::from_le_bytes(bytes))
-    }
-
-    fn try_next_u64(&mut self) -> core::result::Result<u64, Self::Error> {
-        let mut bytes = [0u8; 8];
-        self.take(&mut bytes);
-        Ok(u64::from_le_bytes(bytes))
-    }
-
-    fn try_fill_bytes(&mut self, destination: &mut [u8]) -> core::result::Result<(), Self::Error> {
-        self.take(destination);
-        Ok(())
-    }
-}
-
-impl rand_core_10::TryCryptoRng for ReplayRng10 {}
 
 type ExpectedMap = HashMap<(u64, u64), serde_json::Map<String, serde_json::Value>>;
 type ExpectedLoad = core::result::Result<ExpectedMap, String>;
@@ -309,20 +257,6 @@ fn keypair<R: CryptoRng + RngCore>(
     })
 }
 
-fn verify_wrapper(
-    parameter_set: ParameterSet,
-    message: &[u8],
-    signature: &DilithiumSignatureData,
-    public_key: &DilithiumPublicKey,
-) -> bool {
-    match parameter_set {
-        ParameterSet::MlDsa44 => MlDsa44::verify(message, signature, public_key),
-        ParameterSet::MlDsa65 => MlDsa65::verify(message, signature, public_key),
-        ParameterSet::MlDsa87 => MlDsa87::verify(message, signature, public_key),
-    }
-    .is_ok()
-}
-
 fn required_bytes(case: &TestCase, field: &'static str) -> Result<Vec<u8>> {
     case.inputs
         .get(field)
@@ -450,229 +384,177 @@ fn hash_ml_dsa_message(message: &[u8], context: &[u8], algorithm: &str) -> Resul
     Ok(formatted)
 }
 
-#[derive(Clone, Copy)]
-enum LibcruxInput<'a> {
-    External {
-        message: &'a [u8],
-        context: &'a [u8],
-    },
-    Internal {
-        formatted_message: &'a [u8],
-    },
+fn decode_secret_key(parameter_set: ParameterSet, bytes: &[u8]) -> Result<DilithiumSecretKey> {
+    if bytes.len() != parameter_set.secret_key_len() {
+        return Err(EngineError::InvalidData(format!(
+            "{} expanded private key must be {} bytes, got {}",
+            parameter_set.name(),
+            parameter_set.secret_key_len(),
+            bytes.len()
+        )));
+    }
+    DilithiumSecretKey::from_bytes(bytes).map_err(|error| {
+        EngineError::Crypto(format!(
+            "{} expanded private key validation failed: {error:?}",
+            parameter_set.name()
+        ))
+    })
 }
 
-fn libcrux_sign(
+fn sign_external(
     parameter_set: ParameterSet,
-    secret_key: &[u8],
-    input: LibcruxInput<'_>,
+    message: &[u8],
+    context: &[u8],
+    secret_key: &DilithiumSecretKey,
     randomizer: [u8; 32],
 ) -> Result<Vec<u8>> {
-    macro_rules! sign {
-        ($module:ident, $key:ident, $length:expr) => {{
-            let encoded: [u8; $length] = secret_key.try_into().map_err(|_| {
-                EngineError::InvalidData(format!(
-                    "{} expanded private key must be {} bytes, got {}",
-                    parameter_set.name(),
-                    $length,
-                    secret_key.len()
-                ))
-            })?;
-            let mut signing_key = libcrux_ml_dsa::$module::$key::new(encoded);
-            let result = match input {
-                LibcruxInput::External { message, context } => {
-                    libcrux_ml_dsa::$module::portable::sign(
-                        &signing_key,
-                        message,
-                        context,
-                        randomizer,
-                    )
-                }
-                LibcruxInput::Internal { formatted_message } => {
-                    libcrux_ml_dsa::$module::portable::sign_internal(
-                        &signing_key,
-                        formatted_message,
-                        randomizer,
-                    )
-                }
-            };
-            signing_key.as_mut_slice().zeroize();
-            result
-                .map(|signature| signature.as_slice().to_vec())
-                .map_err(|error| {
-                    EngineError::Crypto(format!(
-                        "{} signature generation failed: {error:?}",
-                        parameter_set.name()
-                    ))
-                })
-        }};
-    }
-
-    match parameter_set {
-        ParameterSet::MlDsa44 => sign!(ml_dsa_44, MLDSA44SigningKey, 2560),
-        ParameterSet::MlDsa65 => sign!(ml_dsa_65, MLDSA65SigningKey, 4032),
-        ParameterSet::MlDsa87 => sign!(ml_dsa_87, MLDSA87SigningKey, 4896),
-    }
+    let mut rng = ReplayRng::new(randomizer.to_vec());
+    let result = match parameter_set {
+        ParameterSet::MlDsa44 => {
+            MlDsa44::sign_with_context_rng(message, context, secret_key, &mut rng)
+        }
+        ParameterSet::MlDsa65 => {
+            MlDsa65::sign_with_context_rng(message, context, secret_key, &mut rng)
+        }
+        ParameterSet::MlDsa87 => {
+            MlDsa87::sign_with_context_rng(message, context, secret_key, &mut rng)
+        }
+    };
+    result
+        .map(|signature| signature.as_ref().to_vec())
+        .map_err(|error| {
+            EngineError::Crypto(format!(
+                "{} signature generation failed: {error:?}",
+                parameter_set.name()
+            ))
+        })
 }
 
-fn libcrux_verify(
+fn sign_internal_message(
     parameter_set: ParameterSet,
-    public_key: &[u8],
-    signature: &[u8],
-    input: LibcruxInput<'_>,
-) -> bool {
-    macro_rules! verify {
-        ($module:ident, $key:ident, $signature:ident, $pk_length:expr, $sig_length:expr) => {{
-            let Ok(encoded_key) = <[u8; $pk_length]>::try_from(public_key) else {
-                return false;
-            };
-            let Ok(encoded_signature) = <[u8; $sig_length]>::try_from(signature) else {
-                return false;
-            };
-            let verification_key = libcrux_ml_dsa::$module::$key::new(encoded_key);
-            let signature = libcrux_ml_dsa::$module::$signature::new(encoded_signature);
-            match input {
-                LibcruxInput::External { message, context } => {
-                    libcrux_ml_dsa::$module::portable::verify(
-                        &verification_key,
-                        message,
-                        context,
-                        &signature,
-                    )
-                }
-                LibcruxInput::Internal { formatted_message } => {
-                    libcrux_ml_dsa::$module::portable::verify_internal(
-                        &verification_key,
-                        formatted_message,
-                        &signature,
-                    )
-                }
-            }
-            .is_ok()
-        }};
-    }
-
-    match parameter_set {
-        ParameterSet::MlDsa44 => verify!(
-            ml_dsa_44,
-            MLDSA44VerificationKey,
-            MLDSA44Signature,
-            1312,
-            2420
-        ),
-        ParameterSet::MlDsa65 => verify!(
-            ml_dsa_65,
-            MLDSA65VerificationKey,
-            MLDSA65Signature,
-            1952,
-            3309
-        ),
-        ParameterSet::MlDsa87 => verify!(
-            ml_dsa_87,
-            MLDSA87VerificationKey,
-            MLDSA87Signature,
-            2592,
-            4627
-        ),
-    }
+    formatted_message: &[u8],
+    secret_key: &DilithiumSecretKey,
+    randomizer: &[u8; 32],
+) -> Result<Vec<u8>> {
+    let result = match parameter_set {
+        ParameterSet::MlDsa44 => {
+            MlDsa44::sign_internal_with_randomizer(formatted_message, secret_key, randomizer)
+        }
+        ParameterSet::MlDsa65 => {
+            MlDsa65::sign_internal_with_randomizer(formatted_message, secret_key, randomizer)
+        }
+        ParameterSet::MlDsa87 => {
+            MlDsa87::sign_internal_with_randomizer(formatted_message, secret_key, randomizer)
+        }
+    };
+    result
+        .map(|signature| signature.as_ref().to_vec())
+        .map_err(|error| {
+            EngineError::Crypto(format!(
+                "{} internal signature generation failed: {error:?}",
+                parameter_set.name()
+            ))
+        })
 }
 
-fn rustcrypto_sign_mu(
+fn sign_mu(
     parameter_set: ParameterSet,
-    secret_key: &[u8],
     mu: &[u8],
-    randomizer: [u8; 32],
+    secret_key: &DilithiumSecretKey,
+    randomizer: &[u8; 32],
 ) -> Result<Vec<u8>> {
-    let mu = Array::<u8, U64>::try_from(mu).map_err(|_| {
+    let mu: &[u8; 64] = mu.try_into().map_err(|_| {
         EngineError::InvalidData(format!(
             "ML-DSA externally supplied mu must be 64 bytes, got {}",
             mu.len()
         ))
     })?;
-
-    macro_rules! sign_mu {
-        ($params:ty) => {{
-            let encoded = ml_dsa::ExpandedSigningKeyBytes::<$params>::try_from(secret_key)
-                .map_err(|_| {
-                    EngineError::InvalidData(format!(
-                        "{} expanded private key must be {} bytes, got {}",
-                        parameter_set.name(),
-                        parameter_set.secret_key_len(),
-                        secret_key.len()
-                    ))
-                })?;
-            #[allow(deprecated)]
-            let signing_key = ml_dsa::ExpandedSigningKey::<$params>::from_expanded(&encoded);
-            let signature = signing_key
-                .sign_mu_randomized(&mu, &mut ReplayRng10::new(randomizer))
-                .map_err(|error| {
-                    EngineError::Crypto(format!(
-                        "{} supplied-mu signature generation failed: {error}",
-                        parameter_set.name()
-                    ))
-                })?;
-            Ok(signature.encode().as_slice().to_vec())
-        }};
-    }
-
-    match parameter_set {
-        ParameterSet::MlDsa44 => sign_mu!(ml_dsa::MlDsa44),
-        ParameterSet::MlDsa65 => sign_mu!(ml_dsa::MlDsa65),
-        ParameterSet::MlDsa87 => sign_mu!(ml_dsa::MlDsa87),
-    }
+    let result = match parameter_set {
+        ParameterSet::MlDsa44 => MlDsa44::sign_mu_with_randomizer(mu, secret_key, randomizer),
+        ParameterSet::MlDsa65 => MlDsa65::sign_mu_with_randomizer(mu, secret_key, randomizer),
+        ParameterSet::MlDsa87 => MlDsa87::sign_mu_with_randomizer(mu, secret_key, randomizer),
+    };
+    result
+        .map(|signature| signature.as_ref().to_vec())
+        .map_err(|error| {
+            EngineError::Crypto(format!(
+                "{} supplied-mu signature generation failed: {error:?}",
+                parameter_set.name()
+            ))
+        })
 }
 
-fn rustcrypto_verify_mu(
+fn verify_external(
     parameter_set: ParameterSet,
-    public_key: &[u8],
-    mu: &[u8],
-    signature: &[u8],
+    message: &[u8],
+    context: &[u8],
+    signature: &DilithiumSignatureData,
+    public_key: &DilithiumPublicKey,
 ) -> bool {
-    let Ok(mu) = Array::<u8, U64>::try_from(mu) else {
+    match parameter_set {
+        ParameterSet::MlDsa44 => {
+            MlDsa44::verify_with_context(message, context, signature, public_key)
+        }
+        ParameterSet::MlDsa65 => {
+            MlDsa65::verify_with_context(message, context, signature, public_key)
+        }
+        ParameterSet::MlDsa87 => {
+            MlDsa87::verify_with_context(message, context, signature, public_key)
+        }
+    }
+    .is_ok()
+}
+
+fn verify_internal_message(
+    parameter_set: ParameterSet,
+    formatted_message: &[u8],
+    signature: &DilithiumSignatureData,
+    public_key: &DilithiumPublicKey,
+) -> bool {
+    match parameter_set {
+        ParameterSet::MlDsa44 => {
+            MlDsa44::verify_internal_message(formatted_message, signature, public_key)
+        }
+        ParameterSet::MlDsa65 => {
+            MlDsa65::verify_internal_message(formatted_message, signature, public_key)
+        }
+        ParameterSet::MlDsa87 => {
+            MlDsa87::verify_internal_message(formatted_message, signature, public_key)
+        }
+    }
+    .is_ok()
+}
+
+fn verify_mu(
+    parameter_set: ParameterSet,
+    mu: &[u8],
+    signature: &DilithiumSignatureData,
+    public_key: &DilithiumPublicKey,
+) -> bool {
+    let Ok(mu) = <&[u8; 64]>::try_from(mu) else {
         return false;
     };
-
-    macro_rules! verify_mu {
-        ($params:ty) => {{
-            let Ok(encoded_key) = ml_dsa::EncodedVerifyingKey::<$params>::try_from(public_key)
-            else {
-                return false;
-            };
-            let Ok(encoded_signature) = ml_dsa::EncodedSignature::<$params>::try_from(signature)
-            else {
-                return false;
-            };
-            let verification_key = ml_dsa::VerifyingKey::<$params>::decode(&encoded_key);
-            let Some(signature) = ml_dsa::Signature::<$params>::decode(&encoded_signature) else {
-                return false;
-            };
-            verification_key.verify_mu(&mu, &signature)
-        }};
-    }
-
     match parameter_set {
-        ParameterSet::MlDsa44 => verify_mu!(ml_dsa::MlDsa44),
-        ParameterSet::MlDsa65 => verify_mu!(ml_dsa::MlDsa65),
-        ParameterSet::MlDsa87 => verify_mu!(ml_dsa::MlDsa87),
+        ParameterSet::MlDsa44 => MlDsa44::verify_mu(mu, signature, public_key),
+        ParameterSet::MlDsa65 => MlDsa65::verify_mu(mu, signature, public_key),
+        ParameterSet::MlDsa87 => MlDsa87::verify_mu(mu, signature, public_key),
     }
+    .is_ok()
 }
 
 /// ML-DSA key generation using the ACVP seed as the direct 32-byte `xi` input.
 pub(crate) fn ml_dsa_keygen(group: &TestGroup, case: &TestCase) -> Result<()> {
     let parameter_set = get_parameter_set(group)?;
 
-    let (public_key, secret_key) = if let Some(seed) = case.inputs.get("seed") {
-        let seed = hex::decode(seed.as_string())?;
-        if seed.len() != 32 {
-            return Err(EngineError::InvalidData(format!(
-                "{} key-generation seed must be 32 bytes, got {}",
-                parameter_set.name(),
-                seed.len()
-            )));
-        }
-        keypair(parameter_set, &mut ReplayRng::new(seed))?
-    } else {
-        keypair(parameter_set, &mut ChaCha20Rng::from_entropy())?
-    };
+    let seed = required_bytes(case, "seed")?;
+    if seed.len() != 32 {
+        return Err(EngineError::InvalidData(format!(
+            "{} key-generation seed must be 32 bytes, got {}",
+            parameter_set.name(),
+            seed.len()
+        )));
+    }
+    let (public_key, secret_key) = keypair(parameter_set, &mut ReplayRng::new(seed))?;
 
     check_expected_hex(&KEYGEN_EXPECTED, group, case, "pk", public_key.to_bytes())?;
     check_expected_hex(&KEYGEN_EXPECTED, group, case, "sk", secret_key.to_bytes())?;
@@ -689,21 +571,12 @@ pub(crate) fn ml_dsa_keygen(group: &TestGroup, case: &TestCase) -> Result<()> {
 /// ML-DSA signature generation using the ACVP `rnd` value directly.
 ///
 /// The expanded private key is sufficient for signing; ACVP sigGen prompts do
-/// not provide the public key. External pure/pre-hash and internal `M'` paths
-/// use libcrux's portable backend. ACVP's optional externally supplied `mu`
-/// interface is cross-checked through RustCrypto because libcrux intentionally
-/// does not expose raw-`mu` signing.
+/// not provide the public key. All four FIPS 204 interfaces exercise dcrypt's
+/// owned implementation; external implementations live only in `verification/`.
 pub(crate) fn ml_dsa_siggen(group: &TestGroup, case: &TestCase) -> Result<()> {
     let parameter_set = get_parameter_set(group)?;
-    let secret_key = required_bytes(case, "sk")?;
-    if secret_key.len() != parameter_set.secret_key_len() {
-        return Err(EngineError::InvalidData(format!(
-            "{} expanded private key must be {} bytes, got {}",
-            parameter_set.name(),
-            parameter_set.secret_key_len(),
-            secret_key.len()
-        )));
-    }
+    let secret_key_bytes = required_bytes(case, "sk")?;
+    let secret_key = decode_secret_key(parameter_set, &secret_key_bytes)?;
 
     // Missing `rnd` denotes the optional deterministic FIPS 204 variant.
     let randomizer = case
@@ -728,15 +601,7 @@ pub(crate) fn ml_dsa_siggen(group: &TestGroup, case: &TestCase) -> Result<()> {
         SignatureInterface::ExternalPure => {
             let message = message(case)?;
             let context = optional_bytes(case, "context")?;
-            libcrux_sign(
-                parameter_set,
-                &secret_key,
-                LibcruxInput::External {
-                    message: &message,
-                    context: &context,
-                },
-                randomizer,
-            )?
+            sign_external(parameter_set, &message, &context, &secret_key, randomizer)?
         }
         SignatureInterface::ExternalPreHash => {
             let message = message(case)?;
@@ -747,29 +612,15 @@ pub(crate) fn ml_dsa_siggen(group: &TestGroup, case: &TestCase) -> Result<()> {
                 .ok_or(EngineError::MissingField("hashAlg"))?
                 .as_string();
             let formatted = hash_ml_dsa_message(&message, &context, &hash_algorithm)?;
-            libcrux_sign(
-                parameter_set,
-                &secret_key,
-                LibcruxInput::Internal {
-                    formatted_message: &formatted,
-                },
-                randomizer,
-            )?
+            sign_internal_message(parameter_set, &formatted, &secret_key, &randomizer)?
         }
         SignatureInterface::InternalMessage => {
             let formatted = message(case)?;
-            libcrux_sign(
-                parameter_set,
-                &secret_key,
-                LibcruxInput::Internal {
-                    formatted_message: &formatted,
-                },
-                randomizer,
-            )?
+            sign_internal_message(parameter_set, &formatted, &secret_key, &randomizer)?
         }
         SignatureInterface::InternalMu => {
             let mu = required_bytes(case, "mu")?;
-            rustcrypto_sign_mu(parameter_set, &secret_key, &mu, randomizer)?
+            sign_mu(parameter_set, &mu, &secret_key, &randomizer)?
         }
     };
 
@@ -798,40 +649,12 @@ pub(crate) fn ml_dsa_sigver(group: &TestGroup, case: &TestCase) -> Result<()> {
     // verification backend. Noncanonical hint encodings are negative vectors.
     let decoded_public = DilithiumPublicKey::from_bytes(&public_key_bytes);
     let decoded_signature = DilithiumSignatureData::from_bytes(&signature_bytes);
-    let test_passed = if decoded_public.is_err() || decoded_signature.is_err() {
-        false
-    } else {
+    let test_passed = if let (Ok(public_key), Ok(signature)) = (decoded_public, decoded_signature) {
         match signature_interface(group)? {
             SignatureInterface::ExternalPure => {
                 let message = message(case)?;
                 let context = optional_bytes(case, "context")?;
-                let direct = libcrux_verify(
-                    parameter_set,
-                    &public_key_bytes,
-                    &signature_bytes,
-                    LibcruxInput::External {
-                        message: &message,
-                        context: &context,
-                    },
-                );
-
-                // The public wrapper intentionally exposes the empty-context
-                // pure operation. Require it to agree whenever applicable.
-                if context.is_empty() {
-                    let wrapper = verify_wrapper(
-                        parameter_set,
-                        &message,
-                        &decoded_signature.expect("checked above"),
-                        &decoded_public.expect("checked above"),
-                    );
-                    if wrapper != direct {
-                        return Err(EngineError::Crypto(format!(
-                            "{} wrapper/libcrux verification disagreement",
-                            parameter_set.name()
-                        )));
-                    }
-                }
-                direct
+                verify_external(parameter_set, &message, &context, &signature, &public_key)
             }
             SignatureInterface::ExternalPreHash => {
                 let message = message(case)?;
@@ -842,31 +665,19 @@ pub(crate) fn ml_dsa_sigver(group: &TestGroup, case: &TestCase) -> Result<()> {
                     .ok_or(EngineError::MissingField("hashAlg"))?
                     .as_string();
                 let formatted = hash_ml_dsa_message(&message, &context, &hash_algorithm)?;
-                libcrux_verify(
-                    parameter_set,
-                    &public_key_bytes,
-                    &signature_bytes,
-                    LibcruxInput::Internal {
-                        formatted_message: &formatted,
-                    },
-                )
+                verify_internal_message(parameter_set, &formatted, &signature, &public_key)
             }
             SignatureInterface::InternalMessage => {
                 let formatted = message(case)?;
-                libcrux_verify(
-                    parameter_set,
-                    &public_key_bytes,
-                    &signature_bytes,
-                    LibcruxInput::Internal {
-                        formatted_message: &formatted,
-                    },
-                )
+                verify_internal_message(parameter_set, &formatted, &signature, &public_key)
             }
             SignatureInterface::InternalMu => {
                 let mu = required_bytes(case, "mu")?;
-                rustcrypto_verify_mu(parameter_set, &public_key_bytes, &mu, &signature_bytes)
+                verify_mu(parameter_set, &mu, &signature, &public_key)
             }
         }
+    } else {
+        false
     };
     check_expected_bool(&SIGVER_EXPECTED, group, case, "testPassed", test_passed)?;
     case.outputs

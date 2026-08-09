@@ -81,7 +81,7 @@ pub trait DilithiumSchemeParams: Send + Sync + 'static {
     /// Seed size for matrix A generation (ρ)
     const SEED_RHO_BYTES: usize = 32;
     /// Seed size for secret/error sampling (ρ')
-    const SEED_KEY_BYTES: usize = 32;
+    const SEED_KEY_BYTES: usize = 64;
     /// Master seed size for key generation (ζ)
     const SEED_ZETA_BYTES: usize = 32;
     /// Hash output size for tr = H(pk)
@@ -255,8 +255,8 @@ impl DilithiumSchemeParams for Dilithium3Params {
     const SIGNATURE_SIZE: usize = 3309;
     // w₁ encoding for γ₂ = 261888
     // (q-1)/(2·γ₂) = 8380416/(2·261888) = 16
-    // Decompose returns r₁ ∈ [0, 15], which requires 5 bits.
-    const W1_BITS: usize = 5;
+    // Decompose returns r₁ ∈ [0, 15], which requires 4 bits.
+    const W1_BITS: usize = 4;
     // Number of bits for packing z coefficients
     // Range [-γ₁+β, γ₁-β] = [-524288+196, 524288-196] = [-524092, 524092]
     // Maximum absolute value: 524092 < 2¹⁹, so 2·524092 < 2²⁰
@@ -334,8 +334,8 @@ impl DilithiumSchemeParams for Dilithium5Params {
     const SECRET_KEY_BYTES: usize = 4896;
     const SIGNATURE_SIZE: usize = 4627;
     // w₁ encoding: (q-1)/(2·γ₂) = 8380416/(2·261888) = 16
-    // Decompose returns r₁ ∈ [0, 15], which requires 5 bits.
-    const W1_BITS: usize = 5;
+    // Decompose returns r₁ ∈ [0, 15], which requires 4 bits.
+    const W1_BITS: usize = 4;
     // Number of bits for packing z coefficients
     // Range [-γ₁+β, γ₁-β] = [-524288+120, 524288-120] = [-524168, 524168]
     // Maximum absolute value: 524168 < 2¹⁹, so 2·524168 < 2²⁰

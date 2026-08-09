@@ -34,7 +34,6 @@ dcrypt-common = { path = "../common", version = "=2.0.0", default-features = fal
 dcrypt-internal = { path = "../internal", version = "=2.0.0", default-features = false }
 dcrypt-params = { path = "../params", version = "=2.0.0" }
 dcrypt-algorithms = { path = "../algorithms", version = "=2.0.0" }
-libcrux-ml-dsa = { version = "=0.0.10", default-features = false, features = ["mldsa44", "mldsa65", "mldsa87"] }
 zeroize = { workspace = true }
 rand = { workspace = true }
 subtle = "2.5"
@@ -43,7 +42,6 @@ subtle = "2.5"
 rand_chacha = { workspace = true }
 hex = "0.4"
 criterion = { version = "0.5", features = ["html_reports"] }
-fips204 = { version = "0.4.6", default-features = false, features = ["ml-dsa-44", "ml-dsa-65", "ml-dsa-87"] }
 
 [[bench]]
 name = "dilithium"
