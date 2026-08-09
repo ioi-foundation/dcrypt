@@ -126,7 +126,7 @@ UNPROTECTED_MLDSA_CHALLENGE_SCRATCH = re.compile(
     r"\blet\s+mut\s+(?:signs|byte)\s*=\s*\[\s*0u8\s*;"
 )
 UNPROTECTED_HIGH_LEVEL_KEY_COPY = re.compile(
-    r"(?:\blet\s+mut\s+(?:key_array|key_data|key|serialized)\b"
+    r"(?:\blet\s+mut\s+(?:buffer_bytes|key_array|key_data|key|serialized)\b"
     r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;|"
     r"\blet\s+mut\s+encryption_key_arr(?:_aes)?\b"
     r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;|"
@@ -184,6 +184,14 @@ TARGETED_SECRET_SCRATCH = {
         r"(?:fn\s+(?:add|sub)\b[^{}]*\{[^{}]*\blet\s+mut\s+limbs\s*=\s*\[|"
         r"\blet\s+(?:a|b)\s*=\s*(?:self|rhs)\.0\.map\s*\(|"
         r"fn\s+pow\b[^{}]*\{[^{}]*\blet\s+mut\s+accumulator\s*=\s*Self::one\s*\()",
+        re.DOTALL,
+    ),
+    "src/eddsa/scalar.rs": re.compile(
+        r"(?:fn\s+to_bytes\b[^{};]*->\s*\[\s*u8\s*;|"
+        r"fn\s+(?:load_limbs|conditional_subtract_order)\b[^{};]*->\s*\[\s*u64\s*;|"
+        r"fn\s+subtract_limbs\b[^{};]*->\s*\(\s*\[\s*u64\s*;|"
+        r"\blet\s+mut\s+(?:sum|limbs|difference|result|bytes|chunk)\s*=\s*\[|"
+        r"\blet\s+mut\s+accumulator\s*=\s*Self::zero\s*\(\s*\))",
         re.DOTALL,
     ),
     "src/eddsa/point.rs": re.compile(
@@ -245,6 +253,19 @@ TARGETED_LIFECYCLE_REQUIREMENTS = {
     "src/eddsa/field.rs": (
         re.compile(r"impl\s+Zeroize\s+for\s+FieldElement"),
         re.compile(r"accumulator\s*=\s*Zeroizing\s*::\s*new\s*\(\s*Self::one"),
+    ),
+    "src/eddsa/scalar.rs": (
+        re.compile(
+            r"fn\s+to_bytes\s*\(\s*&self\s*\)\s*->\s*Zeroizing\s*<\s*\[\s*u8\s*;\s*32\s*\]"
+        ),
+        re.compile(r"accumulator\s*=\s*Zeroizing\s*::\s*new\s*\(\s*Self::zero"),
+        re.compile(
+            r"fn\s+subtract_limbs\b[^{}]*?->\s*\(\s*Zeroizing\s*<",
+            re.DOTALL,
+        ),
+    ),
+    "src/eddsa/ed25519/mod.rs": (
+        re.compile(r"let\s+response_bytes\s*=\s*response\s*\.\s*to_bytes\s*\(\s*\)"),
     ),
     "src/eddsa/point.rs": (
         re.compile(r"impl\s+Zeroize\s+for\s+EdwardsPoint"),
@@ -2161,7 +2182,9 @@ def audit_source_tree(
                     "src/dilithium/sign.rs",
                     "src/dilithium/encoding.rs",
                     "src/eddsa/field.rs",
+                    "src/eddsa/scalar.rs",
                     "src/eddsa/point.rs",
+                    "src/eddsa/ed25519/mod.rs",
                 }
             )
         )
@@ -2303,6 +2326,7 @@ println!("cargo:rustc-link-lib=native");
     assert UNPROTECTED_HIGH_LEVEL_KEY_COPY.search(
         "let mut encryption_key_arr = [0u8; CHACHA20POLY1305_KEY_LEN];"
     )
+    assert UNPROTECTED_HIGH_LEVEL_KEY_COPY.search("let mut buffer_bytes = [0u8; 32];")
     assert len(RAW_SECRET_BYTE_OUTPUT.findall(code_only)) == 1
     assert len(DIRECT_RNG_FILL.findall(code_only)) == 1
     assert (
@@ -2323,6 +2347,12 @@ println!("cargo:rustc-link-lib=native");
     )
     assert TARGETED_SECRET_SCRATCH["src/eddsa/field.rs"].search(
         "fn pow(&self) { let mut accumulator = Self::one(); }"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/eddsa/scalar.rs"].search(
+        "fn to_bytes(&self) -> [u8; 32] { let mut bytes = [0u8; 32]; }"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/eddsa/scalar.rs"].search(
+        "fn mul(&self) { let mut accumulator = Self::zero(); }"
     )
     assert TARGETED_SECRET_SCRATCH["src/eddsa/point.rs"].search(
         "fn scalar_mult(&self) { let mut accumulator = Self::identity(); }"
