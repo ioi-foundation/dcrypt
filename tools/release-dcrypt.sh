@@ -79,8 +79,7 @@ Options:
 Safe workflow:
   tools/release-dcrypt.sh --version 3.0.0
   tools/release-dcrypt.sh --version 3.0.0 --prepare
-  git push origin <current-branch>
-  git push origin v3.0.0
+  # Follow the printed candidate-check, atomic-push, and draft-release handoff.
   tools/release-dcrypt.sh --version 3.0.0 --execute
 EOF
 }
@@ -519,10 +518,27 @@ prepare_release() {
     branch=$(current_branch)
     [[ -n "$branch" ]] || die "cannot prepare a release from detached HEAD"
 
+    local head_commit candidate_branch
+    head_commit=$(git rev-parse HEAD)
+    candidate_branch="release-candidate/$tag"
+
     printf "\n${GREEN}Release preparation complete; nothing was published.${NC}\n"
-    printf 'Review the commit and tag, then run:\n'
-    printf '  git push origin %q\n' "$branch"
-    printf '  git push origin %q\n' "$tag"
+    printf '1. Push only a candidate branch; do not push the tag yet:\n'
+    printf '  git push origin %q\n' \
+        "$head_commit:refs/heads/$candidate_branch"
+    printf '2. Require every trusted check to pass for exact SHA %s.\n' "$head_commit"
+    printf '3. Fast-forward the release branch and push it with the annotated tag atomically:\n'
+    printf '  git push --atomic origin %q %q\n' \
+        "$head_commit:refs/heads/$branch" \
+        "refs/tags/$tag:refs/tags/$tag"
+    printf '4. Verify origin/%s and the peeled origin tag both resolve to %s:\n' \
+        "$branch" "$head_commit"
+    printf '  git ls-remote origin %q %q %q\n' \
+        "refs/heads/$branch" "refs/tags/$tag" "refs/tags/$tag^{}"
+    printf '5. Create and review a GitHub draft from reviewed RELEASE_NOTES.md:\n'
+    printf '  gh release create %q --draft --verify-tag --title %q --notes-file RELEASE_NOTES.md\n' \
+        "$tag" "dcrypt $tag"
+    printf '6. Only after that draft exists, run:\n'
     printf '  tools/release-dcrypt.sh --version %q --execute\n' "$VERSION"
 }
 

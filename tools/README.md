@@ -112,10 +112,24 @@ Preparation:
 - creates only the expected version commit when needed; and
 - creates a local annotated `v<version>` tag.
 
-It does not push or publish. Review the resulting commit and tag, then push the
-current branch and tag using the exact commands printed by the script.
+It does not push or publish. The printed handoff deliberately separates review
+from release publication:
 
-### 3. Publish the pushed tag
+1. Push the exact commit to a `release-candidate/v<version>` branch without the
+   tag.
+2. Require every trusted check to pass for that exact commit SHA.
+3. Fast-forward the release branch and push it together with the already
+   reviewed annotated tag in one `git push --atomic` operation.
+4. Verify the remote branch and peeled annotated tag both resolve to the
+   reviewed SHA.
+5. Create and review a GitHub draft with
+   `gh release create --draft --verify-tag` and reviewed release notes.
+6. Only then run the execute phase.
+
+Do not push the release tag merely to start candidate CI; tags are immutable
+release provenance, not rehearsal refs.
+
+### 3. Publish crates from the verified draft and pushed tag
 
 ```bash
 tools/release-dcrypt.sh --version 3.0.0 --execute
@@ -127,6 +141,8 @@ Live publication requires all of the following:
 - the local tag pointing to `HEAD`;
 - the same tag and commit already present on `origin`;
 - the release commit present on the corresponding remote branch;
+- trusted checks passed for that exact commit and a reviewed GitHub draft
+  created from the verified tag;
 - all enabled release gates passing; and
 - an interactive confirmation containing the exact version.
 
