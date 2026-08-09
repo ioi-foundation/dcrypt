@@ -58,6 +58,24 @@ fn associated_data_is_bound() {
 }
 
 #[test]
+fn historical_zero_nonce_helpers_expose_plaintext_xor() {
+    let nonce = [0u8; 24];
+    let known_plaintext = [0x41u8; 32];
+    let hidden_plaintext: [u8; 32] =
+        core::array::from_fn(|index| (index as u8).wrapping_mul(19).wrapping_add(7));
+
+    let known_ciphertext = rustcrypto_historical_reference(&KEY, &nonce, &known_plaintext, &[]);
+    let hidden_ciphertext = rustcrypto_historical_reference(&KEY, &nonce, &hidden_plaintext, &[]);
+    let repeated_ciphertext = rustcrypto_historical_reference(&KEY, &nonce, &known_plaintext, &[]);
+
+    let recovered: Vec<u8> = (0..known_plaintext.len())
+        .map(|index| known_ciphertext[index] ^ hidden_ciphertext[index] ^ known_plaintext[index])
+        .collect();
+    assert_eq!(recovered, hidden_plaintext);
+    assert_eq!(repeated_ciphertext, known_ciphertext);
+}
+
+#[test]
 fn independent_boundary_matrix_covers_2_880_authenticated_cases() {
     const LENGTHS: [usize; 30] = [
         0, 1, 2, 7, 15, 16, 17, 31, 32, 33, 47, 48, 49, 63, 64, 65, 79, 80, 81, 95, 96, 97, 127,
