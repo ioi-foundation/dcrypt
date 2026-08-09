@@ -1,5 +1,5 @@
 //! Decrypt-only migration support for the nonstandard construction shipped by
-//! dcrypt from `v0.7.0-pre` through `v1.2.3` under the
+//! dcrypt from tagged source `v0.5.0` through `v1.2.3` under the
 //! `XChaCha20Poly1305` name.
 //!
 //! This crate is deliberately outside the published dcrypt workspace and must
@@ -17,7 +17,7 @@ use std::fmt;
 
 /// Exact format acknowledgement required by the command-line tool before decryption.
 pub const REQUIRED_FORMAT_ACKNOWLEDGEMENT: &str =
-    "dcrypt-v0.7.0-pre-through-v1.2.3-custom-xchacha20poly1305";
+    "dcrypt-v0.5.0-through-v1.2.3-custom-xchacha20poly1305";
 
 /// Opaque authentication failure for the historical construction.
 ///
@@ -35,7 +35,7 @@ impl fmt::Display for AuthenticationError {
 impl std::error::Error for AuthenticationError {}
 
 /// Authenticate and decrypt ciphertext from the nonstandard
-/// `XChaCha20Poly1305` construction shipped from `v0.7.0-pre` through
+/// `XChaCha20Poly1305` construction shipped in tagged source from `v0.5.0` through
 /// `v1.2.3`.
 ///
 /// The caller must establish ciphertext provenance before calling this

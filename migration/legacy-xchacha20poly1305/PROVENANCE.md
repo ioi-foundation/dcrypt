@@ -7,12 +7,14 @@ specification and not an endorsement of the withdrawn releases.
 ## Affected source range
 
 Repository history first contains the custom construction at tag
-`v0.7.0-pre` (`4bb148636a28b5dc924d35fedf24b94962f7100d`). Its construction remains
+`v0.5.0` (`4376927181745df5f1de49afa364bd46bacdb17e`). Its construction remains
 semantically unchanged through tag `v1.2.3`
 (`766a03feb860c8b05678754a3e81a00f687fe6c8`). The inspected tagged releases in
 that interval are:
 
 ```text
+v0.5.0
+v0.6.0 v0.6.1 v0.6.2-pre v0.6.3-pre
 v0.7.0-pre
 v0.8.0-beta.1
 v0.9.0-beta.1 v0.9.0-beta.2 v0.9.0-beta.3
@@ -26,10 +28,16 @@ v1.1.0 v1.1.1
 v1.2.0 v1.2.2 v1.2.3
 ```
 
-Treat untagged builds derived from that source interval as affected too. The
+The v0.5/v0.6 source used the former `dcrypt-primitives` layout, and the v0.7
+and v0.8 tags predate the first `dcrypt-algorithms` crates.io artifact. The
+published `dcrypt-algorithms` line starts at `0.9.0-beta.1`; every published
+version before `2.0.0` contains the legacy construction. Treat untagged builds
+derived from the full tagged source interval as affected too. The
 construction derives a 32-byte subkey from bytes 0 through 31 of an ordinary
 IETF ChaCha20 counter-zero stream using nonce bytes 0 through 11, then invokes
-ChaCha20-Poly1305 using nonce bytes 12 through 23. This is not HChaCha20 and is
+ChaCha20-Poly1305 using nonce bytes 12 through 23. v0.x serialized symmetric
+keys used the uppercase `DCRYPT-` prefix; v1.x changed it to lowercase
+`dcrypt-`. The migration CLI accepts both exact historical forms. This is not HChaCha20 and is
 not standard XChaCha20-Poly1305. The v2 source replaced it with the standard
 construction; the migration crate intentionally retains only decryption.
 

@@ -11,10 +11,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 const MAX_STAGING_ATTEMPTS: u64 = 64;
-const LEGACY_KEY_PREFIX: &[u8] = b"dcrypt-CHACHA20POLY1305-KEY:";
+const LEGACY_KEY_PREFIX_V0: &[u8] = b"DCRYPT-CHACHA20POLY1305-KEY:";
+const LEGACY_KEY_PREFIX_V1: &[u8] = b"dcrypt-CHACHA20POLY1305-KEY:";
+const LEGACY_KEY_PREFIXES: [&[u8]; 2] = [LEGACY_KEY_PREFIX_V0, LEGACY_KEY_PREFIX_V1];
 const LEGACY_KEY_BASE64_LENGTH: usize = 44;
 const MAX_SERIALIZED_KEY_FILE_LENGTH: usize =
-    LEGACY_KEY_PREFIX.len() + LEGACY_KEY_BASE64_LENGTH + 2;
+    LEGACY_KEY_PREFIX_V0.len() + LEGACY_KEY_BASE64_LENGTH + 2;
 static STAGING_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 enum KeyInput {
@@ -37,7 +39,7 @@ enum ParseOutcome {
 
 fn usage() -> &'static str {
     "usage: dcrypt-legacy-xchacha20poly1305-migration \
---acknowledge-format dcrypt-v0.7.0-pre-through-v1.2.3-custom-xchacha20poly1305 \
+--acknowledge-format dcrypt-v0.5.0-through-v1.2.3-custom-xchacha20poly1305 \
 (--key-file RAW_KEY | --serialized-key-file LEGACY_KEY) \
 (--nonce-hex 48_HEX_CHARS | --nonce-base64 LEGACY_NONCE) \
 --ciphertext-file INPUT --output-file NEW_OUTPUT [--aad-file AAD]"
@@ -238,8 +240,9 @@ fn read_serialized_key(path: &Path) -> Result<Zeroizing<[u8; 32]>, String> {
     } else if let Some(without_newline) = bytes.strip_suffix(b"\n") {
         bytes = without_newline;
     }
-    let encoded = bytes
-        .strip_prefix(LEGACY_KEY_PREFIX)
+    let encoded = LEGACY_KEY_PREFIXES
+        .iter()
+        .find_map(|prefix| bytes.strip_prefix(*prefix))
         .ok_or_else(|| "serialized key file has the wrong legacy prefix".to_string())?;
     if encoded.len() != LEGACY_KEY_BASE64_LENGTH {
         return Err("serialized key must contain exactly one legacy 32-byte key".into());
@@ -595,7 +598,7 @@ mod tests {
     fn valid_arguments() -> Vec<String> {
         [
             "--acknowledge-format",
-            "dcrypt-v0.7.0-pre-through-v1.2.3-custom-xchacha20poly1305",
+            "dcrypt-v0.5.0-through-v1.2.3-custom-xchacha20poly1305",
             "--key-file",
             "key",
             "--nonce-hex",

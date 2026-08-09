@@ -7,6 +7,7 @@ tools/*
 !tools/verify-implementation-boundary.py
 !tools/verify-implementation-boundary.sh
 !tools/update-benchmarks.sh
+!tools/update-isolated-workspace-versions.py
 !tools/bench-processor/
 tree.md
 Cargo.lock

@@ -356,6 +356,23 @@ validate_release_documentation() {
     fi
 }
 
+validate_isolated_workspace_versions() {
+    local expected=$1
+    python3 "$SCRIPT_DIR/update-isolated-workspace-versions.py" \
+        --manifest "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" \
+        --expect "$expected"
+}
+
+update_isolated_workspace_versions() {
+    local before=$1
+    local after=$2
+    python3 "$SCRIPT_DIR/update-isolated-workspace-versions.py" \
+        --manifest "$PROJECT_ROOT/migration/legacy-xchacha20poly1305/Cargo.toml" \
+        --from-version "$before" \
+        --to-version "$after"
+    validate_isolated_workspace_versions "$after"
+}
+
 create_release_commit_if_needed() {
     local unexpected=""
     local status_line path
@@ -364,7 +381,7 @@ create_release_commit_if_needed() {
         [[ -n "$status_line" ]] || continue
         path=${status_line:3}
         case "$path" in
-            Cargo.toml|crates/*/Cargo.toml|tests/Cargo.toml|Cargo.lock|fuzz/Cargo.lock|verification/Cargo.lock|migration/legacy-xchacha20poly1305/Cargo.lock)
+            Cargo.toml|crates/*/Cargo.toml|tests/Cargo.toml|Cargo.lock|fuzz/Cargo.lock|verification/Cargo.lock|migration/legacy-xchacha20poly1305/Cargo.toml|migration/legacy-xchacha20poly1305/Cargo.lock)
                 ;;
             *)
                 unexpected+="  $path"$'\n'
@@ -380,6 +397,7 @@ create_release_commit_if_needed() {
     if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
         git add Cargo.toml Cargo.lock crates/*/Cargo.toml tests/Cargo.toml \
             fuzz/Cargo.lock verification/Cargo.lock \
+            migration/legacy-xchacha20poly1305/Cargo.toml \
             migration/legacy-xchacha20poly1305/Cargo.lock
         git commit -m "chore: release version $VERSION"
     fi
@@ -403,9 +421,11 @@ prepare_release() {
 
     local before_version
     before_version=$(current_version)
+    validate_isolated_workspace_versions "$before_version"
     if [[ "$before_version" != "$VERSION" ]]; then
         info "Updating workspace from $before_version to $VERSION"
         cargo release version "$VERSION" --execute --no-confirm
+        update_isolated_workspace_versions "$before_version" "$VERSION"
         refresh_isolated_workspace_locks
         create_release_commit_if_needed
     else
@@ -617,6 +637,8 @@ execute_release() {
 dry_run_release() {
     check_registry_target
     run_all_gates
+    validate_isolated_workspace_versions "$(current_version)"
+    python3 "$SCRIPT_DIR/update-isolated-workspace-versions.py" --self-test
     info "Previewing cargo-release version changes"
     cargo release version "$VERSION"
     printf "\n${GREEN}Release rehearsal completed without publishing or tagging.${NC}\n"
@@ -694,6 +716,7 @@ require_command cargo
 require_command git
 require_command jq
 require_command curl
+require_command python3
 cargo_subcommand_available release \
     || die "cargo-release is required (cargo install cargo-release --locked)"
 

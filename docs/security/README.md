@@ -19,8 +19,8 @@ release is currently supported.
 The remaining compatibility and hardening findings are tracked in the
 workspace `SECURITY.md` and `CHANGELOG.md`.
 
-The custom construction shipped under the `XChaCha20Poly1305` name from
-`v0.7.0-pre` through `v1.2.3` is supported only by an isolated
+The custom construction shipped under the `XChaCha20Poly1305` name in tagged
+source from `v0.5.0` through `v1.2.3` is supported only by an isolated
 [decrypt-only migration tool](../../migration/legacy-xchacha20poly1305/README.md).
 It is not standard XChaCha20-Poly1305 and is not part of the published API.
 

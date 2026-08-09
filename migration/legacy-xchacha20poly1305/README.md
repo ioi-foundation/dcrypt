@@ -1,8 +1,8 @@
 # Historical custom XChaCha migration tool
 
 This non-published, decrypt-only tool exists solely for ciphertext known to
-have been created by the nonstandard construction that dcrypt shipped from
-`v0.7.0-pre` through `v1.2.3` under the name `XChaCha20Poly1305`. It cannot
+have been created by the nonstandard construction present in tagged dcrypt
+source from `v0.5.0` through `v1.2.3` under the name `XChaCha20Poly1305`. It cannot
 encrypt, and standard XChaCha20-Poly1305 ciphertext is intentionally rejected.
 The [provenance record](PROVENANCE.md) identifies the historical source and the
 fixed artifact-derived vector used by the tests.
@@ -22,8 +22,9 @@ raw-key files according to the host platform's storage model.
 
 - Supply exactly one key input. `--key-file` accepts a regular file containing
   exactly 32 raw key bytes. `--serialized-key-file` strictly accepts the
-  historical `dcrypt-CHACHA20POLY1305-KEY:<base64>` representation, with at
-  most one trailing LF or CRLF. Both readers are bounded. Keep either file
+  exact historical `DCRYPT-CHACHA20POLY1305-KEY:<base64>` (v0.x) or
+  `dcrypt-CHACHA20POLY1305-KEY:<base64>` (v1.x) representation, with at most
+  one trailing LF or CRLF. Both readers are bounded. Keep either file
   owner-only (for example mode `0600` on Unix).
 - Supply exactly one nonce input. `--nonce-hex` accepts exactly 48 hexadecimal
   characters; `--nonce-base64` strictly accepts the base64 representation
@@ -56,7 +57,7 @@ Run from the repository root:
 ```console
 cargo run --release --locked \
   --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml -- \
-  --acknowledge-format dcrypt-v0.7.0-pre-through-v1.2.3-custom-xchacha20poly1305 \
+  --acknowledge-format dcrypt-v0.5.0-through-v1.2.3-custom-xchacha20poly1305 \
   --key-file legacy.key \
   --nonce-hex 00112233445566778899aabbccddeeff0011223344556677 \
   --ciphertext-file legacy.bin \

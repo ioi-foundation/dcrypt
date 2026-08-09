@@ -56,7 +56,7 @@ Users of an affected release should assume the following:
   replay state.
 - Ciphertext emitted by the former `XChaCha20Poly1305` type is a dcrypt-specific
   legacy format, not standard XChaCha20-Poly1305. The remediated API does not
-  silently decrypt or relabel it. Ciphertext produced from `v0.7.0-pre` through
+  silently decrypt or relabel it. Ciphertext produced from tagged source `v0.5.0` through
   `v1.2.3` can be handled only by the isolated, non-published
   [decrypt-only migration tool](migration/legacy-xchacha20poly1305/README.md)
   after its provenance has been established.

@@ -3,7 +3,7 @@ name = "dcrypt-legacy-xchacha20poly1305-migration"
 version = "0.0.0"
 edition = "2021"
 publish = false
-description = "Isolated decrypt-only migration tool for dcrypt v0.7.0-pre through v1.2.3 custom XChaCha ciphertext"
+description = "Isolated decrypt-only migration tool for dcrypt v0.5.0 through v1.2.3 custom XChaCha ciphertext"
 license = "Apache-2.0"
 
 [dependencies]
