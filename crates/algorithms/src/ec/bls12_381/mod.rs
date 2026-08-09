@@ -10,8 +10,10 @@
 //! nonzero secret scalar with the selected ciphersuite's key-generation
 //! procedure, keep its encoded form in zeroizing storage, and enforce that
 //! ciphersuite's validation rules. `Bls12_381Scalar` is a generic `Copy` field
-//! element, not a protected long-lived secret-key container; explicitly clear
-//! an arithmetic scalar after use.
+//! element for public arithmetic, not a protected secret-key container. The
+//! low-level `msm_vartime` helpers likewise accept public scalars only. Secret
+//! scalar multiplication must use `multiply_secret_be_bytes`, or callers should
+//! use the high-level BLS types in `dcrypt-sign`.
 //! External public keys should be decoded with
 //! `G1Projective::from_bytes_validated`, which rejects the identity. Complete
 //! BLS ciphersuites have more nuanced signature identity rules, so callers

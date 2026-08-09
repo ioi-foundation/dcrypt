@@ -29,8 +29,13 @@ const fn mac(a: u64, b: u64, c: u64, carry: u64) -> (u64, u64) {
     (ret as u64, (ret >> 64) as u64)
 }
 
-/// Scalar field element of BLS12-381
-/// Internal: Four 64-bit limbs in little-endian Montgomery form
+/// Scalar field element of BLS12-381 for public arithmetic.
+///
+/// This generic field element is `Copy` and is not a protected secret-key
+/// container. BLS secret keys remain encoded in exact-size zeroizing storage
+/// and use the dedicated `multiply_secret_be_bytes` group operation.
+///
+/// Internal representation: four 64-bit limbs in little-endian Montgomery form.
 #[derive(Clone, Copy, Eq)]
 pub struct Scalar(pub(crate) [u64; 4]);
 

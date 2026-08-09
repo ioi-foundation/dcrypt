@@ -132,6 +132,7 @@ UNPROTECTED_HIGH_LEVEL_KEY_COPY = re.compile(
     r"(?:\s*:\s*[^=;]+)?\s*=\s*\[\s*0u8\s*;)",
     re.DOTALL,
 )
+BLS_SECRET_CAPABLE_MSM = re.compile(r"\bpub\s+fn\s+msm\s*\(")
 TARGETED_SECRET_SCRATCH = {
     "src/block/aes/mod.rs": re.compile(
         r"(?:\blet\s+mut\s+(?:round_keys_u32|round_key_bytes|state)"
@@ -199,6 +200,8 @@ TARGETED_SECRET_SCRATCH = {
         r"\blet\s+mut\s+accumulator\s*=\s*Self::identity\s*\()",
         re.DOTALL,
     ),
+    "src/ec/bls12_381/g1.rs": BLS_SECRET_CAPABLE_MSM,
+    "src/ec/bls12_381/g2.rs": BLS_SECRET_CAPABLE_MSM,
 }
 TARGETED_LIFECYCLE_REQUIREMENTS = {
     "src/block/aes/mod.rs": (
@@ -270,6 +273,14 @@ TARGETED_LIFECYCLE_REQUIREMENTS = {
         re.compile(r"accumulator\s*=\s*Zeroizing\s*::\s*new\s*\(\s*Self::identity"),
         re.compile(r"doubled\s*=\s*Zeroizing\s*::\s*new"),
         re.compile(r"added\s*=\s*Zeroizing\s*::\s*new"),
+    ),
+    "src/ec/bls12_381/g1.rs": (
+        re.compile(r"pub\s+fn\s+msm_vartime\s*\("),
+        re.compile(r"fn\s+pippenger_vartime\s*\("),
+    ),
+    "src/ec/bls12_381/g2.rs": (
+        re.compile(r"pub\s+fn\s+msm_vartime\s*\("),
+        re.compile(r"fn\s+pippenger_vartime\s*\("),
     ),
 }
 VERSIONED_SHARED_OBJECT = re.compile(r"\.so(?:\.\d+)*$", re.IGNORECASE)
@@ -2354,6 +2365,12 @@ println!("cargo:rustc-link-lib=native");
     )
     assert TARGETED_SECRET_SCRATCH["src/eddsa/point.rs"].search(
         "fn scalar_mult(&self) { let mut accumulator = Self::identity(); }"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/ec/bls12_381/g1.rs"].search(
+        "pub fn msm(points: &[G1Affine], scalars: &[Scalar]) -> Result<Self> { todo!() }"
+    )
+    assert TARGETED_SECRET_SCRATCH["src/ec/bls12_381/g2.rs"].search(
+        "pub fn msm(points: &[G2Affine], scalars: &[Scalar]) -> Result<Self> { todo!() }"
     )
     assert UNSAFE_TOKEN.search("#![forbid(unsafe_code)]") is None
     assert has_crate_level_forbid("// header\n#![forbid(unsafe_code)]\nfn ok() {}")

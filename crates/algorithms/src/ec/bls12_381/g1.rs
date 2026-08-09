@@ -890,8 +890,10 @@ impl G1Projective {
 
     /// Multi-scalar multiplication using a variable-time Pippenger's algorithm.
     ///
-    /// This method is faster for non-sensitive operations where timing side-channels
-    /// are not a concern, as it contains input-dependent branches.
+    /// Every scalar passed to this low-level helper must be public. It contains
+    /// input-dependent branches and does not provide secret-scratch ownership.
+    /// Use [`Self::multiply_secret_be_bytes`] for secret scalar multiplication,
+    /// or the high-level BLS APIs in `dcrypt-sign`.
     ///
     /// # Panics
     /// Panics if `points.len() != scalars.len()`.
@@ -903,30 +905,12 @@ impl G1Projective {
                 reason: "Input slices must have the same length".into(),
             });
         }
-        Ok(Self::pippenger(points, scalars, true))
+        Ok(Self::pippenger_vartime(points, scalars))
     }
 
-    /// Multi-scalar multiplication using a constant-time Pippenger's algorithm.
-    ///
-    /// This method is suitable for cryptographic operations where resistance to
-    /// timing side-channels is required.
-    ///
-    /// # Panics
-    /// Panics if `points.len() != scalars.len()`.
+    /// Internal public-input Pippenger implementation.
     #[cfg(feature = "alloc")]
-    pub fn msm(points: &[G1Affine], scalars: &[Scalar]) -> Result<Self> {
-        if points.len() != scalars.len() {
-            return Err(Error::Parameter {
-                name: "points/scalars".into(),
-                reason: "Input slices must have the same length".into(),
-            });
-        }
-        Ok(Self::pippenger(points, scalars, false))
-    }
-
-    /// Internal Pippenger's algorithm implementation.
-    #[cfg(feature = "alloc")]
-    fn pippenger(points: &[G1Affine], scalars: &[Scalar], is_vartime: bool) -> Self {
+    fn pippenger_vartime(points: &[G1Affine], scalars: &[Scalar]) -> Self {
         if points.is_empty() {
             return Self::identity();
         }
@@ -934,21 +918,14 @@ impl G1Projective {
         let num_entries = points.len();
         let scalar_bits = 255; // BLS12-381 scalar size
 
-        // 1. Choose window size `c`.
-        // If constant-time, we limit window size to avoid excessive bucket scanning.
-        let c = if is_vartime {
-            if num_entries < 32 {
-                3
-            } else {
-                // Integer log2 equivalent: floor(log2(n))
-                // Works in no_std without libm
-                let log2 = (usize::BITS - num_entries.leading_zeros() - 1) as usize;
-                log2 + 2
-            }
+        // 1. Choose window size `c` from the public batch length.
+        let c = if num_entries < 32 {
+            3
         } else {
-            // Fixed window size for constant time to ensure predictable performance.
-            // c=4 means 16 buckets.
-            4
+            // Integer log2 equivalent: floor(log2(n)).
+            // Works in no_std without libm.
+            let log2 = (usize::BITS - num_entries.leading_zeros() - 1) as usize;
+            log2 + 2
         };
 
         let num_windows = (scalar_bits + c - 1) / c;
@@ -977,23 +954,8 @@ impl G1Projective {
                     }
                 }
 
-                if is_vartime {
-                    if k > 0 {
-                        buckets[k - 1] = buckets[k - 1].add_mixed(&points[i]);
-                    }
-                } else {
-                    // Constant-time bucket accumulation
-                    // Iterate all buckets, conditionally add point if bucket index matches k-1.
-                    // If k=0 (scalar chunk is 0), we don't add to any bucket (add identity).
-
-                    for b in 0..num_buckets {
-                        let bucket_idx = b + 1;
-                        // Check whether k equals bucket_idx with the owned CT trait.
-                        let choice = k.ct_eq(&bucket_idx);
-
-                        let res = buckets[b].add_mixed(&points[i]);
-                        buckets[b] = G1Projective::conditional_select(&buckets[b], &res, choice);
-                    }
+                if k > 0 {
+                    buckets[k - 1] = buckets[k - 1].add_mixed(&points[i]);
                 }
             }
 
@@ -1320,12 +1282,8 @@ mod tests {
         let msm_result_vartime = G1Projective::msm_vartime(&points, &scalars).unwrap();
         assert_eq!(G1Affine::from(msm_result_vartime), G1Affine::from(expected));
 
-        // Test msm
-        let msm_result = G1Projective::msm(&points, &scalars).unwrap();
-        assert_eq!(G1Affine::from(msm_result), G1Affine::from(expected));
-
         // Test empty input
-        let empty_res = G1Projective::msm(&[], &[]).unwrap();
+        let empty_res = G1Projective::msm_vartime(&[], &[]).unwrap();
         assert_eq!(empty_res, G1Projective::identity());
     }
 }
