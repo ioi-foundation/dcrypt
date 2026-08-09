@@ -81,7 +81,7 @@ pub(crate) fn kem_keygen<P: KyberParams, R: RngCore + CryptoRng>(
     sk_cca_bytes.extend_from_slice(&sk_cpa_bytes);
     sk_cca_bytes.extend_from_slice(&pk_cca_bytes);
     sk_cca_bytes.extend_from_slice(&h_pk);
-    sk_cca_bytes.extend_from_slice(&s_fo);
+    sk_cca_bytes.extend_from_slice(s_fo.as_ref());
 
     Ok((pk_cca_bytes, sk_cca_bytes))
 }
@@ -104,7 +104,7 @@ pub(crate) fn kem_encaps<P: KyberParams, R: RngCore + CryptoRng>(
 
     // 3. (K_bar, r) = G(m || H(pk))
     let mut g_input = Zeroizing::new(Vec::with_capacity(KYBER_SYMKEY_SEED_BYTES + KYBER_SS_BYTES));
-    g_input.extend_from_slice(&m_bytes);
+    g_input.extend_from_slice(m_bytes.as_ref());
     g_input.extend_from_slice(&h_pk);
     let (k_bar, r_coins) = g_func(&g_input)?;
     let k_bar = Zeroizing::new(k_bar);
@@ -122,7 +122,7 @@ pub(crate) fn kem_encaps<P: KyberParams, R: RngCore + CryptoRng>(
     // 7. K = H(K_bar || H(ct))
     let h_ct = h_func(&ct_cca_bytes)?;
     let mut k_input = Zeroizing::new(Vec::with_capacity(2 * KYBER_SS_BYTES));
-    k_input.extend_from_slice(&k_bar);
+    k_input.extend_from_slice(k_bar.as_ref());
     k_input.extend_from_slice(&h_ct);
     let k = h_func(&k_input)?;
 

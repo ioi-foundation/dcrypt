@@ -17,7 +17,7 @@ use dcrypt_api::{
     Kem as KemTrait, Key as ApiKey, Result as ApiResult,
 };
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::Zeroizing;
 
 use super::ind_cca::{kem_decaps, kem_encaps, kem_keygen};
 use super::params::KyberParams; // IND-CCA2 scheme components

@@ -21,7 +21,7 @@ use dcrypt_api::{
 };
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::Zeroizing;
 
 /// ECDH KEM with P-224 curve
 pub struct EcdhP224;
@@ -282,7 +282,7 @@ impl Kem for EcdhP224 {
         let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec::P224_FIELD_ELEMENT_SIZE + 2 * ec::P224_POINT_COMPRESSED_SIZE,
         ));
-        kdf_ikm.extend_from_slice(&x_coord_bytes);
+        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(&ephemeral_pk_compressed);
         kdf_ikm.extend_from_slice(&public_key_recipient.0);
 
@@ -296,7 +296,7 @@ impl Kem for EcdhP224 {
         // Create authenticated ciphertext: ephemeral_pk || tag
         let mut ct_bytes = [0u8; ec::P224_CIPHERTEXT_SIZE];
         ct_bytes[..ec::P224_POINT_COMPRESSED_SIZE].copy_from_slice(&ephemeral_pk_compressed);
-        let tag = calc_auth_tag(&ss_bytes).map_err(ApiError::from)?;
+        let tag = calc_auth_tag(&ss_bytes[..]).map_err(ApiError::from)?;
         ct_bytes[ec::P224_POINT_COMPRESSED_SIZE..].copy_from_slice(&tag);
         let ciphertext = EcdhP224Ciphertext(ct_bytes);
 
@@ -345,7 +345,7 @@ impl Kem for EcdhP224 {
         let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec::P224_FIELD_ELEMENT_SIZE + 2 * ec::P224_POINT_COMPRESSED_SIZE,
         ));
-        kdf_ikm.extend_from_slice(&x_coord_bytes);
+        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(pk_bytes); // Use only the PK part, not the full ciphertext
         kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
 
@@ -355,7 +355,7 @@ impl Kem for EcdhP224 {
         );
 
         // Verify authentication tag
-        let expected_tag = calc_auth_tag(&ss_bytes).map_err(ApiError::from)?;
+        let expected_tag = calc_auth_tag(&ss_bytes[..]).map_err(ApiError::from)?;
 
         // Constant-time comparison of tags (array to array)
         use dcrypt_common::security::SecureCompare;

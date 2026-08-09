@@ -22,7 +22,7 @@ use dcrypt_api::{
 };
 use dcrypt_common::security::SecretBuffer;
 use dcrypt_internal::random::{CryptoRng, RngCore};
-use dcrypt_internal::zeroing::{Zeroize, ZeroizeOnDrop, Zeroizing};
+use dcrypt_internal::zeroing::Zeroizing;
 
 /// ECDH KEM with P-521 curve
 pub struct EcdhP521;
@@ -263,7 +263,7 @@ impl Kem for EcdhP521 {
         let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec_p521::P521_FIELD_ELEMENT_SIZE + 2 * ec_p521::P521_POINT_COMPRESSED_SIZE,
         ));
-        kdf_ikm.extend_from_slice(&x_coord_bytes);
+        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(&ephemeral_point.serialize_compressed());
         kdf_ikm.extend_from_slice(&public_key_recipient.0);
         let info: Option<&[u8]> = Some(b"ECDH-P521-KEM");
@@ -309,7 +309,7 @@ impl Kem for EcdhP521 {
         let mut kdf_ikm = Zeroizing::new(Vec::with_capacity(
             ec_p521::P521_FIELD_ELEMENT_SIZE + 2 * ec_p521::P521_POINT_COMPRESSED_SIZE,
         ));
-        kdf_ikm.extend_from_slice(&x_coord_bytes);
+        kdf_ikm.extend_from_slice(x_coord_bytes.as_ref());
         kdf_ikm.extend_from_slice(&ciphertext_ephemeral_pk.0);
         kdf_ikm.extend_from_slice(&q_r_point.serialize_compressed());
         let info: Option<&[u8]> = Some(b"ECDH-P521-KEM");
