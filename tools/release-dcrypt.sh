@@ -547,28 +547,85 @@ prepare_release() {
 }
 
 run_remote_release_gate() {
+    local mode=${1:-preflight}
+    local expected_prefix=${2:-}
     local -a args=(--version "$VERSION")
-    if [[ -n "$RESUME_FROM" ]]; then
-        args+=(--resume "$RESUME_FROM")
-    fi
+    case "$mode" in
+        preflight)
+            if [[ -n "$RESUME_FROM" ]]; then
+                args+=(--resume "$RESUME_FROM")
+            fi
+            ;;
+        verified-prefix)
+            args+=(--resume auto --require-local-archives)
+            if [[ -n "$expected_prefix" ]]; then
+                args+=(--expected-prefix "$expected_prefix")
+            fi
+            ;;
+        complete)
+            args+=(--resume auto --require-local-archives --allow-complete \
+                --expected-prefix "${#PUBLISH_ORDER[@]}")
+            ;;
+        *)
+            die "unknown remote release-gate mode: $mode"
+            ;;
+    esac
     "$SCRIPT_DIR/verify-remote-release-ready.py" "${args[@]}"
 }
 
-wait_for_registry() {
+verify_registry_progress() {
     local crate_name=$1
+    local expected_prefix=$2
+    if [[ "$crate_name" == "dcrypt" ]]; then
+        run_remote_release_gate complete
+    else
+        run_remote_release_gate verified-prefix "$expected_prefix"
+    fi
+}
+
+wait_for_verified_registry() {
+    local crate_name=$1
+    local expected_prefix=$2
     local elapsed=0
-    printf "  Waiting for %s@%s in crates.io" "$crate_name" "$VERSION"
+    local log_file
+    log_file=$(mktemp "${TMPDIR:-/tmp}/dcrypt-registry-${crate_name}.XXXXXX")
+    ACTIVE_LOG=$log_file
+    printf "  Waiting for verified %s@%s metadata" "$crate_name" "$VERSION"
     while ((elapsed < REGISTRY_WAIT_SECONDS)); do
-        if crate_version_exists "$crate_name" "$VERSION"; then
+        if verify_registry_progress "$crate_name" "$expected_prefix" \
+            >"$log_file" 2>&1; then
             printf " ${GREEN}✓${NC}\n"
+            cat "$log_file"
+            rm -f "$log_file"
+            ACTIVE_LOG=""
             return 0
         fi
         printf '.'
-        sleep 3
-        elapsed=$((elapsed + 3))
+        sleep 5
+        elapsed=$((elapsed + 5))
     done
     printf " ${RED}✗${NC}\n"
+    cat "$log_file" >&2
+    rm -f "$log_file"
+    ACTIVE_LOG=""
     return 1
+}
+
+verify_reviewed_archive() {
+    local crate_name=$1
+    local report="$PROJECT_ROOT/target/implementation-boundary/report.json"
+    local archive="$PROJECT_ROOT/target/package/${crate_name}-${VERSION}.crate"
+    local label="${crate_name}@${VERSION}"
+    local expected actual
+
+    [[ -f "$archive" ]] || die "cargo package omitted $archive"
+    if ! expected=$(jq -er --arg label "$label" \
+        '.archive_sha256[$label] | select(type == "string")' "$report"); then
+        die "implementation-boundary report omitted $label checksum"
+    fi
+    actual=$(sha256sum "$archive" | awk '{print $1}')
+    [[ "$actual" == "$expected" ]] \
+        || die "pre-upload package archive differs from reviewed $label archive"
 }
 
 publish_crate() {
@@ -582,6 +639,14 @@ publish_crate() {
         info "Packaging $crate_name (attempt $attempt/5)"
         if (cd "$PROJECT_ROOT/$relative_path" && \
             cargo publish --dry-run --locked >"$log_file" 2>&1); then
+            if ! (cd "$PROJECT_ROOT/$relative_path" && \
+                cargo package --locked --no-verify >>"$log_file" 2>&1); then
+                cat "$log_file" >&2
+                rm -f "$log_file"
+                ACTIVE_LOG=""
+                return 1
+            fi
+            verify_reviewed_archive "$crate_name"
             rm -f "$log_file"
             ACTIVE_LOG=""
         else
@@ -604,8 +669,7 @@ publish_crate() {
             cat "$log_file"
             rm -f "$log_file"
             ACTIVE_LOG=""
-            wait_for_registry "$crate_name"
-            return $?
+            return 0
         fi
 
         cat "$log_file" >&2
@@ -669,27 +733,40 @@ execute_release() {
     # Fail quickly before running the long local suite, then repeat immediately
     # before and after the interactive confirmation. The final check closes
     # both the validation-window and user-delay races before the first upload.
-    run_remote_release_gate
+    run_remote_release_gate preflight
+    local initial_prefix
+    initial_prefix=$(target_registry_count)
     check_registry_target
     validate_manual_resume
     run_all_gates
-    run_remote_release_gate
+    run_remote_release_gate verified-prefix "$initial_prefix"
     confirm_live_publish
-    run_remote_release_gate
+    run_remote_release_gate verified-prefix "$initial_prefix"
 
     local -a published=()
-    local entry relative_path crate_name
+    local entry relative_path crate_name expected_prefix=0
     for entry in "${PUBLISH_ORDER[@]}"; do
         IFS='|' read -r relative_path crate_name <<<"$entry"
-        if crate_version_exists "$crate_name" "$VERSION"; then
+        expected_prefix=$((expected_prefix + 1))
+        if ((expected_prefix <= initial_prefix)); then
+            crate_version_exists "$crate_name" "$VERSION" \
+                || die "verified resume prefix regressed at $crate_name@$VERSION"
+            run_remote_release_gate verified-prefix "$initial_prefix"
             printf "${MAGENTA}✓ %s@%s already exists${NC}\n" "$crate_name" "$VERSION"
             published+=("$crate_name")
             save_state "${published[@]}"
             continue
         fi
+        if crate_version_exists "$crate_name" "$VERSION"; then
+            save_state "${published[@]}"
+            die "registry advanced beyond the confirmed prefix at $crate_name; inspect and resume explicitly"
+        fi
 
         if publish_crate "$relative_path" "$crate_name"; then
-            :
+            if ! wait_for_verified_registry "$crate_name" "$expected_prefix"; then
+                save_state "${published[@]}"
+                die "crates.io metadata did not verify for $crate_name; resume with --execute --resume auto"
+            fi
         else
             local publish_status=$?
             save_state "${published[@]}"
@@ -701,6 +778,8 @@ execute_release() {
         published+=("$crate_name")
         save_state "${published[@]}"
     done
+
+    run_remote_release_gate complete
 
     rm -f "$STATE_FILE"
     printf "\n${GREEN}All dcrypt crates were published at %s.${NC}\n" "$VERSION"
@@ -790,6 +869,8 @@ require_command git
 require_command jq
 require_command curl
 require_command python3
+require_command awk
+require_command sha256sum
 load_classified_workspace_records
 cargo_subcommand_available release \
     || die "cargo-release is required (cargo install cargo-release --locked)"

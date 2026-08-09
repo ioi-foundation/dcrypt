@@ -180,9 +180,18 @@ class BoundaryAudit:
         self.excluded_lock_hashes: dict[str, str] = {}
         self.excluded_workspace_metadata: dict[str, dict[str, Any]] = {}
         self.commands: list[dict[str, Any]] = []
+        self.head_sha: str | None = None
 
     def fail(self, scope: str, detail: str) -> None:
         self.violations.add(Violation(scope, detail))
+
+    def bind_git_head(self) -> None:
+        result = self.command(["git", "rev-parse", "--verify", "HEAD"])
+        head_sha = result.stdout.strip()
+        if result.returncode != 0 or not re.fullmatch(r"[0-9a-f]{40}", head_sha):
+            self.fail("report", "could not bind the audit to exact Git HEAD")
+            return
+        self.head_sha = head_sha
 
     def command(
         self,
@@ -1207,6 +1216,23 @@ class BoundaryAudit:
                     self.fail(name, "archive did not contain the expected package root")
                     continue
 
+                vcs_path = unpacked / ".cargo_vcs_info.json"
+                try:
+                    vcs_info = json.loads(vcs_path.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as error:
+                    self.fail(name, f"package provenance is unavailable: {error}")
+                else:
+                    git_info = vcs_info.get("git") if isinstance(vcs_info, dict) else None
+                    if (
+                        not isinstance(git_info, dict)
+                        or git_info.get("sha1") != self.head_sha
+                        or git_info.get("dirty", False) is not False
+                    ):
+                        self.fail(
+                            name,
+                            "package provenance is not clean and bound to exact Git HEAD",
+                        )
+
                 original_manifest = Path(package["manifest_path"]).resolve()
                 library_targets = [
                     target
@@ -1467,6 +1493,7 @@ class BoundaryAudit:
     def write_report(self, policy: dict[str, Any]) -> None:
         report = {
             "schema_version": policy["schema-version"],
+            "head_sha": self.head_sha,
             "policy_sha256": sha256_file(POLICY_PATH),
             "lock_sha256": sha256_file(LOCK_PATH) if LOCK_PATH.is_file() else None,
             "published_packages": policy["published-packages"],
@@ -2185,6 +2212,7 @@ def main() -> int:
         print("error: implementation-boundary.toml schema-version must be 2", file=sys.stderr)
         return 2
     audit = BoundaryAudit(args.report.resolve())
+    audit.bind_git_head()
     tracked_lock = audit.command(
         ["git", "ls-files", "--error-unmatch", "--", "Cargo.lock"]
     )

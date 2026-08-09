@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -64,6 +65,10 @@ EXPECTED_CHECK_CONTEXTS = (
 
 SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[+-][0-9A-Za-z.-]+)?$")
 OBJECT_ID = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+BOUNDARY_REPORT = PROJECT_ROOT / "target" / "implementation-boundary" / "report.json"
+BOUNDARY_POLICY = PROJECT_ROOT / "implementation-boundary.toml"
+LOCK_FILE = PROJECT_ROOT / "Cargo.lock"
 
 
 class GateError(RuntimeError):
@@ -123,6 +128,13 @@ class RegistryState:
     crate_name: str
     present: bool
     yanked: bool | None = None
+    identifier: int | None = None
+    checksum: str | None = None
+    features: tuple[tuple[str, tuple[str, ...]], ...] | None = None
+    expected_features: tuple[tuple[str, tuple[str, ...]], ...] | None = None
+    dependencies: tuple[tuple[object, ...], ...] | None = None
+    expected_dependencies: tuple[tuple[object, ...], ...] | None = None
+    expected_checksum: str | None = None
 
 
 class EvidenceProvider(Protocol):
@@ -170,12 +182,156 @@ class CommandRunner:
             raise GateError(f"{label} failed with status {completed.returncode}")
         return completed.stdout
 
+    def run_bytes(self, args: Sequence[str], label: str) -> bytes:
+        try:
+            completed = subprocess.run(
+                list(args),
+                cwd=self.root,
+                env=self.environment,
+                capture_output=True,
+                check=False,
+                timeout=120,
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise GateError(f"{label} failed: {type(error).__name__}") from error
+        if completed.returncode != 0:
+            raise GateError(f"{label} failed with status {completed.returncode}")
+        return completed.stdout
+
+
+def _normalize_features(raw: object, label: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    if not isinstance(raw, dict):
+        raise GateError(f"{label} feature map is malformed")
+    normalized: list[tuple[str, tuple[str, ...]]] = []
+    for name, values in raw.items():
+        if not isinstance(name, str) or not isinstance(values, list) or not all(
+            isinstance(value, str) for value in values
+        ):
+            raise GateError(f"{label} feature map is malformed")
+        if len(values) != len(set(values)):
+            raise GateError(f"{label} feature map contains duplicate values")
+        normalized.append((name, tuple(sorted(values))))
+    return tuple(sorted(normalized))
+
+
+def _registry_api_features(
+    record: dict[str, Any], label: str
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    if record.get("features2") is not None:
+        raise GateError(f"{label} unexpectedly exposed index-only features2 data")
+    return _normalize_features(record.get("features"), label)
+
+
+def _normalize_dependencies(
+    raw: object, label: str, *, registry: bool
+) -> tuple[tuple[object, ...], ...]:
+    if not isinstance(raw, list):
+        raise GateError(f"{label} dependency list is malformed")
+    normalized: list[tuple[object, ...]] = []
+    for dependency in raw:
+        if not isinstance(dependency, dict):
+            raise GateError(f"{label} dependency list is malformed")
+        name = dependency.get("crate_id" if registry else "name")
+        requirement = dependency.get("req")
+        kind = dependency.get("kind")
+        if not registry and kind is None:
+            kind = "normal"
+        target = dependency.get("target")
+        optional = dependency.get("optional")
+        default_features = dependency.get(
+            "default_features" if registry else "uses_default_features"
+        )
+        features = dependency.get("features")
+        if (
+            not isinstance(name, str)
+            or not isinstance(requirement, str)
+            or kind not in {"normal", "dev", "build"}
+            or (target is not None and not isinstance(target, str))
+            or not isinstance(optional, bool)
+            or not isinstance(default_features, bool)
+            or not isinstance(features, list)
+            or not all(isinstance(feature, str) for feature in features)
+        ):
+            raise GateError(f"{label} dependency list is malformed")
+        normalized.append(
+            (
+                name,
+                requirement,
+                kind,
+                target,
+                optional,
+                default_features,
+                tuple(sorted(features)),
+            )
+        )
+    return tuple(sorted(normalized, key=repr))
+
+
+def _sha256_file(path: Path, label: str) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+    except OSError as error:
+        raise GateError(f"{label} is unavailable") from error
+    return digest.hexdigest()
+
+
+def _archive_hashes_from_report(
+    report: object,
+    version: str,
+    *,
+    current_head: str,
+    lock_sha256: str,
+    policy_sha256: str,
+) -> dict[str, str]:
+    if not isinstance(report, dict) or report.get("passed") is not True:
+        raise GateError("implementation-boundary archive report did not pass")
+    if report.get("head_sha") != current_head:
+        raise GateError(
+            "implementation-boundary archive report is not bound to exact HEAD"
+        )
+    if report.get("lock_sha256") != lock_sha256:
+        raise GateError(
+            "implementation-boundary archive report has a stale lockfile digest"
+        )
+    if report.get("policy_sha256") != policy_sha256:
+        raise GateError(
+            "implementation-boundary archive report has a stale policy digest"
+        )
+    if report.get("published_packages") != list(PUBLISH_ORDER):
+        raise GateError(
+            "implementation-boundary report package order differs from the release"
+        )
+    raw_hashes = report.get("archive_sha256")
+    if not isinstance(raw_hashes, dict):
+        raise GateError("implementation-boundary report omitted archive checksums")
+    expected_labels = {f"{name}@{version}" for name in PUBLISH_ORDER}
+    actual_labels = set(raw_hashes)
+    if actual_labels != expected_labels:
+        raise GateError(
+            "implementation-boundary archive checksum set differs from the release: "
+            f"missing={sorted(expected_labels - actual_labels)}, "
+            f"extra={sorted(actual_labels - expected_labels)}"
+        )
+    archive_hashes: dict[str, str] = {}
+    for label, checksum in raw_hashes.items():
+        if not isinstance(label, str) or not isinstance(checksum, str):
+            raise GateError("implementation-boundary archive checksum map is malformed")
+        if not SHA256.fullmatch(checksum):
+            raise GateError(f"local archive checksum is malformed: {label}")
+        archive_hashes[label] = checksum
+    return archive_hashes
+
 
 class LiveEvidenceProvider:
     """Collect authenticated, read-only evidence from Git, GitHub, and crates.io."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, require_local_archives: bool = False) -> None:
+        self.root = root
         self.runner = CommandRunner(root)
+        self.require_local_archives = require_local_archives
 
     def _git(self, args: Sequence[str], label: str) -> str:
         return self.runner.run(("git", *args), label).strip()
@@ -201,6 +357,59 @@ class LiveEvidenceProvider:
             return json.loads(output)
         except json.JSONDecodeError as error:
             raise GateError(f"{label} returned malformed JSON") from error
+
+    def _crates_json_or_absent(self, endpoint: str, label: str) -> Any | None:
+        output = self.runner.run(
+            (
+                "curl",
+                "--silent",
+                "--show-error",
+                "--location",
+                "--connect-timeout",
+                "15",
+                "--max-time",
+                "60",
+                "--user-agent",
+                USER_AGENT,
+                "--write-out",
+                "\n%{http_code}",
+                f"https://crates.io/api/v1/{endpoint.lstrip('/')}",
+            ),
+            label,
+        )
+        try:
+            body, status_text = output.rsplit("\n", 1)
+            status = int(status_text)
+        except (ValueError, TypeError) as error:
+            raise GateError(f"{label} returned malformed HTTP status data") from error
+        if status == 404:
+            return None
+        if status != 200:
+            raise GateError(f"{label} returned HTTP {status}")
+        try:
+            return json.loads(body)
+        except json.JSONDecodeError as error:
+            raise GateError(f"{label} returned malformed JSON") from error
+
+    def _downloaded_archive_checksum(self, crate_name: str, version: str) -> str:
+        archive = self.runner.run_bytes(
+            (
+                "curl",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--location",
+                "--connect-timeout",
+                "15",
+                "--max-time",
+                "120",
+                "--user-agent",
+                USER_AGENT,
+                f"https://crates.io/api/v1/crates/{crate_name}/{version}/download",
+            ),
+            f"crates.io archive download for {crate_name}@{version}",
+        )
+        return hashlib.sha256(archive).hexdigest()
 
     @staticmethod
     def _parse_ls_remote(output: str, label: str) -> dict[str, str]:
@@ -429,71 +638,221 @@ class LiveEvidenceProvider:
             raise GateError("GitHub release query omitted required fields")
         return ReleaseState(identifier=identifier, tag_name=tag_name, draft=draft)
 
+    def _local_registry_expectations(
+        self, version: str
+    ) -> dict[
+        str,
+        tuple[
+            tuple[tuple[str, tuple[str, ...]], ...],
+            tuple[tuple[object, ...], ...],
+            str | None,
+        ],
+    ]:
+        output = self.runner.run(
+            (
+                "cargo",
+                "metadata",
+                "--locked",
+                "--format-version",
+                "1",
+                "--no-deps",
+            ),
+            "locked local Cargo metadata query",
+        )
+        try:
+            document = json.loads(output)
+        except json.JSONDecodeError as error:
+            raise GateError("local Cargo metadata returned malformed JSON") from error
+        if not isinstance(document, dict) or not isinstance(
+            document.get("packages"), list
+        ):
+            raise GateError("local Cargo metadata omitted package data")
+
+        packages: dict[str, dict[str, Any]] = {}
+        for package in document["packages"]:
+            if not isinstance(package, dict):
+                raise GateError("local Cargo metadata contained malformed package data")
+            name = package.get("name")
+            if name not in PUBLISH_ORDER:
+                continue
+            if not isinstance(name, str) or name in packages:
+                raise GateError("local Cargo metadata contains duplicate release packages")
+            if package.get("version") != version:
+                raise GateError(f"local {name} package is not version {version}")
+            packages[name] = package
+        missing = sorted(set(PUBLISH_ORDER) - packages.keys())
+        extra = sorted(packages.keys() - set(PUBLISH_ORDER))
+        if missing or extra:
+            raise GateError(
+                "local Cargo release package set differs from the publish order: "
+                f"missing={missing}, extra={extra}"
+            )
+
+        archive_hashes: dict[str, str] = {}
+        if self.require_local_archives:
+            try:
+                report = json.loads(BOUNDARY_REPORT.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as error:
+                raise GateError(
+                    "implementation-boundary archive report is unavailable or malformed"
+                ) from error
+            current_head = self._git(
+                ("rev-parse", "--verify", "HEAD"),
+                "local HEAD query for archive report",
+            )
+            archive_hashes = _archive_hashes_from_report(
+                report,
+                version,
+                current_head=current_head,
+                lock_sha256=_sha256_file(LOCK_FILE, "tracked Cargo.lock"),
+                policy_sha256=_sha256_file(
+                    BOUNDARY_POLICY, "implementation-boundary policy"
+                ),
+            )
+
+        expectations = {}
+        for name in PUBLISH_ORDER:
+            package = packages[name]
+            expectations[name] = (
+                _normalize_features(package.get("features"), f"local {name}@{version}"),
+                _normalize_dependencies(
+                    package.get("dependencies"),
+                    f"local {name}@{version}",
+                    registry=False,
+                ),
+                archive_hashes.get(f"{name}@{version}"),
+            )
+        return expectations
+
+    def _registry_dependencies(
+        self, crate_name: str, version: str, version_id: int
+    ) -> tuple[tuple[object, ...], ...]:
+        output = self.runner.run(
+            (
+                "curl",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--location",
+                "--connect-timeout",
+                "15",
+                "--max-time",
+                "60",
+                "--user-agent",
+                USER_AGENT,
+                f"https://crates.io/api/v1/crates/{crate_name}/{version}/dependencies",
+            ),
+            f"crates.io dependency query for {crate_name}@{version}",
+        )
+        try:
+            document = json.loads(output)
+        except json.JSONDecodeError as error:
+            raise GateError(
+                f"crates.io dependency query for {crate_name}@{version} returned malformed JSON"
+            ) from error
+        if not isinstance(document, dict) or not isinstance(
+            document.get("dependencies"), list
+        ):
+            raise GateError(
+                f"crates.io dependency query for {crate_name}@{version} omitted data"
+            )
+        for dependency in document["dependencies"]:
+            if (
+                not isinstance(dependency, dict)
+                or isinstance(dependency.get("id"), bool)
+                or not isinstance(dependency.get("id"), int)
+                or dependency["id"] <= 0
+                or dependency.get("version_id") != version_id
+            ):
+                raise GateError(
+                    f"crates.io dependency query for {crate_name}@{version} "
+                    "contained invalid identity data"
+                )
+        return _normalize_dependencies(
+            document["dependencies"],
+            f"crates.io {crate_name}@{version}",
+            registry=True,
+        )
+
     def registry_states(self, version: str) -> Sequence[RegistryState]:
+        expectations = self._local_registry_expectations(version)
         states: list[RegistryState] = []
         for crate_name in PUBLISH_ORDER:
-            output = self.runner.run(
-                (
-                    "curl",
-                    "--fail",
-                    "--silent",
-                    "--show-error",
-                    "--location",
-                    "--connect-timeout",
-                    "15",
-                    "--max-time",
-                    "60",
-                    "--user-agent",
-                    USER_AGENT,
-                    f"https://crates.io/api/v1/crates/{crate_name}",
-                ),
-                f"crates.io query for {crate_name}",
-            )
-            try:
-                document = json.loads(output)
-            except json.JSONDecodeError as error:
-                raise GateError(
-                    f"crates.io query for {crate_name} returned malformed JSON"
-                ) from error
-            if not isinstance(document, dict) or not isinstance(
-                document.get("versions"), list
-            ):
-                raise GateError(
-                    f"crates.io query for {crate_name} omitted version data"
-                )
-            crate_record = document.get("crate")
-            if (
-                not isinstance(crate_record, dict)
-                or crate_record.get("id") != crate_name
-            ):
-                raise GateError(
-                    f"crates.io query for {crate_name} returned another crate"
-                )
-            for record in document["versions"]:
-                if not isinstance(record, dict) or not isinstance(
-                    record.get("num"), str
-                ):
-                    raise GateError(
-                        f"crates.io query for {crate_name} contained malformed data"
-                    )
-            matches = [
-                record
-                for record in document["versions"]
-                if record.get("num") == version
+            expected_features, expected_dependencies, expected_checksum = expectations[
+                crate_name
             ]
-            if len(matches) > 1:
-                raise GateError(
-                    f"crates.io returned duplicate {crate_name}@{version} records"
+            document = self._crates_json_or_absent(
+                f"crates/{crate_name}/{version}",
+                f"crates.io exact-version query for {crate_name}@{version}",
+            )
+            if document is None:
+                states.append(
+                    RegistryState(
+                        crate_name,
+                        False,
+                        expected_features=expected_features,
+                        expected_dependencies=expected_dependencies,
+                        expected_checksum=expected_checksum,
+                    )
                 )
-            if not matches:
-                states.append(RegistryState(crate_name, False))
                 continue
-            yanked = matches[0].get("yanked")
+            if not isinstance(document, dict) or not isinstance(
+                document.get("version"), dict
+            ):
+                raise GateError(
+                    f"crates.io exact-version query for {crate_name}@{version} "
+                    "omitted version data"
+                )
+            record = document["version"]
+            if record.get("num") != version:
+                raise GateError(
+                    f"crates.io returned another version for {crate_name}@{version}"
+                )
+            if record.get("crate") != crate_name:
+                raise GateError(
+                    f"crates.io returned another crate for {crate_name}@{version}"
+                )
+            identifier = record.get("id")
+            checksum = record.get("checksum")
+            yanked = record.get("yanked")
+            if (
+                isinstance(identifier, bool)
+                or not isinstance(identifier, int)
+                or identifier <= 0
+            ):
+                raise GateError(
+                    f"crates.io omitted a valid version ID for {crate_name}@{version}"
+                )
+            if not isinstance(checksum, str) or not SHA256.fullmatch(checksum):
+                raise GateError(
+                    f"crates.io omitted a valid checksum for {crate_name}@{version}"
+                )
             if not isinstance(yanked, bool):
                 raise GateError(
                     f"crates.io omitted yank state for {crate_name}@{version}"
                 )
-            states.append(RegistryState(crate_name, True, yanked))
+            downloaded_checksum = self._downloaded_archive_checksum(
+                crate_name, version
+            )
+            if downloaded_checksum != checksum:
+                raise GateError(
+                    f"downloaded archive checksum differs from crates.io API: "
+                    f"{crate_name}@{version}"
+                )
+            states.append(
+                RegistryState(
+                    crate_name,
+                    True,
+                    yanked,
+                    identifier,
+                    checksum,
+                    _registry_api_features(record, f"crates.io {crate_name}@{version}"),
+                    expected_features,
+                    self._registry_dependencies(crate_name, version, identifier),
+                    expected_dependencies,
+                    expected_checksum,
+                )
+            )
         return states
 
 
@@ -629,20 +988,69 @@ def validate_release(release: ReleaseState | None, tag: str) -> None:
 
 
 def validate_registry_state(
-    states: Sequence[RegistryState], version: str, resume: str | None
+    states: Sequence[RegistryState],
+    version: str,
+    resume: str | None,
+    *,
+    allow_complete: bool = False,
+    expected_prefix: int | None = None,
 ) -> int:
     names = tuple(state.crate_name for state in states)
     if names != PUBLISH_ORDER:
         raise GateError("crates.io evidence does not match the exact publish order")
     for state in states:
-        if state.present and state.yanked is not False:
-            raise GateError(
-                f"existing {state.crate_name}@{version} is yanked or has unknown state"
+        label = f"{state.crate_name}@{version}"
+        if state.expected_features is None or state.expected_dependencies is None:
+            raise GateError(f"local registry expectations are incomplete: {label}")
+        for dependency in state.expected_dependencies:
+            dependency_name = dependency[0]
+            dependency_requirement = dependency[1]
+            if (
+                dependency_name in PUBLISH_ORDER
+                and dependency_requirement != f"={version}"
+            ):
+                raise GateError(
+                    f"local {label} dependency {dependency_name} uses "
+                    f"{dependency_requirement!r}, expected ={version}"
+                )
+
+        if state.present:
+            if state.yanked is not False:
+                raise GateError(f"existing {label} is yanked or has unknown state")
+            if (
+                isinstance(state.identifier, bool)
+                or not isinstance(state.identifier, int)
+                or state.identifier <= 0
+            ):
+                raise GateError(f"registry identity is missing or invalid: {label}")
+            if not isinstance(state.checksum, str) or not SHA256.fullmatch(
+                state.checksum
+            ):
+                raise GateError(f"registry checksum is missing or malformed: {label}")
+            if state.features != state.expected_features:
+                raise GateError(f"registry feature map differs from local package: {label}")
+            if state.dependencies != state.expected_dependencies:
+                raise GateError(
+                    f"registry dependency metadata differs from local package: {label}"
+                )
+            if (
+                state.expected_checksum is not None
+                and state.checksum != state.expected_checksum
+            ):
+                raise GateError(
+                    f"registry checksum differs from reviewed local archive: {label}"
+                )
+        elif any(
+            value is not None
+            for value in (
+                state.yanked,
+                state.identifier,
+                state.checksum,
+                state.features,
+                state.dependencies,
             )
-        if not state.present and state.yanked is not None:
-            raise GateError(
-                f"absent {state.crate_name}@{version} unexpectedly has yank state"
-            )
+        ):
+            raise GateError(f"absent {label} unexpectedly has registry metadata")
 
     present = [state.present for state in states]
     prefix_length = 0
@@ -652,8 +1060,20 @@ def validate_registry_state(
         raise GateError(
             "target-version crates.io records are not a valid leaf-first prefix"
         )
-    if prefix_length == len(PUBLISH_ORDER):
+    if expected_prefix is not None and prefix_length != expected_prefix:
+        raise GateError(
+            f"registry prefix length is {prefix_length}, expected {expected_prefix}"
+        )
+    if allow_complete and prefix_length != len(PUBLISH_ORDER):
+        raise GateError(
+            f"complete registry state required, found {prefix_length}/{len(PUBLISH_ORDER)}"
+        )
+    if prefix_length == len(PUBLISH_ORDER) and not allow_complete:
         raise GateError(f"all dcrypt crates already exist at {version}")
+    if prefix_length == len(PUBLISH_ORDER):
+        if resume not in (None, "auto"):
+            raise GateError("a completed release cannot use a named resume target")
+        return prefix_length
     if prefix_length and resume is None:
         raise GateError(
             "target-version crates already exist; an explicit --resume is required"
@@ -671,8 +1091,11 @@ def verify_release_gate(
     provider: EvidenceProvider,
     version: str,
     resume: str | None = None,
+    *,
+    allow_complete: bool = False,
+    expected_prefix: int | None = None,
     report: Callable[[str], None] | None = print,
-) -> None:
+) -> int:
     tag = f"v{version}"
     git_state = provider.git_state(tag)
     validate_git_state(git_state)
@@ -706,15 +1129,27 @@ def verify_release_gate(
         )
 
     states = provider.registry_states(version)
-    prefix_length = validate_registry_state(states, version, resume)
+    prefix_length = validate_registry_state(
+        states,
+        version,
+        resume,
+        allow_complete=allow_complete,
+        expected_prefix=expected_prefix,
+    )
     if report:
-        if prefix_length:
+        if prefix_length == len(PUBLISH_ORDER):
+            report(
+                f"  ✓ crates.io has the complete verified release "
+                f"({prefix_length}/{len(PUBLISH_ORDER)})"
+            )
+        elif prefix_length:
             report(
                 f"  ✓ crates.io has a valid explicit-resume prefix "
                 f"({prefix_length}/{len(PUBLISH_ORDER)})"
             )
         else:
             report(f"  ✓ all {len(PUBLISH_ORDER)} {version} crate records are absent")
+    return prefix_length
 
 
 @dataclass
@@ -756,6 +1191,54 @@ class MockProvider:
         return self.registry
 
 
+def _mock_absent_registry(crate_name: str) -> RegistryState:
+    return RegistryState(
+        crate_name,
+        False,
+        expected_features=(),
+        expected_dependencies=(),
+    )
+
+
+def _mock_present_registry(
+    crate_name: str,
+    *,
+    yanked: bool = False,
+    identifier: int = 1,
+    checksum: str = "c" * 64,
+    features: tuple[tuple[str, tuple[str, ...]], ...] = (),
+    expected_features: tuple[tuple[str, tuple[str, ...]], ...] = (),
+    dependencies: tuple[tuple[object, ...], ...] = (),
+    expected_dependencies: tuple[tuple[object, ...], ...] = (),
+    expected_checksum: str | None = None,
+) -> RegistryState:
+    return RegistryState(
+        crate_name,
+        True,
+        yanked,
+        identifier,
+        checksum,
+        features,
+        expected_features,
+        dependencies,
+        expected_dependencies,
+        expected_checksum,
+    )
+
+
+def _mock_boundary_report() -> dict[str, object]:
+    return {
+        "passed": True,
+        "head_sha": "a" * 40,
+        "lock_sha256": "b" * 64,
+        "policy_sha256": "c" * 64,
+        "published_packages": list(PUBLISH_ORDER),
+        "archive_sha256": {
+            f"{name}@3.0.0": "d" * 64 for name in PUBLISH_ORDER
+        },
+    }
+
+
 def _mock_provider() -> MockProvider:
     head = "a" * 40
     tag_object = "b" * 40
@@ -788,7 +1271,7 @@ def _mock_provider() -> MockProvider:
         ),
         runs=runs,
         github_release=ReleaseState(42, "v3.0.0", True),
-        registry=[RegistryState(name, False) for name in PUBLISH_ORDER],
+        registry=[_mock_absent_registry(name) for name in PUBLISH_ORDER],
     )
 
 
@@ -802,10 +1285,122 @@ class GateSelfTests(unittest.TestCase):
     def test_clean_absent_state_passes(self) -> None:
         verify_release_gate(_mock_provider(), "3.0.0", report=None)
 
+    def test_api_feature_map_preserves_modern_feature_syntax(self) -> None:
+        record = {
+            "features": {
+                "default": ["std"],
+                "serde": ["dep:serde"],
+                "weak": ["serde?/derive"],
+            }
+        }
+        self.assertEqual(
+            _registry_api_features(record, "fixture"),
+            (
+                ("default", ("std",)),
+                ("serde", ("dep:serde",)),
+                ("weak", ("serde?/derive",)),
+            ),
+        )
+
+    def test_api_feature_map_rejects_index_features2(self) -> None:
+        with self.assertRaisesRegex(GateError, "index-only features2"):
+            _registry_api_features(
+                {"features": {}, "features2": {"serde": ["dep:serde"]}},
+                "fixture",
+            )
+
+    def test_api_feature_map_rejects_missing_or_duplicate_values(self) -> None:
+        with self.assertRaisesRegex(GateError, "malformed"):
+            _registry_api_features({}, "fixture")
+        with self.assertRaisesRegex(GateError, "duplicate values"):
+            _registry_api_features(
+                {"features": {"default": ["std", "std"]}}, "fixture"
+            )
+
+    def test_dependency_normalization_maps_only_local_null_kind(self) -> None:
+        local = {
+            "name": "dcrypt-internal",
+            "req": "=3.0.0",
+            "kind": None,
+            "target": None,
+            "optional": False,
+            "uses_default_features": False,
+            "features": ["alloc"],
+            "rename": "renamed-internal",
+        }
+        registry = {
+            "crate_id": "dcrypt-internal",
+            "req": "=3.0.0",
+            "kind": "normal",
+            "target": None,
+            "optional": False,
+            "default_features": False,
+            "features": ["alloc"],
+        }
+        self.assertEqual(
+            _normalize_dependencies([local], "local", registry=False),
+            _normalize_dependencies([registry], "registry", registry=True),
+        )
+        registry["kind"] = None
+        with self.assertRaisesRegex(GateError, "malformed"):
+            _normalize_dependencies([registry], "registry", registry=True)
+
+    def test_dependency_normalization_preserves_duplicate_package_rows(self) -> None:
+        base = {
+            "name": "hex",
+            "req": "=0.4.3",
+            "kind": None,
+            "target": None,
+            "optional": False,
+            "uses_default_features": True,
+            "features": [],
+        }
+        dev = dict(base, kind="dev", rename="hex-dev")
+        rows = _normalize_dependencies([base, dev], "local", registry=False)
+        self.assertEqual(len(rows), 2)
+        self.assertNotEqual(rows[0], rows[1])
+
+    def test_archive_report_is_bound_to_head_lock_policy_and_exact_set(self) -> None:
+        report = _mock_boundary_report()
+        hashes = _archive_hashes_from_report(
+            report,
+            "3.0.0",
+            current_head="a" * 40,
+            lock_sha256="b" * 64,
+            policy_sha256="c" * 64,
+        )
+        self.assertEqual(len(hashes), len(PUBLISH_ORDER))
+        for field, pattern in (
+            ("head_sha", "exact HEAD"),
+            ("lock_sha256", "stale lockfile"),
+            ("policy_sha256", "stale policy"),
+        ):
+            stale = dict(report)
+            stale[field] = "e" * len(str(report[field]))
+            with self.assertRaisesRegex(GateError, pattern):
+                _archive_hashes_from_report(
+                    stale,
+                    "3.0.0",
+                    current_head="a" * 40,
+                    lock_sha256="b" * 64,
+                    policy_sha256="c" * 64,
+                )
+        incomplete = dict(report)
+        incomplete["archive_sha256"] = dict(report["archive_sha256"])
+        del incomplete["archive_sha256"][f"{PUBLISH_ORDER[-1]}@3.0.0"]
+        with self.assertRaisesRegex(GateError, "checksum set differs"):
+            _archive_hashes_from_report(
+                incomplete,
+                "3.0.0",
+                current_head="a" * 40,
+                lock_sha256="b" * 64,
+                policy_sha256="c" * 64,
+            )
+
     def test_valid_partial_prefix_requires_and_accepts_explicit_resume(self) -> None:
         provider = _mock_provider()
         provider.registry[:3] = [
-            RegistryState(name, True, False) for name in PUBLISH_ORDER[:3]
+            _mock_present_registry(name) for name in PUBLISH_ORDER[:3]
         ]
         self.assert_gate_fails(provider, "explicit --resume")
         verify_release_gate(provider, "3.0.0", "auto", report=None)
@@ -902,12 +1497,12 @@ class GateSelfTests(unittest.TestCase):
 
     def test_partial_non_prefix_fails(self) -> None:
         provider = _mock_provider()
-        provider.registry[1] = RegistryState(PUBLISH_ORDER[1], True, False)
+        provider.registry[1] = _mock_present_registry(PUBLISH_ORDER[1])
         self.assert_gate_fails(provider, "not a valid leaf-first prefix", "auto")
 
     def test_yanked_prefix_record_fails(self) -> None:
         provider = _mock_provider()
-        provider.registry[0] = RegistryState(PUBLISH_ORDER[0], True, True)
+        provider.registry[0] = _mock_present_registry(PUBLISH_ORDER[0], yanked=True)
         self.assert_gate_fails(provider, "yanked or has unknown state", "auto")
 
     def test_registry_order_mismatch_fails(self) -> None:
@@ -920,15 +1515,117 @@ class GateSelfTests(unittest.TestCase):
 
     def test_wrong_named_resume_target_fails(self) -> None:
         provider = _mock_provider()
-        provider.registry[0] = RegistryState(PUBLISH_ORDER[0], True, False)
+        provider.registry[0] = _mock_present_registry(PUBLISH_ORDER[0])
         self.assert_gate_fails(provider, "first absent crate", PUBLISH_ORDER[4])
 
     def test_completed_registry_state_fails(self) -> None:
         provider = _mock_provider()
         provider.registry = [
-            RegistryState(name, True, False) for name in PUBLISH_ORDER
+            _mock_present_registry(name) for name in PUBLISH_ORDER
         ]
         self.assert_gate_fails(provider, "already exist", "auto")
+
+    def test_completed_registry_state_passes_only_when_authorized(self) -> None:
+        provider = _mock_provider()
+        provider.registry = [
+            _mock_present_registry(name) for name in PUBLISH_ORDER
+        ]
+        prefix = verify_release_gate(
+            provider,
+            "3.0.0",
+            "auto",
+            allow_complete=True,
+            report=None,
+        )
+        self.assertEqual(prefix, len(PUBLISH_ORDER))
+
+    def test_complete_mode_rejects_partial_state(self) -> None:
+        provider = _mock_provider()
+        provider.registry[0] = _mock_present_registry(PUBLISH_ORDER[0])
+        with self.assertRaisesRegex(GateError, "complete registry state required"):
+            verify_release_gate(
+                provider,
+                "3.0.0",
+                "auto",
+                allow_complete=True,
+                report=None,
+            )
+
+    def test_expected_prefix_length_rejects_stale_registry_evidence(self) -> None:
+        provider = _mock_provider()
+        provider.registry[0] = _mock_present_registry(PUBLISH_ORDER[0])
+        with self.assertRaisesRegex(GateError, "prefix length is 1, expected 2"):
+            verify_release_gate(
+                provider,
+                "3.0.0",
+                "auto",
+                expected_prefix=2,
+                report=None,
+            )
+
+    def test_registry_identifier_is_required(self) -> None:
+        provider = _mock_provider()
+        provider.registry[0] = _mock_present_registry(
+            PUBLISH_ORDER[0], identifier=0
+        )
+        self.assert_gate_fails(provider, "identity is missing", "auto")
+
+    def test_registry_checksum_is_required(self) -> None:
+        provider = _mock_provider()
+        provider.registry[0] = _mock_present_registry(
+            PUBLISH_ORDER[0], checksum="not-a-checksum"
+        )
+        self.assert_gate_fails(provider, "checksum is missing", "auto")
+
+    def test_registry_feature_mismatch_fails(self) -> None:
+        provider = _mock_provider()
+        provider.registry[0] = _mock_present_registry(
+            PUBLISH_ORDER[0],
+            features=(("default", ("std",)),),
+            expected_features=(),
+        )
+        self.assert_gate_fails(provider, "feature map differs", "auto")
+
+    def test_registry_dependency_mismatch_fails(self) -> None:
+        provider = _mock_provider()
+        dependency = (
+            "dcrypt-internal",
+            "=3.0.0",
+            "normal",
+            None,
+            False,
+            False,
+            (),
+        )
+        provider.registry[0] = _mock_present_registry(
+            PUBLISH_ORDER[0], dependencies=(dependency,), expected_dependencies=()
+        )
+        self.assert_gate_fails(provider, "dependency metadata differs", "auto")
+
+    def test_local_internal_dependency_must_be_exact(self) -> None:
+        provider = _mock_provider()
+        dependency = (
+            "dcrypt-internal",
+            "^3.0",
+            "normal",
+            None,
+            False,
+            False,
+            (),
+        )
+        provider.registry[0] = _mock_present_registry(
+            PUBLISH_ORDER[0],
+            dependencies=(dependency,),
+            expected_dependencies=(dependency,),
+        )
+        self.assert_gate_fails(provider, "expected =3.0.0", "auto")
+
+    def test_registry_checksum_must_match_reviewed_archive(self) -> None:
+        provider = _mock_provider()
+        provider.registry[0] = _mock_present_registry(
+            PUBLISH_ORDER[0], expected_checksum="d" * 64
+        )
+        self.assert_gate_fails(provider, "reviewed local archive", "auto")
 
     def test_git_network_error_is_fatal(self) -> None:
         provider = _mock_provider()
@@ -960,16 +1657,40 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="explicitly authorize an existing proper publish-order prefix",
     )
     parser.add_argument(
+        "--require-local-archives",
+        action="store_true",
+        help="require registry checksums to match the passed boundary report",
+    )
+    parser.add_argument(
+        "--allow-complete",
+        action="store_true",
+        help="require and accept a fully published, verified 12-crate release",
+    )
+    parser.add_argument(
+        "--expected-prefix",
+        type=int,
+        choices=range(len(PUBLISH_ORDER) + 1),
+        help="require exactly this many leaf-first registry records",
+    )
+    parser.add_argument(
         "--self-test", action="store_true", help="run mock-only fail-closed tests"
     )
     args = parser.parse_args(argv)
     if args.self_test:
-        if args.version is not None or args.resume is not None:
+        if (
+            args.version is not None
+            or args.resume is not None
+            or args.require_local_archives
+            or args.allow_complete
+            or args.expected_prefix is not None
+        ):
             parser.error("--self-test cannot be combined with release options")
     elif args.version is None:
         parser.error("--version is required")
     elif not SEMVER.fullmatch(args.version):
         parser.error("--version must be a semantic version")
+    elif args.allow_complete and not args.require_local_archives:
+        parser.error("--allow-complete requires --require-local-archives")
     return args
 
 
@@ -983,7 +1704,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     if args.self_test:
         return run_self_tests()
-    for command in ("git", "gh", "curl"):
+    for command in ("git", "gh", "curl", "cargo"):
         if shutil.which(command) is None:
             print(f"error: required command is unavailable: {command}", file=sys.stderr)
             return 1
@@ -994,12 +1715,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     try:
         verify_release_gate(
-            LiveEvidenceProvider(PROJECT_ROOT), args.version, args.resume
+            LiveEvidenceProvider(
+                PROJECT_ROOT,
+                require_local_archives=args.require_local_archives,
+            ),
+            args.version,
+            args.resume,
+            allow_complete=args.allow_complete,
+            expected_prefix=args.expected_prefix,
         )
     except GateError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    print("Remote pre-publication gate passed; no external state was changed.")
+    print("Remote release-state gate passed; no external state was changed.")
     return 0
 
 

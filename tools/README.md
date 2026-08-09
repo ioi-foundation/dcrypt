@@ -152,13 +152,24 @@ local and remote annotated-tag objects and peeled commits, every reviewed
 GitHub Actions check to be successful for that exact SHA and issued by the
 trusted Actions app, a private draft release for the exact tag, and either an
 empty registry target or an explicitly authorized valid publication prefix.
+Every present registry record must have a positive crates.io version ID, remain
+unyanked, and exactly match the reviewed local package's feature map and direct
+dependency metadata. After the implementation-boundary packages are built, its
+report must be bound to exact `HEAD`, the tracked lockfile, and the release
+policy; its SHA-256 archive checksums must also match crates.io byte for byte.
 The execute flow runs this gate before the long local suite, immediately before
 the prompt, and once more after the prompt before the first upload so a stale
-interactive confirmation cannot authorize changed remote state.
+interactive confirmation cannot authorize changed remote state. The initially
+verified registry prefix is frozen across that window; concurrent publication
+requires stopping, inspecting, and resuming explicitly.
 
 Each crate is first checked with `cargo publish --dry-run`, published in
-dependency order, and verified through the crates.io API before the next crate
-is attempted. The order is:
+dependency order, and fully reverified through the crates.io API before the
+next crate is attempted. Existing records are never skipped based on existence
+alone, and every transition requires the exact expected leaf-first prefix
+length so stale registry responses cannot advance the loop. The complete
+12-crate registry state is checked again before success is reported. The order
+is:
 
 1. `dcrypt-internal`
 2. `dcrypt-params`
