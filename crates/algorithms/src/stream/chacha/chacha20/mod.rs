@@ -266,11 +266,10 @@ impl ChaCha20 {
     }
 }
 
-/// HChaCha20 core used to validate XChaCha20 test vectors.
+/// HChaCha20 core used to derive the XChaCha20 subkey.
 ///
 /// Unlike a ChaCha20 block, HChaCha20 does not add the initial state back to
 /// the post-round state. It returns words 0..=3 and 12..=15.
-#[cfg(test)]
 pub(crate) fn hchacha20(
     key: &[u8; CHACHA20_KEY_SIZE],
     nonce: &[u8; 16],
@@ -298,13 +297,14 @@ pub(crate) fn hchacha20(
         ChaCha20::quarter_round(&mut state, 3, 4, 9, 14);
     }
 
-    let words = [
+    let mut words = [
         state[0], state[1], state[2], state[3], state[12], state[13], state[14], state[15],
     ];
     let mut out = [0u8; CHACHA20_KEY_SIZE];
-    for (chunk, word) in out.chunks_exact_mut(4).zip(words) {
+    for (chunk, word) in out.chunks_exact_mut(4).zip(words.iter().copied()) {
         LittleEndian::write_u32(chunk, word);
     }
+    words.zeroize();
     state.zeroize();
     out
 }

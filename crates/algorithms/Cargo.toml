@@ -66,7 +66,6 @@ dcrypt-params = { path = "../params", version = "=2.0.0" }
 zeroize = { version = "1.5.7", features = ["zeroize_derive"], optional = true }
 subtle = { version = "2.6.1", default-features = false }
 byteorder = { version = "1.4.3", default-features = false }
-chacha20poly1305 = { version = "0.10.1", default-features = false, features = ["alloc"] }
 
 # Encoding/serialization
 hex = { version = "0.4.3", default-features = false }

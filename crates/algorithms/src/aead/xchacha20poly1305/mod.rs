@@ -1,8 +1,9 @@
-//! XChaCha20Poly1305 authenticated encryption with proper error handling
+//! Standard XChaCha20-Poly1305 authenticated encryption.
 //!
-//! This module implements the XChaCha20Poly1305 Authenticated Encryption with
-//! Associated Data (AEAD) algorithm, which extends ChaCha20Poly1305 with a
-//! 24-byte nonce.
+//! This module implements the construction from the XChaCha draft: HChaCha20
+//! derives a subkey from the key and the first 16 nonce bytes, then the owned
+//! RFC 8439 ChaCha20-Poly1305 implementation uses the nonce
+//! `00000000 || nonce[16..24]`.
 //!
 //! dcrypt v1.2.3 is confirmed to have used a nonstandard construction under
 //! this name; the exact earlier introduced-version range is under investigation.
@@ -10,14 +11,15 @@
 //! those bytes. Migrate legacy data only through a separately isolated,
 //! decrypt-only compatibility tool; never relabel it as XChaCha20-Poly1305.
 
-use crate::aead::chacha20poly1305::{CHACHA20POLY1305_KEY_SIZE, CHACHA20POLY1305_TAG_SIZE};
-use crate::error::{validate, Result};
+use crate::aead::chacha20poly1305::{
+    ChaCha20Poly1305, CHACHA20POLY1305_KEY_SIZE, CHACHA20POLY1305_TAG_SIZE,
+};
+use crate::error::{validate, Error, Result};
+use crate::stream::chacha::chacha20::{hchacha20, CHACHA20_NONCE_SIZE};
 use crate::types::nonce::XChaCha20Compatible;
 use crate::types::Nonce;
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-use chacha20poly1305::aead::{Aead, KeyInit, Payload};
-use chacha20poly1305::{XChaCha20Poly1305 as BackendXChaCha20Poly1305, XNonce};
 use dcrypt_api::traits::AuthenticatedCipher;
 use dcrypt_common::security::{SecretBuffer, SecureZeroingType};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
@@ -57,6 +59,33 @@ impl XChaCha20Poly1305 {
         })
     }
 
+    /// Derive the HChaCha20 subkey and RFC 8439 nonce used by the inner AEAD.
+    fn derive_subkey_and_nonce(
+        &self,
+        nonce: &[u8],
+    ) -> (
+        Zeroizing<[u8; CHACHA20POLY1305_KEY_SIZE]>,
+        [u8; CHACHA20_NONCE_SIZE],
+    ) {
+        let mut hchacha_nonce = [0u8; 16];
+        hchacha_nonce.copy_from_slice(&nonce[..16]);
+
+        let key: &[u8; CHACHA20POLY1305_KEY_SIZE] = self
+            .key
+            .as_ref()
+            .try_into()
+            .expect("SecretBuffer has the declared XChaCha20 key size");
+        let subkey = Zeroizing::new(hchacha20(key, &hchacha_nonce));
+
+        // XChaCha20's IETF ChaCha20 nonce is 32 zero bits followed by the
+        // final 64 bits of the extended nonce.
+        let mut chacha_nonce = [0u8; CHACHA20_NONCE_SIZE];
+        chacha_nonce[4..].copy_from_slice(&nonce[16..24]);
+
+        hchacha_nonce.zeroize();
+        (subkey, chacha_nonce)
+    }
+
     /// Encrypt plaintext using XChaCha20Poly1305
     pub fn encrypt<const N: usize>(
         &self,
@@ -72,20 +101,8 @@ impl XChaCha20Poly1305 {
             nonce.as_ref().len(),
             XCHACHA20POLY1305_NONCE_SIZE,
         )?;
-        let cipher = BackendXChaCha20Poly1305::new_from_slice(self.key.as_ref())
-            .map_err(|_| crate::error::Error::param("key", "invalid XChaCha20 key"))?;
-        cipher
-            .encrypt(
-                XNonce::from_slice(nonce.as_ref()),
-                Payload {
-                    msg: plaintext,
-                    aad: aad.unwrap_or(&[]),
-                },
-            )
-            .map_err(|_| crate::error::Error::Processing {
-                operation: "XChaCha20Poly1305 encryption",
-                details: "message is too long",
-            })
+        let (subkey, chacha_nonce) = self.derive_subkey_and_nonce(nonce.as_ref());
+        ChaCha20Poly1305::new(&subkey).encrypt_with_nonce(&chacha_nonce, plaintext, aad)
     }
 
     /// Decrypt ciphertext using XChaCha20Poly1305
@@ -103,18 +120,14 @@ impl XChaCha20Poly1305 {
             nonce.as_ref().len(),
             XCHACHA20POLY1305_NONCE_SIZE,
         )?;
-        let cipher = BackendXChaCha20Poly1305::new_from_slice(self.key.as_ref())
-            .map_err(|_| crate::error::Error::param("key", "invalid XChaCha20 key"))?;
-        cipher
-            .decrypt(
-                XNonce::from_slice(nonce.as_ref()),
-                Payload {
-                    msg: ciphertext,
-                    aad: aad.unwrap_or(&[]),
+        let (subkey, chacha_nonce) = self.derive_subkey_and_nonce(nonce.as_ref());
+        ChaCha20Poly1305::new(&subkey)
+            .decrypt_with_nonce(&chacha_nonce, ciphertext, aad)
+            .map_err(|error| match error {
+                Error::Authentication { .. } => Error::Authentication {
+                    algorithm: "XChaCha20Poly1305",
                 },
-            )
-            .map_err(|_| crate::error::Error::Authentication {
-                algorithm: "XChaCha20Poly1305",
+                other => other,
             })
     }
 }

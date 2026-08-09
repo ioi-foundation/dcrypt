@@ -83,7 +83,7 @@ members = [
     "crates/utils",
     "tests"
 ]
-exclude = ["fuzz"]
+exclude = ["fuzz", "verification"]
 resolver = "2"
 
 [workspace.package]

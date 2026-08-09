@@ -4,6 +4,7 @@ use crate::types::Nonce;
 
 #[test]
 fn hchacha20_draft_vector() {
+    // draft-irtf-cfrg-xchacha-03, section 2.2.1.
     let key: [u8; 32] =
         hex::decode("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
             .unwrap()
@@ -24,6 +25,7 @@ fn hchacha20_draft_vector() {
 
 #[test]
 fn xchacha20poly1305_draft_aead_vector() {
+    // draft-irtf-cfrg-xchacha-03, appendix A.3.1.
     let key: [u8; 32] =
         hex::decode("808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f")
             .unwrap()
@@ -61,6 +63,17 @@ fn xchacha20poly1305_draft_aead_vector() {
 }
 
 #[test]
+fn xchacha_derives_the_ietf_nonce_from_the_final_eight_bytes() {
+    let key = [0x42; CHACHA20POLY1305_KEY_SIZE];
+    let nonce: [u8; XCHACHA20POLY1305_NONCE_SIZE] = core::array::from_fn(|index| index as u8);
+    let cipher = XChaCha20Poly1305::new(&key);
+
+    let (_, derived_nonce) = cipher.derive_subkey_and_nonce(&nonce);
+
+    assert_eq!(derived_nonce, [0, 0, 0, 0, 16, 17, 18, 19, 20, 21, 22, 23]);
+}
+
+#[test]
 fn test_xchacha20poly1305() {
     // Simple test for XChaCha20Poly1305
     let key = [0x42; CHACHA20POLY1305_KEY_SIZE];
@@ -84,4 +97,13 @@ fn test_xchacha20poly1305() {
         .expect("Decryption failed");
 
     assert_eq!(decrypted, plaintext);
+
+    let mut tampered = ciphertext;
+    *tampered.last_mut().unwrap() ^= 1;
+    assert_eq!(
+        xchacha.decrypt(&nonce, &tampered, None),
+        Err(Error::Authentication {
+            algorithm: "XChaCha20Poly1305"
+        })
+    );
 }

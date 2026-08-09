@@ -13,7 +13,6 @@ use dcrypt_algorithms::aead::chacha20poly1305::CHACHA20POLY1305_TAG_SIZE;
 use dcrypt_algorithms::aead::xchacha20poly1305::XChaCha20Poly1305;
 use dcrypt_algorithms::error::Error as PrimitiveError;
 use dcrypt_algorithms::types::Nonce; // Import the generic Nonce type
-use rand::RngCore;
 use std::fmt;
 
 /// ChaCha20Poly1305 authenticated encryption
@@ -155,6 +154,10 @@ impl ChaCha20Poly1305Cipher {
 /// same name by the affected legacy implementation (confirmed in dcrypt
 /// v1.2.3). Legacy data requires an isolated
 /// decrypt-only migration tool.
+///
+/// Encryption requires an explicit [`XChaCha20Poly1305Nonce`]. This type does
+/// not expose an OS-random key/nonce constructor or a hidden-nonce encryption
+/// helper.
 pub struct XChaCha20Poly1305Cipher {
     cipher: XChaCha20Poly1305,
 }
@@ -183,13 +186,6 @@ impl XChaCha20Poly1305Nonce {
     /// Creates a new nonce from raw bytes
     pub fn new(bytes: [u8; 24]) -> Self {
         Self(bytes)
-    }
-
-    /// Creates a new random nonce
-    pub fn generate() -> Self {
-        let mut nonce = [0u8; 24];
-        rand::rngs::OsRng.fill_bytes(&mut nonce);
-        Self(nonce)
     }
 
     /// Returns a reference to the raw nonce bytes
@@ -221,12 +217,11 @@ impl fmt::Display for XChaCha20Poly1305Nonce {
     }
 }
 
-impl Aead for XChaCha20Poly1305Cipher {
-    type Nonce = XChaCha20Poly1305Nonce;
-
-    fn encrypt(
+impl XChaCha20Poly1305Cipher {
+    /// Encrypt with an explicit, caller-managed 24-byte nonce.
+    pub fn encrypt(
         &self,
-        nonce: &Self::Nonce,
+        nonce: &XChaCha20Poly1305Nonce,
         plaintext: &[u8],
         aad: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
@@ -239,9 +234,10 @@ impl Aead for XChaCha20Poly1305Cipher {
             .map_err(from_primitive_error)
     }
 
-    fn decrypt(
+    /// Decrypt with the explicit 24-byte nonce used for encryption.
+    pub fn decrypt(
         &self,
-        nonce: &Self::Nonce,
+        nonce: &XChaCha20Poly1305Nonce,
         ciphertext: &[u8],
         aad: Option<&[u8]>,
     ) -> Result<Vec<u8>> {
@@ -269,31 +265,9 @@ impl Aead for XChaCha20Poly1305Cipher {
                 _ => from_primitive_error(e),
             })
     }
-
-    fn generate_nonce() -> Self::Nonce {
-        XChaCha20Poly1305Nonce::generate()
-    }
 }
 
 impl XChaCha20Poly1305Cipher {
-    /// Generates a new XChaCha20Poly1305 instance with a random key
-    pub fn generate() -> Result<(Self, ChaCha20Poly1305Key)> {
-        let key = ChaCha20Poly1305Key::generate();
-        let cipher = Self::new(&key)?;
-        Ok((cipher, key))
-    }
-
-    /// Convenience method for encryption with a new random nonce
-    pub fn encrypt_with_random_nonce(
-        &self,
-        plaintext: &[u8],
-        aad: Option<&[u8]>,
-    ) -> Result<(Vec<u8>, XChaCha20Poly1305Nonce)> {
-        let nonce = Self::generate_nonce();
-        let ciphertext = self.encrypt(&nonce, plaintext, aad)?;
-        Ok((ciphertext, nonce))
-    }
-
     /// Helper method to decrypt and verify all in one step
     pub fn decrypt_and_verify(
         &self,

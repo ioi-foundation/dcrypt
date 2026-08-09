@@ -1,0 +1,15 @@
+[package]
+name = "dcrypt-verification"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[workspace]
+resolver = "2"
+
+[dev-dependencies]
+dcrypt-algorithms = { path = "../crates/algorithms" }
+chacha20poly1305 = { version = "=0.10.1", default-features = false, features = ["alloc"] }
