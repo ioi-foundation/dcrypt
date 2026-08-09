@@ -14,7 +14,7 @@
 //! ## Features
 //!
 //! - `traditional` (default): symmetric primitives plus ECDH, ECIES, ECDSA,
-//!   and Ed25519
+//!   Ed25519, and the standard BLS12-381 Basic/Aug/PoP and Eth2 profiles
 //! - `post-quantum`: final FIPS 203 ML-KEM and FIPS 204 ML-DSA
 //! - `hybrid`: Hybrid constructions combining traditional and post-quantum
 //!   primitives (and therefore enables both categories)
@@ -155,6 +155,7 @@ mod tests {
         let _ = core::mem::size_of::<algorithms::Sha256>();
         let _ = core::mem::size_of::<kem::EcdhP256>();
         let _ = core::mem::size_of::<pke::EciesP256>();
+        let _ = core::mem::size_of::<sign::Bls12381G2Basic>();
         let _ = core::mem::size_of::<sign::EcdsaP256>();
         let _ = core::mem::size_of::<symmetric::Aes256Gcm>();
     }
