@@ -4,6 +4,7 @@ tools/*
 !tools/README.md
 !tools/release-dcrypt.sh
 !tools/verify-publish-ready.sh
+!tools/verify-remote-release-ready.py
 !tools/verify-implementation-boundary.py
 !tools/verify-implementation-boundary.sh
 !tools/update-benchmarks.sh
