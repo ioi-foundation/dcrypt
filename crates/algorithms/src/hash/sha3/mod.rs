@@ -88,6 +88,33 @@ fn xor_byte_in_state(state: &mut [u64; KECCAK_STATE_SIZE], pos: usize, val: u8) 
     compiler_fence(Ordering::SeqCst);
 }
 
+#[inline(always)]
+fn xor_bit_in_state(state: &mut [u64; KECCAK_STATE_SIZE], pos: usize, bit: u8) {
+    let byte_pos = pos / 8;
+    let bit_in_byte = pos % 8;
+    xor_byte_in_state(state, byte_pos, (bit & 1) << bit_in_byte);
+}
+
+fn validate_bit_string(data: &[u8], bit_len: usize) -> Result<(usize, usize)> {
+    let rounded_len = bit_len
+        .checked_add(7)
+        .ok_or_else(|| crate::error::Error::param("bit_length", "Bit length is too large"))?
+        / 8;
+    validate::length("bit-oriented SHA-3 input", data.len(), rounded_len)?;
+
+    let partial_bits = bit_len % 8;
+    if partial_bits != 0 {
+        let unused_mask = (1u8 << (8 - partial_bits)) - 1;
+        validate::parameter(
+            data[rounded_len - 1] & unused_mask == 0,
+            "data",
+            "Unused low bits in the final byte must be zero",
+        )?;
+    }
+
+    Ok((bit_len / 8, partial_bits))
+}
+
 // ──────────────────────── marker algorithm types ──────────────────────────
 
 /// Marker type for **SHA3-224**.
@@ -222,6 +249,72 @@ macro_rules! impl_sha3_variant {
 
                 self.zeroize();
                 Ok(out)
+            }
+
+            fn finalize_bits_internal(
+                &mut self,
+                mut partial_byte: u8,
+                partial_bits: usize,
+            ) -> Result<Zeroizing<[u8; $out]>> {
+                let rate_bits = Self::rate() * 8;
+                let mut bit_pos = self.pt * 8;
+
+                // FIPS 202 numbers bits within each byte least-significant bit
+                // first.  The SHA-3 delimited suffix is 0x06, i.e. the three
+                // bits 0, 1, 1 following the message.
+                for i in 0..partial_bits {
+                    xor_bit_in_state(&mut self.state, bit_pos, (partial_byte >> i) & 1);
+                    bit_pos += 1;
+                    if bit_pos == rate_bits {
+                        keccak_f1600(&mut self.state);
+                        bit_pos = 0;
+                    }
+                }
+                partial_byte.zeroize();
+                for i in 0..3 {
+                    xor_bit_in_state(&mut self.state, bit_pos, (0x06 >> i) & 1);
+                    bit_pos += 1;
+                    if bit_pos == rate_bits {
+                        keccak_f1600(&mut self.state);
+                        bit_pos = 0;
+                    }
+                }
+
+                // The final bit of pad10*1 terminates the current rate block.
+                xor_bit_in_state(&mut self.state, rate_bits - 1, 1);
+                keccak_f1600(&mut self.state);
+
+                let mut out = Zeroizing::new([0u8; $out]);
+                for i in 0..$out {
+                    out[i] = get_byte_from_state(&self.state, i);
+                }
+
+                self.zeroize();
+                Ok(out)
+            }
+
+            /// Hash a bit string without changing the byte-oriented streaming
+            /// API. Bits in a partial final byte occupy its most-significant
+            /// positions, matching the hexadecimal representation used by
+            /// NIST ACVP SHA-3 vectors.
+            ///
+            /// The input must contain exactly `ceil(bit_len / 8)` bytes, and
+            /// any unused low bits in the final byte must be zero.
+            #[doc(hidden)]
+            pub fn digest_bits(data: &[u8], bit_len: usize) -> Result<Digest<$out>> {
+                let (full_bytes, partial_bits) = validate_bit_string(data, bit_len)?;
+                let mut hasher = Self::init();
+                hasher.update_internal(&data[..full_bytes])?;
+                let mut partial_byte = if partial_bits == 0 {
+                    0
+                } else {
+                    data[full_bytes] >> (8 - partial_bits)
+                };
+                let hash = hasher.finalize_bits_internal(partial_byte, partial_bits)?;
+                partial_byte.zeroize();
+                let mut digest = Digest::<$out>::zeroed();
+                digest.as_mut().copy_from_slice(&hash[..]);
+                Ok(digest)
             }
         }
 

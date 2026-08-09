@@ -15,6 +15,16 @@ fn vectors_dir() -> PathBuf {
         .join("sha3")
 }
 
+fn patterned_bit_string(bit_len: usize) -> Vec<u8> {
+    let mut message: Vec<u8> = (0..(bit_len + 7) / 8)
+        .map(|index| (index as u8).wrapping_mul(73).wrapping_add(41))
+        .collect();
+    if bit_len % 8 != 0 {
+        *message.last_mut().unwrap() &= 0xff << (8 - bit_len % 8);
+    }
+    message
+}
+
 // Basic sanity check tests - keep these for quick development feedback
 #[test]
 fn test_sha3_256_empty() {
@@ -32,6 +42,70 @@ fn test_sha3_224_empty() {
 
     let hash = Sha3_224::digest(&[]).unwrap();
     assert_eq!(hex::encode(&hash), expected);
+}
+
+#[test]
+fn test_sha3_bit_oriented_nist_vectors() {
+    // NIST ACVP uses the most-significant positions of the final byte for a
+    // partial input.  These vectors exercise both possible first bits and a
+    // multi-bit prefix, so a byte-hash or reversed bit order cannot pass.
+    let sha3_224_two_bits = Sha3_224::digest_bits(&[0xc0], 2).unwrap();
+    assert_eq!(
+        hex::encode(sha3_224_two_bits.as_ref()),
+        "dfeb54cd8a7a549089ae3709307923b49116dba1ad3cbc3fe403b6e8"
+    );
+
+    let sha3_256_one_zero_bit = Sha3_256::digest_bits(&[0x00], 1).unwrap();
+    assert_eq!(
+        hex::encode(sha3_256_one_zero_bit.as_ref()),
+        "1b2e61923578e35f3b4629e04a0ff3b73daa571ae01130d9c16ef7da7a4cfdc2"
+    );
+}
+
+#[test]
+fn test_sha3_bit_oriented_api_preserves_byte_hashing_and_rejects_ambiguity() {
+    let ordinary = Sha3_256::digest(b"abc").unwrap();
+    let bit_oriented = Sha3_256::digest_bits(b"abc", 24).unwrap();
+    assert_eq!(ordinary.as_ref(), bit_oriented.as_ref());
+
+    // A two-bit input must have its six unused low bits cleared, and must be
+    // represented by exactly one byte.
+    assert!(Sha3_256::digest_bits(&[0xc1], 2).is_err());
+    assert!(Sha3_256::digest_bits(&[0xc0, 0x00], 2).is_err());
+}
+
+#[test]
+fn test_sha3_bit_suffix_at_and_across_rate_boundary() {
+    // Cross-checked against XKCP Keccak_HashUpdate/Final.  1149/1085 input
+    // bits plus the three-bit SHA-3 delimited suffix exactly fill a rate
+    // block; the following lengths force the suffix across that boundary.
+    for (bit_len, expected) in [
+        (
+            1149,
+            "57eb731d6e05d3b5c43c0ff08276f76c5f506b6ce76a7d3cb879598c",
+        ),
+        (
+            1150,
+            "3494129888cc45ad1b6a7f46e769e13b9b32c3b9e0ffab8820a7e5f5",
+        ),
+    ] {
+        let digest = Sha3_224::digest_bits(&patterned_bit_string(bit_len), bit_len).unwrap();
+        assert_eq!(hex::encode(digest.as_ref()), expected);
+    }
+
+    for (bit_len, expected) in [
+        (
+            1085,
+            "4ee84e128d913715d2a50c9752500201ce2efa54e019a83f7c28ce55ed6b87f4",
+        ),
+        (
+            1086,
+            "2cba2d7426f1beb3920b33acf200eaea35a6697b8f52c1dd3a0002c6bfbcd613",
+        ),
+    ] {
+        let digest = Sha3_256::digest_bits(&patterned_bit_string(bit_len), bit_len).unwrap();
+        assert_eq!(hex::encode(digest.as_ref()), expected);
+    }
 }
 
 #[test]

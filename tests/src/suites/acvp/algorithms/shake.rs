@@ -1,12 +1,125 @@
 //! ACVP handlers for SHAKE extendable output functions
 
 use crate::suites::acvp::error::{EngineError, Result};
-use crate::suites::acvp::model::{TestCase, TestGroup};
+use crate::suites::acvp::model::{FlexValue, TestCase, TestGroup};
 use dcrypt_algorithms::xof::shake::{ShakeXof128, ShakeXof256};
 use dcrypt_algorithms::xof::ExtendableOutputFunction;
 use hex;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
+
+trait AcvpShake {
+    fn generate_bits(message: &[u8], bit_len: usize, output_len: usize) -> Result<Vec<u8>>;
+}
+
+impl AcvpShake for ShakeXof128 {
+    fn generate_bits(message: &[u8], bit_len: usize, output_len: usize) -> Result<Vec<u8>> {
+        Ok(ShakeXof128::generate_bits(message, bit_len, output_len)?.to_vec())
+    }
+}
+
+impl AcvpShake for ShakeXof256 {
+    fn generate_bits(message: &[u8], bit_len: usize, output_len: usize) -> Result<Vec<u8>> {
+        Ok(ShakeXof256::generate_bits(message, bit_len, output_len)?.to_vec())
+    }
+}
+
+fn usize_field(value: Option<&FlexValue>, name: &'static str) -> Result<usize> {
+    value
+        .map(FlexValue::as_string)
+        .and_then(|value| value.parse().ok())
+        .ok_or(EngineError::MissingField(name))
+}
+
+/// Decode ACVP's left-aligned representation of an input bit string.  Accept
+/// the historical one-byte zero sentinel only for an empty input.
+fn decode_message_bits(encoded: &str, bit_len: usize) -> Result<Vec<u8>> {
+    let mut message = hex::decode(encoded)?;
+    if bit_len == 0 && message == [0] {
+        message.clear();
+    }
+    let expected_len = bit_len
+        .checked_add(7)
+        .ok_or_else(|| EngineError::InvalidData("message bit length overflows usize".into()))?
+        / 8;
+    if message.len() != expected_len {
+        return Err(EngineError::InvalidData(format!(
+            "{}-bit message requires {} encoded bytes, got {}",
+            bit_len,
+            expected_len,
+            message.len()
+        )));
+    }
+    if bit_len % 8 != 0 {
+        let unused_mask = (1u8 << (8 - bit_len % 8)) - 1;
+        if message.last().copied().unwrap_or(0) & unused_mask != 0 {
+            return Err(EngineError::InvalidData(
+                "unused low bits in the final message byte must be zero".into(),
+            ));
+        }
+    }
+    Ok(message)
+}
+
+fn shake_output(
+    group: &TestGroup,
+    message: &[u8],
+    message_bit_len: usize,
+    output_bit_len: usize,
+) -> Result<Vec<u8>> {
+    if output_bit_len == 0 {
+        return Err(EngineError::InvalidData(
+            "SHAKE output length must be non-zero".into(),
+        ));
+    }
+    let output_len = output_bit_len
+        .checked_add(7)
+        .ok_or_else(|| EngineError::InvalidData("output bit length overflows usize".into()))?
+        / 8;
+    let mut output = match group.algorithm.as_str() {
+        "SHAKE-128" | "SHAKE128" => {
+            ShakeXof128::generate_bits(message, message_bit_len, output_len)?.to_vec()
+        }
+        "SHAKE-256" | "SHAKE256" => {
+            ShakeXof256::generate_bits(message, message_bit_len, output_len)?.to_vec()
+        }
+        algorithm => {
+            return Err(EngineError::InvalidData(format!(
+                "Unsupported SHAKE variant: {}",
+                algorithm
+            )))
+        }
+    };
+
+    // ACVP represents a partial SHAKE output byte with the requested bits in
+    // its low positions and the unused high positions cleared.
+    if output_bit_len % 8 != 0 {
+        *output.last_mut().expect("non-empty output validated above") &=
+            (1u8 << (output_bit_len % 8)) - 1;
+    }
+    Ok(output)
+}
+
+fn compare_or_record_output(case: &TestCase, output: &[u8]) -> Result<()> {
+    let output_hex = hex::encode(output);
+    if let Some(expected) = case
+        .inputs
+        .get("md")
+        .or_else(|| case.inputs.get("output"))
+        .map(FlexValue::as_string)
+    {
+        let expected_bytes = hex::decode(&expected)?;
+        if expected_bytes != output {
+            return Err(EngineError::Mismatch {
+                expected,
+                actual: output_hex,
+            });
+        }
+    } else {
+        case.outputs.borrow_mut().insert("md".into(), output_hex);
+    }
+    Ok(())
+}
 
 /// SHAKE Algorithm Family Test (AFT) handler
 /// Handles SHAKE-128 and SHAKE-256 XOF tests
@@ -28,131 +141,13 @@ pub(crate) fn shake_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
         .and_then(|s| s.parse::<usize>().ok())
         .ok_or(EngineError::MissingField("outLen"))?;
 
-    // Decode the message from hex
-    let msg_bytes = hex::decode(&msg_hex)?;
-
-    // Get expected output if provided (for validation)
-    let expected_out = case
-        .inputs
-        .get("md")
-        .or_else(|| case.inputs.get("output"))
-        .map(|v| v.as_string());
-
-    // For bit-oriented outputs, we need to handle them specially
-    if out_len_bits % 8 != 0 {
-        // Calculate how many full bytes we need plus the partial byte
-        let full_bytes = out_len_bits / 8;
-        let partial_bits = out_len_bits % 8;
-        let total_bytes = full_bytes + if partial_bits > 0 { 1 } else { 0 };
-
-        // Generate the output
-        let algorithm = &group.algorithm;
-        let mut output = match algorithm.as_str() {
-            "SHAKE-128" | "SHAKE128" => {
-                let mut xof = ShakeXof128::new();
-                xof.update(&msg_bytes)?;
-                xof.squeeze_into_vec(total_bytes)?
-            }
-            "SHAKE-256" | "SHAKE256" => {
-                let mut xof = ShakeXof256::new();
-                xof.update(&msg_bytes)?;
-                xof.squeeze_into_vec(total_bytes)?
-            }
-            _ => {
-                return Err(EngineError::InvalidData(format!(
-                    "Unsupported SHAKE variant: {}",
-                    algorithm
-                )))
-            }
-        };
-
-        // Mask the last byte if we have partial bits
-        if partial_bits > 0 {
-            let mask = (1u8 << partial_bits) - 1;
-            if let Some(last_byte) = output.last_mut() {
-                *last_byte &= mask;
-            }
-        }
-
-        let output_hex = hex::encode(&output);
-
-        // Check result if expected value was provided
-        if let Some(expected) = expected_out {
-            // For bit-oriented outputs, we need to compare only the relevant bits
-            let expected_bytes = hex::decode(&expected)?;
-
-            // Compare full bytes
-            for i in 0..full_bytes {
-                if i < output.len() && i < expected_bytes.len() {
-                    if output[i] != expected_bytes[i] {
-                        return Err(EngineError::Mismatch {
-                            expected: expected.clone(),
-                            actual: output_hex,
-                        });
-                    }
-                }
-            }
-
-            // Compare partial byte if present
-            if partial_bits > 0 && full_bytes < output.len() && full_bytes < expected_bytes.len() {
-                let mask = (1u8 << partial_bits) - 1;
-                if (output[full_bytes] & mask) != (expected_bytes[full_bytes] & mask) {
-                    return Err(EngineError::Mismatch {
-                        expected: expected.clone(),
-                        actual: output_hex,
-                    });
-                }
-            }
-        } else {
-            // Store result for response generation
-            // Truncate to exact bit length in hex representation
-            let hex_chars = (out_len_bits + 3) / 4; // Round up bits to hex chars
-            let truncated_hex = &output_hex[..hex_chars];
-            case.outputs
-                .borrow_mut()
-                .insert("md".into(), truncated_hex.to_string());
-        }
-    } else {
-        // Byte-aligned output - standard processing
-        let out_len_bytes = out_len_bits / 8;
-
-        let algorithm = &group.algorithm;
-        let output_hex = match algorithm.as_str() {
-            "SHAKE-128" | "SHAKE128" => {
-                let mut xof = ShakeXof128::new();
-                xof.update(&msg_bytes)?;
-                let output = xof.squeeze_into_vec(out_len_bytes)?;
-                hex::encode(&output)
-            }
-            "SHAKE-256" | "SHAKE256" => {
-                let mut xof = ShakeXof256::new();
-                xof.update(&msg_bytes)?;
-                let output = xof.squeeze_into_vec(out_len_bytes)?;
-                hex::encode(&output)
-            }
-            _ => {
-                return Err(EngineError::InvalidData(format!(
-                    "Unsupported SHAKE variant: {}",
-                    algorithm
-                )))
-            }
-        };
-
-        // Check result if expected value was provided
-        if let Some(expected) = expected_out {
-            if !super::hex_equal(&output_hex, &expected) {
-                return Err(EngineError::Mismatch {
-                    expected,
-                    actual: output_hex,
-                });
-            }
-        } else {
-            // Store result for response generation
-            case.outputs.borrow_mut().insert("md".into(), output_hex);
-        }
-    }
-
-    Ok(())
+    let msg_len_bits = usize_field(
+        case.inputs.get("len").or_else(|| case.inputs.get("msgLen")),
+        "len",
+    )?;
+    let msg_bytes = decode_message_bits(&msg_hex, msg_len_bits)?;
+    let output = shake_output(group, &msg_bytes, msg_len_bits, out_len_bits)?;
+    compare_or_record_output(case, &output)
 }
 
 /// SHAKE Variable Output Test (VOT) handler
@@ -173,75 +168,38 @@ pub(crate) fn shake_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
         .map(|v| v.as_string())
         .ok_or(EngineError::MissingField("seed"))?;
 
-    // Get the output length in bits - check multiple locations including group defaults and params
-    let out_len_bits = case
-        .inputs
-        .get("outLen")
-        .or_else(|| case.inputs.get("outputLen"))
-        .or_else(|| case.inputs.get("outlen")) // lowercase variant
-        .or_else(|| group.defaults.get("outLen"))
-        .or_else(|| group.defaults.get("outputLen"))
-        .or_else(|| group.defaults.get("outlen"))
-        .map(|v| v.as_string())
-        .or_else(|| {
-            // Check in group params if it exists
-            group
-                .params
-                .as_ref()
-                .and_then(|p| p.as_object())
-                .and_then(|obj| {
-                    obj.get("outLen")
-                        .or_else(|| obj.get("outputLen"))
-                        .or_else(|| obj.get("outlen"))
-                })
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-        })
-        .or_else(|| {
-            // For SHAKE MCT, sometimes the output length is fixed based on the algorithm
-            // SHAKE-128 MCT often uses 128 bits (16 bytes)
-            // SHAKE-256 MCT often uses 256 bits (32 bytes)
-            match group.algorithm.as_str() {
-                "SHAKE-128" | "SHAKE128" => Some("128".to_string()),
-                "SHAKE-256" | "SHAKE256" => Some("256".to_string()),
-                _ => None,
-            }
-        })
-        .and_then(|s| s.parse::<usize>().ok())
-        .ok_or(EngineError::MissingField("outLen"))?;
-
-    // For MCT, we typically work with byte-aligned outputs
-    if out_len_bits % 8 != 0 {
+    let seed_bit_len = usize_field(
+        case.inputs.get("len").or_else(|| case.inputs.get("msgLen")),
+        "len",
+    )?;
+    if seed_bit_len != 128 {
         return Err(EngineError::InvalidData(format!(
-            "MCT requires byte-aligned output length, got {} bits",
-            out_len_bits
+            "SHAKE MCT seed must be 128 bits, got {}",
+            seed_bit_len
         )));
     }
-    let out_len_bytes = out_len_bits / 8;
+    let seed_bytes = decode_message_bits(&seed_hex, seed_bit_len)?;
+    let min_out_bits = usize_field(group.defaults.get("minOutLen"), "minOutLen")?;
+    let max_out_bits = usize_field(group.defaults.get("maxOutLen"), "maxOutLen")?;
+    if min_out_bits == 0
+        || min_out_bits > max_out_bits
+        || min_out_bits % 8 != 0
+        || max_out_bits % 8 != 0
+    {
+        return Err(EngineError::InvalidData(format!(
+            "invalid SHAKE MCT output range {}..={} bits",
+            min_out_bits, max_out_bits
+        )));
+    }
 
-    let seed_bytes = hex::decode(&seed_hex)?;
-
-    // Get expected final output if provided
-    let expected_md = case.inputs.get("md").map(|v| v.as_string());
-
-    // Determine which SHAKE variant to use
-    let algorithm = &group.algorithm;
-
-    // SHAKE Monte Carlo test procedure (similar to other hash MCTs):
-    // MD[0] = Seed
-    // For j = 0 to 99:
-    //   MSG = MD[j]
-    //   MD[j+1] = SHAKE(MSG, outLen)
-    // Output MD[100]
-
-    let final_output = match algorithm.as_str() {
+    let results = match group.algorithm.as_str() {
         "SHAKE-128" | "SHAKE128" => {
-            shake_mct_inner::<ShakeXof128>(&seed_bytes, out_len_bytes, 100)?
+            shake_mct_inner::<ShakeXof128>(&seed_bytes, min_out_bits / 8, max_out_bits / 8)?
         }
         "SHAKE-256" | "SHAKE256" => {
-            shake_mct_inner::<ShakeXof256>(&seed_bytes, out_len_bytes, 100)?
+            shake_mct_inner::<ShakeXof256>(&seed_bytes, min_out_bits / 8, max_out_bits / 8)?
         }
-        _ => {
+        algorithm => {
             return Err(EngineError::InvalidData(format!(
                 "Unsupported SHAKE variant: {}",
                 algorithm
@@ -249,243 +207,241 @@ pub(crate) fn shake_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
         }
     };
 
-    let output_hex = hex::encode(&final_output);
-
-    // Check result if expected value was provided
-    if let Some(expected) = expected_md {
-        if !super::hex_equal(&output_hex, &expected) {
-            return Err(EngineError::Mismatch {
-                expected,
-                actual: output_hex,
-            });
-        }
+    if let Some(expected) = case.inputs.get("resultsArray") {
+        compare_shake_mct_results(expected, &results)
     } else {
-        // Store result for response generation
-        case.outputs.borrow_mut().insert("md".into(), output_hex);
+        let response: Vec<_> = results
+            .iter()
+            .map(|(out_len, digest)| {
+                serde_json::json!({
+                    "md": hex::encode_upper(digest),
+                    "outLen": out_len * 8,
+                })
+            })
+            .collect();
+        case.outputs.borrow_mut().insert(
+            "resultsArray".into(),
+            serde_json::to_string(&response)
+                .map_err(|error| EngineError::InvalidData(error.to_string()))?,
+        );
+        Ok(())
     }
-
-    Ok(())
 }
 
-/// Inner function for Monte Carlo Test implementation
-fn shake_mct_inner<X: ExtendableOutputFunction>(
+/// ACVP SHAKE MCT: each of 100 reported iterations contains 1000 SHAKE
+/// operations.  Every input is the leftmost 128 output bits (right-zero-padded
+/// when necessary), and the next output length is selected from the rightmost
+/// 16 output bits.
+fn shake_mct_inner<X: AcvpShake>(
     seed: &[u8],
-    out_len: usize,
-    iterations: usize,
-) -> Result<Vec<u8>> {
-    let mut md = seed.to_vec();
+    min_out_len: usize,
+    max_out_len: usize,
+) -> Result<Vec<(usize, Vec<u8>)>> {
+    let range = max_out_len - min_out_len + 1;
+    let mut message = seed.to_vec();
+    let mut out_len = max_out_len;
+    let mut results = Vec::with_capacity(100);
 
-    for _ in 0..iterations {
-        let mut xof = X::new();
-        xof.update(&md)?;
-        // The Monte Carlo digest is public test-vector state.
-        md = xof.squeeze_into_vec(out_len)?.to_vec();
+    for _ in 0..100 {
+        let mut digest = Vec::new();
+        let mut digest_out_len = out_len;
+        for _ in 0..1000 {
+            digest_out_len = out_len;
+            digest = X::generate_bits(&message, 128, out_len)?;
+
+            let last = digest.len();
+            let selector = u16::from_be_bytes([digest[last - 2], digest[last - 1]]) as usize;
+            out_len = min_out_len + selector % range;
+
+            message.clear();
+            message.extend_from_slice(&digest[..digest.len().min(16)]);
+            message.resize(16, 0);
+        }
+        results.push((digest_out_len, digest));
+    }
+    Ok(results)
+}
+
+fn compare_shake_mct_results(expected: &FlexValue, actual: &[(usize, Vec<u8>)]) -> Result<()> {
+    let FlexValue::Array(expected) = expected else {
+        return Err(EngineError::InvalidData(
+            "resultsArray must be an array".into(),
+        ));
+    };
+    if expected.len() != actual.len() {
+        return Err(EngineError::Mismatch {
+            expected: format!("{} MCT results", expected.len()),
+            actual: format!("{} MCT results", actual.len()),
+        });
     }
 
-    Ok(md)
+    for (index, (expected, (actual_out_len, actual_digest))) in
+        expected.iter().zip(actual).enumerate()
+    {
+        let FlexValue::Object(expected) = expected else {
+            return Err(EngineError::InvalidData(format!(
+                "resultsArray[{}] must be an object",
+                index
+            )));
+        };
+        let expected_md = expected
+            .get("md")
+            .map(FlexValue::as_string)
+            .ok_or(EngineError::MissingField("resultsArray.md"))?;
+        let expected_out_len = usize_field(expected.get("outLen"), "resultsArray.outLen")?;
+        let actual_md = hex::encode(actual_digest);
+        if expected_out_len != actual_out_len * 8 || !super::hex_equal(&actual_md, &expected_md) {
+            return Err(EngineError::Mismatch {
+                expected: format!("{} bits: {}", expected_out_len, expected_md),
+                actual: format!("{} bits: {}", actual_out_len * 8, actual_md),
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Large Data Test (LDT) handler for SHAKE
 /// Tests XOF with very large messages
 pub(crate) fn shake_ldt(group: &TestGroup, case: &TestCase) -> Result<()> {
-    // Get expansion technique
-    let expansion_technique = case
-        .inputs
-        .get("expansionTechnique")
-        .map(|v| v.as_string().to_lowercase())
-        .unwrap_or_else(|| "repeating".to_string());
+    let out_len_bits = usize_field(
+        case.inputs
+            .get("outLen")
+            .or_else(|| case.inputs.get("outputLen")),
+        "outLen",
+    )?;
 
-    // Get output length in bits
-    let out_len_bits = case
-        .inputs
-        .get("outLen")
-        .or_else(|| case.inputs.get("outputLen"))
-        .map(|v| v.as_string())
-        .and_then(|s| s.parse::<usize>().ok())
-        .ok_or(EngineError::MissingField("outLen"))?;
-
-    // Get content length
-    let content_len_bits_opt = case
-        .inputs
-        .get("contentLength")
-        .or_else(|| case.inputs.get("contentLen"))
-        .or_else(|| case.inputs.get("len"))
-        .map(|v| v.as_string())
-        .and_then(|s| s.parse::<usize>().ok());
-
-    // Generate the full message based on expansion technique
-    let full_message = match expansion_technique.as_str() {
-        "repeating" => {
-            let content_len_bits =
-                content_len_bits_opt.ok_or(EngineError::MissingField("contentLength"))?;
-
-            if content_len_bits % 8 != 0 {
+    let (pattern, target_len, expansion_technique) =
+        if let Some(FlexValue::Object(large_msg)) = case.inputs.get("largeMsg") {
+            let content = large_msg
+                .get("content")
+                .map(FlexValue::as_string)
+                .ok_or(EngineError::MissingField("largeMsg.content"))?;
+            let pattern = hex::decode(content)?;
+            if let Some(content_length) = large_msg.get("contentLength") {
+                let content_bits = usize_field(Some(content_length), "largeMsg.contentLength")?;
+                if content_bits % 8 != 0 || content_bits / 8 != pattern.len() {
+                    return Err(EngineError::InvalidData(format!(
+                        "largeMsg contentLength {} bits does not match {} encoded bytes",
+                        content_bits,
+                        pattern.len()
+                    )));
+                }
+            }
+            let full_length = usize_field(large_msg.get("fullLength"), "largeMsg.fullLength")?;
+            if full_length % 8 != 0 {
                 return Err(EngineError::InvalidData(
-                    "Content length must be multiple of 8 bits".into(),
+                    "largeMsg.fullLength must be byte-aligned".into(),
                 ));
             }
-            let content_len_bytes = content_len_bits / 8;
-
-            let content_hex = case
+            let expansion = large_msg
+                .get("expansionTechnique")
+                .map(FlexValue::as_string)
+                .unwrap_or_else(|| "repeating".into())
+                .to_lowercase();
+            (pattern, full_length / 8, expansion)
+        } else if case.inputs.contains_key("largeMsg") {
+            return Err(EngineError::InvalidData(
+                "largeMsg must be an object".into(),
+            ));
+        } else {
+            let target_bits = usize_field(
+                case.inputs
+                    .get("contentLength")
+                    .or_else(|| case.inputs.get("contentLen"))
+                    .or_else(|| case.inputs.get("len")),
+                "contentLength",
+            )?;
+            if target_bits % 8 != 0 {
+                return Err(EngineError::InvalidData(
+                    "content length must be byte-aligned".into(),
+                ));
+            }
+            let content = case
                 .inputs
                 .get("content")
                 .or_else(|| case.inputs.get("msg"))
-                .map(|v| v.as_string())
-                .unwrap_or_else(|| "".to_string());
+                .map(FlexValue::as_string)
+                .unwrap_or_default();
+            let expansion = case
+                .inputs
+                .get("expansionTechnique")
+                .map(FlexValue::as_string)
+                .unwrap_or_else(|| "repeating".into())
+                .to_lowercase();
+            (hex::decode(content)?, target_bits / 8, expansion)
+        };
 
-            let content_bytes = if content_hex.is_empty() {
-                vec![]
-            } else {
-                hex::decode(&content_hex)?
-            };
-
-            build_repeating(&content_bytes, content_len_bytes)?
+    if expansion_technique != "repeating" {
+        return Err(EngineError::InvalidData(format!(
+            "Unsupported SHAKE LDT expansion technique: {}",
+            expansion_technique
+        )));
+    }
+    let output = match group.algorithm.as_str() {
+        "SHAKE-128" | "SHAKE128" => {
+            shake_repeating::<ShakeXof128>(&pattern, target_len, out_len_bits)?
         }
-        _ => {
+        "SHAKE-256" | "SHAKE256" => {
+            shake_repeating::<ShakeXof256>(&pattern, target_len, out_len_bits)?
+        }
+        algorithm => {
             return Err(EngineError::InvalidData(format!(
-                "Unsupported expansion technique: {}",
-                expansion_technique
+                "Unsupported SHAKE variant: {}",
+                algorithm
             )))
         }
     };
-
-    // Process with SHAKE - handle both byte-aligned and bit-oriented outputs
-    let algorithm = &group.algorithm;
-
-    // For bit-oriented outputs
-    if out_len_bits % 8 != 0 {
-        let full_bytes = out_len_bits / 8;
-        let partial_bits = out_len_bits % 8;
-        let total_bytes = full_bytes + if partial_bits > 0 { 1 } else { 0 };
-
-        let mut output = match algorithm.as_str() {
-            "SHAKE-128" | "SHAKE128" => {
-                let mut xof = ShakeXof128::new();
-                xof.update(&full_message)?;
-                xof.squeeze_into_vec(total_bytes)?
-            }
-            "SHAKE-256" | "SHAKE256" => {
-                let mut xof = ShakeXof256::new();
-                xof.update(&full_message)?;
-                xof.squeeze_into_vec(total_bytes)?
-            }
-            _ => {
-                return Err(EngineError::InvalidData(format!(
-                    "Unsupported SHAKE variant: {}",
-                    algorithm
-                )))
-            }
-        };
-
-        // Mask the last byte
-        if partial_bits > 0 {
-            let mask = (1u8 << partial_bits) - 1;
-            if let Some(last_byte) = output.last_mut() {
-                *last_byte &= mask;
-            }
-        }
-
-        let output_hex = hex::encode(&output);
-
-        // Check result if expected value was provided
-        if let Some(expected) = case.inputs.get("md").map(|v| v.as_string()) {
-            let expected_bytes = hex::decode(&expected)?;
-
-            // Compare full bytes
-            for i in 0..full_bytes {
-                if i < output.len() && i < expected_bytes.len() {
-                    if output[i] != expected_bytes[i] {
-                        return Err(EngineError::Mismatch {
-                            expected: expected.clone(),
-                            actual: output_hex,
-                        });
-                    }
-                }
-            }
-
-            // Compare partial byte
-            if partial_bits > 0 && full_bytes < output.len() && full_bytes < expected_bytes.len() {
-                let mask = (1u8 << partial_bits) - 1;
-                if (output[full_bytes] & mask) != (expected_bytes[full_bytes] & mask) {
-                    return Err(EngineError::Mismatch {
-                        expected: expected.clone(),
-                        actual: output_hex,
-                    });
-                }
-            }
-        } else {
-            // Store result - truncate hex to exact bit length
-            let hex_chars = (out_len_bits + 3) / 4;
-            let truncated_hex = &output_hex[..hex_chars];
-            case.outputs
-                .borrow_mut()
-                .insert("md".into(), truncated_hex.to_string());
-        }
-    } else {
-        // Byte-aligned output
-        let out_len_bytes = out_len_bits / 8;
-
-        let output_hex = match algorithm.as_str() {
-            "SHAKE-128" | "SHAKE128" => {
-                let mut xof = ShakeXof128::new();
-                xof.update(&full_message)?;
-                let output = xof.squeeze_into_vec(out_len_bytes)?;
-                hex::encode(&output)
-            }
-            "SHAKE-256" | "SHAKE256" => {
-                let mut xof = ShakeXof256::new();
-                xof.update(&full_message)?;
-                let output = xof.squeeze_into_vec(out_len_bytes)?;
-                hex::encode(&output)
-            }
-            _ => {
-                return Err(EngineError::InvalidData(format!(
-                    "Unsupported SHAKE variant: {}",
-                    algorithm
-                )))
-            }
-        };
-
-        // Check result if expected value was provided
-        if let Some(expected) = case.inputs.get("md").map(|v| v.as_string()) {
-            if !super::hex_equal(&output_hex, &expected) {
-                return Err(EngineError::Mismatch {
-                    expected,
-                    actual: output_hex,
-                });
-            }
-        } else {
-            // Store result for response generation
-            case.outputs.borrow_mut().insert("md".into(), output_hex);
-        }
-    }
-
-    Ok(())
+    compare_or_record_output(case, &output)
 }
 
-/// Build a message by repeating a pattern to reach target length
-fn build_repeating(pattern: &[u8], target_len: usize) -> Result<Vec<u8>> {
-    if target_len == 0 {
-        return Ok(vec![]);
-    }
-
-    if pattern.is_empty() {
+fn shake_repeating<X: ExtendableOutputFunction>(
+    pattern: &[u8],
+    target_len: usize,
+    output_bit_len: usize,
+) -> Result<Vec<u8>> {
+    if target_len != 0 && pattern.is_empty() {
         return Err(EngineError::InvalidData(
-            "Non-zero length requested but pattern is empty".into(),
+            "non-zero length requested but repeating pattern is empty".into(),
+        ));
+    }
+    if output_bit_len == 0 {
+        return Err(EngineError::InvalidData(
+            "SHAKE output length must be non-zero".into(),
         ));
     }
 
-    let mut message = Vec::with_capacity(target_len);
-    while message.len() < target_len {
-        let remaining = target_len - message.len();
-        if remaining >= pattern.len() {
-            message.extend_from_slice(pattern);
-        } else {
-            message.extend_from_slice(&pattern[..remaining]);
+    let mut xof = X::new();
+    if target_len != 0 {
+        const TARGET_CHUNK: usize = 1024 * 1024;
+        let repeats = (TARGET_CHUNK / pattern.len()).max(1);
+        let chunk_len = repeats.checked_mul(pattern.len()).ok_or_else(|| {
+            EngineError::InvalidData("repeating SHAKE chunk length overflow".into())
+        })?;
+        let mut chunk = Vec::with_capacity(chunk_len);
+        for _ in 0..repeats {
+            chunk.extend_from_slice(pattern);
+        }
+
+        let mut remaining = target_len;
+        while remaining >= chunk.len() {
+            xof.update(&chunk)?;
+            remaining -= chunk.len();
+        }
+        if remaining != 0 {
+            xof.update(&chunk[..remaining])?;
         }
     }
 
-    Ok(message)
+    let output_len = output_bit_len
+        .checked_add(7)
+        .ok_or_else(|| EngineError::InvalidData("output bit length overflows usize".into()))?
+        / 8;
+    let mut output = xof.squeeze_into_vec(output_len)?.to_vec();
+    if output_bit_len % 8 != 0 {
+        *output.last_mut().expect("non-empty output validated above") &=
+            (1u8 << (output_bit_len % 8)) - 1;
+    }
+    Ok(output)
 }
 
 /// Register SHAKE handlers

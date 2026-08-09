@@ -261,6 +261,68 @@ fn keccak_absorb(state: &mut SecureKeccakState, data: &[u8], rate: usize) {
     *state = SecureKeccakState::from_u64_array(&state_array);
 }
 
+fn validate_bit_string(data: &[u8], bit_len: usize) -> Result<(usize, usize)> {
+    let rounded_len = bit_len
+        .checked_add(7)
+        .ok_or_else(|| Error::param("bit_length", "Bit length is too large"))?
+        / 8;
+    validate::length("bit-oriented SHAKE input", data.len(), rounded_len)?;
+
+    let partial_bits = bit_len % 8;
+    if partial_bits != 0 {
+        let unused_mask = (1u8 << (8 - partial_bits)) - 1;
+        validate::parameter(
+            data[rounded_len - 1] & unused_mask == 0,
+            "data",
+            "Unused low bits in the final byte must be zero",
+        )?;
+    }
+
+    Ok((bit_len / 8, partial_bits))
+}
+
+fn append_bit<const RATE: usize>(
+    state: &mut SecureKeccakState,
+    block: &mut SecretBuffer<RATE>,
+    bit_pos: &mut usize,
+    bit: u8,
+) {
+    block.as_mut()[*bit_pos / 8] ^= (bit & 1) << (*bit_pos % 8);
+    *bit_pos += 1;
+    if *bit_pos == RATE * 8 {
+        keccak_absorb(state, block.as_ref(), RATE);
+        block.zeroize();
+        *bit_pos = 0;
+    }
+}
+
+fn finalize_bit_string<const RATE: usize>(
+    state: &mut SecureKeccakState,
+    buffered: &SecretBuffer<RATE>,
+    buffer_idx: usize,
+    mut partial_byte: u8,
+    partial_bits: usize,
+) {
+    let mut block = SecretBuffer::<RATE>::zeroed();
+    block.as_mut()[..buffer_idx].copy_from_slice(&buffered.as_ref()[..buffer_idx]);
+    let mut bit_pos = buffer_idx * 8;
+
+    for i in 0..partial_bits {
+        append_bit(state, &mut block, &mut bit_pos, (partial_byte >> i) & 1);
+    }
+    partial_byte.zeroize();
+
+    // FIPS 202 SHAKE domain bits (1111) followed by the first bit of
+    // pad10*1 form the five-bit delimited suffix 0x1f.
+    for i in 0..5 {
+        append_bit(state, &mut block, &mut bit_pos, (0x1f >> i) & 1);
+    }
+
+    // Terminate the current rate block with the final bit of pad10*1.
+    block.as_mut()[RATE - 1] ^= 0x80;
+    keccak_absorb(state, block.as_ref(), RATE);
+}
+
 impl ShakeXof128 {
     fn init() -> Self {
         ShakeXof128 {
@@ -270,6 +332,53 @@ impl ShakeXof128 {
             is_finalized: false,
             squeezing: false,
         }
+    }
+
+    fn finalize_bits_internal(&mut self, partial_byte: u8, partial_bits: usize) -> Result<()> {
+        validate::parameter(
+            !self.is_finalized,
+            "state",
+            "SHAKE input has already been finalized",
+        )?;
+        validate::parameter(
+            !self.squeezing,
+            "state",
+            "SHAKE output is already being squeezed",
+        )?;
+        finalize_bit_string(
+            &mut self.state,
+            &self.buffer,
+            self.buffer_idx,
+            partial_byte,
+            partial_bits,
+        );
+        self.buffer.zeroize();
+        self.buffer_idx = 0;
+        self.is_finalized = true;
+        Ok(())
+    }
+
+    /// Generate SHAKE output for a bit-oriented input while preserving the
+    /// byte-oriented streaming API. Bits in a partial final input byte occupy
+    /// its most-significant positions, matching NIST ACVP representation.
+    #[doc(hidden)]
+    pub fn generate_bits(data: &[u8], bit_len: usize, output_len: usize) -> Result<ZeroizingBytes> {
+        validate::parameter(
+            output_len > 0,
+            "output_length",
+            "XOF output length must be greater than 0",
+        )?;
+        let (full_bytes, partial_bits) = validate_bit_string(data, bit_len)?;
+        let mut xof = Self::init();
+        xof.update(&data[..full_bytes])?;
+        let mut partial_byte = if partial_bits == 0 {
+            0
+        } else {
+            data[full_bytes] >> (8 - partial_bits)
+        };
+        xof.finalize_bits_internal(partial_byte, partial_bits)?;
+        partial_byte.zeroize();
+        xof.squeeze_into_vec(output_len)
     }
 }
 
@@ -427,6 +536,53 @@ impl ShakeXof256 {
             is_finalized: false,
             squeezing: false,
         }
+    }
+
+    fn finalize_bits_internal(&mut self, partial_byte: u8, partial_bits: usize) -> Result<()> {
+        validate::parameter(
+            !self.is_finalized,
+            "state",
+            "SHAKE input has already been finalized",
+        )?;
+        validate::parameter(
+            !self.squeezing,
+            "state",
+            "SHAKE output is already being squeezed",
+        )?;
+        finalize_bit_string(
+            &mut self.state,
+            &self.buffer,
+            self.buffer_idx,
+            partial_byte,
+            partial_bits,
+        );
+        self.buffer.zeroize();
+        self.buffer_idx = 0;
+        self.is_finalized = true;
+        Ok(())
+    }
+
+    /// Generate SHAKE output for a bit-oriented input while preserving the
+    /// byte-oriented streaming API. Bits in a partial final input byte occupy
+    /// its most-significant positions, matching NIST ACVP representation.
+    #[doc(hidden)]
+    pub fn generate_bits(data: &[u8], bit_len: usize, output_len: usize) -> Result<ZeroizingBytes> {
+        validate::parameter(
+            output_len > 0,
+            "output_length",
+            "XOF output length must be greater than 0",
+        )?;
+        let (full_bytes, partial_bits) = validate_bit_string(data, bit_len)?;
+        let mut xof = Self::init();
+        xof.update(&data[..full_bytes])?;
+        let mut partial_byte = if partial_bits == 0 {
+            0
+        } else {
+            data[full_bytes] >> (8 - partial_bits)
+        };
+        xof.finalize_bits_internal(partial_byte, partial_bits)?;
+        partial_byte.zeroize();
+        xof.squeeze_into_vec(output_len)
     }
 }
 

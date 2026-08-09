@@ -8,6 +8,76 @@ use hex;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
 
+trait AcvpSha3 {
+    fn digest_bits(message: &[u8], bit_len: usize) -> Result<Vec<u8>>;
+}
+
+macro_rules! impl_acvp_sha3 {
+    ($type:ty) => {
+        impl AcvpSha3 for $type {
+            fn digest_bits(message: &[u8], bit_len: usize) -> Result<Vec<u8>> {
+                Ok(<$type>::digest_bits(message, bit_len)?.as_ref().to_vec())
+            }
+        }
+    };
+}
+
+impl_acvp_sha3!(Sha3_224);
+impl_acvp_sha3!(Sha3_256);
+impl_acvp_sha3!(Sha3_384);
+impl_acvp_sha3!(Sha3_512);
+
+fn usize_field(value: Option<&FlexValue>, name: &'static str) -> Result<usize> {
+    value
+        .map(FlexValue::as_string)
+        .and_then(|value| value.parse().ok())
+        .ok_or(EngineError::MissingField(name))
+}
+
+/// Decode ACVP's left-aligned representation of a bit string.  Some older
+/// vector sets use a single `00` byte as the sentinel for an empty string.
+fn decode_message_bits(encoded: &str, bit_len: usize) -> Result<Vec<u8>> {
+    let mut message = hex::decode(encoded)?;
+    if bit_len == 0 && message == [0] {
+        message.clear();
+    }
+
+    let expected_len = bit_len
+        .checked_add(7)
+        .ok_or_else(|| EngineError::InvalidData("message bit length overflows usize".into()))?
+        / 8;
+    if message.len() != expected_len {
+        return Err(EngineError::InvalidData(format!(
+            "{}-bit message requires {} encoded bytes, got {}",
+            bit_len,
+            expected_len,
+            message.len()
+        )));
+    }
+    if bit_len % 8 != 0 {
+        let unused_mask = (1u8 << (8 - bit_len % 8)) - 1;
+        if message.last().copied().unwrap_or(0) & unused_mask != 0 {
+            return Err(EngineError::InvalidData(
+                "unused low bits in the final message byte must be zero".into(),
+            ));
+        }
+    }
+    Ok(message)
+}
+
+fn sha3_digest(group: &TestGroup, message: &[u8], bit_len: usize) -> Result<Vec<u8>> {
+    match group.algorithm.as_str() {
+        "SHA3-224" | "SHA-3-224" => <Sha3_224 as AcvpSha3>::digest_bits(message, bit_len),
+        "SHA3-256" | "SHA-3-256" => <Sha3_256 as AcvpSha3>::digest_bits(message, bit_len),
+        "SHA3-384" | "SHA-3-384" => <Sha3_384 as AcvpSha3>::digest_bits(message, bit_len),
+        "SHA3-512" | "SHA-3-512" => <Sha3_512 as AcvpSha3>::digest_bits(message, bit_len),
+        algorithm => Err(EngineError::InvalidData(format!(
+            "Unsupported SHA-3 variant: {}",
+            algorithm
+        ))),
+    }
+}
+
 /// SHA-3 Algorithm Family Test (AFT) handler
 /// Handles SHA3-224, SHA3-256, SHA3-384, and SHA3-512
 pub(crate) fn sha3_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
@@ -19,8 +89,11 @@ pub(crate) fn sha3_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
         .map(|v| v.as_string())
         .ok_or(EngineError::MissingField("msg"))?;
 
-    // Decode the message from hex
-    let msg_bytes = hex::decode(&msg_hex)?;
+    let bit_len = usize_field(
+        case.inputs.get("len").or_else(|| case.inputs.get("msgLen")),
+        "len",
+    )?;
+    let msg_bytes = decode_message_bits(&msg_hex, bit_len)?;
 
     // Get expected digest if provided (for validation)
     let expected_md = case
@@ -29,33 +102,7 @@ pub(crate) fn sha3_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
         .or_else(|| case.inputs.get("digest"))
         .map(|v| v.as_string());
 
-    // Determine which SHA-3 variant to use based on the algorithm name
-    let algorithm = &group.algorithm;
-
-    let digest_hex = match algorithm.as_str() {
-        "SHA3-224" | "SHA-3-224" => {
-            let digest = Sha3_224::digest(&msg_bytes)?;
-            hex::encode(digest.as_ref())
-        }
-        "SHA3-256" | "SHA-3-256" => {
-            let digest = Sha3_256::digest(&msg_bytes)?;
-            hex::encode(digest.as_ref())
-        }
-        "SHA3-384" | "SHA-3-384" => {
-            let digest = Sha3_384::digest(&msg_bytes)?;
-            hex::encode(digest.as_ref())
-        }
-        "SHA3-512" | "SHA-3-512" => {
-            let digest = Sha3_512::digest(&msg_bytes)?;
-            hex::encode(digest.as_ref())
-        }
-        _ => {
-            return Err(EngineError::InvalidData(format!(
-                "Unsupported SHA-3 variant: {}",
-                algorithm
-            )))
-        }
-    };
+    let digest_hex = hex::encode(sha3_digest(group, &msg_bytes, bit_len)?);
 
     // Check result if expected value was provided
     if let Some(expected) = expected_md {
@@ -83,28 +130,32 @@ pub(crate) fn sha3_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
         .map(|v| v.as_string())
         .ok_or(EngineError::MissingField("seed"))?;
 
-    let seed_bytes = hex::decode(&seed_hex)?;
+    let seed_bit_len = usize_field(
+        case.inputs.get("len").or_else(|| case.inputs.get("msgLen")),
+        "len",
+    )?;
+    let seed_bytes = decode_message_bits(&seed_hex, seed_bit_len)?;
+    let alternate = group
+        .defaults
+        .get("mctVersion")
+        .map(FlexValue::as_string)
+        .unwrap_or_else(|| "standard".into())
+        .eq_ignore_ascii_case("alternate");
 
-    // Get expected final digest if provided
-    let expected_md = case.inputs.get("md").map(|v| v.as_string());
-
-    // Determine which SHA-3 variant to use
-    let algorithm = &group.algorithm;
-
-    // SHA-3 Monte Carlo test procedure:
-    // MD[0] = Seed
-    // MD[1] = SHA3(MD[0])
-    // MD[2] = SHA3(MD[1])
-    // For j = 3 to 999:
-    //   MD[j] = SHA3(MD[j-3] || MD[j-2] || MD[j-1])
-    // Output MD[999]
-
-    let final_digest = match algorithm.as_str() {
-        "SHA3-224" | "SHA-3-224" => sha3_mct_inner::<Sha3_224>(&seed_bytes, 1000)?,
-        "SHA3-256" | "SHA-3-256" => sha3_mct_inner::<Sha3_256>(&seed_bytes, 1000)?,
-        "SHA3-384" | "SHA-3-384" => sha3_mct_inner::<Sha3_384>(&seed_bytes, 1000)?,
-        "SHA3-512" | "SHA-3-512" => sha3_mct_inner::<Sha3_512>(&seed_bytes, 1000)?,
-        _ => {
+    let results = match group.algorithm.as_str() {
+        "SHA3-224" | "SHA-3-224" => {
+            sha3_mct_inner::<Sha3_224>(&seed_bytes, seed_bit_len, alternate)?
+        }
+        "SHA3-256" | "SHA-3-256" => {
+            sha3_mct_inner::<Sha3_256>(&seed_bytes, seed_bit_len, alternate)?
+        }
+        "SHA3-384" | "SHA-3-384" => {
+            sha3_mct_inner::<Sha3_384>(&seed_bytes, seed_bit_len, alternate)?
+        }
+        "SHA3-512" | "SHA-3-512" => {
+            sha3_mct_inner::<Sha3_512>(&seed_bytes, seed_bit_len, alternate)?
+        }
+        algorithm => {
             return Err(EngineError::InvalidData(format!(
                 "Unsupported SHA-3 variant: {}",
                 algorithm
@@ -112,62 +163,89 @@ pub(crate) fn sha3_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
         }
     };
 
-    let digest_hex = hex::encode(&final_digest);
-
-    // Check result if expected value was provided
-    if let Some(expected) = expected_md {
-        if !super::hex_equal(&digest_hex, &expected) {
-            return Err(EngineError::Mismatch {
-                expected,
-                actual: digest_hex,
-            });
-        }
+    if let Some(expected) = case.inputs.get("resultsArray") {
+        compare_sha3_mct_results(expected, &results)
     } else {
-        // Store result for response generation
-        case.outputs.borrow_mut().insert("md".into(), digest_hex);
+        let response: Vec<_> = results
+            .iter()
+            .map(|digest| serde_json::json!({ "md": hex::encode_upper(digest) }))
+            .collect();
+        case.outputs.borrow_mut().insert(
+            "resultsArray".into(),
+            serde_json::to_string(&response)
+                .map_err(|error| EngineError::InvalidData(error.to_string()))?,
+        );
+        Ok(())
     }
-
-    Ok(())
 }
 
-/// Inner function for Monte Carlo Test implementation
-fn sha3_mct_inner<H: HashFunction>(seed: &[u8], iterations: usize) -> Result<Vec<u8>>
-where
-    H::Output: AsRef<[u8]>,
-{
-    // Initialize MD array
-    let mut md = Vec::new();
+fn normalize_mct_message(message: &[u8], bit_len: usize) -> Vec<u8> {
+    let byte_len = (bit_len + 7) / 8;
+    let mut normalized = vec![0; byte_len];
+    let copied = message.len().min(byte_len);
+    normalized[..copied].copy_from_slice(&message[..copied]);
+    if bit_len % 8 != 0 {
+        normalized[byte_len - 1] &= !((1u8 << (8 - bit_len % 8)) - 1);
+    }
+    normalized
+}
 
-    // MD[0] = Seed
-    md.push(seed.to_vec());
+/// FIPS 202 / ACVP SHA-3 MCT: 100 reported iterations, each containing
+/// 1000 hashes.  The alternate form truncates or right-zero-pads every inner
+/// message back to the original seed length before hashing.
+fn sha3_mct_inner<H: AcvpSha3>(
+    seed: &[u8],
+    seed_bit_len: usize,
+    alternate: bool,
+) -> Result<Vec<Vec<u8>>> {
+    let mut message = seed.to_vec();
+    let mut results = Vec::with_capacity(100);
+    for _ in 0..100 {
+        for _ in 0..1000 {
+            let (input, input_bits) = if alternate {
+                (normalize_mct_message(&message, seed_bit_len), seed_bit_len)
+            } else {
+                let bits = message.len().checked_mul(8).ok_or_else(|| {
+                    EngineError::InvalidData("MCT message length overflows usize".into())
+                })?;
+                (message, bits)
+            };
+            message = H::digest_bits(&input, input_bits)?;
+        }
+        results.push(message.clone());
+    }
+    Ok(results)
+}
 
-    // MD[1] = SHA3(MD[0])
-    let digest1 = H::digest(&md[0])?;
-    md.push(digest1.as_ref().to_vec());
-
-    // MD[2] = SHA3(MD[1])
-    let digest2 = H::digest(&md[1])?;
-    md.push(digest2.as_ref().to_vec());
-
-    // For j = 3 to iterations-1:
-    for _j in 3..iterations {
-        // MD[j] = SHA3(MD[j-3] || MD[j-2] || MD[j-1])
-        let mut input = Vec::new();
-        input.extend_from_slice(&md[md.len() - 3]);
-        input.extend_from_slice(&md[md.len() - 2]);
-        input.extend_from_slice(&md[md.len() - 1]);
-
-        let digest = H::digest(&input)?;
-        md.push(digest.as_ref().to_vec());
-
-        // To save memory, we can remove old entries we don't need anymore
-        if md.len() > 3 {
-            md.remove(0);
+fn compare_sha3_mct_results(expected: &FlexValue, actual: &[Vec<u8>]) -> Result<()> {
+    let FlexValue::Array(expected) = expected else {
+        return Err(EngineError::InvalidData(
+            "resultsArray must be an array".into(),
+        ));
+    };
+    if expected.len() != actual.len() {
+        return Err(EngineError::Mismatch {
+            expected: format!("{} MCT results", expected.len()),
+            actual: format!("{} MCT results", actual.len()),
+        });
+    }
+    for (index, (expected, actual)) in expected.iter().zip(actual).enumerate() {
+        let FlexValue::Object(expected) = expected else {
+            return Err(EngineError::InvalidData(format!(
+                "resultsArray[{}] must be an object",
+                index
+            )));
+        };
+        let expected = expected
+            .get("md")
+            .map(FlexValue::as_string)
+            .ok_or(EngineError::MissingField("resultsArray.md"))?;
+        let actual = hex::encode(actual);
+        if !super::hex_equal(&actual, &expected) {
+            return Err(EngineError::Mismatch { expected, actual });
         }
     }
-
-    // Return the last digest
-    Ok(md.last().unwrap().clone())
+    Ok(())
 }
 
 /// Large Data Test (LDT) handler for SHA-3
@@ -230,7 +308,7 @@ pub(crate) fn sha3_ldt(group: &TestGroup, case: &TestCase) -> Result<()> {
                 hex::decode(&content_hex)?
             };
 
-            build_repeating(&content_bytes, content_len_bytes)?
+            return hash_repeating_and_check(group, case, &content_bytes, content_len_bytes);
         }
         "random" => {
             let message_hex = case
@@ -288,21 +366,22 @@ fn handle_large_msg_test(
         .map(|v| v.as_string())
         .ok_or(EngineError::MissingField("largeMsg.content"))?;
 
-    // Get fullLength - try both as string and number
+    // Get fullLength - try both as string and number without truncating on
+    // targets whose usize cannot represent the vector length.
     let full_length_bits = large_msg
         .get("fullLength")
-        .map(|v| match v {
+        .and_then(|v| match v {
             FlexValue::String(s) => s.parse::<usize>().ok(),
-            FlexValue::Number(n) => n.as_u64().map(|x| x as usize),
+            FlexValue::Number(n) => n.as_u64().and_then(|x| usize::try_from(x).ok()),
             _ => None,
         })
-        .flatten()
         .ok_or(EngineError::MissingField("largeMsg.fullLength"))?;
 
     let expansion_technique = large_msg
         .get("expansionTechnique")
         .map(|v| v.as_string())
-        .unwrap_or_else(|| "repeating".to_string());
+        .unwrap_or_else(|| "repeating".to_string())
+        .to_lowercase();
 
     // Convert bits to bytes
     if full_length_bits % 8 != 0 {
@@ -314,62 +393,101 @@ fn handle_large_msg_test(
 
     // Decode the content pattern
     let content_bytes = hex::decode(&content_hex)?;
-
-    // For very large messages, check if we can handle them
-    const MAX_SIZE: usize = 100 * 1024 * 1024; // 100 MB limit
-
-    if full_length_bytes > MAX_SIZE {
-        // Skip tests that are too large
-        eprintln!(
-            "Skipping LDT test {} - message size {} MB exceeds {} MB limit",
-            case.test_id,
-            full_length_bytes / (1024 * 1024),
-            MAX_SIZE / (1024 * 1024)
-        );
-
-        // If there's an expected digest, we need to return an error
-        if case.inputs.contains_key("md") {
+    if let Some(content_length) = large_msg.get("contentLength") {
+        let content_bits = usize_field(Some(content_length), "largeMsg.contentLength")?;
+        if content_bits % 8 != 0 || content_bits / 8 != content_bytes.len() {
             return Err(EngineError::InvalidData(format!(
-                "Cannot process {} MB message in memory",
-                full_length_bytes / (1024 * 1024)
+                "largeMsg contentLength {} bits does not match {} encoded bytes",
+                content_bits,
+                content_bytes.len()
             )));
         }
-
-        // Otherwise, mark as skipped
-        case.outputs
-            .borrow_mut()
-            .insert("testPassed".into(), "false".into());
-        case.outputs.borrow_mut().insert(
-            "reason".into(),
-            format!(
-                "Message too large: {} MB",
-                full_length_bytes / (1024 * 1024)
-            ),
-        );
-
-        return Ok(());
     }
 
-    // Generate the full message
-    let full_message = match expansion_technique.as_str() {
-        "repeating" => build_repeating(&content_bytes, full_length_bytes)?,
-        _ => {
+    match expansion_technique.as_str() {
+        // LDT inputs intentionally reach multiple GiB. Feed a bounded
+        // pattern-aligned chunk into the streaming hash instead of
+        // materializing the complete message.
+        "repeating" => hash_repeating_and_check(group, case, &content_bytes, full_length_bytes),
+        _ => Err(EngineError::InvalidData(format!(
+            "Unsupported expansion technique in largeMsg: {}",
+            expansion_technique
+        ))),
+    }
+}
+
+fn hash_repeating<H>(pattern: &[u8], target_len: usize) -> Result<String>
+where
+    H: HashFunction,
+    H::Output: AsRef<[u8]>,
+{
+    if target_len != 0 && pattern.is_empty() {
+        return Err(EngineError::InvalidData(
+            "non-zero length requested but repeating pattern is empty".into(),
+        ));
+    }
+
+    let mut hash = H::new();
+    if target_len != 0 {
+        const TARGET_CHUNK: usize = 1024 * 1024;
+        let repeats = (TARGET_CHUNK / pattern.len()).max(1);
+        let chunk_len = repeats.checked_mul(pattern.len()).ok_or_else(|| {
+            EngineError::InvalidData("repeating SHA-3 chunk length overflow".into())
+        })?;
+        let mut chunk = Vec::with_capacity(chunk_len);
+        for _ in 0..repeats {
+            chunk.extend_from_slice(pattern);
+        }
+
+        let mut remaining = target_len;
+        while remaining >= chunk.len() {
+            hash.update(&chunk)?;
+            remaining -= chunk.len();
+        }
+        if remaining != 0 {
+            hash.update(&chunk[..remaining])?;
+        }
+    }
+    Ok(hex::encode(hash.finalize()?.as_ref()))
+}
+
+fn hash_repeating_and_check(
+    group: &TestGroup,
+    case: &TestCase,
+    pattern: &[u8],
+    target_len: usize,
+) -> Result<()> {
+    let digest_hex = match group.algorithm.as_str() {
+        "SHA3-224" | "SHA-3-224" => hash_repeating::<Sha3_224>(pattern, target_len)?,
+        "SHA3-256" | "SHA-3-256" => hash_repeating::<Sha3_256>(pattern, target_len)?,
+        "SHA3-384" | "SHA-3-384" => hash_repeating::<Sha3_384>(pattern, target_len)?,
+        "SHA3-512" | "SHA-3-512" => hash_repeating::<Sha3_512>(pattern, target_len)?,
+        algorithm => {
             return Err(EngineError::InvalidData(format!(
-                "Unsupported expansion technique in largeMsg: {}",
-                expansion_technique
+                "Unsupported SHA-3 variant: {}",
+                algorithm
             )))
         }
     };
+    check_digest(case, digest_hex)
+}
 
-    // Hash the message and check results
-    hash_and_check_result(group, case, &full_message)
+fn check_digest(case: &TestCase, digest_hex: String) -> Result<()> {
+    if let Some(expected) = case.inputs.get("md").map(FlexValue::as_string) {
+        if !super::hex_equal(&digest_hex, &expected) {
+            return Err(EngineError::Mismatch {
+                expected,
+                actual: digest_hex,
+            });
+        }
+    } else {
+        case.outputs.borrow_mut().insert("md".into(), digest_hex);
+    }
+    Ok(())
 }
 
 /// Common function to hash a message and check the result
 fn hash_and_check_result(group: &TestGroup, case: &TestCase, message: &[u8]) -> Result<()> {
-    // Get expected digest if provided
-    let expected_md = case.inputs.get("md").map(|v| v.as_string());
-
     // Determine which SHA-3 variant to use
     let algorithm = &group.algorithm;
 
@@ -398,46 +516,7 @@ fn hash_and_check_result(group: &TestGroup, case: &TestCase, message: &[u8]) -> 
         }
     };
 
-    // Check result if expected value was provided
-    if let Some(expected) = expected_md {
-        if !super::hex_equal(&digest_hex, &expected) {
-            return Err(EngineError::Mismatch {
-                expected,
-                actual: digest_hex,
-            });
-        }
-    } else {
-        // Store result for response generation
-        case.outputs.borrow_mut().insert("md".into(), digest_hex);
-    }
-
-    Ok(())
-}
-
-/// Build a message by repeating a pattern to reach target length
-fn build_repeating(pattern: &[u8], target_len: usize) -> Result<Vec<u8>> {
-    if target_len == 0 {
-        return Ok(vec![]);
-    }
-
-    if pattern.is_empty() {
-        // Empty pattern but non-zero length requested - error
-        return Err(EngineError::InvalidData(
-            "Non-zero length requested but pattern is empty".into(),
-        ));
-    }
-
-    let mut message = Vec::with_capacity(target_len);
-    while message.len() < target_len {
-        let remaining = target_len - message.len();
-        if remaining >= pattern.len() {
-            message.extend_from_slice(pattern);
-        } else {
-            message.extend_from_slice(&pattern[..remaining]);
-        }
-    }
-
-    Ok(message)
+    check_digest(case, digest_hex)
 }
 
 /// Register SHA-3 handlers

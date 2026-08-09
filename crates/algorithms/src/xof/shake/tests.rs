@@ -3,6 +3,16 @@
 use super::*;
 use hex;
 
+fn patterned_bit_string(bit_len: usize) -> Vec<u8> {
+    let mut message: Vec<u8> = (0..(bit_len + 7) / 8)
+        .map(|index| (index as u8).wrapping_mul(73).wrapping_add(41))
+        .collect();
+    if bit_len % 8 != 0 {
+        *message.last_mut().unwrap() &= 0xff << (8 - bit_len % 8);
+    }
+    message
+}
+
 #[test]
 fn test_shake128_empty_output() {
     let mut xof = ShakeXof128::new();
@@ -73,6 +83,69 @@ fn test_shake128_xof_variable_length() {
     let output = xof.squeeze_into_vec(32).unwrap();
 
     assert_eq!(hex::encode(&output), abc_32_expected);
+}
+
+#[test]
+fn test_shake_bit_oriented_nist_vectors() {
+    let shake128 = ShakeXof128::generate_bits(&[0xc0], 2, 16).unwrap();
+    assert_eq!(
+        hex::encode(&shake128[..]),
+        "f6b6c4093f0a2ceba61b9f2c2fea2ca2"
+    );
+
+    let shake256 = ShakeXof256::generate_bits(&[0x80], 2, 32).unwrap();
+    assert_eq!(
+        hex::encode(&shake256[..]),
+        "d93f97bf0211bbd33df10904e7f7ed9cd476eafa7f658f6442f660d2b4520bd1"
+    );
+}
+
+#[test]
+fn test_shake_bit_oriented_api_preserves_byte_input_and_rejects_ambiguity() {
+    let mut ordinary = ShakeXof128::new();
+    ordinary.update(b"abc").unwrap();
+    let ordinary = ordinary.squeeze_into_vec(32).unwrap();
+    let bit_oriented = ShakeXof128::generate_bits(b"abc", 24, 32).unwrap();
+    assert_eq!(&ordinary[..], &bit_oriented[..]);
+
+    assert!(ShakeXof128::generate_bits(&[0xc1], 2, 16).is_err());
+    assert!(ShakeXof128::generate_bits(&[0xc0, 0x00], 2, 16).is_err());
+}
+
+#[test]
+fn test_shake_bit_suffix_at_and_across_rate_boundary() {
+    // Cross-checked against XKCP Keccak_HashUpdate/Final.  1339/1083 input
+    // bits plus SHAKE's five-bit delimited suffix exactly fill a rate block;
+    // the following lengths exercise the mid-suffix permutation path.
+    for (bit_len, expected) in [
+        (
+            1339,
+            "e7ee91cb733ee18991bcdc70a5d86a85089de10af3bb6ce79dd044a943e00949",
+        ),
+        (
+            1340,
+            "28d7998d7dbe58d22b05c2124aa5d083f7d4592687da46c068cdccce0cff5fbf",
+        ),
+    ] {
+        let output =
+            ShakeXof128::generate_bits(&patterned_bit_string(bit_len), bit_len, 32).unwrap();
+        assert_eq!(hex::encode(&output[..]), expected);
+    }
+
+    for (bit_len, expected) in [
+        (
+            1083,
+            "351d0f4ee4e56c3ec44b15248b764cf88540a31a78341b59976fa5226b2332cc",
+        ),
+        (
+            1084,
+            "3efc9658ff69ec5617e1e25cd877a9e53d134a621e011060cfd081b6201c1b69",
+        ),
+    ] {
+        let output =
+            ShakeXof256::generate_bits(&patterned_bit_string(bit_len), bit_len, 32).unwrap();
+        assert_eq!(hex::encode(&output[..]), expected);
+    }
 }
 
 #[test]
