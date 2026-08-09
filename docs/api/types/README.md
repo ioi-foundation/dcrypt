@@ -35,7 +35,8 @@ objects.
         *   Implements `Zeroize` and `ZeroizeOnDrop`.
         *   Never retains inaccessible spare capacity. It wipes the complete old allocation before any operation replaces it.
         *   Mutable dereferencing exposes only `[u8]`, preventing callers from invoking `Vec` operations that can reallocate without first wiping the old allocation.
-        *   `PartialEq` uses constant-time comparison.
+        *   Equal-length `PartialEq` uses dcrypt's mask-based comparison; this
+            is not a whole-operation compiler/target timing proof.
         *   `Debug` formatting redacts content.
     *   **Functionality**:
         *   Constructors: `new(data: Box<[u8]>)`, `from_slice(slice: &[u8])`, `zeroed(len: usize)`, and `random<R: CryptoRng>(rng: &mut R, len: usize)`.
@@ -43,8 +44,6 @@ objects.
         *   `to_bytes_zeroizing_boxed()` and `into_bytes_zeroizing_boxed()` return exact-size zeroizing storage.
     *   **Serialization**: Implements `crate::SerializeSecret` with an
         exact-size zeroizing output.
-    *   **Feature Dependency**: Available when the `alloc` feature is enabled.
-
 3.  **`Key`**:
     *   **Purpose**: A generic wrapper for cryptographic key data (variable length).
     *   **Security**: Uses exact-size boxed storage and implements `Zeroize` and `ZeroizeOnDrop`.

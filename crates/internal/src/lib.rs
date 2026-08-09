@@ -1,7 +1,8 @@
 //! Internal utility functions for the dcrypt library
 //!
-//! This crate provides internal utilities and helpers that are used by
-//! other dcrypt crates but are not part of the public API.
+//! This crate provides low-level shared utilities. The dcrypt facade publicly
+//! re-exports its caller-supplied RNG traits; other items are
+//! implementation-oriented and have no separate stability promise.
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(unsafe_code)]

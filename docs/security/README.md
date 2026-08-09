@@ -18,7 +18,7 @@ release before `v3.0.0` is supported; `v3.0.0` is the supported replacement.
 - [DCRYPT-2026-0003: GCM operation nonce ignored](DCRYPT-2026-0003.md) — [GHSA-h9f2-fgp8-vc4h](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-h9f2-fgp8-vc4h)
 - [DCRYPT-2026-0004: unauthenticated streaming framing](DCRYPT-2026-0004.md) — [GHSA-8cwp-4826-jg9f](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-8cwp-4826-jg9f)
 
-The v3 audit identified six additional release-blocking findings. Their
+The v3 remediation review identified six additional release-blocking findings. Their
 coordinated GitHub advisories were published with the corrective release. CVEs
 have been requested but may not yet be assigned; the
 `DCRYPT-*` names remain repository-local tracking identifiers.

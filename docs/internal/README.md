@@ -1,6 +1,9 @@
 # dcrypt Internal Utilities (`internal`)
 
-The `internal` crate provides low-level utility functions and modules that are shared across various dcrypt crates but are **not** intended to be part of the public API. These utilities typically deal with implementation details crucial for security or correctness, such as constant-time operations or byte-order conversions.
+The `internal` crate contains low-level utilities shared across dcrypt crates.
+The `dcrypt` facade publicly re-exports its caller-supplied RNG traits; the
+remaining items are implementation-oriented and have no separate stability
+promise.
 
 ## Core Components
 
@@ -41,7 +44,9 @@ The `internal` crate provides low-level utility functions and modules that are s
 
 ## Intended Use
 
-The `internal` crate is strictly for use by other dcrypt crates (e.g., `algorithms`, `common`). Its contents are considered implementation details and are subject to change without notice, as they are not governed by the public API stability promises of the dcrypt library.
+Except for the caller RNG traits used by supported facade examples, this
+crate's contents are implementation details and may change without a separate
+API-stability promise.
 
 By centralizing these low-level, security-critical utilities, dcrypt aims to:
 -   Centralize mask-based operations and exact-size clearing helpers so their

@@ -45,7 +45,8 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
     storage and invoke best-effort clearing. Equal-length secret comparison uses
     owned mask-based primitives; neither property is a blanket compiler,
     target, or physical-erasure guarantee.
--   **`no_std` Compatibility**: Designed to be usable in `no_std` environments, with features like heap allocations (`alloc`) being optional.
+-   **`no_std` Compatibility**: Supports `no_std` with an allocator;
+    variable-length public and secret types require allocation.
 
 ## How It Fits in dcrypt
 

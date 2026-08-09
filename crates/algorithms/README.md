@@ -17,7 +17,8 @@ target-specific; this document makes no blanket guarantee.
 
 This library provides low-level cryptographic implementations intended to be used through the higher-level APIs of the `dcrypt` suite. It is built with the following principles:
 
-*   **Security review:** Secret-bearing paths are expected to follow the workspace constant-time and zeroization policies, but not every current implementation has completed the required dynamic review.
+*   **Security review:** Release gates exercise representative critical paths;
+    this is not a blanket compiler/target or side-channel proof.
 *   **Correctness:** Selected algorithms have NIST/RFC known-answer coverage. Self-roundtrips and vector tests are evidence of interoperability, not certification or a security audit.
 *   **Type Safety:** A strong type system is used to prevent common cryptographic mistakes at compile time. Keys, nonces, and other cryptographic types are bound to the algorithms they are intended for.
 *   **Feature-oriented builds:** The crate exposes `std` and allocation-backed

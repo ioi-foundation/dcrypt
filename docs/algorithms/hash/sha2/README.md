@@ -25,7 +25,7 @@ tests. That coverage is a correctness check, not a high-assurance certification.
 
 ## Supported Variants
 
-This module provides the following FIPS-compliant SHA-2 hash functions:
+This module provides the following SHA-2 functions specified by FIPS PUB 180-4:
 
 | Struct        | Output Size (bits) | Output Size (bytes) | Block Size (bytes) |
 | :------------ | :----------------- | :------------------ | :----------------- |
@@ -42,6 +42,9 @@ All SHA-2 structs implement the `HashFunction` trait from the parent `dcrypt::al
 
 ```rust
 pub trait HashFunction {
+    type Algorithm;
+    type Output;
+
     // Creates a new hasher instance.
     fn new() -> Self;
 
@@ -72,7 +75,7 @@ let data = b"some important data";
 let digest = Sha256::digest(data).unwrap();
 
 println!("SHA-256: {}", digest.to_hex());
-// Output: SHA-256: 1307990e6ba5ca145eb35e99182a9bec46531bc54ddf656a602c780fa0240dee
+// Output: SHA-256: 44eb9cfafb3b81e3c4651d3ab35e794a95b4a6af62bd9ec19c9ebfe63367a8b1
 ```
 
 ### Incremental (Streaming) Hashing (SHA-512)
