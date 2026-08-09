@@ -90,8 +90,7 @@ pub use types::{
 
 // Re-export security types from dcrypt-core
 pub use dcrypt_common::security::{
-    barrier, EphemeralSecret, SecretBuffer, SecretVec, SecureCompare, SecureOperation,
-    SecureOperationBuilder, SecureOperationExt, ZeroizeGuard,
+    barrier, EphemeralSecret, SecretBuffer, SecretVec, SecureCompare, ZeroizeGuard,
 };
 
 // Algorithm types and compatibility traits

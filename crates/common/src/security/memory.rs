@@ -3,108 +3,15 @@
 //! This module provides traits and utilities for ensuring memory safety
 //! in cryptographic operations.
 
-use dcrypt_api::Result;
-
-// Handle Vec and Box imports based on features
+// Handle Box imports based on features
 #[cfg(feature = "std")]
-use std::{boxed::Box, vec::Vec};
+use std::boxed::Box;
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
 extern crate alloc as rust_alloc;
 
 #[cfg(all(not(feature = "std"), feature = "alloc"))]
-use rust_alloc::{boxed::Box, vec::Vec};
-
-/// Type alias for cleanup functions used in secure operations
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub type CleanupFn<T> = Box<dyn FnOnce(&mut T)>;
-
-/// Trait for secure cryptographic operations
-///
-/// This trait ensures that sensitive data is properly handled and cleared
-/// after operations complete, whether they succeed or fail.
-pub trait SecureOperation<T> {
-    /// Execute the operation securely
-    ///
-    /// This method should:
-    /// 1. Perform the cryptographic operation
-    /// 2. Clear all sensitive intermediate data
-    /// 3. Return the result or error
-    fn execute_secure(self) -> Result<T>;
-
-    /// Clear all sensitive data associated with this operation
-    ///
-    /// This method is called automatically by `execute_secure` but can
-    /// also be called manually when needed.
-    fn clear_sensitive_data(&mut self);
-}
-
-/// Extension trait for operations that produce a result
-pub trait SecureOperationExt: Sized {
-    type Output;
-
-    /// Execute the operation and ensure cleanup on both success and failure
-    fn execute_with_cleanup<F>(self, cleanup: F) -> Result<Self::Output>
-    where
-        F: FnOnce();
-}
-
-/// Builder pattern for secure operations
-///
-/// This pattern allows for composing operations while maintaining
-/// security guarantees at each step.
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub struct SecureOperationBuilder<T> {
-    state: T,
-    cleanup_fns: Vec<CleanupFn<T>>,
-}
-
-#[cfg(any(feature = "std", feature = "alloc"))]
-impl<T> SecureOperationBuilder<T> {
-    /// Create a new secure operation builder
-    pub fn new(initial_state: T) -> Self {
-        Self {
-            state: initial_state,
-            cleanup_fns: Vec::new(),
-        }
-    }
-
-    /// Add a cleanup function to be called when the operation completes
-    pub fn with_cleanup<F>(mut self, cleanup: F) -> Self
-    where
-        F: FnOnce(&mut T) + 'static,
-    {
-        self.cleanup_fns.push(Box::new(cleanup));
-        self
-    }
-
-    /// Transform the state
-    pub fn transform<U, F>(self, f: F) -> SecureOperationBuilder<U>
-    where
-        F: FnOnce(T) -> U,
-    {
-        SecureOperationBuilder {
-            state: f(self.state),
-            cleanup_fns: Vec::new(), // Cleanup functions don't transfer
-        }
-    }
-
-    /// Build and execute the operation
-    pub fn build<O, F>(self, operation: F) -> Result<O>
-    where
-        F: FnOnce(&mut T) -> Result<O>,
-    {
-        let mut state = self.state;
-        let result = operation(&mut state);
-
-        // Execute cleanup functions regardless of success/failure
-        for cleanup in self.cleanup_fns.into_iter().rev() {
-            cleanup(&mut state);
-        }
-
-        result
-    }
-}
+use rust_alloc::boxed::Box;
 
 /// Trait for types that can be securely compared
 ///
@@ -195,47 +102,6 @@ pub mod alloc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dcrypt_internal::zeroing::Zeroize;
-
-    #[cfg(all(not(feature = "std"), feature = "alloc"))]
-    use super::rust_alloc::vec;
-
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    struct TestOperation {
-        secret: [u8; 4],
-        result: Option<Vec<u8>>,
-    }
-
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    impl SecureOperation<Vec<u8>> for TestOperation {
-        fn execute_secure(mut self) -> Result<Vec<u8>> {
-            // Simulate some operation
-            self.result = Some(self.secret.iter().map(|&b| b ^ 0xFF).collect());
-            let result = self.result.clone().unwrap();
-            self.clear_sensitive_data();
-            Ok(result)
-        }
-
-        fn clear_sensitive_data(&mut self) {
-            self.secret.zeroize();
-            if let Some(ref mut result) = self.result {
-                result.zeroize();
-            }
-            self.result = None;
-        }
-    }
-
-    #[test]
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    fn test_secure_operation() {
-        let op = TestOperation {
-            secret: [1, 2, 3, 4],
-            result: None,
-        };
-
-        let result = op.execute_secure().unwrap();
-        assert_eq!(result, vec![254, 253, 252, 251]);
-    }
 
     #[test]
     fn test_secure_compare() {

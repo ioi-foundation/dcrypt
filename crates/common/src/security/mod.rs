@@ -13,12 +13,8 @@ pub use secret::{EphemeralSecret, SecretBuffer, SecureZeroingType, ZeroizeGuard}
 #[cfg(feature = "alloc")]
 pub use secret::SecretVec;
 
-// Re-export memory safety traits and utilities
-pub use memory::{SecureCompare, SecureOperation, SecureOperationExt};
-
-// Conditionally re-export SecureOperationBuilder only when std or alloc features are enabled
-#[cfg(any(feature = "std", feature = "alloc"))]
-pub use memory::SecureOperationBuilder;
+// Re-export constant-time comparison utilities.
+pub use memory::SecureCompare;
 
 // Re-export memory barrier utilities
 pub use memory::barrier;

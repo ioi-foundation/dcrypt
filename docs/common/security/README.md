@@ -24,21 +24,15 @@ side-channel guarantees.
     *   **`SecureZeroingType` Trait**:
         A trait for types that can be securely zeroed and cloned while maintaining their security properties. Both `SecretBuffer` and `SecretVec` implement this.
 
-2.  **Secure Operations and Comparisons (`memory.rs`)**:
-    This part supplies cleanup composition and equality helpers. Equal-length
-    comparison uses `subtle`; no whole-operation/compiler/target constant-time
-    guarantee follows from using these helpers.
-    *   **`SecureOperation<T>` Trait**:
-        Defines a contract for operations that handle sensitive data. The key method is `execute_secure(self) -> Result<T>`, which should perform the operation and then ensure all sensitive intermediate data is cleared via `clear_sensitive_data(&mut self)`.
-    *   **`SecureOperationExt` Trait**:
-        An extension trait for operations that produce a `Result`, providing `execute_with_cleanup` to ensure a cleanup function runs regardless of success or failure.
-    *   **`SecureOperationBuilder<T>`**:
-        A builder pattern for constructing complex operations step-by-step while allowing for cleanup functions to be registered and executed at the end.
+2.  **Constant-Time Comparisons (`memory.rs`)**:
+    Equal-length comparison uses dcrypt's owned constant-time equality
+    primitive; no whole-operation/compiler/target constant-time guarantee
+    follows from using this helper.
     *   **`SecureCompare` Trait**:
         Provides methods for constant-time comparison:
         *   `secure_eq(&self, other: &Self) -> bool`: Constant-time equality check.
-        *   `secure_cmp(&self, other: &Self) -> subtle::Choice`: Constant-time comparison returning a `subtle::Choice`.
-        Implementations are provided for `[u8; N]` and `&[u8]` using the `subtle` crate.
+        *   `secure_cmp(&self, other: &Self) -> Choice`: Constant-time comparison returning dcrypt's owned `Choice`.
+        Implementations are provided for `[u8; N]` and `&[u8]`.
 
 3.  **Memory Barriers (`memory.rs::barrier`)**:
     These expose compiler and CPU fences. Fences alone do not make an algorithm

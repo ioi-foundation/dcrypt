@@ -101,13 +101,10 @@ pub mod prelude {
     // Re-export security types
     pub use crate::common::{EphemeralSecret, SecretBuffer, SecureZeroingType, ZeroizeGuard};
 
-    // Re-export memory safety utilities
-    pub use crate::common::{SecureCompare, SecureOperation, SecureOperationExt};
+    // Re-export constant-time comparison utilities.
+    pub use crate::common::SecureCompare;
 
     // Conditional re-exports based on features
-    #[cfg(any(feature = "std", feature = "alloc"))]
-    pub use crate::common::SecureOperationBuilder;
-
     #[cfg(feature = "alloc")]
     pub use crate::common::SecretVec;
 

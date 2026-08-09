@@ -133,6 +133,10 @@ UNPROTECTED_HIGH_LEVEL_KEY_COPY = re.compile(
     re.DOTALL,
 )
 BLS_SECRET_CAPABLE_MSM = re.compile(r"\bpub\s+fn\s+msm\s*\(")
+MISLEADING_SECURE_OPERATION_API = re.compile(
+    r"\b(?:trait\s+SecureOperation(?:Ext)?|"
+    r"struct\s+SecureOperationBuilder|type\s+CleanupFn)\b"
+)
 TARGETED_SECRET_SCRATCH = {
     "src/block/aes/mod.rs": re.compile(
         r"(?:\blet\s+mut\s+(?:round_keys_u32|round_key_bytes|state)"
@@ -2160,6 +2164,11 @@ def audit_source_tree(
                         UNPROTECTED_HIGH_LEVEL_KEY_COPY,
                         code_only,
                     ),
+                    (
+                        "misleading manual secret-cleanup abstraction",
+                        MISLEADING_SECURE_OPERATION_API,
+                        code_only,
+                    ),
                 )
             )
             if check_internal_entropy:
@@ -2291,6 +2300,7 @@ fn hchacha20(key: &[u8; 32]) -> [u8; 32] { todo!() }
 fn generate_j0() -> Result<[u8; 16]> { todo!() }
 let mut signs = [0u8; 8];
 let mut key_data = [0u8; 32];
+pub struct SecureOperationBuilder<T>(T);
 fn derive_key(input: &[u8]) -> Result<Vec<u8>> { todo!() }
 rng.try_fill_bytes(&mut secret)?;
 let mut key_words = [0u32; 8];
@@ -2336,6 +2346,7 @@ println!("cargo:rustc-link-lib=native");
         "let mut encryption_key_arr = [0u8; CHACHA20POLY1305_KEY_LEN];"
     )
     assert UNPROTECTED_HIGH_LEVEL_KEY_COPY.search("let mut buffer_bytes = [0u8; 32];")
+    assert len(MISLEADING_SECURE_OPERATION_API.findall(code_only)) == 1
     assert len(RAW_SECRET_BYTE_OUTPUT.findall(code_only)) == 1
     assert len(DIRECT_RNG_FILL.findall(code_only)) == 1
     assert (
