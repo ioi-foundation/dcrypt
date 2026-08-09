@@ -1,5 +1,9 @@
 // tests/tests/constant_time/ecdh.rs
-use dcrypt_algorithms::ec::p256::{self, Scalar, P256_SCALAR_SIZE};
+use dcrypt_algorithms::ec::{
+    k256::{self, Scalar as K256Scalar, K256_SCALAR_SIZE},
+    p224::{self, Scalar as P224Scalar, P224_SCALAR_SIZE},
+    p256::{self, Scalar as P256Scalar, P256_SCALAR_SIZE},
+};
 use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
 
@@ -12,38 +16,18 @@ fn create_ecdh_config() -> TestConfig {
     config
 }
 
-#[test]
-fn test_p256_scalar_mult_constant_time() {
+fn assert_scalar_mult_timing<W, M>(name: &str, warmup_op: W, measurement_op: M)
+where
+    W: FnMut(),
+    M: FnMut(bool),
+{
     let config = create_ecdh_config();
-    let base_point = p256::base_point_g();
-
-    let mut low_weight_bytes = [0u8; P256_SCALAR_SIZE];
-    low_weight_bytes[P256_SCALAR_SIZE - 1] = 1;
-    let scalar_low = Scalar::new(low_weight_bytes).expect("Invalid scalar");
-
-    let mut high_weight_bytes = [0xFFu8; P256_SCALAR_SIZE];
-    high_weight_bytes[0] = 0x00; // Ensure < n
-    let scalar_high = Scalar::new(high_weight_bytes).expect("Invalid scalar");
-
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
-
-    let warmup_op = || {
-        let _ = base_point.mul(&scalar_low);
-    };
-
-    let measurement_op = |high_weight: bool| {
-        if high_weight {
-            let _ = base_point.mul(&scalar_high);
-        } else {
-            let _ = base_point.mul(&scalar_low);
-        }
-    };
-
     let analysis = tester
-        .calibrate_and_measure(warmup_op, measurement_op, &config, "ECDH P-256 Scalar Mult")
+        .calibrate_and_measure(warmup_op, measurement_op, &config, name)
         .expect("Calibration failed");
 
-    println!("ECDH P-256 Scalar Mult Timing Analysis:");
+    println!("{name} Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);
     println!(
         "  99% CI: [{:.3}, {:.3}] ns",
@@ -51,11 +35,89 @@ fn test_p256_scalar_mult_constant_time() {
     );
 
     if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!(
-            "\n{}",
-            generate_test_insights(&analysis, &config, "ECDH P-256 Scalar Mult")
-        );
+        println!("\n{}", generate_test_insights(&analysis, &config, name));
     }
 
     assert!(analysis.is_constant_time);
+}
+
+#[test]
+fn test_p224_scalar_mult_constant_time() {
+    let base_point = p224::base_point_g();
+
+    let mut low_weight_bytes = [0u8; P224_SCALAR_SIZE];
+    low_weight_bytes[P224_SCALAR_SIZE - 1] = 1;
+    let scalar_low = P224Scalar::new(low_weight_bytes).expect("Invalid scalar");
+
+    let mut high_weight_bytes = [0xFFu8; P224_SCALAR_SIZE];
+    high_weight_bytes[0] = 0x00; // Ensure < n
+    let scalar_high = P224Scalar::new(high_weight_bytes).expect("Invalid scalar");
+
+    assert_scalar_mult_timing(
+        "ECDH P-224 Scalar Mult",
+        || {
+            let _ = base_point.mul(&scalar_low);
+        },
+        |high_weight| {
+            if high_weight {
+                let _ = base_point.mul(&scalar_high);
+            } else {
+                let _ = base_point.mul(&scalar_low);
+            }
+        },
+    );
+}
+
+#[test]
+fn test_p256_scalar_mult_constant_time() {
+    let base_point = p256::base_point_g();
+
+    let mut low_weight_bytes = [0u8; P256_SCALAR_SIZE];
+    low_weight_bytes[P256_SCALAR_SIZE - 1] = 1;
+    let scalar_low = P256Scalar::new(low_weight_bytes).expect("Invalid scalar");
+
+    let mut high_weight_bytes = [0xFFu8; P256_SCALAR_SIZE];
+    high_weight_bytes[0] = 0x00; // Ensure < n
+    let scalar_high = P256Scalar::new(high_weight_bytes).expect("Invalid scalar");
+
+    assert_scalar_mult_timing(
+        "ECDH P-256 Scalar Mult",
+        || {
+            let _ = base_point.mul(&scalar_low);
+        },
+        |high_weight| {
+            if high_weight {
+                let _ = base_point.mul(&scalar_high);
+            } else {
+                let _ = base_point.mul(&scalar_low);
+            }
+        },
+    );
+}
+
+#[test]
+fn test_k256_scalar_mult_constant_time() {
+    let base_point = k256::base_point_g();
+
+    let mut low_weight_bytes = [0u8; K256_SCALAR_SIZE];
+    low_weight_bytes[K256_SCALAR_SIZE - 1] = 1;
+    let scalar_low = K256Scalar::new(low_weight_bytes).expect("Invalid scalar");
+
+    let mut high_weight_bytes = [0xFFu8; K256_SCALAR_SIZE];
+    high_weight_bytes[0] = 0x00; // Ensure < n
+    let scalar_high = K256Scalar::new(high_weight_bytes).expect("Invalid scalar");
+
+    assert_scalar_mult_timing(
+        "ECDH K-256 Scalar Mult",
+        || {
+            let _ = base_point.mul(&scalar_low);
+        },
+        |high_weight| {
+            if high_weight {
+                let _ = base_point.mul(&scalar_high);
+            } else {
+                let _ = base_point.mul(&scalar_low);
+            }
+        },
+    );
 }
