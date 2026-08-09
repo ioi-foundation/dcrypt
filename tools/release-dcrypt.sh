@@ -55,6 +55,7 @@ Usage: tools/release-dcrypt.sh --version VERSION [MODE] [OPTIONS]
 Modes (choose at most one):
   (default)            Non-mutating rehearsal. Runs gates, packaging checks,
                        registry checks, and cargo-release's version dry-run.
+                       Missing audit, deny, Miri, or fuzz tools are fatal.
   --prepare            From a clean tree, apply the version bump, create the
                        release commit if cargo-release did not, and create the
                        local annotated tag. Does not push or publish.
@@ -274,10 +275,6 @@ require_security_subcommand() {
         return 0
     fi
 
-    if [[ "$MODE" == "dry-run" ]]; then
-        warn "cargo-$subcommand is unavailable; install with: $install_hint"
-        return 1
-    fi
     die "cargo-$subcommand is required; install with: $install_hint"
 }
 
@@ -300,22 +297,20 @@ run_check_gates() {
     done < <(classified_workspace_records)
     cargo check --workspace --all-targets --all-features
 
-    if require_security_subcommand audit "cargo install cargo-audit --locked"; then
-        cargo audit
-        while IFS=$'\t' read -r category workspace; do
-            [[ -n "$category" && -n "$workspace" ]] || continue
-            cargo audit --file "$PROJECT_ROOT/$workspace/Cargo.lock"
-        done < <(classified_workspace_records)
-    fi
+    require_security_subcommand audit "cargo install cargo-audit --locked"
+    cargo audit
+    while IFS=$'\t' read -r category workspace; do
+        [[ -n "$category" && -n "$workspace" ]] || continue
+        cargo audit --file "$PROJECT_ROOT/$workspace/Cargo.lock"
+    done < <(classified_workspace_records)
 
-    if require_security_subcommand deny "cargo install cargo-deny --locked"; then
-        cargo deny --workspace --all-features check
-        while IFS=$'\t' read -r category workspace; do
-            [[ -n "$category" && -n "$workspace" ]] || continue
-            cargo deny --manifest-path "$PROJECT_ROOT/$workspace/Cargo.toml" \
-                --all-features check
-        done < <(classified_workspace_records)
-    fi
+    require_security_subcommand deny "cargo install cargo-deny --locked"
+    cargo deny --workspace --all-features check
+    while IFS=$'\t' read -r category workspace; do
+        [[ -n "$category" && -n "$workspace" ]] || continue
+        cargo deny --manifest-path "$PROJECT_ROOT/$workspace/Cargo.toml" \
+            --all-features check
+    done < <(classified_workspace_records)
 
     if cargo +nightly miri --version >/dev/null 2>&1; then
         info "Running Miri on public error and secret-memory APIs"
@@ -346,8 +341,6 @@ run_check_gates() {
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
             cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
                 checked_decoders_reject_on_curve_non_subgroup_point
-    elif [[ "$MODE" == "dry-run" ]]; then
-        warn "nightly Miri is unavailable"
     else
         die "nightly Miri is required (rustup +nightly component add miri)"
     fi
@@ -374,8 +367,6 @@ run_check_gates() {
                 info "Completed 1000 deterministic runs for each of ${#fuzz_targets[@]} fuzz targets in $workspace"
             )
         done < <(classified_workspace_records)
-    elif [[ "$MODE" == "dry-run" ]]; then
-        warn "cargo-fuzz is unavailable"
     else
         die "cargo-fuzz is required (cargo install cargo-fuzz --locked)"
     fi

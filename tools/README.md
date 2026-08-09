@@ -43,6 +43,12 @@ bypass. `--skip-checks` skips only the separate format, audit/deny, Miri, and
 fuzz checks. Other CI jobs run independently so a boundary failure does not
 hide their diagnostics.
 
+The default non-mutating rehearsal is strict: missing `cargo-audit`,
+`cargo-deny`, nightly Miri, or `cargo-fuzz` tooling is a failure, just as it is
+for prepare and execute. The explicitly reported `--skip-checks` development
+option is the only way to bypass those tool-dependent checks, and its result is
+not release evidence.
+
 Publish readiness also runs `verify-bls-secret-assembly.sh`. It compiles the
 protected G1 and G2 scalar-multiplication bridges with one generic codegen unit
 for Linux x86-64, Linux AArch64, WebAssembly, and Thumb, then fails closed

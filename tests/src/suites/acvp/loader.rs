@@ -1,7 +1,7 @@
 //! Loads ACVP test vectors from JSON files.
 
 use crate::suites::acvp::model::{FlexValue, TestSuite};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -19,11 +19,104 @@ fn merge_expected_results(suite_dir: &Path, suite: &mut TestSuite) -> Result<(),
         .map_err(|error| format!("Failed to read {}: {}", expected_file.display(), error))?;
     let expected: serde_json::Value = serde_json::from_str(&json)
         .map_err(|error| format!("Failed to parse {}: {}", expected_file.display(), error))?;
+    merge_expected_value(&expected, suite)
+}
+
+fn prompt_case_ids(suite: &TestSuite) -> Result<BTreeMap<u64, BTreeSet<u64>>, String> {
+    let mut groups = BTreeMap::new();
+    for group in &suite.groups {
+        let mut cases = BTreeSet::new();
+        for case in &group.tests {
+            if !cases.insert(case.test_id) {
+                return Err(format!(
+                    "prompt.json contains duplicate tgId {}/tcId {}",
+                    group.group_name, case.test_id
+                ));
+            }
+        }
+        if groups.insert(group.group_name, cases).is_some() {
+            return Err(format!(
+                "prompt.json contains duplicate tgId {}",
+                group.group_name
+            ));
+        }
+    }
+    Ok(groups)
+}
+
+fn expected_case_ids(expected: &serde_json::Value) -> Result<BTreeMap<u64, BTreeSet<u64>>, String> {
     let groups = expected
         .get("testGroups")
         .and_then(serde_json::Value::as_array)
         .ok_or_else(|| "expectedResults.json is missing testGroups".to_string())?;
 
+    let mut ids = BTreeMap::new();
+    for expected_group in groups {
+        let group_id = expected_group
+            .get("tgId")
+            .and_then(serde_json::Value::as_u64)
+            .ok_or_else(|| "expected result group is missing tgId".to_string())?;
+        let cases = expected_group
+            .get("tests")
+            .and_then(serde_json::Value::as_array)
+            .ok_or_else(|| format!("expected result tgId {} is missing tests", group_id))?;
+        let mut case_ids = BTreeSet::new();
+        for expected_case in cases {
+            let case_id = expected_case
+                .get("tcId")
+                .and_then(serde_json::Value::as_u64)
+                .ok_or_else(|| format!("expected result tgId {} is missing tcId", group_id))?;
+            if !case_ids.insert(case_id) {
+                return Err(format!(
+                    "expectedResults.json contains duplicate tgId {}/tcId {}",
+                    group_id, case_id
+                ));
+            }
+        }
+        if ids.insert(group_id, case_ids).is_some() {
+            return Err(format!(
+                "expectedResults.json contains duplicate tgId {}",
+                group_id
+            ));
+        }
+    }
+    Ok(ids)
+}
+
+fn merge_expected_value(expected: &serde_json::Value, suite: &mut TestSuite) -> Result<(), String> {
+    let prompt_ids = prompt_case_ids(suite)?;
+    let expected_ids = expected_case_ids(expected)?;
+    let prompt_groups: BTreeSet<_> = prompt_ids.keys().copied().collect();
+    let expected_groups: BTreeSet<_> = expected_ids.keys().copied().collect();
+    if prompt_groups != expected_groups {
+        return Err(format!(
+            "prompt/expected tgId sets differ: missing expected {:?}, unexpected expected {:?}",
+            prompt_groups
+                .difference(&expected_groups)
+                .collect::<Vec<_>>(),
+            expected_groups
+                .difference(&prompt_groups)
+                .collect::<Vec<_>>()
+        ));
+    }
+    for (group_id, prompt_cases) in &prompt_ids {
+        let expected_cases = expected_ids
+            .get(group_id)
+            .ok_or_else(|| format!("expected result is missing tgId {}", group_id))?;
+        if prompt_cases != expected_cases {
+            return Err(format!(
+                "prompt/expected tcId sets differ for tgId {}: missing expected {:?}, unexpected expected {:?}",
+                group_id,
+                prompt_cases.difference(expected_cases).collect::<Vec<_>>(),
+                expected_cases.difference(prompt_cases).collect::<Vec<_>>()
+            ));
+        }
+    }
+
+    let groups = expected
+        .get("testGroups")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| "expectedResults.json is missing testGroups".to_string())?;
     for expected_group in groups {
         let group_id = expected_group
             .get("tgId")
@@ -223,4 +316,105 @@ pub fn load_all_suites() -> Vec<TestSuite> {
     vec![load_suite_by_name("ACVP-AES-CBC-1.0").unwrap_or_else(|e| {
         panic!("Failed to load ACVP-AES-CBC-1.0: {}", e);
     })]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn suite(groups: serde_json::Value) -> TestSuite {
+        serde_json::from_value(json!({
+            "vsId": 1,
+            "algorithm": "SHA2-256",
+            "testGroups": groups,
+        }))
+        .expect("test prompt should deserialize")
+    }
+
+    fn prompt_group(group_id: u64, case_ids: &[u64]) -> serde_json::Value {
+        json!({
+            "tgId": group_id,
+            "testType": "AFT",
+            "tests": case_ids
+                .iter()
+                .map(|case_id| json!({ "tcId": case_id, "msg": "" }))
+                .collect::<Vec<_>>(),
+        })
+    }
+
+    fn expected_group(group_id: u64, case_ids: &[u64]) -> serde_json::Value {
+        json!({
+            "tgId": group_id,
+            "tests": case_ids
+                .iter()
+                .map(|case_id| json!({ "tcId": case_id, "md": "00" }))
+                .collect::<Vec<_>>(),
+        })
+    }
+
+    fn merge_error(prompt_groups: serde_json::Value, expected_groups: serde_json::Value) -> String {
+        let mut prompt = suite(prompt_groups);
+        merge_expected_value(&json!({ "testGroups": expected_groups }), &mut prompt)
+            .expect_err("malformed identifier sets must be rejected")
+    }
+
+    #[test]
+    fn expected_results_require_an_exact_unique_group_and_case_join() {
+        let mut exact = suite(json!([prompt_group(1, &[1, 2]), prompt_group(2, &[3])]));
+        merge_expected_value(
+            &json!({
+                "testGroups": [expected_group(2, &[3]), expected_group(1, &[2, 1])],
+            }),
+            &mut exact,
+        )
+        .expect("array order must not affect the identifier join");
+        assert_eq!(exact.groups[0].tests[0].inputs["md"].as_string(), "00");
+
+        assert!(merge_error(
+            json!([prompt_group(1, &[1]), prompt_group(1, &[2])]),
+            json!([expected_group(1, &[1, 2])]),
+        )
+        .contains("prompt.json contains duplicate tgId 1"));
+        assert!(merge_error(
+            json!([prompt_group(1, &[1, 1])]),
+            json!([expected_group(1, &[1])]),
+        )
+        .contains("prompt.json contains duplicate tgId 1/tcId 1"));
+        assert!(merge_error(
+            json!([prompt_group(1, &[1])]),
+            json!([expected_group(1, &[1]), expected_group(1, &[1])]),
+        )
+        .contains("expectedResults.json contains duplicate tgId 1"));
+        assert!(merge_error(
+            json!([prompt_group(1, &[1])]),
+            json!([expected_group(1, &[1, 1])]),
+        )
+        .contains("expectedResults.json contains duplicate tgId 1/tcId 1"));
+
+        let missing_case = merge_error(
+            json!([prompt_group(1, &[1, 2])]),
+            json!([expected_group(1, &[1])]),
+        );
+        assert!(
+            missing_case.contains("missing expected [2]"),
+            "{missing_case}"
+        );
+        let unexpected_case = merge_error(
+            json!([prompt_group(1, &[1])]),
+            json!([expected_group(1, &[1, 2])]),
+        );
+        assert!(
+            unexpected_case.contains("unexpected expected [2]"),
+            "{unexpected_case}"
+        );
+        let missing_group = merge_error(
+            json!([prompt_group(1, &[1]), prompt_group(2, &[2])]),
+            json!([expected_group(1, &[1])]),
+        );
+        assert!(
+            missing_group.contains("missing expected [2]"),
+            "{missing_group}"
+        );
+    }
 }
