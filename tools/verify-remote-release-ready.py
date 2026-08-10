@@ -1320,6 +1320,7 @@ class GateSelfTests(unittest.TestCase):
         )[0]
 
         for gate in ("verify-bls-secret-assembly.sh", "verify-ghash-assembly.sh"):
+            gate_text = (PROJECT_ROOT / "tools" / gate).read_text()
             self.assertEqual(
                 publish_boundary.count(f'"$SCRIPT_DIR/{gate}"'),
                 1,
@@ -1329,6 +1330,21 @@ class GateSelfTests(unittest.TestCase):
                 ci_boundary.count(f"run: tools/{gate}"),
                 1,
                 f"CI boundary job must invoke {gate} exactly once",
+            )
+            self.assertIn(
+                "for command in cargo find grep python3 rustup",
+                gate_text,
+                f"{gate} must use tools available on the pinned CI image",
+            )
+            self.assertIn(
+                'grep -Fqx -- "$target"',
+                gate_text,
+                f"{gate} must check installed targets without requiring ripgrep",
+            )
+            self.assertNotRegex(
+                gate_text,
+                r"\brg\b",
+                f"{gate} must not depend on the optional ripgrep executable",
             )
 
         self.assertEqual(

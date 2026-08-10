@@ -15,7 +15,7 @@ if [[ ! "$TOOLCHAIN" =~ ^[A-Za-z0-9._-]+$ ]]; then
     printf 'error: invalid DCRYPT_ASSEMBLY_TOOLCHAIN value\n' >&2
     exit 2
 fi
-for command in cargo find python3 rg rustup; do
+for command in cargo find grep python3 rustup; do
     command -v "$command" >/dev/null 2>&1 || {
         printf 'error: required command is unavailable: %s\n' "$command" >&2
         exit 1
@@ -24,7 +24,7 @@ done
 
 installed_targets="$(rustup target list --installed --toolchain "$TOOLCHAIN")"
 for target in "${TARGETS[@]}"; do
-    if ! rg --fixed-strings --line-regexp --quiet "$target" <<<"$installed_targets"; then
+    if ! grep -Fqx -- "$target" <<<"$installed_targets"; then
         printf 'error: target %s is not installed for toolchain %s\n' "$target" "$TOOLCHAIN" >&2
         printf 'install it with: rustup target add --toolchain %s %s\n' "$TOOLCHAIN" "$target" >&2
         exit 1
