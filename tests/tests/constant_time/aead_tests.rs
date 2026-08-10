@@ -1,4 +1,3 @@
-// tests/constant_time/aead_tests.rs
 // Constant-time tests for AEAD ciphers (GCM and ChaCha20Poly1305)
 
 use dcrypt_algorithms::aead::chacha20poly1305::ChaCha20Poly1305;
@@ -12,24 +11,62 @@ use dcrypt_algorithms::types::Nonce;
 use dcrypt_api::traits::AuthenticatedCipher;
 use dcrypt_api::types::SecretBytes;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
-use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
-use std::cell::RefCell;
+use dcrypt_tests::suites::constant_time::tester::{
+    prepare_bytes, TimingAnalysis, TimingClass, TimingTester,
+};
+use std::hint::black_box;
 
-fn select_equal_length_input(out: &mut [u8], input_a: &[u8], input_b: &[u8], use_b: bool) {
-    assert_eq!(out.len(), input_a.len());
-    assert_eq!(input_a.len(), input_b.len());
+/// One allocation is reused for both timing classes. Preparation reads both
+/// equal-length templates and mask-selects into `current` without resizing it.
+struct PreparedAeadInput {
+    current: Vec<u8>,
+    input_a: Vec<u8>,
+    input_b: Vec<u8>,
+    current_address: usize,
+    current_len: usize,
+    current_capacity: usize,
+}
 
-    // Read both candidates and select with a mask. Besides keeping the copy
-    // outside the clock, this avoids class-correlated branch-history and cache
-    // footprints immediately before the measurement starts.
-    let mask = 0u8.wrapping_sub(use_b as u8);
-    for ((output, a), b) in out.iter_mut().zip(input_a).zip(input_b) {
-        *output = (*a & !mask) | (*b & mask);
+impl PreparedAeadInput {
+    fn new(input_a: &[u8], input_b: &[u8]) -> Result<Self, String> {
+        if input_a.len() != input_b.len() {
+            return Err(format!(
+                "timing classes have different public ciphertext lengths: {} != {}",
+                input_a.len(),
+                input_b.len()
+            ));
+        }
+
+        let current = input_a.to_vec();
+        let current_address = current.as_ptr().addr();
+        let current_len = current.len();
+        let current_capacity = current.capacity();
+
+        Ok(Self {
+            current,
+            input_a: input_a.to_vec(),
+            input_b: input_b.to_vec(),
+            current_address,
+            current_len,
+            current_capacity,
+        })
+    }
+
+    fn prepare(&mut self, class: TimingClass) {
+        self.enforce_stable_storage();
+        prepare_bytes(&mut self.current, &self.input_a, &self.input_b, class);
+        self.enforce_stable_storage();
+    }
+
+    fn enforce_stable_storage(&self) {
+        assert_eq!(self.current.as_ptr().addr(), self.current_address);
+        assert_eq!(self.current.len(), self.current_len);
+        assert_eq!(self.current.capacity(), self.current_capacity);
     }
 }
 
-// Helper to set up the GCM instance once
-fn make_gcm() -> (Gcm<Aes128>, Nonce<12>, Vec<u8>, Vec<u8>, Vec<u8>) {
+// Helper to set up the GCM instance once.
+fn make_gcm() -> Result<(Gcm<Aes128>, Nonce<12>, Vec<u8>, Vec<u8>, Vec<u8>), String> {
     let key_bytes = [0u8; 16];
     let key = SecretBytes::<16>::new(key_bytes);
     let nonce_bytes = [0u8; 12];
@@ -38,134 +75,91 @@ fn make_gcm() -> (Gcm<Aes128>, Nonce<12>, Vec<u8>, Vec<u8>, Vec<u8>) {
     let plain_a = b"secret message";
     let plain_b = b"second message";
     let cipher = Aes128::new(&key);
-    let g = Gcm::new(cipher).unwrap();
-    let ct_a = g.internal_encrypt(&nonce, plain_a, Some(aad)).unwrap();
-    let ct_b = g.internal_encrypt(&nonce, plain_b, Some(aad)).unwrap();
-    (g, nonce, ct_a, ct_b, aad.to_vec())
+    let g = Gcm::new(cipher).map_err(|error| format!("GCM timing setup failed: {error}"))?;
+    let ct_a = g
+        .internal_encrypt(&nonce, plain_a, Some(aad))
+        .map_err(|error| format!("GCM class A timing setup failed: {error}"))?;
+    let ct_b = g
+        .internal_encrypt(&nonce, plain_b, Some(aad))
+        .map_err(|error| format!("GCM class B timing setup failed: {error}"))?;
+    Ok((g, nonce, ct_a, ct_b, aad.to_vec()))
 }
 
-#[test]
-fn test_gcm_success_path_constant_time() {
+pub(super) fn measure_gcm_success_path() -> Result<TimingAnalysis, String> {
     let config = TestConfig::for_aead();
-    let (gcm, nonce, ciphertext_a, ciphertext_b, aad) = make_gcm();
-    let tester = TimingTester::new(config.num_samples, config.num_iterations);
+    let (gcm, nonce, ciphertext_a, ciphertext_b, aad) = make_gcm()?;
 
-    let warmup_op = || {
-        let _ = gcm.internal_decrypt(&nonce, &ciphertext_a, Some(&aad));
-    };
-
-    let measurement_input = RefCell::new(ciphertext_a.clone());
-    let prepare_op = |use_b: bool| {
-        select_equal_length_input(
-            &mut measurement_input.borrow_mut(),
-            &ciphertext_a,
-            &ciphertext_b,
-            use_b,
-        );
-    };
-    let measurement_op = || {
-        let input = measurement_input.borrow();
-        let _ = gcm.internal_decrypt(&nonce, &input, Some(&aad));
-    };
-
-    let analysis = tester
-        .calibrate_and_measure_prepared(
-            warmup_op,
-            prepare_op,
-            measurement_op,
-            &config,
-            "GCM Success Path",
-        )
-        .expect("Calibration failed");
-
-    println!("GCM Success Path Timing Analysis:");
-    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!(
-        "  99% CI: [{:.3}, {:.3}] ns",
-        analysis.ci_lower, analysis.ci_upper
-    );
-    println!("  Cohen's d: {:.3}", analysis.cohens_d);
-
-    if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!(
-            "\n{}",
-            generate_test_insights(&analysis, &config, "GCM Success Path")
-        );
+    if gcm
+        .internal_decrypt(&nonce, &ciphertext_a, Some(&aad))
+        .is_err()
+        || gcm
+            .internal_decrypt(&nonce, &ciphertext_b, Some(&aad))
+            .is_err()
+    {
+        return Err("GCM success timing fixture did not decrypt successfully".to_string());
     }
 
-    assert!(
-        analysis.is_constant_time,
-        "GCM success path not constant time"
-    );
+    let mut state = PreparedAeadInput::new(&ciphertext_a, &ciphertext_b)?;
+    let tester = TimingTester::new(config.num_samples, config.num_iterations);
+
+    tester.calibrate_and_measure_prepared(
+        &mut state,
+        PreparedAeadInput::prepare,
+        |state| {
+            drop(black_box(gcm.internal_decrypt(
+                &nonce,
+                black_box(state.current.as_slice()),
+                Some(&aad),
+            )));
+        },
+        &config,
+        "GCM Success Path",
+    )
 }
 
-fn assert_gcm_invalid_pair_constant_time(
+fn measure_gcm_invalid_pair(
     gcm: &Gcm<Aes128>,
     nonce: &Nonce<12>,
     invalid_a: &[u8],
     invalid_b: &[u8],
     aad: &[u8],
     name: &str,
-) {
-    let config = TestConfig::for_aead();
-    let tester = TimingTester::new(config.num_samples, config.num_iterations);
-
-    assert!(gcm.internal_decrypt(nonce, invalid_a, Some(aad)).is_err());
-    assert!(gcm.internal_decrypt(nonce, invalid_b, Some(aad)).is_err());
-
-    let warmup_op = || {
-        drop(std::hint::black_box(gcm.internal_decrypt(
-            nonce,
-            invalid_a,
-            Some(aad),
-        )));
-    };
-
-    let measurement_input = RefCell::new(invalid_a.to_vec());
-    let prepare_op = |use_b: bool| {
-        select_equal_length_input(
-            &mut measurement_input.borrow_mut(),
-            invalid_a,
-            invalid_b,
-            use_b,
-        );
-    };
-    let measurement_op = || {
-        let input = measurement_input.borrow();
-        drop(std::hint::black_box(gcm.internal_decrypt(
-            nonce,
-            &input,
-            Some(aad),
-        )));
-    };
-
-    let analysis = tester
-        .calibrate_and_measure_prepared(warmup_op, prepare_op, measurement_op, &config, name)
-        .expect("Calibration failed");
-
-    println!("{name} Timing Analysis:");
-    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!(
-        "  99% CI: [{:.3}, {:.3}] ns",
-        analysis.ci_lower, analysis.ci_upper
-    );
-
-    if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!("\n{}", generate_test_insights(&analysis, &config, name));
+) -> Result<TimingAnalysis, String> {
+    if gcm.internal_decrypt(nonce, invalid_a, Some(aad)).is_ok()
+        || gcm.internal_decrypt(nonce, invalid_b, Some(aad)).is_ok()
+    {
+        return Err(format!("{name} fixture did not reject both classes"));
     }
 
-    assert!(
-        analysis.is_constant_time,
-        "{name} invalid classes are not constant time"
-    );
+    let config = TestConfig::for_aead();
+    let mut state = PreparedAeadInput::new(invalid_a, invalid_b)?;
+    let tester = TimingTester::new(config.num_samples, config.num_iterations);
+
+    tester.calibrate_and_measure_prepared(
+        &mut state,
+        PreparedAeadInput::prepare,
+        |state| {
+            drop(black_box(gcm.internal_decrypt(
+                nonce,
+                black_box(state.current.as_slice()),
+                Some(aad),
+            )));
+        },
+        &config,
+        name,
+    )
 }
 
-#[test]
-fn test_gcm_invalid_ciphertext_data_constant_time() {
-    let (gcm, nonce, valid_ct, _, aad) = make_gcm();
+pub(super) fn measure_gcm_invalid_ciphertext_data() -> Result<TimingAnalysis, String> {
+    let (gcm, nonce, valid_ct, _, aad) = make_gcm()?;
     let tag_len = <Gcm<Aes128> as AuthenticatedCipher>::TAG_SIZE;
-    let ciphertext_len = valid_ct.len() - tag_len;
-    assert!(ciphertext_len > 0);
+    let ciphertext_len = valid_ct
+        .len()
+        .checked_sub(tag_len)
+        .ok_or_else(|| "GCM fixture ciphertext is shorter than its tag".to_string())?;
+    if ciphertext_len == 0 {
+        return Err("GCM fixture has no ciphertext data".to_string());
+    }
 
     // Both classes have the same public length and authentication-error result.
     // They differ only in attacker-controlled ciphertext bits that feed the
@@ -175,21 +169,26 @@ fn test_gcm_invalid_ciphertext_data_constant_time() {
     let mut invalid_b = valid_ct.clone();
     invalid_b[0] ^= 0x80;
 
-    assert_gcm_invalid_pair_constant_time(
+    measure_gcm_invalid_pair(
         &gcm,
         &nonce,
         &invalid_a,
         &invalid_b,
         &aad,
         "GCM Invalid Ciphertext Data",
-    );
+    )
 }
 
-#[test]
-fn test_gcm_first_vs_last_tag_mismatch_constant_time() {
-    let (gcm, nonce, valid_ct, _, aad) = make_gcm();
+pub(super) fn measure_gcm_first_vs_last_tag_mismatch() -> Result<TimingAnalysis, String> {
+    let (gcm, nonce, valid_ct, _, aad) = make_gcm()?;
     let tag_len = <Gcm<Aes128> as AuthenticatedCipher>::TAG_SIZE;
-    let first_tag_index = valid_ct.len() - tag_len;
+    let first_tag_index = valid_ct
+        .len()
+        .checked_sub(tag_len)
+        .ok_or_else(|| "GCM fixture ciphertext is shorter than its tag".to_string())?;
+    if tag_len == 0 || first_tag_index >= valid_ct.len() {
+        return Err("GCM fixture has no authentication tag".to_string());
+    }
 
     // Both classes traverse the authentication-error path; only the mismatch
     // position within the equal-length received tag changes.
@@ -199,17 +198,17 @@ fn test_gcm_first_vs_last_tag_mismatch_constant_time() {
     let last_tag_index = last_mismatch.len() - 1;
     last_mismatch[last_tag_index] ^= 0x01;
 
-    assert_gcm_invalid_pair_constant_time(
+    measure_gcm_invalid_pair(
         &gcm,
         &nonce,
         &first_mismatch,
         &last_mismatch,
         &aad,
         "GCM First-vs-Last Tag Mismatch",
-    );
+    )
 }
 
-fn make_chacha_poly() -> (ChaCha20Poly1305, Vec<u8>, Vec<u8>, Vec<u8>) {
+fn make_chacha_poly() -> Result<(ChaCha20Poly1305, Vec<u8>, Vec<u8>, Vec<u8>), String> {
     let key = [0x42; CHACHA20POLY1305_KEY_SIZE];
     let nonce_bytes = [0x24; CHACHA20POLY1305_NONCE_SIZE];
     let nonce = Nonce::<CHACHA20POLY1305_NONCE_SIZE>::new(nonce_bytes);
@@ -218,156 +217,116 @@ fn make_chacha_poly() -> (ChaCha20Poly1305, Vec<u8>, Vec<u8>, Vec<u8>) {
     let plaintext_b = b"another private msg!";
 
     let cipher = ChaCha20Poly1305::new(&key);
-    let ciphertext_a = cipher.encrypt(&nonce, plaintext_a, Some(aad)).unwrap();
-    let ciphertext_b = cipher.encrypt(&nonce, plaintext_b, Some(aad)).unwrap();
-    (cipher, ciphertext_a, ciphertext_b, aad.to_vec())
+    let ciphertext_a = cipher
+        .encrypt(&nonce, plaintext_a, Some(aad))
+        .map_err(|error| format!("ChaChaPoly class A timing setup failed: {error}"))?;
+    let ciphertext_b = cipher
+        .encrypt(&nonce, plaintext_b, Some(aad))
+        .map_err(|error| format!("ChaChaPoly class B timing setup failed: {error}"))?;
+    Ok((cipher, ciphertext_a, ciphertext_b, aad.to_vec()))
 }
 
-#[test]
-fn test_chacha_poly_success_constant_time() {
+pub(super) fn measure_chacha_poly_success_path() -> Result<TimingAnalysis, String> {
     let config = TestConfig::for_chacha_poly();
-    let (cipher, ciphertext_a, ciphertext_b, aad) = make_chacha_poly();
+    let (cipher, ciphertext_a, ciphertext_b, aad) = make_chacha_poly()?;
     let nonce_bytes = [0x24; CHACHA20POLY1305_NONCE_SIZE];
     let nonce = Nonce::<CHACHA20POLY1305_NONCE_SIZE>::new(nonce_bytes);
-    assert_eq!(ciphertext_a.len(), ciphertext_b.len());
 
-    let tester = TimingTester::new(config.num_samples, config.num_iterations);
-
-    let warmup_op = || {
-        let _ = cipher.decrypt(&nonce, &ciphertext_a, Some(&aad));
-    };
-
-    let measurement_input = RefCell::new(ciphertext_a.clone());
-    let prepare_op = |use_b: bool| {
-        select_equal_length_input(
-            &mut measurement_input.borrow_mut(),
-            &ciphertext_a,
-            &ciphertext_b,
-            use_b,
-        );
-    };
-    let measurement_op = || {
-        let input = measurement_input.borrow();
-        let _ = cipher.decrypt(&nonce, &input, Some(&aad));
-    };
-
-    let analysis = tester
-        .calibrate_and_measure_prepared(
-            warmup_op,
-            prepare_op,
-            measurement_op,
-            &config,
-            "ChaChaPoly Success Path",
-        )
-        .expect("Calibration failed");
-
-    println!("ChaChaPoly Success Path Timing Analysis:");
-    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!(
-        "  99% CI: [{:.3}, {:.3}] ns",
-        analysis.ci_lower, analysis.ci_upper
-    );
-
-    if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!(
-            "\n{}",
-            generate_test_insights(&analysis, &config, "ChaChaPoly Success Path")
-        );
+    if cipher.decrypt(&nonce, &ciphertext_a, Some(&aad)).is_err()
+        || cipher.decrypt(&nonce, &ciphertext_b, Some(&aad)).is_err()
+    {
+        return Err("ChaChaPoly success timing fixture did not decrypt successfully".to_string());
     }
 
-    assert!(analysis.is_constant_time);
+    let mut state = PreparedAeadInput::new(&ciphertext_a, &ciphertext_b)?;
+    let tester = TimingTester::new(config.num_samples, config.num_iterations);
+
+    tester.calibrate_and_measure_prepared(
+        &mut state,
+        PreparedAeadInput::prepare,
+        |state| {
+            drop(black_box(cipher.decrypt(
+                &nonce,
+                black_box(state.current.as_slice()),
+                Some(&aad),
+            )));
+        },
+        &config,
+        "ChaChaPoly Success Path",
+    )
 }
 
-fn assert_chacha_poly_invalid_pair_constant_time(
+fn measure_chacha_poly_invalid_pair(
     cipher: &ChaCha20Poly1305,
     nonce: &Nonce<CHACHA20POLY1305_NONCE_SIZE>,
     invalid_a: &[u8],
     invalid_b: &[u8],
     aad: &[u8],
     name: &str,
-) {
-    let config = TestConfig::for_chacha_poly();
-    let tester = TimingTester::new(config.num_samples, config.num_iterations);
-
-    assert!(cipher.decrypt(nonce, invalid_a, Some(aad)).is_err());
-    assert!(cipher.decrypt(nonce, invalid_b, Some(aad)).is_err());
-
-    let warmup_op = || {
-        drop(std::hint::black_box(cipher.decrypt(
-            nonce,
-            invalid_a,
-            Some(aad),
-        )));
-    };
-
-    let measurement_input = RefCell::new(invalid_a.to_vec());
-    let prepare_op = |use_b: bool| {
-        select_equal_length_input(
-            &mut measurement_input.borrow_mut(),
-            invalid_a,
-            invalid_b,
-            use_b,
-        );
-    };
-    let measurement_op = || {
-        let input = measurement_input.borrow();
-        drop(std::hint::black_box(cipher.decrypt(
-            nonce,
-            &input,
-            Some(aad),
-        )));
-    };
-
-    let analysis = tester
-        .calibrate_and_measure_prepared(warmup_op, prepare_op, measurement_op, &config, name)
-        .expect("Calibration failed");
-
-    println!("{name} Timing Analysis:");
-    println!("  Mean diff: {:.3} ns", analysis.mean_diff);
-    println!(
-        "  99% CI: [{:.3}, {:.3}] ns",
-        analysis.ci_lower, analysis.ci_upper
-    );
-
-    if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
-        println!("\n{}", generate_test_insights(&analysis, &config, name));
+) -> Result<TimingAnalysis, String> {
+    if cipher.decrypt(nonce, invalid_a, Some(aad)).is_ok()
+        || cipher.decrypt(nonce, invalid_b, Some(aad)).is_ok()
+    {
+        return Err(format!("{name} fixture did not reject both classes"));
     }
 
-    assert!(
-        analysis.is_constant_time,
-        "{name} invalid classes are not constant time"
-    );
+    let config = TestConfig::for_chacha_poly();
+    let mut state = PreparedAeadInput::new(invalid_a, invalid_b)?;
+    let tester = TimingTester::new(config.num_samples, config.num_iterations);
+
+    tester.calibrate_and_measure_prepared(
+        &mut state,
+        PreparedAeadInput::prepare,
+        |state| {
+            drop(black_box(cipher.decrypt(
+                nonce,
+                black_box(state.current.as_slice()),
+                Some(aad),
+            )));
+        },
+        &config,
+        name,
+    )
 }
 
-#[test]
-fn test_chacha_poly_invalid_ciphertext_data_constant_time() {
-    let (cipher, valid_ct, _, aad) = make_chacha_poly();
+pub(super) fn measure_chacha_poly_invalid_ciphertext_data() -> Result<TimingAnalysis, String> {
+    let (cipher, valid_ct, _, aad) = make_chacha_poly()?;
     let nonce_bytes = [0x24; CHACHA20POLY1305_NONCE_SIZE];
     let nonce = Nonce::<CHACHA20POLY1305_NONCE_SIZE>::new(nonce_bytes);
-    let ciphertext_len = valid_ct.len() - CHACHA20POLY1305_TAG_SIZE;
-    assert!(ciphertext_len > 0);
+    let ciphertext_len = valid_ct
+        .len()
+        .checked_sub(CHACHA20POLY1305_TAG_SIZE)
+        .ok_or_else(|| "ChaChaPoly fixture ciphertext is shorter than its tag".to_string())?;
+    if ciphertext_len == 0 {
+        return Err("ChaChaPoly fixture has no ciphertext data".to_string());
+    }
 
     let mut invalid_a = valid_ct.clone();
     invalid_a[0] ^= 0x01;
     let mut invalid_b = valid_ct.clone();
     invalid_b[0] ^= 0x80;
 
-    assert_chacha_poly_invalid_pair_constant_time(
+    measure_chacha_poly_invalid_pair(
         &cipher,
         &nonce,
         &invalid_a,
         &invalid_b,
         &aad,
         "ChaChaPoly Invalid Ciphertext Data",
-    );
+    )
 }
 
-#[test]
-fn test_chacha_poly_first_vs_last_tag_mismatch_constant_time() {
-    let (cipher, valid_ct, _, aad) = make_chacha_poly();
+pub(super) fn measure_chacha_poly_first_vs_last_tag_mismatch() -> Result<TimingAnalysis, String> {
+    let (cipher, valid_ct, _, aad) = make_chacha_poly()?;
     let nonce_bytes = [0x24; CHACHA20POLY1305_NONCE_SIZE];
     let nonce = Nonce::<CHACHA20POLY1305_NONCE_SIZE>::new(nonce_bytes);
-    let first_tag_index = valid_ct.len() - CHACHA20POLY1305_TAG_SIZE;
+    let first_tag_index = valid_ct
+        .len()
+        .checked_sub(CHACHA20POLY1305_TAG_SIZE)
+        .ok_or_else(|| "ChaChaPoly fixture ciphertext is shorter than its tag".to_string())?;
+    if CHACHA20POLY1305_TAG_SIZE == 0 || first_tag_index >= valid_ct.len() {
+        return Err("ChaChaPoly fixture has no authentication tag".to_string());
+    }
 
     let mut first_mismatch = valid_ct.clone();
     first_mismatch[first_tag_index] ^= 0x01;
@@ -375,12 +334,12 @@ fn test_chacha_poly_first_vs_last_tag_mismatch_constant_time() {
     let last_tag_index = last_mismatch.len() - 1;
     last_mismatch[last_tag_index] ^= 0x01;
 
-    assert_chacha_poly_invalid_pair_constant_time(
+    measure_chacha_poly_invalid_pair(
         &cipher,
         &nonce,
         &first_mismatch,
         &last_mismatch,
         &aad,
         "ChaChaPoly First-vs-Last Tag Mismatch",
-    );
+    )
 }
