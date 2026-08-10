@@ -21,7 +21,7 @@ pub struct TestConfig {
     /// Practical Significance Threshold (nanoseconds).
     /// A family-adjusted rejection blocks only when the paired mean difference
     /// also exceeds this value.
-    /// This filters out architectural biases that are real but exploitable.
+    /// This filters out differences below the predeclared practical threshold.
     /// Default: 1.0ns (approx 3-4 cycles on modern CPUs).
     pub practical_significance_threshold: f64,
 
