@@ -2,14 +2,27 @@
 use dcrypt_algorithms::hash::Sha256;
 use dcrypt_algorithms::kdf::pbkdf2::Pbkdf2;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
-use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
+use dcrypt_tests::suites::constant_time::tester::{
+    generate_test_insights, prepare_bytes, TimingAnalysis, TimingClass, TimingTester,
+};
+
+struct PreparedPassword {
+    current: [u8; 32],
+    class_a: [u8; 32],
+    class_b: [u8; 32],
+}
+
+impl PreparedPassword {
+    fn prepare(&mut self, class: TimingClass) {
+        prepare_bytes(&mut self.current, &self.class_a, &self.class_b, class);
+    }
+}
 
 fn create_pbkdf2_config() -> TestConfig {
     TestConfig::for_pbkdf2()
 }
 
-#[test]
-fn test_pbkdf2_constant_time() {
+pub(super) fn measure_pbkdf2_constant_time() -> Result<TimingAnalysis, String> {
     let config = create_pbkdf2_config();
     let iterations = 50;
     // Password length is public to this slice-based API and affects ordinary
@@ -25,24 +38,30 @@ fn test_pbkdf2_constant_time() {
         password2_bytes.len(),
         "timing classes must use equal public password lengths"
     );
+    let mut state = PreparedPassword {
+        current: password1_bytes,
+        class_a: password1_bytes,
+        class_b: password2_bytes,
+    };
 
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
-    let warmup_op = || {
-        let _ = Pbkdf2::<Sha256>::pbkdf2(&password1_bytes, salt, iterations, output_len);
+    let measurement_op = |prepared: &PreparedPassword| {
+        std::hint::black_box(Pbkdf2::<Sha256>::pbkdf2(
+            &prepared.current,
+            salt,
+            iterations,
+            output_len,
+        ));
     };
 
-    let measurement_op = |use_pw2: bool| {
-        if use_pw2 {
-            let _ = Pbkdf2::<Sha256>::pbkdf2(&password2_bytes, salt, iterations, output_len);
-        } else {
-            let _ = Pbkdf2::<Sha256>::pbkdf2(&password1_bytes, salt, iterations, output_len);
-        }
-    };
-
-    let analysis = tester
-        .calibrate_and_measure(warmup_op, measurement_op, &config, "PBKDF2")
-        .expect("Calibration failed");
+    let analysis = tester.calibrate_and_measure_prepared(
+        &mut state,
+        PreparedPassword::prepare,
+        measurement_op,
+        &config,
+        "PBKDF2",
+    )?;
 
     println!("PBKDF2 Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);
@@ -51,9 +70,9 @@ fn test_pbkdf2_constant_time() {
         analysis.ci_lower, analysis.ci_upper
     );
 
-    if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
+    if std::env::var("VERBOSE").is_ok() {
         println!("\n{}", generate_test_insights(&analysis, &config, "PBKDF2"));
     }
 
-    assert!(analysis.is_constant_time);
+    Ok(analysis)
 }

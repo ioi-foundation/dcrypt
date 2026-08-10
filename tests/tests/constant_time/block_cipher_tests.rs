@@ -3,10 +3,23 @@ use dcrypt_algorithms::block::aes::Aes128;
 use dcrypt_algorithms::block::BlockCipher;
 use dcrypt_api::types::SecretBytes;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
-use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
+use dcrypt_tests::suites::constant_time::tester::{
+    generate_test_insights, prepare_bytes, TimingAnalysis, TimingClass, TimingTester,
+};
 
-#[test]
-fn test_aes_constant_time() {
+struct PreparedBlock {
+    current: [u8; 16],
+    class_a: [u8; 16],
+    class_b: [u8; 16],
+}
+
+impl PreparedBlock {
+    fn prepare(&mut self, class: TimingClass) {
+        prepare_bytes(&mut self.current, &self.class_a, &self.class_b, class);
+    }
+}
+
+pub(super) fn measure_aes_constant_time() -> Result<TimingAnalysis, String> {
     let config = TestConfig::for_block_cipher();
     let key_bytes = [0u8; 16];
     let key = SecretBytes::<16>::new(key_bytes);
@@ -14,22 +27,27 @@ fn test_aes_constant_time() {
 
     let plain_a = [0x55u8; 16];
     let plain_b = [0xAAu8; 16];
+    let mut state = PreparedBlock {
+        current: plain_a,
+        class_a: plain_a,
+        class_b: plain_b,
+    };
 
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
-    let warmup_op = || {
-        let mut buf = plain_a;
+    let measurement_op = |prepared: &PreparedBlock| {
+        let mut buf = prepared.current;
         cipher.encrypt_block(&mut buf).unwrap();
+        std::hint::black_box(buf);
     };
 
-    let measurement_op = |use_b: bool| {
-        let mut buf = if use_b { plain_b } else { plain_a };
-        cipher.encrypt_block(&mut buf).unwrap();
-    };
-
-    let analysis = tester
-        .calibrate_and_measure(warmup_op, measurement_op, &config, "AES-128")
-        .expect("Calibration failed");
+    let analysis = tester.calibrate_and_measure_prepared(
+        &mut state,
+        PreparedBlock::prepare,
+        measurement_op,
+        &config,
+        "AES-128",
+    )?;
 
     println!("AES-128 Timing Analysis:");
     println!("  Mean diff: {:.3} ns", analysis.mean_diff);
@@ -39,12 +57,12 @@ fn test_aes_constant_time() {
     );
     println!("  Cohen's d: {:.3}", analysis.cohens_d);
 
-    if !analysis.is_constant_time || std::env::var("VERBOSE").is_ok() {
+    if std::env::var("VERBOSE").is_ok() {
         println!(
             "\n{}",
             generate_test_insights(&analysis, &config, "AES-128")
         );
     }
 
-    assert!(analysis.is_constant_time);
+    Ok(analysis)
 }
