@@ -1,5 +1,7 @@
 # dcrypt: A Cryptographic Library in Rust
 
+**Evidence-carrying cryptography for a world where assurance expires.**
+
 [![Crates.io](https://img.shields.io/crates/v/dcrypt.svg?style=flat-square)](https://crates.io/crates/dcrypt)
 [![Docs.rs](https://img.shields.io/docsrs/dcrypt?style=flat-square)](https://docs.rs/dcrypt)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
@@ -22,9 +24,47 @@ implementations may be used only as isolated test oracles. These constraints
 reduce implementation risk but do not by themselves prove cryptographic
 correctness, side-channel resistance, or suitability for production.
 
-## 🚀 Novel Capabilities
+## 🧭 Why dcrypt exists
 
-dcrypt introduces capabilities critical for the transition to quantum-safe and decentralized computing:
+**An audit is a snapshot, not a security invariant.** An algorithm may be
+standardized, an implementation audited, and a binary signed — yet none of
+those facts makes security permanent. New cryptanalysis, compiler
+transformations, dependency changes, hardware behavior, and previously
+undisclosed vulnerabilities can invalidate yesterday's assurance. dcrypt
+exists to make cryptographic assurance reproducible rather than inherited:
+
+*   **Minimize and expose the trusted computing base.** No unsafe Rust, native
+    code, or FFI in the published code or its normal/build dependency closure
+    — mechanically enforced by a fail-closed boundary gate
+    ([`implementation-boundary.toml`](implementation-boundary.toml)), not
+    asserted. External implementations exist only as isolated test oracles.
+*   **Diversify assumptions.** First-class classical/post-quantum hybrid KEMs
+    and signatures, so no system makes one irreversible bet on one algorithm
+    family or one era of cryptanalysis. Separate implementations are still
+    required when implementation diversity is part of the threat model.
+*   **Scope every claim.** Release evidence records the applicable release,
+    configuration, toolchain, target, property, and threat model. ACVP
+    conformance is a correctness gate, not FIPS validation; statistical timing
+    results are evidence, not a constant-time proof. A claim without enough
+    scope to evaluate it is treated as a defect.
+*   **Revoke claims when the evidence fails.** When a release violates the
+    assurance contract, the release is withdrawn rather than the contract
+    weakened — as practiced in the
+    [v2.0.0 withdrawal](docs/security/V2.0.0-WITHDRAWAL.md) and the
+    [eleven advisories](docs/security/README.md) documented for this
+    corrective-release campaign.
+*   **Decentralize verification.** The boundary manifest, ACVP harness, timing
+    suite, fuzz targets, and release gates live in this repository and are
+    runnable by anyone. No maintainer, auditor, or institution — including
+    this project — should become an unquestioned root of trust.
+
+dcrypt's goal is not to ask the world to trust it. Its goal is to be the
+cryptographic library that asks for the least unexamined trust — and supplies
+the most independently reproducible evidence.
+
+## 🚀 Capabilities
+
+dcrypt provides capabilities for the transition to quantum-safe and decentralized computing:
 
 1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use dcrypt-owned safe-Rust key generation, signing, verification, sampling, arithmetic, and exact encodings. Public APIs support deterministic signing and hedged signing with caller-provided randomness and contexts. All 615 official ACVP cases pass exactly; independent implementations are confined to the excluded verification workspace. This is not a claim that dcrypt is formally verified, audited, or FIPS validated.
 2.  **Pure-Rust FIPS 203 (ML-KEM)**: Final-standard ML-KEM-512, ML-KEM-768, and ML-KEM-1024 use owned safe-Rust arithmetic, encoding, and SHA3/SHAKE primitives. All 240 official ACVP cases pass exactly; this project is not a FIPS-validated cryptographic module.
@@ -165,12 +205,15 @@ The library is organized as a workspace of specialized crates to align type-safe
 
 ## 🔒 Security & Verification
 
-Security is the primary driver for dcrypt. The library employs a rigorous testing methodology:
+Security is the primary driver for dcrypt, and assurance is continuously
+re-earned rather than inherited. The evidence below states the applicable
+release, configuration, toolchain, target, property, and threat-model scope and
+is reproducible from this repository.
 
 ### Constant-Time Verification
 The repository contains a custom statistical regression engine (`dcrypt-tests/src/suites/constant_time`). The security-validation workflow runs it serially as a regression gate and labels its scope explicitly. A constant-time claim additionally requires operation-specific source review and optimized-assembly/target evidence, supplemented by external dynamic tools where applicable. Passing that scoped evidence is not a universal compiler, target, microarchitectural, or caller-level proof.
-*   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the combined signals.
-*   **Noise Gating**: Maintains a persistent noise profile and aborts inconclusive runs when the host environment is materially noisier than the historical baseline.
+*   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the three signals within each case.
+*   **Noise Gating**: Records a noise profile for the current environment. When a prior baseline exists, the gate aborts inconclusive runs if the host is materially noisier than that baseline.
 *   **Coverage**: Exercises critical paths in ML-KEM, ML-DSA verification, BLS secret scalar multiplication, hybrid constructions, ECDH, and AEAD implementations for timing regressions.
 
 ### Standards testing
