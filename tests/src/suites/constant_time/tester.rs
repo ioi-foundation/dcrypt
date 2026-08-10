@@ -216,7 +216,7 @@ impl TimingTester {
         let mut environment_status = "Clean".to_string();
 
         if config.use_noise_profile {
-            let mut store = ProfileStore::load_or_create(&config.noise_profile_path);
+            let mut store = ProfileStore::load_or_create(&config.noise_profile_path)?;
             if let Some(baseline) = store.get_baseline(name) {
                 if current_mad > baseline * config.noise_tolerance_factor {
                     return Err(format!(
@@ -232,7 +232,7 @@ impl TimingTester {
                 }
             }
             store.update(name, current_mad);
-            store.save(&config.noise_profile_path);
+            store.save(&config.noise_profile_path)?;
         }
 
         // Preheat both prepared classes through the same measured closure.
@@ -977,6 +977,75 @@ mod tests {
         assert_eq!(prepare_count.get(), 2 + 2 + 2 * 2);
         assert_eq!(measure_count.get(), 2 + 2 + 2 * 2 * 3);
         assert_eq!(analysis.a_first.iter().filter(|&&value| value).count(), 1);
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn prepared_api_propagates_profile_write_failure() {
+        let proc_self = std::path::Path::new("/proc/self");
+        assert!(proc_self.is_dir(), "Linux profile I/O test requires procfs");
+
+        let mut config = TestConfig::default();
+        config.num_warmup = 1;
+        config.num_samples = 2;
+        config.num_iterations = 1;
+        config.noise_profile_path = proc_self.join(format!(
+            "dcrypt-timing-profile-write-must-fail-{}.json",
+            std::process::id()
+        ));
+        let tester = TimingTester::new(config.num_samples, config.num_iterations);
+        let mut state = 0u8;
+
+        let error = tester
+            .calibrate_and_measure_prepared(
+                &mut state,
+                |current, class| *current = class as u8,
+                |current| {
+                    black_box(current);
+                },
+                &config,
+                "profile-write-failure-self-test",
+            )
+            .unwrap_err();
+        assert!(error.contains("write noise profile"), "{error}");
+    }
+
+    #[test]
+    fn prepared_api_propagates_non_directory_profile_parent() {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "dcrypt-timing-profile-parent-{}-{nonce}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        let non_directory = directory.join("not-a-directory");
+        std::fs::write(&non_directory, b"block profile parent").unwrap();
+
+        let mut config = TestConfig::default();
+        config.num_warmup = 1;
+        config.num_samples = 2;
+        config.num_iterations = 1;
+        config.noise_profile_path = non_directory.join("profile.json");
+        let tester = TimingTester::new(config.num_samples, config.num_iterations);
+        let mut state = 0u8;
+
+        let error = tester
+            .calibrate_and_measure_prepared(
+                &mut state,
+                |current, class| *current = class as u8,
+                |current| {
+                    black_box(current);
+                },
+                &config,
+                "profile-parent-failure-self-test",
+            )
+            .unwrap_err();
+        assert!(error.contains("open noise profile"), "{error}");
+
+        std::fs::remove_dir_all(directory).unwrap();
     }
 
     fn synthetic_case(name: &str, p_value: f64, mean_diff: f64) -> TimingAnalysis {

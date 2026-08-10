@@ -71,6 +71,36 @@ BOUNDARY_POLICY = PROJECT_ROOT / "implementation-boundary.toml"
 LOCK_FILE = PROJECT_ROOT / "Cargo.lock"
 
 
+def shell_logical_commands(source: str) -> list[str]:
+    """Return exact shell command lines after joining backslash continuations."""
+    joined = source.replace("\\\n", " ")
+    return [
+        re.sub(r"\s+", " ", line.strip())
+        for line in joined.splitlines()
+        if line.strip()
+    ]
+
+
+def folded_yaml_run_commands(source: str) -> list[str]:
+    """Extract exact commands from YAML `run: >-` blocks without a YAML dependency."""
+    lines = source.splitlines()
+    commands: list[str] = []
+    for index, line in enumerate(lines):
+        if line.strip() != "run: >-":
+            continue
+        block_indent = len(line) - len(line.lstrip())
+        fragments: list[str] = []
+        for continuation in lines[index + 1 :]:
+            if not continuation.strip():
+                break
+            indent = len(continuation) - len(continuation.lstrip())
+            if indent <= block_indent:
+                break
+            fragments.append(continuation.strip())
+        commands.append(re.sub(r"\s+", " ", " ".join(fragments)))
+    return commands
+
+
 class GateError(RuntimeError):
     """A failed invariant or an unavailable source of release evidence."""
 
@@ -1312,33 +1342,22 @@ class GateSelfTests(unittest.TestCase):
             f"{required_timing} -- --test-threads=1 --nocapture"
         )
 
-        def normalize_commands(source: str) -> str:
-            return re.sub(r"\s+", " ", source.replace("\\\n", " "))
+        release_commands = shell_logical_commands(release_section)
+        workspace_commands = shell_logical_commands(workflow_section)
+        timing_workflow_commands = folded_yaml_run_commands(timing_workflow_section)
 
-        normalized_release = normalize_commands(release_script)
-        normalized_workflow = normalize_commands(workflow)
-        normalized_release_section = normalize_commands(release_section)
-        normalized_workspace_section = normalize_commands(workflow_section)
-        normalized_timing_workflow = normalize_commands(timing_workflow_section)
-
-        self.assertEqual(normalized_release_section.count(required_library), 1)
-        self.assertEqual(normalized_workspace_section.count(required_library), 1)
         self.assertEqual(
-            sum(line.strip() == required_library for line in release_section.splitlines()),
+            release_commands.count(required_library),
             1,
         )
         self.assertEqual(
-            sum(line.strip() == required_library for line in workflow_section.splitlines()),
+            workspace_commands.count(required_library),
             1,
         )
-        self.assertEqual(normalized_release.count(required_timing), 1)
-        self.assertEqual(normalized_workflow.count(required_timing), 1)
-        self.assertEqual(
-            normalized_release_section.count(required_timing_invocation), 1
-        )
-        self.assertEqual(
-            normalized_timing_workflow.count(required_timing_invocation), 1
-        )
+        self.assertEqual(release_commands.count(required_timing_invocation), 1)
+        self.assertEqual(timing_workflow_commands, [required_timing_invocation])
+        self.assertEqual(release_script.count(required_timing), 1)
+        self.assertEqual(workflow.count(required_timing), 1)
         for timing_section in (release_section, timing_workflow_section):
             self.assertNotIn("repository_constant_time_suite", timing_section)
             self.assertNotIn("--exact", timing_section)
@@ -1351,6 +1370,29 @@ class GateSelfTests(unittest.TestCase):
         )
         self.assertIn("fn repository_constant_time_suite()", timing_integration)
         self.assertIn("fn timing_harness_contract_guard()", timing_integration)
+
+        shell_suffixes = (
+            f"{required_timing_invocation} unintended_filter",
+            f"{required_timing_invocation} --ignored",
+            f"{required_timing_invocation} \\\n        unintended_filter",
+        )
+        for suffixed in shell_suffixes:
+            self.assertNotIn(
+                required_timing_invocation,
+                shell_logical_commands(f"    {suffixed}\n"),
+            )
+
+        yaml_suffixes = (
+            f"        run: >-\n          {required_timing_invocation} unintended_filter\n",
+            "        run: >-\n"
+            f"          {required_timing_invocation}\n"
+            "          --ignored\n",
+        )
+        for suffixed in yaml_suffixes:
+            self.assertNotIn(
+                required_timing_invocation,
+                folded_yaml_run_commands(suffixed),
+            )
 
     def test_assembly_gates_remain_in_release_and_ci_boundary_scope(self) -> None:
         publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()

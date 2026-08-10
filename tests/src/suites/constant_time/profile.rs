@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 use std::path::Path;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -24,32 +24,44 @@ pub struct ProfileStore {
 static STORE_LOCK: Mutex<()> = Mutex::new(());
 
 impl ProfileStore {
-    pub fn load_or_create(path: &Path) -> Self {
-        if !path.exists() {
-            return Self::default();
-        }
-
+    pub fn load_or_create(path: &Path) -> Result<Self, String> {
         let mut file = match File::open(path) {
             Ok(f) => f,
-            Err(_) => return Self::default(),
+            Err(error) if error.kind() == ErrorKind::NotFound => return Ok(Self::default()),
+            Err(error) => return Err(format!("open noise profile {}: {error}", path.display())),
         };
 
         let mut contents = String::new();
-        if file.read_to_string(&mut contents).is_err() {
-            return Self::default();
-        }
+        file.read_to_string(&mut contents)
+            .map_err(|error| format!("read noise profile {}: {error}", path.display()))?;
 
-        serde_json::from_str(&contents).unwrap_or_default()
+        serde_json::from_str(&contents)
+            .map_err(|error| format!("parse noise profile {}: {error}", path.display()))
     }
 
-    pub fn save(&self, path: &Path) {
+    pub fn save(&self, path: &Path) -> Result<(), String> {
         // Simple file lock simulation via Mutex for within-process safety.
         // Cross-process safety isn't guaranteed here but acceptable for test suites.
-        let _guard = STORE_LOCK.lock().unwrap();
+        let _guard = STORE_LOCK
+            .lock()
+            .map_err(|_| "noise profile store lock poisoned".to_string())?;
 
-        if let Ok(json) = serde_json::to_string_pretty(self) {
-            let _ = fs::write(path, json);
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            fs::create_dir_all(parent).map_err(|error| {
+                format!(
+                    "create noise profile directory {}: {error}",
+                    parent.display()
+                )
+            })?;
         }
+
+        let json = serde_json::to_string_pretty(self)
+            .map_err(|error| format!("serialize noise profile {}: {error}", path.display()))?;
+        fs::write(path, json)
+            .map_err(|error| format!("write noise profile {}: {error}", path.display()))
     }
 
     /// Updates the profile using an Exponential Moving Average (EMA)
@@ -92,31 +104,79 @@ impl ProfileStore {
 mod tests {
     use super::*;
 
-    #[test]
-    fn paired_profile_path_does_not_consume_legacy_keys() {
+    fn temporary_directory(label: &str) -> std::path::PathBuf {
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let directory = std::env::temp_dir().join(format!(
-            "dcrypt-timing-profile-{}-{nonce}",
+        std::env::temp_dir().join(format!(
+            "dcrypt-timing-profile-{label}-{}-{nonce}",
             std::process::id()
-        ));
+        ))
+    }
+
+    #[test]
+    fn paired_profile_path_does_not_consume_legacy_keys() {
+        let directory = temporary_directory("namespace");
         fs::create_dir(&directory).unwrap();
         let legacy_path = directory.join("ct_noise_profile.json");
         let paired_path = directory.join("ct_noise_profile_paired_v1.json");
 
         let mut legacy = ProfileStore::default();
         legacy.update("legacy-case", 7.0);
-        legacy.save(&legacy_path);
+        legacy.save(&legacy_path).unwrap();
         let legacy_baseline = ProfileStore::load_or_create(&legacy_path)
+            .unwrap()
             .get_baseline("legacy-case")
             .unwrap();
         assert!((legacy_baseline - 7.0).abs() < 1.0e-12);
         assert_eq!(
-            ProfileStore::load_or_create(&paired_path).get_baseline("legacy-case"),
+            ProfileStore::load_or_create(&paired_path)
+                .unwrap()
+                .get_baseline("legacy-case"),
             None
         );
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn save_creates_missing_parent_and_round_trips() {
+        let directory = temporary_directory("round-trip");
+        let path = directory.join("missing/parents/profile.json");
+        let mut store = ProfileStore::default();
+        store.update("round-trip", 11.0);
+
+        store.save(&path).unwrap();
+        assert!(path.is_file());
+        assert_eq!(
+            ProfileStore::load_or_create(&path)
+                .unwrap()
+                .get_baseline("round-trip"),
+            Some(11.0)
+        );
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn malformed_profile_and_unwritable_parent_fail_closed() {
+        let directory = temporary_directory("negative-io");
+        fs::create_dir(&directory).unwrap();
+
+        let malformed = directory.join("malformed.json");
+        fs::write(&malformed, b"{").unwrap();
+        assert!(ProfileStore::load_or_create(&malformed)
+            .unwrap_err()
+            .contains("parse noise profile"));
+
+        let non_directory = directory.join("not-a-directory");
+        fs::write(&non_directory, b"block parent creation").unwrap();
+        let path = non_directory.join("profile.json");
+        assert!(ProfileStore::default()
+            .save(&path)
+            .unwrap_err()
+            .contains("create noise profile directory"));
 
         fs::remove_dir_all(directory).unwrap();
     }

@@ -1,6 +1,19 @@
 // tests/src/suites/constant_time/config.rs
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+const PAIRED_NOISE_PROFILE_FILE: &str = "ct_noise_profile_paired_v1.json";
+
+/// Resolve the paired-harness profile against the workspace rather than the
+/// process cwd. Cargo runs this crate's integration binaries from `tests/`, so
+/// a relative `target/...` path would silently select `tests/target`.
+pub fn paired_noise_profile_path() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("dcrypt-tests must remain directly inside the workspace")
+        .join("target")
+        .join(PAIRED_NOISE_PROFILE_FILE)
+}
 
 /// Configuration parameters for constant-time execution testing.
 ///
@@ -26,8 +39,9 @@ pub struct TestConfig {
     /// Default: 0.5ns.
     pub practical_significance_threshold: f64,
 
-    /// Legacy Dudect-style Welch t-statistic threshold retained for report
-    /// compatibility. Welch output is descriptive and never gates the suite.
+    /// Legacy Dudect-style Welch t-statistic threshold retained for
+    /// configuration/API compatibility. Welch output is descriptive and never
+    /// gates the suite.
     pub welch_t_threshold: f64,
 
     // --- Sampling Configuration ---
@@ -71,7 +85,7 @@ impl Default for TestConfig {
             use_noise_profile: true,
             // The paired-v1 harness is statistically incomparable with the
             // legacy independent-sample engine and must not consume its keys.
-            noise_profile_path: PathBuf::from("target/ct_noise_profile_paired_v1.json"),
+            noise_profile_path: paired_noise_profile_path(),
             noise_tolerance_factor: 3.0, // Abort if noise is 3x historical baseline
         }
     }
@@ -155,9 +169,16 @@ mod tests {
 
     #[test]
     fn default_uses_paired_v1_noise_namespace() {
+        let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+        let expected = workspace_root
+            .join("target")
+            .join(PAIRED_NOISE_PROFILE_FILE);
+        let configured = TestConfig::default().noise_profile_path;
+
+        assert!(configured.is_absolute());
         assert_eq!(
-            TestConfig::default().noise_profile_path,
-            PathBuf::from("target/ct_noise_profile_paired_v1.json")
+            configured, expected,
+            "the default profile must not resolve relative to integration-test cwd"
         );
     }
 }

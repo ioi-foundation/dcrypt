@@ -13,6 +13,7 @@ mod stream_tests;
 mod xof_tests;
 
 use dcrypt_tests::suites::constant_time::config::TestConfig;
+use dcrypt_tests::suites::constant_time::profile::ProfileStore;
 use dcrypt_tests::suites::constant_time::tester::{
     analyze_blocking_family, generate_familywise_insights, generate_test_insights, TimingAnalysis,
     EXPECTED_BLOCKING_CASES,
@@ -138,6 +139,40 @@ fn repository_constant_time_suite() {
 
 #[test]
 fn timing_harness_contract_guard() {
+    assert_eq!(
+        std::env::current_dir().expect("resolve integration-test cwd"),
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")),
+        "Cargo must run the timing integration binary from the dcrypt-tests crate"
+    );
+    let workspace_target = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("dcrypt-tests must remain directly inside the workspace")
+        .join("target");
+    let profile_path = TestConfig::default().noise_profile_path;
+    assert!(profile_path.is_absolute());
+    assert_eq!(profile_path.parent(), Some(workspace_target.as_path()));
+
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock must follow the Unix epoch")
+        .as_nanos();
+    let contract_profile = workspace_target.join(format!(
+        "ct_noise_profile_paired_v1.contract-{}-{nonce}.json",
+        std::process::id()
+    ));
+    assert!(!contract_profile.exists());
+    let mut store = ProfileStore::default();
+    store.update("integration-cwd-contract", 13.0);
+    store.save(&contract_profile).unwrap();
+    assert_eq!(
+        ProfileStore::load_or_create(&contract_profile)
+            .unwrap()
+            .get_baseline("integration-cwd-contract"),
+        Some(13.0)
+    );
+    std::fs::remove_file(&contract_profile).unwrap();
+    assert!(!contract_profile.exists());
+
     const CASE_SOURCES: [(&str, &str); 15] = [
         ("aead_tests.rs", include_str!("aead_tests.rs")),
         (
