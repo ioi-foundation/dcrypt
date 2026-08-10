@@ -65,6 +65,25 @@ fn test_gf_multiply_zero() {
 }
 
 #[test]
+fn test_gf_multiply_nist_gcm_component() {
+    // NIST GCM zero-key/one-block known-answer intermediate multiplication.
+    let x = hex::decode("0388dace60b6a392f328c2b971b2fe78")
+        .unwrap()
+        .try_into()
+        .unwrap();
+    let h = hex::decode("66e94bd4ef8a2c3b884cfa59ca342b2e")
+        .unwrap()
+        .try_into()
+        .unwrap();
+    let expected: [u8; 16] = hex::decode("5e2ec746917062882c85b0685353deb7")
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    assert_eq!(&*GHash::gf_multiply(&x, &h), &expected);
+}
+
+#[test]
 fn test_ghash_internal_consistency() -> Result<()> {
     // Test that GHASH produces consistent results when using the same inputs
     let h = [

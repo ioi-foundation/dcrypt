@@ -64,6 +64,19 @@ shape must be reviewed on every target before the checked expectations are
 updated. Set `DCRYPT_KEEP_BLS_ASSEMBLY=1` to retain the emitted files for that
 manual review.
 
+Publish readiness also runs `verify-ghash-assembly.sh`. It compiles the owned
+GHASH multiplication entry point with one generic codegen unit for the same
+four targets and fails closed unless the function has exactly one conditional
+branch, binds its backedge to the reviewed fixed counter, contains no calls or
+indirect/table/Thumb-IT control in the loop, retains the reviewed whole-width
+mask, field-shift, and reduction operations inside that loop, and makes exactly
+five reviewed `u128` clearing calls on the normal post-loop path. The default
+unwind build permits only the exact reviewed clearing calls and unreachable
+`panic_in_cleanup` target as indirect x86 calls outside the loop. This catches
+LLVM transformations that replace a source-level masked addend with a branch
+on a secret-derived GHASH accumulator bit. Set
+`DCRYPT_KEEP_GHASH_ASSEMBLY=1` to retain the emitted files for manual review.
+
 ## Release model
 
 Releases use three explicit phases. Uploading is never combined with versioning

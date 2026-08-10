@@ -27,8 +27,9 @@
 //! GF(2^128) multiplication uses fixed-iteration, mask-based arithmetic with
 //! respect to the hash key and input blocks. Processing time still depends on
 //! the public input lengths, as permitted by the GCM interface.
-//! This is a source-level design property, not a blanket compiler- or
-//! target-level constant-time proof.
+//! Release tooling checks the optimized loop and arithmetic-mask shape on every
+//! supported target for the selected release compiler. This is not a blanket
+//! constant-time proof for every compiler or target.
 
 use crate::error::{validate, Error, Result};
 use dcrypt_internal::zeroing::{Zeroize, Zeroizing};
@@ -188,7 +189,10 @@ impl GHash {
     /// - The least significant bit of each byte represents the highest-degree coefficient
     /// - The most significant bit represents the lowest-degree coefficient
     ///
-    /// This implementation is constant-time with respect to the input data.
+    /// At source level this uses a fixed 128 steps and arithmetic masks rather
+    /// than data-dependent selection. Release tooling checks the optimized
+    /// compiler shape on each supported target; this does not claim a universal
+    /// constant-time guarantee for every compiler and target.
     ///
     /// # Arguments
     /// * `x` - First 16-byte operand.
@@ -196,47 +200,32 @@ impl GHash {
     ///
     /// # Returns
     /// A 16-byte array representing the product in GF(2^128).
+    #[inline(never)]
     fn gf_multiply(x: &[u8; 16], y: &[u8; 16]) -> Zeroizing<[u8; 16]> {
-        let mut z = Zeroizing::new([0u8; 16]);
-        let mut v = Zeroizing::new(*y);
+        // Keep each field element in one logical integer. LLVM turned the old
+        // byte-at-a-time masked XOR into a branch that skipped sixteen XORs
+        // when an accumulator bit was zero. After the first GHASH block those
+        // bits depend on the secret hash subkey H. The whole-width masks below
+        // retain one fixed 128-iteration loop in optimized supported-target
+        // builds; the release compiler-shape gate enforces that property.
+        const REDUCTION: u128 = 0xe100_0000_0000_0000_0000_0000_0000_0000;
 
-        // Process each byte of x
-        for x_byte in x.iter() {
-            // Process each bit in the byte (MSB first in byte representation)
-            for j in 0..8 {
-                // Extract the bit value (0 or 1) in constant time
-                let bit_val = (x_byte >> (7 - j)) & 1;
+        let mut x_value = Zeroizing::new(u128::from_be_bytes(*x));
+        let mut v = Zeroizing::new(u128::from_be_bytes(*y));
+        let mut z = Zeroizing::new(0u128);
+        let mut x_mask = Zeroizing::new(0u128);
+        let mut reduction_mask = Zeroizing::new(0u128);
 
-                // Create a mask from the bit: 0xFF if bit=1, 0x00 if bit=0
-                let mask = 0u8.wrapping_sub(bit_val);
+        for _ in 0..128 {
+            *x_mask = 0u128.wrapping_sub(*x_value >> 127);
+            *z ^= *v & *x_mask;
 
-                // XOR the value of V into Z if the bit is set (in constant time)
-                for (z_byte, v_byte) in z.iter_mut().zip(v.iter()) {
-                    *z_byte ^= v_byte & mask;
-                }
-
-                // Check if LSB of V is set (in constant time)
-                let lsb = v[15] & 1;
-
-                // Create mask for the reduction step: 0xFF if lsb=1, 0x00 if lsb=0
-                let lsb_mask = 0u8.wrapping_sub(lsb);
-
-                // Right shift V by 1 bit (in big-endian representation)
-                let mut carry = 0;
-                for v_byte in v.iter_mut() {
-                    let next_carry = *v_byte & 1;
-                    *v_byte = (*v_byte >> 1) | (carry << 7);
-                    carry = next_carry;
-                }
-
-                // If LSB was 1, XOR with the reduction polynomial in constant time
-                // The polynomial is x^128 + x^7 + x^2 + x + 1
-                // In GCM bit ordering, this is 0xE1 in the MSB
-                v[0] ^= 0xE1 & lsb_mask;
-            }
+            *reduction_mask = 0u128.wrapping_sub(*v & 1);
+            *v = (*v >> 1) ^ (REDUCTION & *reduction_mask);
+            *x_value <<= 1;
         }
 
-        z
+        Zeroizing::new(z.to_be_bytes())
     }
 }
 

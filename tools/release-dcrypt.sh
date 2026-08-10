@@ -71,7 +71,8 @@ Options:
                        interoperability, and isolated timing tests.
   --skip-checks        Development rehearsal only: skip format/check,
                        audit/deny, Miri, and bounded fuzz campaigns. The
-                       implementation-boundary and BLS assembly gates cannot be skipped.
+                       implementation-boundary, BLS assembly, and GHASH assembly
+                       gates cannot be skipped.
   --resume CRATE       Resume a partial --execute at CRATE, or use "auto" to
                        trust crates.io as the source of truth.
   --registry-wait SEC  Maximum registry propagation wait per crate (default 300).
@@ -286,7 +287,7 @@ require_security_subcommand() {
 
 run_check_gates() {
     if [[ "$SKIP_CHECKS" == true ]]; then
-        warn "format, static, supply-chain, Miri, and fuzz gates were explicitly skipped; the implementation-boundary and BLS assembly gates still ran"
+        warn "format, static, supply-chain, Miri, and fuzz gates were explicitly skipped; the implementation-boundary, BLS assembly, and GHASH assembly gates still ran"
         return
     fi
 

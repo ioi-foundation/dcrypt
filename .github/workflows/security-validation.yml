@@ -36,6 +36,8 @@ jobs:
           tools/verify-implementation-boundary.sh
       - name: Inspect optimized BLS secret-scalar assembly
         run: tools/verify-bls-secret-assembly.sh
+      - name: Inspect optimized owned GHASH assembly
+        run: tools/verify-ghash-assembly.sh
 
   format-and-check:
     name: Format and all-target workspace check

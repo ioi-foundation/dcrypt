@@ -143,6 +143,14 @@ else
     exit 1
 fi
 
+printf "\n${BLUE}Optimized owned GHASH compiler inspection${NC}\n"
+if "$SCRIPT_DIR/verify-ghash-assembly.sh"; then
+    pass "GHASH multiplication assembly shape passed on every supported target"
+else
+    fail "GHASH multiplication assembly inspection failed"
+    exit 1
+fi
+
 metadata_file=$(mktemp "${TMPDIR:-/tmp}/dcrypt-metadata.XXXXXX")
 trap 'rm -f "$metadata_file"' EXIT
 

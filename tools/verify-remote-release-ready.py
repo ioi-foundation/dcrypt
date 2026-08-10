@@ -1302,6 +1302,44 @@ class GateSelfTests(unittest.TestCase):
         self.assertEqual(re.sub(r"\s+", " ", release_section).count(required), 1)
         self.assertEqual(re.sub(r"\s+", " ", workflow_section).count(required), 1)
 
+    def test_assembly_gates_remain_in_release_and_ci_boundary_scope(self) -> None:
+        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
+        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        workflow = (
+            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
+        ).read_text()
+
+        publish_boundary = publish_ready.split(
+            'printf "\\n${BLUE}Zero-unsafe and zero-FFI implementation boundary', 1
+        )[1].split("metadata_file=$(mktemp", 1)[0]
+        release_verifier = release_script.split("run_publish_verifier() {", 1)[1].split(
+            "run_test_gates() {", 1
+        )[0]
+        ci_boundary = workflow.split("  implementation-boundary:", 1)[1].split(
+            "\n  format-and-check:", 1
+        )[0]
+
+        for gate in ("verify-bls-secret-assembly.sh", "verify-ghash-assembly.sh"):
+            self.assertEqual(
+                publish_boundary.count(f'"$SCRIPT_DIR/{gate}"'),
+                1,
+                f"publish-ready must invoke {gate} exactly once in boundary scope",
+            )
+            self.assertEqual(
+                ci_boundary.count(f"run: tools/{gate}"),
+                1,
+                f"CI boundary job must invoke {gate} exactly once",
+            )
+
+        self.assertEqual(
+            release_verifier.count('"$SCRIPT_DIR/verify-publish-ready.sh"'), 1
+        )
+        self.assertEqual(
+            release_script.count('run_publish_verifier "$'),
+            2,
+            "prepare/execute release paths must both enter the publish-ready verifier",
+        )
+
     def test_api_feature_map_preserves_modern_feature_syntax(self) -> None:
         record = {
             "features": {
