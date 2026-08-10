@@ -4,6 +4,16 @@
 //! PBKDF2 applies a pseudorandom function (such as HMAC) to the input password
 //! along with a salt value and repeats the process many times to produce a
 //! derived key, which can then be used as a cryptographic key in subsequent operations.
+//!
+//! # Timing boundary
+//!
+//! Password length, salt length, iteration count, and output length are public
+//! metadata to this slice-based API. They affect allocation, copying, hash
+//! absorption, and loop counts. Callers that need to conceal password length
+//! must encode or pad passwords to a fixed public length before calling PBKDF2.
+//! Timing regressions for secret password bytes therefore hold all of this
+//! metadata fixed; they are not a whole-operation constant-time guarantee
+//! across different public parameter values.
 
 use crate::error::{validate, Error, Result};
 use crate::hash::HashFunction;

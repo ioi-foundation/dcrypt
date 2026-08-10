@@ -12,22 +12,31 @@ fn create_pbkdf2_config() -> TestConfig {
 fn test_pbkdf2_constant_time() {
     let config = create_pbkdf2_config();
     let iterations = 50;
-    let password1_bytes = b"correct horse battery staple";
-    let password2_bytes = b"Tr0ub4dor&3";
+    // Password length is public to this slice-based API and affects ordinary
+    // allocation, copying, and hash-input work. Keep it fixed so this A/B test
+    // isolates secret contents rather than comparing 28-byte and 11-byte jobs.
+    let password1_bytes = [0x00; 32];
+    let password2_bytes = [0xff; 32];
     let salt = &[0x73, 0x61, 0x6c, 0x74];
     let output_len = 32;
+
+    assert_eq!(
+        password1_bytes.len(),
+        password2_bytes.len(),
+        "timing classes must use equal public password lengths"
+    );
 
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let warmup_op = || {
-        let _ = Pbkdf2::<Sha256>::pbkdf2(password1_bytes, salt, iterations, output_len);
+        let _ = Pbkdf2::<Sha256>::pbkdf2(&password1_bytes, salt, iterations, output_len);
     };
 
     let measurement_op = |use_pw2: bool| {
         if use_pw2 {
-            let _ = Pbkdf2::<Sha256>::pbkdf2(password2_bytes, salt, iterations, output_len);
+            let _ = Pbkdf2::<Sha256>::pbkdf2(&password2_bytes, salt, iterations, output_len);
         } else {
-            let _ = Pbkdf2::<Sha256>::pbkdf2(password1_bytes, salt, iterations, output_len);
+            let _ = Pbkdf2::<Sha256>::pbkdf2(&password1_bytes, salt, iterations, output_len);
         }
     };
 

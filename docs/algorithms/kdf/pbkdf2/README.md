@@ -16,6 +16,8 @@ This implementation is generic over any hash function that implements the `HashF
 
 *   **Recommendation for New Applications:** For new applications, the use of **Argon2 is strongly recommended** over PBKDF2. Argon2 was designed to be memory-hard, providing significantly better resistance against modern cracking hardware. PBKDF2 is provided for legacy system compatibility and for environments where FIPS compliance is a strict requirement.
 
+*   **Timing Boundary:** Password length, salt length, iteration count, and output length are public metadata to this slice-based API. They affect allocation, copying, hash absorption, and loop counts. Applications that need to conceal password length must encode or pad passwords to a fixed public length before calling PBKDF2. The repository timing regression compares secret password bytes only while keeping that metadata equal; it is not a whole-operation constant-time guarantee across different public parameter values.
+
 ## Usage
 
 ### Direct Usage for Key Derivation
