@@ -1347,6 +1347,33 @@ class GateSelfTests(unittest.TestCase):
                 f"{gate} must not depend on the optional ripgrep executable",
             )
 
+        bls_driver = (
+            PROJECT_ROOT / "tools" / "verify-bls-secret-assembly.sh"
+        ).read_text()
+        bls_checker = (
+            PROJECT_ROOT / "tools" / "verify-bls-secret-assembly.py"
+        ).read_text()
+        for required in (
+            "CARGO_ENCODED_RUSTFLAGS",
+            'CARGO_HOME="$cargo_home"',
+            "--remap-path-prefix=$PROJECT_ROOT=/dcrypt",
+            "--remap-path-prefix=$cargo_home=/cargo",
+            "compiler_profile=rust-1.93.1",
+            "compiler_profile=rust-1.97.1",
+            '--compiler-profile "$compiler_profile"',
+            "${#assembly_files[@]} != 1",
+            "dcrypt_algorithms-*.s",
+        ):
+            self.assertIn(required, bls_driver)
+        for required in (
+            "COMPILER_PROFILES",
+            "os.O_NOFOLLOW",
+            "stat.S_ISREG",
+            "assembly input is not a regular file",
+        ):
+            self.assertIn(required, bls_checker)
+        self.assertNotIn("read_text(", bls_checker.split("def main() -> int:", 1)[1])
+
         self.assertEqual(
             release_verifier.count('"$SCRIPT_DIR/verify-publish-ready.sh"'), 1
         )

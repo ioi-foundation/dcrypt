@@ -51,18 +51,21 @@ not release evidence.
 
 Publish readiness also runs `verify-bls-secret-assembly.sh`. It compiles the
 protected G1 and G2 scalar-multiplication bridges with one generic codegen unit
-for Linux x86-64, Linux AArch64, WebAssembly, and Thumb, then fails closed
-unless each optimized entry point has its reviewed public-control branch
-fingerprint and target-specific mask-selection instructions. Native targets
-have only input rejection and two fixed loop backedges; WebAssembly also emits
-a fixed number of constant-size copy guards comparing immediate lengths. This
-deterministic compiler-shape regression is intentionally non-skippable for
-release modes.
+for Linux x86-64, Linux AArch64, WebAssembly, and Thumb. Checkout and Cargo
+source roots are remapped to deterministic virtual paths, and the gate requires
+exactly one regular primary-crate assembly file per target. It reads that file
+once as raw bytes and accepts only the reviewed whole-emission SHA-256 for the
+exact Rust 1.93.1 or Rust 1.97.1 compiler profile before also checking each
+optimized entry point's public-control branch and target-specific mask-selection
+shape. The raw fingerprint binds out-of-function directives, aliases,
+relocations, metadata, and local constants as well as the protected bodies.
+This deterministic compiler-emission regression is intentionally
+non-skippable for release modes.
 
 It is not a general constant-time proof: a compiler update that changes the
-shape must be reviewed on every target before the checked expectations are
-updated. Set `DCRYPT_KEEP_BLS_ASSEMBLY=1` to retain the emitted files for that
-manual review.
+emission must be reviewed on every target before the checked profile and hashes
+are updated. Set `DCRYPT_KEEP_BLS_ASSEMBLY=1` to retain the emitted files for
+that manual review.
 
 Publish readiness also runs `verify-ghash-assembly.sh`. It compiles the owned
 GHASH multiplication entry point with one generic codegen unit for the same
