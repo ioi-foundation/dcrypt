@@ -4,8 +4,9 @@ use std::path::PathBuf;
 
 /// Configuration parameters for constant-time execution testing.
 ///
-/// This configuration moves away from heuristic scoring (T-stat > 5.0) and towards
-/// statistical inference (Confidence Intervals) and adaptive noise profiling.
+/// The blocking gate uses one paired-randomization p-value per case, a single
+/// suite-wide Holm correction, and a predeclared practical threshold. Confidence
+/// intervals, Welch output, and KS output are descriptive only.
 #[derive(Debug, Clone)]
 pub struct TestConfig {
     // --- Statistical Parameters ---
@@ -19,8 +20,8 @@ pub struct TestConfig {
     pub bootstrap_iterations: usize,
 
     /// Practical Significance Threshold (nanoseconds).
-    /// A family-adjusted rejection blocks only when the paired mean difference
-    /// also exceeds this value.
+    /// A family-adjusted rejection blocks only when the absolute paired mean
+    /// difference also exceeds this value.
     /// This filters out differences below the predeclared practical threshold.
     /// Default: 0.5ns.
     pub practical_significance_threshold: f64,
@@ -39,7 +40,7 @@ pub struct TestConfig {
     /// Number of iterations per sample batch.
     pub num_iterations: usize,
 
-    // --- Noise Profiling (DTS Gen 2) ---
+    // --- Versioned paired-harness noise profiling ---
     /// If true, loads/saves noise profiles to disk to detect environment degradation.
     pub use_noise_profile: bool,
 

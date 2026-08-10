@@ -131,7 +131,7 @@ fn repository_constant_time_suite() {
             .map(|decision| decision.name.as_str())
             .collect();
         panic!(
-            "suite-wide Holm rejected and the paired mean exceeded its unchanged practical threshold for: {blockers:?}"
+            "suite-wide Holm rejected and the absolute paired mean difference exceeded its unchanged practical threshold for: {blockers:?}"
         );
     }
 }

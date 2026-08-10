@@ -142,6 +142,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Validation
 
+- Redesigned the statistical timing regression gate around prepared, reusable
+  same-address state and an exactly balanced paired A/B schedule. Each of the
+  exact 29 blocking cases contributes one fixed-seed paired-randomization
+  p-value to a single suite-wide Holm correction at family alpha 0.01; a case
+  blocks only when the adjusted test rejects and the magnitude of its paired
+  mean exceeds the unchanged practical threshold. Paired-bootstrap intervals,
+  Welch tests, and KS tests remain descriptive, while the versioned `paired-v1`
+  noise profile cannot consume legacy-harness baselines.
 - Exact official ACVP gates cover 240 ML-KEM cases (75 key generation, 75
   encapsulation, 30 decapsulation, and 60 key-validation cases) and all 615
   ML-DSA cases (75 key generation, 360 signature generation, and 180 signature

@@ -1290,6 +1290,12 @@ class GateSelfTests(unittest.TestCase):
         workflow = (
             PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
         ).read_text()
+        timing_tester = (
+            PROJECT_ROOT / "tests" / "src" / "suites" / "constant_time" / "tester.rs"
+        ).read_text()
+        timing_integration = (
+            PROJECT_ROOT / "tests" / "tests" / "constant_time" / "mod.rs"
+        ).read_text()
 
         release_section = release_script.split("run_test_gates() {", 1)[1].split(
             "require_security_subcommand() {", 1
@@ -1297,10 +1303,54 @@ class GateSelfTests(unittest.TestCase):
         workflow_section = workflow.split("  workspace-tests:", 1)[1].split(
             "\n  acvp-and-aes-cbc-properties:", 1
         )[0]
-        required = "cargo test -p dcrypt-tests --lib --all-features"
+        timing_workflow_section = workflow.split("  statistical-timing:", 1)[1].split(
+            "\n  dependency-policy:", 1
+        )[0]
+        required_library = "cargo test -p dcrypt-tests --lib --all-features"
+        required_timing = "cargo test -p dcrypt-tests --test constant_time_tests"
+        required_timing_invocation = (
+            f"{required_timing} -- --test-threads=1 --nocapture"
+        )
 
-        self.assertEqual(re.sub(r"\s+", " ", release_section).count(required), 1)
-        self.assertEqual(re.sub(r"\s+", " ", workflow_section).count(required), 1)
+        def normalize_commands(source: str) -> str:
+            return re.sub(r"\s+", " ", source.replace("\\\n", " "))
+
+        normalized_release = normalize_commands(release_script)
+        normalized_workflow = normalize_commands(workflow)
+        normalized_release_section = normalize_commands(release_section)
+        normalized_workspace_section = normalize_commands(workflow_section)
+        normalized_timing_workflow = normalize_commands(timing_workflow_section)
+
+        self.assertEqual(normalized_release_section.count(required_library), 1)
+        self.assertEqual(normalized_workspace_section.count(required_library), 1)
+        self.assertEqual(
+            sum(line.strip() == required_library for line in release_section.splitlines()),
+            1,
+        )
+        self.assertEqual(
+            sum(line.strip() == required_library for line in workflow_section.splitlines()),
+            1,
+        )
+        self.assertEqual(normalized_release.count(required_timing), 1)
+        self.assertEqual(normalized_workflow.count(required_timing), 1)
+        self.assertEqual(
+            normalized_release_section.count(required_timing_invocation), 1
+        )
+        self.assertEqual(
+            normalized_timing_workflow.count(required_timing_invocation), 1
+        )
+        for timing_section in (release_section, timing_workflow_section):
+            self.assertNotIn("repository_constant_time_suite", timing_section)
+            self.assertNotIn("--exact", timing_section)
+        self.assertIn(
+            "fn debug_prepared_schedule_assembly_is_branch_free()", timing_tester
+        )
+        self.assertIn(
+            "objdump is required for the Linux x86_64 debug schedule gate",
+            timing_tester,
+        )
+        self.assertIn("fn repository_constant_time_suite()", timing_integration)
+        self.assertIn("fn timing_harness_contract_guard()", timing_integration)
 
     def test_assembly_gates_remain_in_release_and_ci_boundary_scope(self) -> None:
         publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()

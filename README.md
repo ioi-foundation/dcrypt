@@ -212,8 +212,8 @@ is reproducible from this repository.
 
 ### Constant-Time Verification
 The repository contains a custom statistical regression engine (`dcrypt-tests/src/suites/constant_time`). The security-validation workflow runs it serially as a regression gate and labels its scope explicitly. A constant-time claim additionally requires operation-specific source review and optimized-assembly/target evidence, supplemented by external dynamic tools where applicable. Passing that scoped evidence is not a universal compiler, target, microarchitectural, or caller-level proof.
-*   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the three signals within each case.
-*   **Noise Gating**: Records a noise profile for the current environment. When a prior baseline exists, the gate aborts inconclusive runs if the host is materially noisier than that baseline.
+*   **Methodology**: Each of the 29 blocking cases uses one reusable same-address state, prepares its equal-public-metadata A/B input outside the clock with read-both mask selection, and follows an exactly balanced paired schedule. One fixed-seed paired-randomization p-value per case enters a single suite-wide Holm correction at family alpha 0.01. A case blocks the suite only when Holm rejects and the absolute paired mean difference exceeds the unchanged case-specific practical threshold. Paired-bootstrap confidence intervals, Welch-style mean-shift checks, and Kolmogorov-Smirnov tests are descriptive diagnostics only.
+*   **Noise Gating**: Records the current environment in the versioned `paired-v1` noise-profile namespace. A legacy-harness profile is never consumed. When a comparable prior `paired-v1` baseline exists, the gate aborts an inconclusive run if the host is materially noisier than that baseline.
 *   **Coverage**: Exercises critical paths in ML-KEM, ML-DSA verification, BLS secret scalar multiplication, hybrid constructions, ECDH, and AEAD implementations for timing regressions.
 
 ### Standards testing
