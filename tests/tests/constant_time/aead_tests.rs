@@ -13,6 +13,20 @@ use dcrypt_api::traits::AuthenticatedCipher;
 use dcrypt_api::types::SecretBytes;
 use dcrypt_tests::suites::constant_time::config::TestConfig;
 use dcrypt_tests::suites::constant_time::tester::{generate_test_insights, TimingTester};
+use std::cell::RefCell;
+
+fn select_equal_length_input(out: &mut [u8], input_a: &[u8], input_b: &[u8], use_b: bool) {
+    assert_eq!(out.len(), input_a.len());
+    assert_eq!(input_a.len(), input_b.len());
+
+    // Read both candidates and select with a mask. Besides keeping the copy
+    // outside the clock, this avoids class-correlated branch-history and cache
+    // footprints immediately before the measurement starts.
+    let mask = 0u8.wrapping_sub(use_b as u8);
+    for ((output, a), b) in out.iter_mut().zip(input_a).zip(input_b) {
+        *output = (*a & !mask) | (*b & mask);
+    }
+}
 
 // Helper to set up the GCM instance once
 fn make_gcm() -> (Gcm<Aes128>, Nonce<12>, Vec<u8>, Vec<u8>, Vec<u8>) {
@@ -40,16 +54,28 @@ fn test_gcm_success_path_constant_time() {
         let _ = gcm.internal_decrypt(&nonce, &ciphertext_a, Some(&aad));
     };
 
-    let measurement_op = |use_b: bool| {
-        if use_b {
-            let _ = gcm.internal_decrypt(&nonce, &ciphertext_b, Some(&aad));
-        } else {
-            let _ = gcm.internal_decrypt(&nonce, &ciphertext_a, Some(&aad));
-        }
+    let measurement_input = RefCell::new(ciphertext_a.clone());
+    let prepare_op = |use_b: bool| {
+        select_equal_length_input(
+            &mut measurement_input.borrow_mut(),
+            &ciphertext_a,
+            &ciphertext_b,
+            use_b,
+        );
+    };
+    let measurement_op = || {
+        let input = measurement_input.borrow();
+        let _ = gcm.internal_decrypt(&nonce, &input, Some(&aad));
     };
 
     let analysis = tester
-        .calibrate_and_measure(warmup_op, measurement_op, &config, "GCM Success Path")
+        .calibrate_and_measure_prepared(
+            warmup_op,
+            prepare_op,
+            measurement_op,
+            &config,
+            "GCM Success Path",
+        )
         .expect("Calibration failed");
 
     println!("GCM Success Path Timing Analysis:");
@@ -95,24 +121,26 @@ fn assert_gcm_invalid_pair_constant_time(
         )));
     };
 
-    let measurement_op = |use_b: bool| {
-        if use_b {
-            drop(std::hint::black_box(gcm.internal_decrypt(
-                nonce,
-                invalid_b,
-                Some(aad),
-            )));
-        } else {
-            drop(std::hint::black_box(gcm.internal_decrypt(
-                nonce,
-                invalid_a,
-                Some(aad),
-            )));
-        }
+    let measurement_input = RefCell::new(invalid_a.to_vec());
+    let prepare_op = |use_b: bool| {
+        select_equal_length_input(
+            &mut measurement_input.borrow_mut(),
+            invalid_a,
+            invalid_b,
+            use_b,
+        );
+    };
+    let measurement_op = || {
+        let input = measurement_input.borrow();
+        drop(std::hint::black_box(gcm.internal_decrypt(
+            nonce,
+            &input,
+            Some(aad),
+        )));
     };
 
     let analysis = tester
-        .calibrate_and_measure(warmup_op, measurement_op, &config, name)
+        .calibrate_and_measure_prepared(warmup_op, prepare_op, measurement_op, &config, name)
         .expect("Calibration failed");
 
     println!("{name} Timing Analysis:");
@@ -209,17 +237,24 @@ fn test_chacha_poly_success_constant_time() {
         let _ = cipher.decrypt(&nonce, &ciphertext_a, Some(&aad));
     };
 
-    let measurement_op = |use_b: bool| {
-        if use_b {
-            let _ = cipher.decrypt(&nonce, &ciphertext_b, Some(&aad));
-        } else {
-            let _ = cipher.decrypt(&nonce, &ciphertext_a, Some(&aad));
-        }
+    let measurement_input = RefCell::new(ciphertext_a.clone());
+    let prepare_op = |use_b: bool| {
+        select_equal_length_input(
+            &mut measurement_input.borrow_mut(),
+            &ciphertext_a,
+            &ciphertext_b,
+            use_b,
+        );
+    };
+    let measurement_op = || {
+        let input = measurement_input.borrow();
+        let _ = cipher.decrypt(&nonce, &input, Some(&aad));
     };
 
     let analysis = tester
-        .calibrate_and_measure(
+        .calibrate_and_measure_prepared(
             warmup_op,
+            prepare_op,
             measurement_op,
             &config,
             "ChaChaPoly Success Path",
@@ -265,24 +300,26 @@ fn assert_chacha_poly_invalid_pair_constant_time(
         )));
     };
 
-    let measurement_op = |use_b: bool| {
-        if use_b {
-            drop(std::hint::black_box(cipher.decrypt(
-                nonce,
-                invalid_b,
-                Some(aad),
-            )));
-        } else {
-            drop(std::hint::black_box(cipher.decrypt(
-                nonce,
-                invalid_a,
-                Some(aad),
-            )));
-        }
+    let measurement_input = RefCell::new(invalid_a.to_vec());
+    let prepare_op = |use_b: bool| {
+        select_equal_length_input(
+            &mut measurement_input.borrow_mut(),
+            invalid_a,
+            invalid_b,
+            use_b,
+        );
+    };
+    let measurement_op = || {
+        let input = measurement_input.borrow();
+        drop(std::hint::black_box(cipher.decrypt(
+            nonce,
+            &input,
+            Some(aad),
+        )));
     };
 
     let analysis = tester
-        .calibrate_and_measure(warmup_op, measurement_op, &config, name)
+        .calibrate_and_measure_prepared(warmup_op, prepare_op, measurement_op, &config, name)
         .expect("Calibration failed");
 
     println!("{name} Timing Analysis:");

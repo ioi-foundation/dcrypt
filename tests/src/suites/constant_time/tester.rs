@@ -70,6 +70,36 @@ impl TimingTester {
         W: FnMut(),
         M: FnMut(bool) -> (),
     {
+        let use_b = std::cell::Cell::new(false);
+        self.calibrate_and_measure_prepared(
+            &mut warmup_op,
+            |class_b| use_b.set(class_b),
+            || measurement_op(use_b.get()),
+            config,
+            name,
+        )
+    }
+
+    /// Measure two classes after preparing their public inputs outside the
+    /// timed interval.
+    ///
+    /// `prepare_op` selects class A (`false`) or B (`true`). `measurement_op`
+    /// intentionally receives no class selector, so callers can feed both
+    /// classes through the same address and the same measured call site. The
+    /// prepared state must remain valid for every iteration in the batch.
+    pub fn calibrate_and_measure_prepared<W, P, M>(
+        &self,
+        mut warmup_op: W,
+        mut prepare_op: P,
+        mut measurement_op: M,
+        config: &TestConfig,
+        name: &str,
+    ) -> Result<TimingAnalysis, String>
+    where
+        W: FnMut(),
+        P: FnMut(bool),
+        M: FnMut(),
+    {
         let _measurement_guard = TIMING_MEASUREMENT_LOCK
             .lock()
             .map_err(|_| "timing measurement lock poisoned".to_string())?;
@@ -119,16 +149,19 @@ impl TimingTester {
         let mut rng = thread_rng();
 
         // Pre-heat
-        measurement_op(false);
-        measurement_op(true);
+        prepare_op(false);
+        measurement_op();
+        prepare_op(true);
+        measurement_op();
 
         for _ in 0..self.num_samples {
             let run_a_first = rng.gen_bool(0.5);
 
             let mut measure = |op_arg: bool| {
+                prepare_op(op_arg);
                 let start = Instant::now();
                 for _ in 0..self.num_iterations {
-                    measurement_op(op_arg);
+                    measurement_op();
                 }
                 let end = Instant::now();
                 // Return avg ns per op
