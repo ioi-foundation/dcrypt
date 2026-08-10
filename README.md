@@ -168,7 +168,7 @@ The library is organized as a workspace of specialized crates to align type-safe
 Security is the primary driver for dcrypt. The library employs a rigorous testing methodology:
 
 ### Constant-Time Verification
-The repository contains a custom statistical regression engine (`dcrypt-tests/src/suites/constant_time`). The security-validation workflow runs it serially as a regression gate and labels its scope explicitly. It is not dudect or ctgrind, and those stronger target-specific checks remain required before any production constant-time claim.
+The repository contains a custom statistical regression engine (`dcrypt-tests/src/suites/constant_time`). The security-validation workflow runs it serially as a regression gate and labels its scope explicitly. A constant-time claim additionally requires operation-specific source review and optimized-assembly/target evidence, supplemented by external dynamic tools where applicable. Passing that scoped evidence is not a universal compiler, target, microarchitectural, or caller-level proof.
 *   **Methodology**: Uses interleaved A/B timing measurements, bootstrap confidence intervals, Kolmogorov-Smirnov tests, Welch-style mean-shift checks, and Holm-Bonferroni correction across the combined signals.
 *   **Noise Gating**: Maintains a persistent noise profile and aborts inconclusive runs when the host environment is materially noisier than the historical baseline.
 *   **Coverage**: Exercises critical paths in ML-KEM, ML-DSA verification, BLS secret scalar multiplication, hybrid constructions, ECDH, and AEAD implementations for timing regressions.

@@ -11,7 +11,7 @@ exact internal dependency pins.
 
 ## Security advisories
 
-This release is the first supported remediation for ten coordinated findings:
+This release is the first supported remediation for eleven coordinated findings:
 
 - **Critical — `dcrypt-api`: safe error-registry APIs could cause undefined
   behavior.** Mismatched deallocation, unchecked type confusion, and concurrent
@@ -53,6 +53,12 @@ This release is the first supported remediation for ten coordinated findings:
   XChaCha20-Poly1305 used a nonstandard construction.** Explicit-nonce output
   from every affected published version is not standard XChaCha20-Poly1305.
   [GHSA-xj38-xmch-9j4w](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-xj38-xmch-9j4w)
+- **Moderate — `dcrypt-algorithms` / `dcrypt-symmetric` / `dcrypt-pke`:
+  optimized GHASH contained secret-dependent branches.** Compiler optimization
+  turned the intended byte-mask selection into branches derived from the GHASH
+  accumulator. No practical key recovery or end-to-end forgery has been
+  demonstrated from this behavior.
+  [GHSA-86cg-f85f-5ggw](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-86cg-f85f-5ggw)
 
 Updating does not retroactively restore the confidentiality, authenticity, or
 provenance of affected ciphertext, signatures, authorizations, keys, or process
@@ -94,8 +100,11 @@ blanket compiler/target constant-time or physical-memory-erasure claim.
   separately named Ethereum PoP-v4 adapter. RFC 9380 G1/G2 hash-to-curve is
   implemented directly by dcrypt; no external hash-to-curve library is needed
   at runtime.
-- Hardened GCM, streaming AEAD, ECDSA DER/scalars, Poly1305, HMAC, ChaCha20
-  counter exhaustion, KEM/PKE key parsing, and exact-size secret ownership.
+- Hardened GCM, including a four-target optimized-assembly gate that requires
+  GHASH's one fixed-counter backedge, reviewed in-loop arithmetic-mask shape,
+  absence of loop calls/indirect control, and five normal-path `u128` clearing
+  calls; streaming AEAD, ECDSA DER/scalars, Poly1305, HMAC, ChaCha20 counter
+  exhaustion, KEM/PKE key parsing, and exact-size secret ownership.
 
 ## Breaking migration notes
 

@@ -352,7 +352,7 @@ impl FieldElement {
     /// Constant-time conditional selection between two limb arrays
     ///
     /// Returns a if flag == 0, returns b if flag == 1
-    /// Used for branchless operations to maintain constant-time guarantees.
+    /// Used to avoid source-level branches in reviewed conditional selections.
     fn conditional_select(a: &[u32; 8], b: &[u32; 8], flag: Choice) -> Self {
         let mut out = Zeroizing::new([0u32; 8]);
         for i in 0..8 {

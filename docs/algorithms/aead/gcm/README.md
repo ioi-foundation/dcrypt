@@ -33,6 +33,30 @@ Security is the primary design consideration for this implementation.
 *   **Memory hygiene:** Owned GHASH and AES key state use zeroization. This does not guarantee erasure of caller, compiler, register, or allocator copies.
 *   **Robust API:** The API is designed around the `SymmetricCipher` trait, using a builder pattern that guides the user to provide all necessary components (like the nonce) before an operation can be executed, reducing the risk of misuse.
 
+### GHASH compiler-shape evidence
+
+Published versions before `3.0.0` expressed GHASH's conditional field XOR as
+a byte mask, but supported optimizing Rust compilers could transform that mask
+into conditional branches on secret-derived accumulator bits. The issue is
+tracked as
+[GHSA-86cg-f85f-5ggw](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-86cg-f85f-5ggw).
+
+Version `3.0.0` uses a fixed 128-iteration, whole-width masked multiplication.
+The release gate compiles the exact source with one generic codegen unit for
+Linux x86-64, Linux AArch64, WebAssembly, and Thumb. It requires exactly one
+conditional branch bound to the fixed-counter backedge; no loop calls,
+indirect/table control, or Thumb IT control; the reviewed whole-width masks,
+field shifts, and reduction operations inside the loop; and exactly five
+reviewed `u128` clearing calls on the normal post-loop path. The default unwind
+build permits only the reviewed clearing calls and unreachable
+`panic_in_cleanup` target as indirect x86 calls outside the loop. NIST
+functional vectors and statistical timing regressions provide separate
+correctness and regression evidence.
+
+This evidence is scoped to the recorded source, compiler, flags, target, and
+test environment. It is not a blanket proof for other compiler versions,
+targets, microarchitectures, or surrounding caller code.
+
 ## Usage
 
 ### Encryption and Decryption with AES-128-GCM

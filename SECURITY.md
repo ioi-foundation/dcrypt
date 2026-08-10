@@ -48,6 +48,13 @@ Users of an affected release should assume the following:
   operation nonce was supplied. Identify affected keys, rotate them, and
   re-encrypt; a software update alone cannot restore confidentiality or
   authenticity.
+- Optimized GHASH multiplication in every published pre-v3
+  `dcrypt-algorithms` artifact can branch on secret-derived accumulator bits.
+  The same implementation backs AES-GCM in `dcrypt-symmetric` and P-384/P-521
+  ECIES in `dcrypt-pke`. No practical key recovery or end-to-end forgery has
+  been demonstrated from this behavior, but deployments with a precise local,
+  co-resident, or repeated remote timing observer should treat affected keys as
+  potentially exposed and rotate them after upgrading.
 - Attacker-controlled Ed25519 public keys may have enabled forged
   authorizations. Audit registered keys, trust stores, signatures, and actions
   authorized by them.

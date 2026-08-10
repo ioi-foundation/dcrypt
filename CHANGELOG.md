@@ -67,6 +67,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `0.9.0-beta.1` through `1.2.3`. Explicit-nonce ciphertext from those releases
   is not standard XChaCha20-Poly1305 and is accepted only by the isolated
   decrypt-only migration tool.
+- Replaced GHASH's byte-mask field multiplication, which optimizing compilers
+  transformed into branches on secret-derived accumulator bits, with a fixed
+  128-iteration whole-width masked implementation. The affected low-level GCM,
+  symmetric AES-GCM, and P-384/P-521 ECIES paths were present in every
+  published version from `0.9.0-beta.1` through withdrawn `2.0.0`. No practical
+  key recovery or end-to-end forgery has been demonstrated from this compiler
+  behavior.
 - Extended exact-size secret ownership and best-effort explicit clearing across
   hashes, XOFs, MACs, KDFs, password hashing, key generation, KEMs, and signature
   operations. Secret APIs no longer return `Vec`-backed buffers with
@@ -147,8 +154,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   workspace tests/doctests, Miri, Loom, deterministic 1,000-run campaigns for
   every fuzz target, statistical timing
   regressions, cargo-audit, cargo-deny, independent oracles, and clean-room
-  package verification. Passing these gates is not an independent audit,
-  formal verification, FIPS validation, or proof of constant-time behavior.
+  package verification. The exact release source is also compiled for the four
+  declared GHASH targets and checked for one fixed-counter backedge, no loop
+  calls or indirect/table/Thumb-IT control, the reviewed in-loop mask/shift/
+  reduction shape, and exactly five normal-path `u128` clearing calls. Passing
+  these gates is not an independent audit, formal verification, FIPS
+  validation, or proof of constant-time behavior outside that recorded scope.
 
 ### Migration
 

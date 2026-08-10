@@ -1,9 +1,9 @@
 # Security advisories
 
-The ten findings below are published as GitHub Security Advisories. The first
-four findings and the v2 withdrawal are tracked by
+The eleven findings below have assigned GitHub Security Advisory identifiers.
+The first four findings and the v2 withdrawal are tracked by
 [RustSec advisory-db PR #3124](https://github.com/RustSec/advisory-db/pull/3124);
-RustSec submissions for the six additional v3 findings are part of the
+RustSec submissions for the seven additional v3 findings are part of the
 coordinated disclosure. The repository-local `DCRYPT-*` identifiers are
 project tracking identifiers, not assigned RustSec IDs.
 
@@ -18,8 +18,9 @@ release before `v3.0.0` is supported; `v3.0.0` is the supported replacement.
 - [DCRYPT-2026-0003: GCM operation nonce ignored](DCRYPT-2026-0003.md) — [GHSA-h9f2-fgp8-vc4h](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-h9f2-fgp8-vc4h)
 - [DCRYPT-2026-0004: unauthenticated streaming framing](DCRYPT-2026-0004.md) — [GHSA-8cwp-4826-jg9f](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-8cwp-4826-jg9f)
 
-The v3 remediation review identified six additional release-blocking findings.
-Their coordinated GitHub advisories were published with the corrective release.
+The v3 remediation review identified seven additional release-blocking
+findings. Their coordinated GitHub advisories are scheduled for publication
+with the corrective release.
 CVE requests follow independent verification of the v3 artifacts and public
 advisories. Each GHSA is authoritative for its current request and assignment
 state; the `DCRYPT-*` names remain repository-local tracking identifiers.
@@ -35,6 +36,7 @@ It is not standard XChaCha20-Poly1305 and is not part of the v3 published API.
 - [DCRYPT-2026-0008: Kyber implementation is not final FIPS 203 ML-KEM](DCRYPT-2026-0008.md) — [GHSA-xcw2-2p85-wmmp](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-xcw2-2p85-wmmp)
 - [DCRYPT-2026-0009: zero-nonce XChaCha operations reuse a one-time nonce](DCRYPT-2026-0009.md) — [GHSA-vwrw-2qvx-3rh9](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-vwrw-2qvx-3rh9)
 - [DCRYPT-2026-0010: XChaCha20-Poly1305 APIs used a nonstandard construction](DCRYPT-2026-0010.md) — [GHSA-xj38-xmch-9j4w](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-xj38-xmch-9j4w)
+- [DCRYPT-2026-0011: AES-GCM GHASH multiplication compiled with secret-dependent branches](DCRYPT-2026-0011.md) — [GHSA-86cg-f85f-5ggw](https://github.com/ioi-foundation/dcrypt/security/advisories/GHSA-86cg-f85f-5ggw)
 
 See the [traditional-EC removal notice](V3-TRADITIONAL-EC-REMOVALS.md) for the
 full B-283 parameter comparison, published-artifact boundary, regression

@@ -25,8 +25,10 @@ proof.
    - Table lookups with secret-derived indices MUST be avoided or mitigated.
 
 4. **Constant-Time Comparisons:**
-   - Equality checks involving secret values SHOULD use reviewed constant-time
-     primitives such as `subtle`; public length validation remains separate.
+   - Equality checks involving secret values MUST use dcrypt-owned, reviewed
+     mask-based equality after public length validation has completed.
+     Source-level masks are not sufficient by themselves; the claimed
+     operation still requires compiler- and target-specific evidence.
 
 5. **Error Handling:**
    - A result variant that depends on a secret MUST NOT be used as ordinary
@@ -40,7 +42,9 @@ proof.
    - Use the provided branchless implementations for all Galois Field operations.
 
 2. **Authentication Tag Verification:**
-   - Always use `subtle::ConstantTimeEq` for AEAD and MAC tag verification.
+   - Use dcrypt's owned mask-based `ConstantTimeEq` for equal-length AEAD and
+     MAC tag verification. Public length rejection remains a separate ordinary
+     branch.
 
 3. **S-Box Lookups:**
    - Prefer maintained hardware-accelerated or bitsliced implementations with a
@@ -48,16 +52,22 @@ proof.
      mitigation for secret-indexed lookups.
 
 4. **Testing:**
-   - Claimed operations SHOULD have dudect-style or equivalent statistical
-     tests on each relevant target, supplemented by ctgrind or other dynamic
-     analysis where available.
-   - Negative results block release. Positive statistical results do not prove
-     constant-time execution.
+   - Each claimed operation MUST identify its declared release toolchain and
+     target scope and provide the applicable combination of source review,
+     optimized-assembly inspection, and statistical timing regression.
+   - Supported dynamic side-channel analysis MAY supplement that evidence; no
+     single tool is a universal gate for every operation or target.
+   - A secret-dependent branch, memory access, or reproducible statistical
+     signal in the declared scope blocks the claim and release. Passing evidence
+     does not prove constant-time execution on other compilers, targets, or
+     microarchitectures.
 
 ## Verification
 
 All changes to a path carrying a constant-time claim MUST receive dedicated
-side-channel review before release. The repository's current statistical timing
-harness is a regression tool; dudect/ctgrind coverage is a release blocker until
-it is actually configured and passing in CI. No documentation may turn this
-policy into a blanket production or constant-time claim.
+side-channel review before release. The release gate must bind the exact source,
+compiler, target, assembly or dynamic evidence where applicable, and statistical
+regression result declared for that operation. Missing or negative required
+evidence blocks that scoped claim and release. These checks do not establish a
+universal compiler, target, microarchitectural, or production constant-time
+proof, and no documentation may present them as one.
