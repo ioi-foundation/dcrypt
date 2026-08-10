@@ -1605,7 +1605,7 @@ class BoundaryAudit:
                 package_map = {
                     package["id"]: package for package in metadata.get("packages", [])
                 }
-                target_directory = temp_root / scope
+                target_directory = temp_root / filesystem_safe_scope(scope)
                 env = clean_cargo_env()
                 env["RUSTFLAGS"] = "--force-warn=unsafe-code"
                 env["CARGO_TARGET_DIR"] = str(target_directory)
@@ -1904,6 +1904,14 @@ def clean_cargo_env() -> dict[str, str]:
     env = os.environ.copy()
     env.pop("CARGO_ENCODED_RUSTFLAGS", None)
     return env
+
+
+def filesystem_safe_scope(scope: str) -> str:
+    """Return a deterministic Cargo target-directory component for a scope label."""
+
+    readable = re.sub(r"[^A-Za-z0-9._-]+", "-", scope).strip("-")
+    digest = hashlib.sha256(scope.encode()).hexdigest()[:8]
+    return f"{readable or 'scope'}-{digest}"
 
 
 def compilation_matrix(
@@ -2579,6 +2587,13 @@ println!("cargo:rustc-link-lib=native");
     assert is_exact_requirement("=1.2.3")
     assert not is_exact_requirement("1.2.3")
     assert not is_exact_requirement("^1.2.3")
+    unsafe_scope = "linux-aarch64:all-features"
+    safe_scope = filesystem_safe_scope(unsafe_scope)
+    assert safe_scope == filesystem_safe_scope(unsafe_scope)
+    assert safe_scope.startswith("linux-aarch64-all-features-")
+    assert os.pathsep not in safe_scope
+    assert "/" not in safe_scope and "\\" not in safe_scope
+    assert safe_scope != filesystem_safe_scope("linux-aarch64-all-features")
     classified = classified_excluded_workspaces(
         {
             "verification-workspace": "verification",
