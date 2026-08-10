@@ -77,7 +77,7 @@ pub(super) fn measure_ml_kem768_decapsulate_success_path() -> Result<TimingAnaly
             // Deserialize + Decapsulate call path.
             let ciphertext = <MlKem768 as Kem>::Ciphertext::from_bytes(&prepared.current)
                 .expect("prepared ML-KEM ciphertext must retain its fixed width");
-            black_box(MlKem768::decapsulate(&sk, &ciphertext));
+            let _ = black_box(MlKem768::decapsulate(&sk, &ciphertext));
         },
         &config,
         "MlKem768 Decapsulate Success",
@@ -117,7 +117,7 @@ pub(super) fn measure_ml_kem768_decapsulate_rejection_path() -> Result<TimingAna
             prepared.assert_stable();
             let ciphertext = <MlKem768 as Kem>::Ciphertext::from_bytes(&prepared.current)
                 .expect("prepared ML-KEM ciphertext must retain its fixed width");
-            black_box(MlKem768::decapsulate(&sk, &ciphertext));
+            let _ = black_box(MlKem768::decapsulate(&sk, &ciphertext));
         },
         &config,
         "MlKem768 Decapsulate Reject",

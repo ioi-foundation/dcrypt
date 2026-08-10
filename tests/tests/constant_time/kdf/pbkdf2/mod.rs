@@ -47,7 +47,7 @@ pub(super) fn measure_pbkdf2_constant_time() -> Result<TimingAnalysis, String> {
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let measurement_op = |prepared: &PreparedPassword| {
-        std::hint::black_box(Pbkdf2::<Sha256>::pbkdf2(
+        let _ = std::hint::black_box(Pbkdf2::<Sha256>::pbkdf2(
             &prepared.current,
             salt,
             iterations,

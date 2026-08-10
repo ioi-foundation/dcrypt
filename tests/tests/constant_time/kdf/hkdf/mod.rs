@@ -40,7 +40,7 @@ pub(super) fn measure_hkdf_constant_time() -> Result<TimingAnalysis, String> {
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let measurement_op = |prepared: &PreparedSecret| {
-        std::hint::black_box(hkdf.derive_key(&prepared.current, salt, info, output_len));
+        let _ = std::hint::black_box(hkdf.derive_key(&prepared.current, salt, info, output_len));
     };
 
     let analysis = tester.calibrate_and_measure_prepared(

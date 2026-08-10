@@ -30,7 +30,7 @@ pub(super) fn measure_sha256_constant_time() -> Result<TimingAnalysis, String> {
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let measurement_op = |prepared: &PreparedInput<64>| {
-        std::hint::black_box(Sha256::digest(&prepared.current));
+        let _ = std::hint::black_box(Sha256::digest(&prepared.current));
     };
 
     let analysis = tester.calibrate_and_measure_prepared(
@@ -71,7 +71,7 @@ pub(super) fn measure_sha3_256_constant_time() -> Result<TimingAnalysis, String>
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let measurement_op = |prepared: &PreparedInput<136>| {
-        std::hint::black_box(Sha3_256::digest(&prepared.current));
+        let _ = std::hint::black_box(Sha3_256::digest(&prepared.current));
     };
 
     let analysis = tester.calibrate_and_measure_prepared(

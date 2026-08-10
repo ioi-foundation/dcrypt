@@ -32,7 +32,7 @@ pub(super) fn measure_hmac_sha256_constant_time() -> Result<TimingAnalysis, Stri
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let measurement_op = |prepared: &PreparedMessage| {
-        std::hint::black_box(Hmac::<Sha256>::mac(&key, &prepared.current));
+        let _ = std::hint::black_box(Hmac::<Sha256>::mac(&key, &prepared.current));
     };
 
     let analysis = tester.calibrate_and_measure_prepared(

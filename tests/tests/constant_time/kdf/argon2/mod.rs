@@ -130,7 +130,7 @@ pub(super) fn measure_argon2id_verify_constant_time() -> Result<TimingAnalysis, 
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let measurement_op = |prepared: &PreparedVerifyPassword| {
-        std::hint::black_box(argon2.verify(&prepared.current, &stored_hash));
+        let _ = std::hint::black_box(argon2.verify(&prepared.current, &stored_hash));
     };
 
     let analysis = tester.calibrate_and_measure_prepared(

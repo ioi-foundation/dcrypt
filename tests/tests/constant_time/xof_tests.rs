@@ -31,7 +31,7 @@ pub(super) fn measure_shake256_constant_time() -> Result<TimingAnalysis, String>
     let tester = TimingTester::new(config.num_samples, config.num_iterations);
 
     let measurement_op = |prepared: &PreparedInput<136>| {
-        std::hint::black_box(ShakeXof256::generate(&prepared.current, output_len));
+        let _ = std::hint::black_box(ShakeXof256::generate(&prepared.current, output_len));
     };
 
     let analysis = tester.calibrate_and_measure_prepared(

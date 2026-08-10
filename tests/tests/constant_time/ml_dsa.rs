@@ -162,7 +162,7 @@ fn test_ml_dsa_65_verify_public_input_timing_diagnostic() {
                 prepared.assert_stable();
                 let signature = MlDsaSignature::from_bytes(&prepared.current_signature)
                     .expect("prepared ML-DSA signature must remain canonical");
-                black_box(MlDsa65::verify(&prepared.current_message, &signature, &pk));
+                let _ = black_box(MlDsa65::verify(&prepared.current_message, &signature, &pk));
             },
             &config,
             "ML-DSA-65 Verify Public Inputs",
@@ -211,7 +211,7 @@ pub(super) fn measure_ml_dsa_65_verify_rejection_path() -> Result<TimingAnalysis
                 .expect("prepared ML-DSA rejection signature must remain canonical");
             let result = MlDsa65::verify(&prepared.current_message, &signature, &pk);
             debug_assert!(result.is_err());
-            black_box(result);
+            let _ = black_box(result);
         },
         &config,
         "ML-DSA-65 Verify Reject",

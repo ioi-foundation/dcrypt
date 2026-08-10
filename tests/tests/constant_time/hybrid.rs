@@ -74,7 +74,7 @@ pub(super) fn measure_hybrid_kem_decapsulate_success_path() -> Result<TimingAnal
             // public Deserialize + Decapsulate boundary.
             let ciphertext = <EcdhP256MlKem768 as Kem>::Ciphertext::from_bytes(&prepared.current)
                 .expect("prepared hybrid ciphertext must retain its fixed width");
-            black_box(EcdhP256MlKem768::decapsulate(&sk, &ciphertext));
+            let _ = black_box(EcdhP256MlKem768::decapsulate(&sk, &ciphertext));
         },
         &config,
         "Hybrid KEM Decapsulate Success",
@@ -114,7 +114,7 @@ pub(super) fn measure_hybrid_kem_decapsulate_rejection_path() -> Result<TimingAn
             prepared.assert_stable();
             let ciphertext = <EcdhP256MlKem768 as Kem>::Ciphertext::from_bytes(&prepared.current)
                 .expect("prepared hybrid ciphertext must retain its fixed width");
-            black_box(EcdhP256MlKem768::decapsulate(&sk, &ciphertext));
+            let _ = black_box(EcdhP256MlKem768::decapsulate(&sk, &ciphertext));
         },
         &config,
         "Hybrid KEM Decapsulate Reject",
