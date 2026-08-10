@@ -87,3 +87,37 @@ impl ProfileStore {
         self.profiles.get(name).map(|p| p.baseline_mad_ns)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn paired_profile_path_does_not_consume_legacy_keys() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "dcrypt-timing-profile-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir(&directory).unwrap();
+        let legacy_path = directory.join("ct_noise_profile.json");
+        let paired_path = directory.join("ct_noise_profile_paired_v1.json");
+
+        let mut legacy = ProfileStore::default();
+        legacy.update("legacy-case", 7.0);
+        legacy.save(&legacy_path);
+        let legacy_baseline = ProfileStore::load_or_create(&legacy_path)
+            .get_baseline("legacy-case")
+            .unwrap();
+        assert!((legacy_baseline - 7.0).abs() < 1.0e-12);
+        assert_eq!(
+            ProfileStore::load_or_create(&paired_path).get_baseline("legacy-case"),
+            None
+        );
+
+        fs::remove_dir_all(directory).unwrap();
+    }
+}

@@ -22,7 +22,7 @@ pub struct TestConfig {
     /// A family-adjusted rejection blocks only when the paired mean difference
     /// also exceeds this value.
     /// This filters out differences below the predeclared practical threshold.
-    /// Default: 1.0ns (approx 3-4 cycles on modern CPUs).
+    /// Default: 0.5ns.
     pub practical_significance_threshold: f64,
 
     /// Legacy Dudect-style Welch t-statistic threshold retained for report
@@ -68,7 +68,9 @@ impl Default for TestConfig {
             num_iterations: 500, // Lower iterations/sample to catch interruptions
 
             use_noise_profile: true,
-            noise_profile_path: PathBuf::from("target/ct_noise_profile.json"),
+            // The paired-v1 harness is statistically incomparable with the
+            // legacy independent-sample engine and must not consume its keys.
+            noise_profile_path: PathBuf::from("target/ct_noise_profile_paired_v1.json"),
             noise_tolerance_factor: 3.0, // Abort if noise is 3x historical baseline
         }
     }
@@ -143,5 +145,18 @@ impl TestConfig {
             practical_significance_threshold: 2.0,
             ..Self::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_uses_paired_v1_noise_namespace() {
+        assert_eq!(
+            TestConfig::default().noise_profile_path,
+            PathBuf::from("target/ct_noise_profile_paired_v1.json")
+        );
     }
 }

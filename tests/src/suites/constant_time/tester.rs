@@ -30,17 +30,37 @@ pub enum TimingClass {
     B = 1,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct MeasurementPair {
+    a_first: bool,
+    first: TimingClass,
+    second: TimingClass,
+}
+
+/// Keep the timed loop's schedule load mechanically separate from schedule
+/// construction. Debug-codegen regression coverage below rejects conditional
+/// control flow in this exact function.
+#[inline(never)]
+fn load_measurement_pair(pair: &MeasurementPair) -> (TimingClass, TimingClass) {
+    (pair.first, pair.second)
+}
+
 /// Replace a reusable byte buffer without a class-correlated branch or
 /// class-selected template read immediately before the timed interval.
 /// Both equal-length templates are read on every call.
 pub fn prepare_bytes(current: &mut [u8], class_a: &[u8], class_b: &[u8], class: TimingClass) {
     assert_eq!(current.len(), class_a.len());
     assert_eq!(current.len(), class_b.len());
-    let class_b_mask = 0u8.wrapping_sub(class as u8);
-    let class_a_mask = !class_b_mask;
+    let (class_a_mask, class_b_mask) = class_masks(class);
     for ((destination, &a), &b) in current.iter_mut().zip(class_a).zip(class_b) {
         *destination = (a & class_a_mask) | (b & class_b_mask);
     }
+}
+
+#[inline(never)]
+fn class_masks(class: TimingClass) -> (u8, u8) {
+    let class_b_mask = 0u8.wrapping_sub(class as u8);
+    (!class_b_mask, class_b_mask)
 }
 
 #[derive(Debug)]
@@ -168,7 +188,11 @@ impl TimingTester {
         let schedule_seed = derived_seed(SCHEDULE_SEED, name);
         let randomization_seed = derived_seed(RANDOMIZATION_SEED, name);
         let bootstrap_seed = derived_seed(BOOTSTRAP_SEED, name);
-        let a_first = balanced_schedule(self.num_samples, schedule_seed)?;
+        let measurement_schedule = measurement_schedule(self.num_samples, schedule_seed)?;
+        let a_first: Vec<bool> = measurement_schedule
+            .iter()
+            .map(|pair| pair.a_first)
+            .collect();
 
         // Warm up and characterize only the measured operation. Class
         // preparation stays outside the interval on every iteration.
@@ -221,12 +245,8 @@ impl TimingTester {
         let mut first_times = Vec::with_capacity(self.num_samples);
         let mut second_times = Vec::with_capacity(self.num_samples);
 
-        for &class_a_first in &a_first {
-            let (first_class, second_class) = if class_a_first {
-                (TimingClass::A, TimingClass::B)
-            } else {
-                (TimingClass::B, TimingClass::A)
-            };
+        for pair in &measurement_schedule {
+            let (first_class, second_class) = load_measurement_pair(pair);
             first_times.push(measure_batch(
                 state,
                 first_class,
@@ -417,6 +437,26 @@ fn balanced_schedule(samples: usize, seed: u64) -> Result<Vec<bool>, String> {
     schedule[..samples / 2].fill(true);
     schedule.shuffle(&mut ChaCha20Rng::seed_from_u64(seed));
     Ok(schedule)
+}
+
+fn measurement_schedule(samples: usize, seed: u64) -> Result<Vec<MeasurementPair>, String> {
+    const CLASS_ORDER: [(TimingClass, TimingClass); 2] = [
+        (TimingClass::B, TimingClass::A),
+        (TimingClass::A, TimingClass::B),
+    ];
+    balanced_schedule(samples, seed).map(|a_first| {
+        a_first
+            .into_iter()
+            .map(|a_first| {
+                let (first, second) = CLASS_ORDER[usize::from(a_first)];
+                MeasurementPair {
+                    a_first,
+                    first,
+                    second,
+                }
+            })
+            .collect()
+    })
 }
 
 fn derived_seed(base: u64, name: &str) -> u64 {
@@ -683,6 +723,8 @@ pub fn generate_familywise_insights(family: &FamilywiseAnalysis) -> String {
 mod tests {
     use super::*;
     use std::cell::Cell;
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    use std::process::Command;
 
     #[test]
     fn balanced_schedule_is_deterministic_and_exact() {
@@ -691,6 +733,196 @@ mod tests {
         assert_eq!(first, second);
         assert_eq!(first.iter().filter(|&&value| value).count(), 50);
         assert!(balanced_schedule(99, 7).is_err());
+    }
+
+    #[test]
+    fn measurement_order_is_fully_precomputed() {
+        let schedule = measurement_schedule(100, 7).unwrap();
+        assert_eq!(schedule.iter().filter(|pair| pair.a_first).count(), 50);
+        for pair in &schedule {
+            let expected = if pair.a_first {
+                (TimingClass::A, TimingClass::B)
+            } else {
+                (TimingClass::B, TimingClass::A)
+            };
+            assert_eq!(load_measurement_pair(pair), expected);
+        }
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    #[derive(Debug)]
+    struct DebugInstruction {
+        address: u64,
+        mnemonic: String,
+        operands: String,
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    fn debug_disassembly() -> String {
+        let executable = std::env::current_exe().expect("resolve current test executable");
+        let output = Command::new("objdump")
+            .arg("-dC")
+            .arg(executable)
+            .output()
+            .expect("objdump is required for the Linux x86_64 debug schedule gate");
+        assert!(output.status.success(), "objdump failed");
+        String::from_utf8(output.stdout).expect("objdump must emit UTF-8")
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    fn symbol_mnemonics(disassembly: &str, symbol: &str) -> Vec<String> {
+        let mut lines = disassembly
+            .lines()
+            .skip_while(|line| !line.contains(symbol))
+            .skip(1);
+        let mut mnemonics = Vec::new();
+        for line in &mut lines {
+            if line.is_empty() || (line.contains(" <") && line.ends_with(">:")) {
+                break;
+            }
+            if let Some(instruction) = line.split('\t').nth(2) {
+                if let Some(mnemonic) = instruction.split_whitespace().next() {
+                    mnemonics.push(mnemonic.to_string());
+                }
+            }
+        }
+        mnemonics
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    fn parsed_instructions(disassembly: &str) -> Vec<DebugInstruction> {
+        disassembly
+            .lines()
+            .filter_map(|line| {
+                let mut columns = line.split('\t');
+                let address = columns
+                    .next()?
+                    .trim()
+                    .strip_suffix(':')
+                    .and_then(|value| u64::from_str_radix(value, 16).ok())?;
+                columns.next()?;
+                let instruction = columns.next()?.trim();
+                let split_at = instruction
+                    .find(char::is_whitespace)
+                    .unwrap_or(instruction.len());
+                Some(DebugInstruction {
+                    address,
+                    mnemonic: instruction[..split_at].to_string(),
+                    operands: instruction[split_at..].trim().to_string(),
+                })
+            })
+            .collect()
+    }
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    #[test]
+    fn debug_prepared_schedule_assembly_is_branch_free() {
+        let probe = MeasurementPair {
+            a_first: true,
+            first: TimingClass::A,
+            second: TimingClass::B,
+        };
+        black_box(load_measurement_pair(black_box(&probe)));
+        black_box(class_masks(black_box(TimingClass::B)));
+
+        let disassembly = debug_disassembly();
+        let load_symbol = "<dcrypt_tests::suites::constant_time::tester::load_measurement_pair>:";
+        let load_mnemonics = symbol_mnemonics(&disassembly, load_symbol);
+        assert!(load_mnemonics
+            .iter()
+            .any(|mnemonic| mnemonic.starts_with("ret")));
+        assert!(
+            load_mnemonics.iter().all(|mnemonic| {
+                mnemonic.starts_with("mov")
+                    || mnemonic.starts_with("ret")
+                    || mnemonic == "int3"
+                    || mnemonic.starts_with("nop")
+                    || mnemonic.starts_with("endbr")
+                    || mnemonic.starts_with("xchg")
+            }),
+            "debug schedule load gained data-dependent/control-flow instructions: {load_mnemonics:?}"
+        );
+
+        let mask_symbol = "<dcrypt_tests::suites::constant_time::tester::class_masks>:";
+        let mask_mnemonics = symbol_mnemonics(&disassembly, mask_symbol);
+        assert!(mask_mnemonics
+            .iter()
+            .any(|mnemonic| mnemonic.starts_with("ret")));
+        assert!(
+            mask_mnemonics.iter().all(|mnemonic| {
+                mnemonic.starts_with("mov")
+                    || mnemonic.starts_with("ret")
+                    || mnemonic == "int3"
+                    || mnemonic.starts_with("nop")
+                    || mnemonic.starts_with("endbr")
+                    || mnemonic.starts_with("xchg")
+                    || mnemonic.starts_with("and")
+                    || mnemonic.starts_with("sub")
+                    || mnemonic.starts_with("neg")
+                    || mnemonic.starts_with("dec")
+                    || mnemonic.starts_with("xor")
+            }),
+            "debug class-mask lowering gained conditional control: {mask_mnemonics:?}"
+        );
+
+        let instructions = parsed_instructions(&disassembly);
+        let by_address: std::collections::BTreeMap<u64, usize> = instructions
+            .iter()
+            .enumerate()
+            .map(|(index, instruction)| (instruction.address, index))
+            .collect();
+        let mut found_reviewed_path = false;
+        for candidate in instructions
+            .iter()
+            .enumerate()
+            .filter_map(|(index, instruction)| {
+                (instruction.mnemonic.starts_with("call")
+                    && instruction.operands.contains("load_measurement_pair"))
+                .then_some(index)
+            })
+        {
+            let mut index = candidate + 1;
+            for _ in 0..256 {
+                let Some(instruction) = instructions.get(index) else {
+                    break;
+                };
+                if instruction.mnemonic == "jmp" || instruction.mnemonic == "jmpq" {
+                    let Some(target) = instruction
+                        .operands
+                        .split_whitespace()
+                        .next()
+                        .and_then(|value| u64::from_str_radix(value, 16).ok())
+                        .and_then(|address| by_address.get(&address).copied())
+                    else {
+                        break;
+                    };
+                    index = target;
+                    continue;
+                }
+                if instruction.mnemonic.starts_with('j')
+                    || instruction.mnemonic.starts_with("loop")
+                    || instruction.mnemonic.starts_with("cmov")
+                    || instruction.mnemonic.starts_with("set")
+                    || instruction.mnemonic.starts_with("ret")
+                {
+                    break;
+                }
+                if instruction.mnemonic.starts_with("call") {
+                    if instruction.operands.contains("measure_batch") {
+                        found_reviewed_path = true;
+                    }
+                    break;
+                }
+                index += 1;
+            }
+            if found_reviewed_path {
+                break;
+            }
+        }
+        assert!(
+            found_reviewed_path,
+            "no debug emitted path from the precomputed pair load to the first measure_batch was free of selector control"
+        );
     }
 
     #[test]
