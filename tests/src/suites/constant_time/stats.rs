@@ -1,7 +1,8 @@
 // tests/src/suites/constant_time/stats.rs
 
 use rand::prelude::*;
-use rand::thread_rng;
+use rand::seq::SliceRandom;
+use rand_chacha::ChaCha20Rng;
 
 /// Calculates the median of a dataset.
 pub fn median(data: &[f64]) -> f64 {
@@ -33,10 +34,114 @@ pub fn robust_cv(data: &[f64]) -> f64 {
     }
 }
 
-/// Generates bootstrap distribution of means
-pub fn bootstrap_mean_distribution(diffs: &[f64], iterations: usize) -> Vec<f64> {
+fn validate_finite_nonempty(values: &[f64], label: &str) -> Result<(), String> {
+    if values.is_empty() {
+        return Err(format!("{label} must not be empty"));
+    }
+    if values.iter().any(|value| !value.is_finite()) {
+        return Err(format!("{label} contains a non-finite value"));
+    }
+    Ok(())
+}
+
+/// Reconstruct A-B differences from the measured first/second batches and the
+/// predeclared within-pair assignment.
+pub fn paired_differences(
+    first: &[f64],
+    second: &[f64],
+    a_first: &[bool],
+) -> Result<Vec<f64>, String> {
+    if first.len() != second.len() || first.len() != a_first.len() {
+        return Err("paired timing vectors have different lengths".to_string());
+    }
+    validate_finite_nonempty(first, "first timings")?;
+    validate_finite_nonempty(second, "second timings")?;
+
+    Ok(first
+        .iter()
+        .zip(second)
+        .zip(a_first)
+        .map(|((&first_time, &second_time), &class_a_first)| {
+            if class_a_first {
+                first_time - second_time
+            } else {
+                second_time - first_time
+            }
+        })
+        .collect())
+}
+
+fn validate_balanced_assignment(a_first: &[bool]) -> Result<(), String> {
+    if a_first.len() < 2 || a_first.len() % 2 != 0 {
+        return Err("paired randomization requires a nonzero even sample count".to_string());
+    }
+    let a_first_count = a_first.iter().filter(|&&value| value).count();
+    if a_first_count * 2 != a_first.len() {
+        return Err("paired assignment is not exactly balanced".to_string());
+    }
+    Ok(())
+}
+
+/// Two-sided paired randomization test for the balanced A-first/B-first design.
+///
+/// The sharp-null distribution reassigns exactly half of the measured first
+/// and second batches to class A. `iterations` and `seed` are fixed before any
+/// observations are collected. The add-one correction prevents a zero p-value.
+pub fn balanced_paired_randomization_p_value(
+    first: &[f64],
+    second: &[f64],
+    observed_a_first: &[bool],
+    iterations: usize,
+    seed: u64,
+) -> Result<f64, String> {
+    if iterations == 0 {
+        return Err("paired randomization iteration count must be positive".to_string());
+    }
+    validate_balanced_assignment(observed_a_first)?;
+    let observed_diffs = paired_differences(first, second, observed_a_first)?;
+    let observed_stat = observed_diffs.iter().sum::<f64>().abs();
+
+    let mut assignment = vec![false; observed_a_first.len()];
+    assignment[..observed_a_first.len() / 2].fill(true);
+    let mut rng = ChaCha20Rng::seed_from_u64(seed);
+    let mut extreme = 0usize;
+
+    for _ in 0..iterations {
+        assignment.shuffle(&mut rng);
+        let candidate_sum = first
+            .iter()
+            .zip(second)
+            .zip(&assignment)
+            .map(|((&first_time, &second_time), &class_a_first)| {
+                if class_a_first {
+                    first_time - second_time
+                } else {
+                    second_time - first_time
+                }
+            })
+            .sum::<f64>()
+            .abs();
+        if candidate_sum >= observed_stat {
+            extreme += 1;
+        }
+    }
+
+    Ok((extreme as f64 + 1.0) / (iterations as f64 + 1.0))
+}
+
+/// Generates a deterministic paired-bootstrap distribution of mean A-B
+/// differences. The seed and iteration budget are fixed before measurement.
+pub fn bootstrap_mean_distribution(
+    diffs: &[f64],
+    iterations: usize,
+    seed: u64,
+) -> Result<Vec<f64>, String> {
+    validate_finite_nonempty(diffs, "paired differences")?;
+    if iterations == 0 {
+        return Err("bootstrap iteration count must be positive".to_string());
+    }
     let n = diffs.len();
-    let mut rng = thread_rng();
+    let mut rng = ChaCha20Rng::seed_from_u64(seed);
     let mut means = Vec::with_capacity(iterations);
 
     for _ in 0..iterations {
@@ -50,14 +155,22 @@ pub fn bootstrap_mean_distribution(diffs: &[f64], iterations: usize) -> Vec<f64>
     }
 
     means.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    means
+    Ok(means)
 }
 
-/// Performs Percentile Bootstrap to calculate CI and p-value.
-///
-/// Returns (lower_bound, upper_bound, p_value).
-pub fn bootstrap_ci_and_p(diffs: &[f64], iterations: usize, alpha: f64) -> (f64, f64, f64) {
-    let means = bootstrap_mean_distribution(diffs, iterations);
+/// Performs a deterministic percentile bootstrap for a descriptive paired CI.
+/// It deliberately returns no p-value; the paired randomization test is the
+/// suite's only primary inference.
+pub fn bootstrap_ci(
+    diffs: &[f64],
+    iterations: usize,
+    alpha: f64,
+    seed: u64,
+) -> Result<(f64, f64), String> {
+    if !(0.0 < alpha && alpha < 1.0) {
+        return Err("bootstrap alpha must be between zero and one".to_string());
+    }
+    let means = bootstrap_mean_distribution(diffs, iterations, seed)?;
 
     let lower_idx = ((iterations as f64) * (alpha / 2.0)) as usize;
     let upper_idx = ((iterations as f64) * (1.0 - (alpha / 2.0))) as usize;
@@ -66,15 +179,7 @@ pub fn bootstrap_ci_and_p(diffs: &[f64], iterations: usize, alpha: f64) -> (f64,
     let lower = means[lower_idx.min(iterations - 1)];
     let upper = means[upper_idx.min(iterations - 1)];
 
-    // Calculate "Percentile P-value" for H0: mu = 0.
-    // This represents the probability that the bootstrap distribution crosses 0.
-    // It aligns perfectly with the CI: if 99% CI excludes 0, then p < 0.01.
-    let count_below_zero = means.iter().filter(|&&m| m < 0.0).count();
-    let p_one_sided = count_below_zero as f64 / iterations as f64;
-    // Two-sided p-value
-    let p = 2.0 * p_one_sided.min(1.0 - p_one_sided);
-
-    (lower, upper, p.max(1.0 / iterations as f64))
+    Ok((lower, upper))
 }
 
 /// Welch's t-test statistic and a large-sample two-sided p-value approximation.
@@ -228,4 +333,70 @@ pub fn ks_statistic(a: &[f64], b: &[f64]) -> f64 {
         }
     }
     max_diff
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn paired_differences_reconstruct_a_minus_b() {
+        let diffs = paired_differences(
+            &[11.0, 3.0, 15.0, 7.0],
+            &[1.0, 13.0, 5.0, 17.0],
+            &[true, false, true, false],
+        )
+        .unwrap();
+        assert_eq!(diffs, vec![10.0; 4]);
+    }
+
+    #[test]
+    fn balanced_randomization_has_predeclared_resolution_and_known_null() {
+        let assignment: Vec<bool> = (0..40).map(|index| index % 2 == 0).collect();
+        let identical = vec![7.0; assignment.len()];
+        assert_eq!(
+            balanced_paired_randomization_p_value(
+                &identical,
+                &identical,
+                &assignment,
+                100_000,
+                17,
+            )
+            .unwrap(),
+            1.0
+        );
+
+        let first: Vec<f64> = assignment
+            .iter()
+            .map(|&a_first| if a_first { 10.0 } else { 0.0 })
+            .collect();
+        let second: Vec<f64> = assignment
+            .iter()
+            .map(|&a_first| if a_first { 0.0 } else { 10.0 })
+            .collect();
+        let p = balanced_paired_randomization_p_value(&first, &second, &assignment, 100_000, 17)
+            .unwrap();
+        assert_eq!(p, 1.0 / 100_001.0);
+        assert!(p < 0.01 / 29.0);
+    }
+
+    #[test]
+    fn paired_randomization_rejects_malformed_evidence() {
+        assert!(balanced_paired_randomization_p_value(
+            &[1.0, 2.0],
+            &[1.0, 2.0],
+            &[true, true],
+            100,
+            1,
+        )
+        .is_err());
+        assert!(paired_differences(&[f64::NAN], &[1.0], &[true]).is_err());
+    }
+
+    #[test]
+    fn paired_bootstrap_is_deterministic() {
+        let first = bootstrap_ci(&[-2.0, -1.0, 1.0, 2.0], 1_000, 0.01, 99).unwrap();
+        let second = bootstrap_ci(&[-2.0, -1.0, 1.0, 2.0], 1_000, 0.01, 99).unwrap();
+        assert_eq!(first, second);
+    }
 }

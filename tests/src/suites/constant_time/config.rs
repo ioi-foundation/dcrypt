@@ -9,7 +9,8 @@ use std::path::PathBuf;
 #[derive(Debug, Clone)]
 pub struct TestConfig {
     // --- Statistical Parameters ---
-    /// Significance level (alpha) for the confidence interval.
+    /// Significance level (alpha) for the descriptive confidence interval.
+    /// The blocking family alpha is fixed separately by the suite contract.
     /// Default: 0.01 (99% confidence).
     pub significance_level: f64,
 
@@ -18,15 +19,14 @@ pub struct TestConfig {
     pub bootstrap_iterations: usize,
 
     /// Practical Significance Threshold (nanoseconds).
-    /// Even if a difference is statistically significant (p < alpha),
-    /// we ignore it if the magnitude of the difference is less than this value.
+    /// A family-adjusted rejection blocks only when the paired mean difference
+    /// also exceeds this value.
     /// This filters out architectural biases that are real but exploitable.
     /// Default: 1.0ns (approx 3-4 cycles on modern CPUs).
     pub practical_significance_threshold: f64,
 
-    /// Dudect-style Welch t-statistic threshold.
-    /// Values above this indicate a likely timing signal even when the mean
-    /// shift is small relative to noisy environments.
+    /// Legacy Dudect-style Welch t-statistic threshold retained for report
+    /// compatibility. Welch output is descriptive and never gates the suite.
     pub welch_t_threshold: f64,
 
     // --- Sampling Configuration ---
@@ -56,7 +56,10 @@ impl Default for TestConfig {
     fn default() -> Self {
         Self {
             significance_level: 0.01, // 99% Confidence
-            bootstrap_iterations: 10_000,
+            // Fixed paired-bootstrap budget. This is large enough for stable
+            // 99% descriptive intervals and is never increased after seeing
+            // a result.
+            bootstrap_iterations: 100_000,
             practical_significance_threshold: 0.5, // 0.5ns tolerance
             welch_t_threshold: 4.5,
 

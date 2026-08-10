@@ -3,15 +3,53 @@
 use crate::suites::constant_time::config::TestConfig;
 use crate::suites::constant_time::profile::ProfileStore;
 use crate::suites::constant_time::stats;
-use rand::{thread_rng, Rng};
+use rand::seq::SliceRandom;
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
+use std::collections::BTreeSet;
+use std::hint::black_box;
+use std::sync::atomic::{compiler_fence, Ordering};
 use std::sync::Mutex;
 use std::time::Instant;
 
 static TIMING_MEASUREMENT_LOCK: Mutex<()> = Mutex::new(());
 
+pub const PRIMARY_RANDOMIZATION_ITERATIONS: usize = 100_000;
+pub const MIN_BOOTSTRAP_ITERATIONS: usize = 100_000;
+pub const BLOCKING_FAMILY_ALPHA: f64 = 0.01;
+pub const EXPECTED_BLOCKING_CASES: usize = 29;
+
+const SCHEDULE_SEED: u64 = 0x4454_5353_4348_4544;
+const RANDOMIZATION_SEED: u64 = 0x4454_5352_414e_444f;
+const BOOTSTRAP_SEED: u64 = 0x4454_5342_4f4f_5453;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TimingClass {
+    A,
+    B,
+}
+
 #[derive(Debug)]
 pub struct TimingAnalysis {
-    // Stats
+    pub name: String,
+
+    // Raw paired evidence. `a_first[index]` describes which class occupied
+    // `first_times[index]`; every schedule is exactly balanced.
+    pub first_times: Vec<f64>,
+    pub second_times: Vec<f64>,
+    pub a_first: Vec<bool>,
+    pub times_a: Vec<f64>,
+    pub times_b: Vec<f64>,
+    pub paired_diffs: Vec<f64>,
+
+    // Primary inference. This is the only per-case p-value admitted to the
+    // blocking family and is not itself a verdict.
+    pub primary_p_value: f64,
+    pub randomization_iterations: usize,
+    pub schedule_seed: u64,
+    pub randomization_seed: u64,
+
+    // Descriptive statistics only.
     pub mean_a: f64,
     pub mean_b: f64,
     pub mean_diff: f64,
@@ -19,29 +57,44 @@ pub struct TimingAnalysis {
     pub mad_b: f64,
     pub cohens_d: f64,
     pub ks_stat: f64,
+    pub ks_p_value: f64,
     pub welch_t: f64,
-
-    // Inference & P-values
+    pub welch_p_value: f64,
     pub ci_lower: f64,
     pub ci_upper: f64,
-    pub zero_in_ci: bool,
-    pub p_ci: f64,    // Bootstrap p-value for mean diff
-    pub p_ks: f64,    // KS test p-value for distribution shape
-    pub p_welch: f64, // Welch t-test p-value (large-sample approximation)
-
-    // Multi-signal Correction (Holm-Bonferroni)
-    pub holm_reject_ci: bool,    // Did mean diff survive Holm?
-    pub holm_reject_ks: bool,    // Did KS stat survive Holm?
-    pub holm_reject_welch: bool, // Did Welch survive Holm?
+    pub bootstrap_iterations: usize,
+    pub bootstrap_seed: u64,
 
     pub practical_threshold: f64,
-
-    // Environment
     pub noise_floor_mad: f64,
     pub environment_status: String,
+}
 
-    // Verdict
-    pub is_constant_time: bool,
+#[derive(Debug)]
+pub struct FamilyCaseDecision {
+    pub name: String,
+    pub primary_p_value: f64,
+    pub holm_reject: bool,
+    pub exceeds_practical_threshold: bool,
+    pub blocks_release: bool,
+}
+
+#[derive(Debug)]
+pub struct FamilywiseAnalysis {
+    pub alpha: f64,
+    pub decisions: Vec<FamilyCaseDecision>,
+}
+
+impl FamilywiseAnalysis {
+    pub fn blocking_cases(&self) -> impl Iterator<Item = &FamilyCaseDecision> {
+        self.decisions
+            .iter()
+            .filter(|decision| decision.blocks_release)
+    }
+
+    pub fn passes(&self) -> bool {
+        self.blocking_cases().next().is_none()
+    }
 }
 
 pub struct TimingTester {
@@ -57,221 +110,411 @@ impl TimingTester {
         }
     }
 
-    /// Calculate metrics, check profile, and determine pass/fail.
-    /// Returns `Err` if the environment is too noisy to run a valid test.
-    pub fn calibrate_and_measure<W, M>(
-        &self,
-        mut warmup_op: W,
-        mut measurement_op: M,
-        config: &TestConfig,
-        name: &str,
-    ) -> Result<TimingAnalysis, String>
-    where
-        W: FnMut(),
-        M: FnMut(bool) -> (),
-    {
-        let use_b = std::cell::Cell::new(false);
-        self.calibrate_and_measure_prepared(
-            &mut warmup_op,
-            |class_b| use_b.set(class_b),
-            || measurement_op(use_b.get()),
-            config,
-            name,
-        )
-    }
-
-    /// Measure two classes after preparing their public inputs outside the
-    /// timed interval.
+    /// Measure two classes through one reusable state and one class-free timed
+    /// call site.
     ///
-    /// `prepare_op` selects class A (`false`) or B (`true`). `measurement_op`
-    /// intentionally receives no class selector, so callers can feed both
-    /// classes through the same address and the same measured call site. The
-    /// prepared state must remain valid for every iteration in the batch.
-    pub fn calibrate_and_measure_prepared<W, P, M>(
+    /// `prepare_op` runs outside every `Instant` interval and must update
+    /// `state` in place. `measurement_op` receives no class selector, which
+    /// makes an A/B branch inside the measured API impossible by construction.
+    /// The state object must stay at the same address for the entire run;
+    /// Vec-backed states must additionally enforce stable pointer/length/
+    /// capacity invariants in their preparation function.
+    pub fn calibrate_and_measure_prepared<S, P, M>(
         &self,
-        mut warmup_op: W,
+        state: &mut S,
         mut prepare_op: P,
         mut measurement_op: M,
         config: &TestConfig,
         name: &str,
     ) -> Result<TimingAnalysis, String>
     where
-        W: FnMut(),
-        P: FnMut(bool),
-        M: FnMut(),
+        P: FnMut(&mut S, TimingClass),
+        M: FnMut(&S),
     {
+        if self.num_samples < 2 || self.num_samples % 2 != 0 {
+            return Err("timing samples must be a nonzero even count".to_string());
+        }
+        if self.num_iterations == 0 || config.num_warmup == 0 {
+            return Err("timing warmup and batch iteration counts must be positive".to_string());
+        }
+        if config.bootstrap_iterations < MIN_BOOTSTRAP_ITERATIONS {
+            return Err(format!(
+                "paired bootstrap requires at least {MIN_BOOTSTRAP_ITERATIONS} fixed iterations"
+            ));
+        }
+        if !(0.0 < config.significance_level && config.significance_level < 1.0) {
+            return Err("timing significance level must be between zero and one".to_string());
+        }
+
         let _measurement_guard = TIMING_MEASUREMENT_LOCK
             .lock()
             .map_err(|_| "timing measurement lock poisoned".to_string())?;
+        let state_address = std::ptr::from_ref(&*state).addr();
 
-        // --- 1. Warmup & Noise Profiling ---
+        let schedule_seed = derived_seed(SCHEDULE_SEED, name);
+        let randomization_seed = derived_seed(RANDOMIZATION_SEED, name);
+        let bootstrap_seed = derived_seed(BOOTSTRAP_SEED, name);
+        let a_first = balanced_schedule(self.num_samples, schedule_seed)?;
+
+        // Warm up and characterize only the measured operation. Class
+        // preparation stays outside the interval on every iteration.
         let mut warmup_times = Vec::with_capacity(config.num_warmup);
         for _ in 0..config.num_warmup {
+            prepare_checked(state, TimingClass::A, state_address, &mut prepare_op)?;
+            compiler_fence(Ordering::SeqCst);
+            black_box(&*state);
             let start = Instant::now();
-            warmup_op();
+            measurement_op(black_box(&*state));
+            compiler_fence(Ordering::SeqCst);
             let end = Instant::now();
+            ensure_state_address(state, state_address)?;
             warmup_times.push((end - start).as_nanos() as f64);
         }
 
         let current_mad = stats::robust_mad(&warmup_times);
-        let mut env_status = "Clean".to_string();
+        if !current_mad.is_finite() {
+            return Err("warmup noise estimate is non-finite".to_string());
+        }
+        let mut environment_status = "Clean".to_string();
 
-        // Profile Check & Gating
         if config.use_noise_profile {
             let mut store = ProfileStore::load_or_create(&config.noise_profile_path);
-
             if let Some(baseline) = store.get_baseline(name) {
-                // Check if noise is drastically worse than history
                 if current_mad > baseline * config.noise_tolerance_factor {
-                    // GATING: Abort the test if the environment is too noisy.
                     return Err(format!(
-                        "TEST ABORTED: Environment too noisy. Current MAD {:.2}ns > {:.1}x Baseline {:.2}ns", 
+                        "TEST ABORTED: Environment too noisy. Current MAD {:.2}ns > {:.1}x Baseline {:.2}ns",
                         current_mad, config.noise_tolerance_factor, baseline
                     ));
                 }
-
-                // Warn if noise is elevated but within tolerance
                 if current_mad > baseline * 1.5 {
-                    env_status = format!(
+                    environment_status = format!(
                         "Elevated Noise (MAD {:.2} > Baseline {:.2})",
                         current_mad, baseline
                     );
                 }
             }
-
             store.update(name, current_mad);
             store.save(&config.noise_profile_path);
         }
 
-        // --- 2. Interleaved Measurement ---
+        // Preheat both prepared classes through the same measured closure.
+        prepare_checked(state, TimingClass::A, state_address, &mut prepare_op)?;
+        measurement_op(black_box(&*state));
+        prepare_checked(state, TimingClass::B, state_address, &mut prepare_op)?;
+        measurement_op(black_box(&*state));
+        ensure_state_address(state, state_address)?;
+
+        let mut first_times = Vec::with_capacity(self.num_samples);
+        let mut second_times = Vec::with_capacity(self.num_samples);
+
+        for &class_a_first in &a_first {
+            let (first_class, second_class) = if class_a_first {
+                (TimingClass::A, TimingClass::B)
+            } else {
+                (TimingClass::B, TimingClass::A)
+            };
+            first_times.push(measure_batch(
+                state,
+                first_class,
+                state_address,
+                self.num_iterations,
+                &mut prepare_op,
+                &mut measurement_op,
+            )?);
+            second_times.push(measure_batch(
+                state,
+                second_class,
+                state_address,
+                self.num_iterations,
+                &mut prepare_op,
+                &mut measurement_op,
+            )?);
+        }
+
+        self.analyze(
+            name,
+            first_times,
+            second_times,
+            a_first,
+            config,
+            current_mad,
+            environment_status,
+            schedule_seed,
+            randomization_seed,
+            bootstrap_seed,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn analyze(
+        &self,
+        name: &str,
+        first_times: Vec<f64>,
+        second_times: Vec<f64>,
+        a_first: Vec<bool>,
+        config: &TestConfig,
+        noise_mad: f64,
+        environment_status: String,
+        schedule_seed: u64,
+        randomization_seed: u64,
+        bootstrap_seed: u64,
+    ) -> Result<TimingAnalysis, String> {
+        let paired_diffs = stats::paired_differences(&first_times, &second_times, &a_first)?;
         let mut times_a = Vec::with_capacity(self.num_samples);
         let mut times_b = Vec::with_capacity(self.num_samples);
-        let mut rng = thread_rng();
-
-        // Pre-heat
-        prepare_op(false);
-        measurement_op();
-        prepare_op(true);
-        measurement_op();
-
-        for _ in 0..self.num_samples {
-            let run_a_first = rng.gen_bool(0.5);
-
-            let mut measure = |op_arg: bool| {
-                prepare_op(op_arg);
-                let start = Instant::now();
-                for _ in 0..self.num_iterations {
-                    measurement_op();
-                }
-                let end = Instant::now();
-                // Return avg ns per op
-                ((end - start).as_nanos() as f64) / (self.num_iterations as f64)
-            };
-
-            if run_a_first {
-                times_a.push(measure(false));
-                times_b.push(measure(true));
+        for ((&first, &second), &class_a_first) in
+            first_times.iter().zip(&second_times).zip(&a_first)
+        {
+            if class_a_first {
+                times_a.push(first);
+                times_b.push(second);
             } else {
-                let b = measure(true);
-                let a = measure(false);
-                times_b.push(b);
-                times_a.push(a);
+                times_a.push(second);
+                times_b.push(first);
             }
         }
 
-        self.analyze(&times_a, &times_b, config, current_mad, env_status)
-    }
-
-    fn analyze(
-        &self,
-        a: &[f64],
-        b: &[f64],
-        config: &TestConfig,
-        noise_mad: f64,
-        env_status: String,
-    ) -> Result<TimingAnalysis, String> {
-        // 1. Pairwise Differences
-        let diffs: Vec<f64> = a.iter().zip(b).map(|(x, y)| x - y).collect();
-        let mean_diff = diffs.iter().sum::<f64>() / diffs.len() as f64;
-
-        // 2. Bootstrap Confidence Interval & P-Value (Metric 1: Mean Diff)
-        let (ci_low, ci_high, p_ci) = stats::bootstrap_ci_and_p(
-            &diffs,
+        let primary_p_value = stats::balanced_paired_randomization_p_value(
+            &first_times,
+            &second_times,
+            &a_first,
+            PRIMARY_RANDOMIZATION_ITERATIONS,
+            randomization_seed,
+        )?;
+        let (ci_lower, ci_upper) = stats::bootstrap_ci(
+            &paired_diffs,
             config.bootstrap_iterations,
             config.significance_level,
-        );
+            bootstrap_seed,
+        )?;
+        let mean_a = mean(&times_a)?;
+        let mean_b = mean(&times_b)?;
+        let mean_diff = mean(&paired_diffs)?;
+        let ks_stat = stats::ks_statistic(&times_a, &times_b);
+        let ks_p_value = stats::ks_pvalue(ks_stat, times_a.len(), times_b.len());
+        let (welch_t, welch_p_value) = stats::welch_t_statistic(&times_a, &times_b);
 
-        // 3. Kolmogorov-Smirnov Test (Metric 2: Distribution Shape)
-        let ks_stat = stats::ks_statistic(a, b);
-        let p_ks = stats::ks_pvalue(ks_stat, a.len(), b.len());
-
-        // 4. Welch's t-test (Metric 3: Dudect-style signal)
-        let (welch_t, p_welch) = stats::welch_t_statistic(a, b);
-
-        // 5. Holm-Bonferroni Correction
-        // We are testing two hypotheses:
-        // H0_1: Mean diff = 0
-        // H0_2: Distributions are identical
-        // H0_3: Welch t-statistic indicates no mean-shift signal
-        // We want to control FWER at `significance_level`
-        let pvals = vec![p_ci, p_ks, p_welch];
-        let holm_decisions = stats::holm_adjust(&pvals, config.significance_level);
-
-        let holm_reject_ci = holm_decisions[0];
-        let holm_reject_ks = holm_decisions[1];
-        let holm_reject_welch = holm_decisions[2];
-
-        // 6. Other Diagnostics
-        let mean_a = a.iter().sum::<f64>() / a.len() as f64;
-        let mean_b = b.iter().sum::<f64>() / b.len() as f64;
-        let mad_a = stats::robust_mad(a);
-        let mad_b = stats::robust_mad(b);
-        let cohens_d = stats::cohens_d(a, b);
-
-        // 7. Decision Logic
-        // A. Confidence Interval Check (Primary Signal)
-        // Note: zero_excluded matches holm_reject_ci in theory (same test), but
-        // we track both explicitly.
-        let zero_excluded = ci_low > 0.0 || ci_high < 0.0;
-
-        // B. Practical Significance (Magnitude)
-        let thr = config.practical_significance_threshold;
-        let is_practical = ci_low > thr || ci_high < -thr;
-
-        // C. Multi-signal Confirmation
-        // We only flag a failure if:
-        // 1. The difference is statistically significant (CI doesn't touch zero)
-        // 2. The difference is practically significant (outside threshold)
-        // 3. The hypothesis test survives Holm correction (controls false positive rate)
-        //
-        // Note: We use holm_reject_ci as the gatekeeper. KS provides shape info.
-        let welch_signal = welch_t.abs() >= config.welch_t_threshold && holm_reject_welch;
-        let leak_detected = is_practical && (zero_excluded && holm_reject_ci || welch_signal);
-
-        Ok(TimingAnalysis {
+        let finite_diagnostics = [
+            primary_p_value,
+            ci_lower,
+            ci_upper,
             mean_a,
             mean_b,
             mean_diff,
-            mad_a,
-            mad_b,
-            cohens_d,
             ks_stat,
+            ks_p_value,
             welch_t,
-            ci_lower: ci_low,
-            ci_upper: ci_high,
-            zero_in_ci: !zero_excluded,
-            p_ci,
-            p_ks,
-            p_welch,
-            holm_reject_ci,
-            holm_reject_ks,
-            holm_reject_welch,
+            welch_p_value,
+        ];
+        if finite_diagnostics.iter().any(|value| !value.is_finite()) {
+            return Err("timing analysis produced a non-finite value".to_string());
+        }
+
+        Ok(TimingAnalysis {
+            name: name.to_string(),
+            first_times,
+            second_times,
+            a_first,
+            times_a: times_a.clone(),
+            times_b: times_b.clone(),
+            paired_diffs,
+            primary_p_value,
+            randomization_iterations: PRIMARY_RANDOMIZATION_ITERATIONS,
+            schedule_seed,
+            randomization_seed,
+            mean_a,
+            mean_b,
+            mean_diff,
+            mad_a: stats::robust_mad(&times_a),
+            mad_b: stats::robust_mad(&times_b),
+            cohens_d: stats::cohens_d(&times_a, &times_b),
+            ks_stat,
+            ks_p_value,
+            welch_t,
+            welch_p_value,
+            ci_lower,
+            ci_upper,
+            bootstrap_iterations: config.bootstrap_iterations,
+            bootstrap_seed,
             practical_threshold: config.practical_significance_threshold,
             noise_floor_mad: noise_mad,
-            environment_status: env_status,
-            is_constant_time: !leak_detected,
+            environment_status,
         })
     }
+}
+
+fn prepare_checked<S, P>(
+    state: &mut S,
+    class: TimingClass,
+    expected_address: usize,
+    prepare_op: &mut P,
+) -> Result<(), String>
+where
+    P: FnMut(&mut S, TimingClass),
+{
+    ensure_state_address(state, expected_address)?;
+    prepare_op(state, class);
+    compiler_fence(Ordering::SeqCst);
+    black_box(&*state);
+    ensure_state_address(state, expected_address)
+}
+
+fn measure_batch<S, P, M>(
+    state: &mut S,
+    class: TimingClass,
+    expected_address: usize,
+    iterations: usize,
+    prepare_op: &mut P,
+    measurement_op: &mut M,
+) -> Result<f64, String>
+where
+    P: FnMut(&mut S, TimingClass),
+    M: FnMut(&S),
+{
+    prepare_checked(state, class, expected_address, prepare_op)?;
+    compiler_fence(Ordering::SeqCst);
+    let start = Instant::now();
+    for _ in 0..iterations {
+        measurement_op(black_box(&*state));
+        compiler_fence(Ordering::SeqCst);
+    }
+    let end = Instant::now();
+    compiler_fence(Ordering::SeqCst);
+    ensure_state_address(state, expected_address)?;
+    let average = (end - start).as_nanos() as f64 / iterations as f64;
+    if !average.is_finite() {
+        return Err("timing batch produced a non-finite duration".to_string());
+    }
+    Ok(average)
+}
+
+fn ensure_state_address<S>(state: &S, expected: usize) -> Result<(), String> {
+    if std::ptr::from_ref(state).addr() != expected {
+        return Err("prepared timing state moved during measurement".to_string());
+    }
+    Ok(())
+}
+
+fn balanced_schedule(samples: usize, seed: u64) -> Result<Vec<bool>, String> {
+    if samples < 2 || samples % 2 != 0 {
+        return Err("balanced schedule requires a nonzero even sample count".to_string());
+    }
+    let mut schedule = vec![false; samples];
+    schedule[..samples / 2].fill(true);
+    schedule.shuffle(&mut ChaCha20Rng::seed_from_u64(seed));
+    Ok(schedule)
+}
+
+fn derived_seed(base: u64, name: &str) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325u64;
+    for byte in name.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    base ^ hash
+}
+
+fn mean(values: &[f64]) -> Result<f64, String> {
+    if values.is_empty() || values.iter().any(|value| !value.is_finite()) {
+        return Err("cannot compute a timing mean from empty/non-finite data".to_string());
+    }
+    Ok(values.iter().sum::<f64>() / values.len() as f64)
+}
+
+pub fn analyze_blocking_family(
+    cases: &[TimingAnalysis],
+    expected_names: &[&str],
+) -> Result<FamilywiseAnalysis, String> {
+    if expected_names.len() != EXPECTED_BLOCKING_CASES {
+        return Err(format!(
+            "family contract expected {EXPECTED_BLOCKING_CASES} names, got {}",
+            expected_names.len()
+        ));
+    }
+    if cases.len() != EXPECTED_BLOCKING_CASES {
+        return Err(format!(
+            "blocking timing family expected {EXPECTED_BLOCKING_CASES} cases, got {}",
+            cases.len()
+        ));
+    }
+
+    let expected: BTreeSet<&str> = expected_names.iter().copied().collect();
+    if expected.len() != EXPECTED_BLOCKING_CASES {
+        return Err("blocking timing contract contains duplicate expected names".to_string());
+    }
+    let observed: BTreeSet<&str> = cases.iter().map(|case| case.name.as_str()).collect();
+    if observed.len() != EXPECTED_BLOCKING_CASES {
+        return Err("blocking timing evidence contains duplicate case names".to_string());
+    }
+    if observed != expected {
+        let missing: Vec<_> = expected.difference(&observed).copied().collect();
+        let unexpected: Vec<_> = observed.difference(&expected).copied().collect();
+        return Err(format!(
+            "blocking timing case-set mismatch; missing={missing:?}, unexpected={unexpected:?}"
+        ));
+    }
+
+    let mut ordered = Vec::with_capacity(EXPECTED_BLOCKING_CASES);
+    for &name in expected_names {
+        let case = cases
+            .iter()
+            .find(|case| case.name == name)
+            .ok_or_else(|| format!("missing blocking timing case {name}"))?;
+        validate_case(case)?;
+        ordered.push(case);
+    }
+    let p_values: Vec<f64> = ordered.iter().map(|case| case.primary_p_value).collect();
+    let holm_rejections = stats::holm_adjust(&p_values, BLOCKING_FAMILY_ALPHA);
+    let decisions = ordered
+        .into_iter()
+        .zip(holm_rejections)
+        .map(|(case, holm_reject)| {
+            let exceeds_practical_threshold = case.mean_diff.abs() > case.practical_threshold;
+            FamilyCaseDecision {
+                name: case.name.clone(),
+                primary_p_value: case.primary_p_value,
+                holm_reject,
+                exceeds_practical_threshold,
+                blocks_release: holm_reject && exceeds_practical_threshold,
+            }
+        })
+        .collect();
+
+    Ok(FamilywiseAnalysis {
+        alpha: BLOCKING_FAMILY_ALPHA,
+        decisions,
+    })
+}
+
+fn validate_case(case: &TimingAnalysis) -> Result<(), String> {
+    if !case.primary_p_value.is_finite()
+        || !(0.0..=1.0).contains(&case.primary_p_value)
+        || !case.mean_diff.is_finite()
+        || !case.practical_threshold.is_finite()
+        || case.practical_threshold < 0.0
+    {
+        return Err(format!("{} contains invalid family evidence", case.name));
+    }
+    if case.randomization_iterations != PRIMARY_RANDOMIZATION_ITERATIONS {
+        return Err(format!(
+            "{} used {} primary permutations instead of {}",
+            case.name, case.randomization_iterations, PRIMARY_RANDOMIZATION_ITERATIONS
+        ));
+    }
+    if case.bootstrap_iterations < MIN_BOOTSTRAP_ITERATIONS {
+        return Err(format!(
+            "{} used too few paired bootstrap iterations",
+            case.name
+        ));
+    }
+    if case.first_times.len() != case.second_times.len()
+        || case.first_times.len() != case.a_first.len()
+        || case.first_times.len() != case.paired_diffs.len()
+        || case.a_first.iter().filter(|&&value| value).count() * 2 != case.a_first.len()
+    {
+        return Err(format!("{} has malformed paired evidence", case.name));
+    }
+    Ok(())
 }
 
 pub fn generate_test_insights(
@@ -279,81 +522,187 @@ pub fn generate_test_insights(
     _config: &TestConfig,
     primitive_name: &str,
 ) -> String {
-    let mut s = String::new();
+    let schedule: String = analysis
+        .a_first
+        .iter()
+        .map(|&a_first| if a_first { 'A' } else { 'B' })
+        .collect();
+    format!(
+        "Timing diagnostics: {primitive_name}\n\
+         Environment: {}\n\
+         Noise floor MAD: {:.3} ns\n\
+         Mean A-B: {:.3} ns\n\
+         99% paired-bootstrap CI (descriptive): [{:.3}, {:.3}] ns\n\
+         Practical threshold: {:.3} ns\n\
+         Primary balanced-randomization p (unadjusted): {:.8}\n\
+         Primary permutations: {} seed={:#018x}\n\
+         Balanced schedule seed={:#018x} A-first pattern={}\n\
+         Diagnostic Cohen's d: {:.3}\n\
+         Diagnostic Welch t/p: {:.3} / {:.3e}\n\
+         Diagnostic KS statistic/p: {:.3} / {:.3e}\n\
+         Paired bootstrap: {} seed={:#018x}\n\
+         Raw first ns/op: {:?}\n\
+         Raw second ns/op: {:?}\n\
+         Raw paired A-B ns/op: {:?}",
+        analysis.environment_status,
+        analysis.noise_floor_mad,
+        analysis.mean_diff,
+        analysis.ci_lower,
+        analysis.ci_upper,
+        analysis.practical_threshold,
+        analysis.primary_p_value,
+        analysis.randomization_iterations,
+        analysis.randomization_seed,
+        analysis.schedule_seed,
+        schedule,
+        analysis.cohens_d,
+        analysis.welch_t,
+        analysis.welch_p_value,
+        analysis.ks_stat,
+        analysis.ks_p_value,
+        analysis.bootstrap_iterations,
+        analysis.bootstrap_seed,
+        analysis.first_times,
+        analysis.second_times,
+        analysis.paired_diffs,
+    )
+}
 
-    let status_icon = if analysis.is_constant_time {
-        "✅"
-    } else {
-        "❌"
-    };
+pub fn generate_familywise_insights(family: &FamilywiseAnalysis) -> String {
+    let mut output = format!(
+        "Blocking timing family: {} cases, Holm FWER alpha={}\n",
+        family.decisions.len(),
+        family.alpha
+    );
+    for decision in &family.decisions {
+        output.push_str(&format!(
+            "  {}: primary_p={:.8}, holm_reject={}, practical={}, blocks={}\n",
+            decision.name,
+            decision.primary_p_value,
+            decision.holm_reject,
+            decision.exceeds_practical_threshold,
+            decision.blocks_release,
+        ));
+    }
+    output
+}
 
-    s.push_str(&format!("{} Result: {}\n", status_icon, primitive_name));
-    s.push_str(&format!(
-        "   Environment: {}\n",
-        analysis.environment_status
-    ));
-    s.push_str(&format!(
-        "   Noise Floor (MAD): {:.3} ns\n",
-        analysis.noise_floor_mad
-    ));
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
 
-    s.push_str("   --- Statistics ---\n");
-    s.push_str(&format!("   Mean Diff:   {:.3} ns\n", analysis.mean_diff));
-    s.push_str(&format!(
-        "   99% CI:      [{:.3}, {:.3}] ns\n",
-        analysis.ci_lower, analysis.ci_upper
-    ));
-    s.push_str(&format!(
-        "   Cohen's d:   {:.3} (Effect Size)\n",
-        analysis.cohens_d
-    ));
-    s.push_str(&format!("   Welch t:     {:.3}\n", analysis.welch_t));
+    #[test]
+    fn balanced_schedule_is_deterministic_and_exact() {
+        let first = balanced_schedule(100, 7).unwrap();
+        let second = balanced_schedule(100, 7).unwrap();
+        assert_eq!(first, second);
+        assert_eq!(first.iter().filter(|&&value| value).count(), 50);
+        assert!(balanced_schedule(99, 7).is_err());
+    }
 
-    s.push_str("   --- Hypothesis Tests (Holm-Adjusted) ---\n");
-    s.push_str(&format!(
-        "   Mean Diff P: {:.1e} (Reject: {})\n",
-        analysis.p_ci, analysis.holm_reject_ci
-    ));
-    s.push_str(&format!(
-        "   KS Stat P:   {:.1e} (Reject: {})\n",
-        analysis.p_ks, analysis.holm_reject_ks
-    ));
-    s.push_str(&format!(
-        "   Welch P:     {:.1e} (Reject: {})\n",
-        analysis.p_welch, analysis.holm_reject_welch
-    ));
+    #[test]
+    fn prepared_api_uses_one_address_and_prepares_once_per_batch() {
+        #[derive(Debug)]
+        struct State(u8);
 
-    if !analysis.is_constant_time {
-        s.push_str("\n   ⚠️  FAILURE DIAGNOSIS:\n");
+        let mut config = TestConfig::default();
+        config.num_warmup = 2;
+        config.num_samples = 2;
+        config.num_iterations = 3;
+        config.use_noise_profile = false;
+        let tester = TimingTester::new(config.num_samples, config.num_iterations);
+        let mut state = State(0);
+        let address = std::ptr::from_ref(&state).addr();
+        let prepare_count = Cell::new(0usize);
+        let measure_count = Cell::new(0usize);
 
-        if analysis.holm_reject_ci {
-            s.push_str("   - Statistically significant mean difference detected (p < alpha).\n");
-        }
+        let analysis = tester
+            .calibrate_and_measure_prepared(
+                &mut state,
+                |current, class| {
+                    assert_eq!(std::ptr::from_ref(current).addr(), address);
+                    current.0 = u8::from(class == TimingClass::B);
+                    prepare_count.set(prepare_count.get() + 1);
+                },
+                |current| {
+                    assert_eq!(std::ptr::from_ref(current).addr(), address);
+                    black_box(current.0);
+                    measure_count.set(measure_count.get() + 1);
+                },
+                &config,
+                "prepared-api-self-test",
+            )
+            .unwrap();
 
-        if analysis.ci_lower > analysis.practical_threshold {
-            s.push_str(&format!(
-                "   - Positive bias exceeds practical threshold (+{:.1} ns)\n",
-                analysis.practical_threshold
-            ));
-        } else if analysis.ci_upper < -analysis.practical_threshold {
-            s.push_str(&format!(
-                "   - Negative bias exceeds practical threshold (-{:.1} ns)\n",
-                analysis.practical_threshold
-            ));
-        }
+        // warmups + two preheats + two classes for each paired sample
+        assert_eq!(prepare_count.get(), 2 + 2 + 2 * 2);
+        assert_eq!(measure_count.get(), 2 + 2 + 2 * 2 * 3);
+        assert_eq!(analysis.a_first.iter().filter(|&&value| value).count(), 1);
+    }
 
-        if analysis.holm_reject_ks {
-            s.push_str("   - Distribution shapes differ significantly (suggests branching).\n");
-        } else {
-            s.push_str(
-                "   - Distributions similar shape, offset implies data-dependent operands.\n",
-            );
-        }
-
-        if analysis.holm_reject_welch {
-            s.push_str("   - Welch's t-test exceeded the dudect-style significance threshold.\n");
+    fn synthetic_case(name: &str, p_value: f64, mean_diff: f64) -> TimingAnalysis {
+        TimingAnalysis {
+            name: name.to_string(),
+            first_times: vec![2.0, 1.0],
+            second_times: vec![1.0, 2.0],
+            a_first: vec![true, false],
+            times_a: vec![2.0, 2.0],
+            times_b: vec![1.0, 1.0],
+            paired_diffs: vec![1.0, 1.0],
+            primary_p_value: p_value,
+            randomization_iterations: PRIMARY_RANDOMIZATION_ITERATIONS,
+            schedule_seed: 1,
+            randomization_seed: 2,
+            mean_a: 2.0,
+            mean_b: 1.0,
+            mean_diff,
+            mad_a: 0.0,
+            mad_b: 0.0,
+            cohens_d: 0.0,
+            ks_stat: 1.0,
+            ks_p_value: 0.1,
+            welch_t: 0.0,
+            welch_p_value: 1.0,
+            ci_lower: 1.0,
+            ci_upper: 1.0,
+            bootstrap_iterations: MIN_BOOTSTRAP_ITERATIONS,
+            bootstrap_seed: 3,
+            practical_threshold: 0.5,
+            noise_floor_mad: 0.0,
+            environment_status: "Synthetic".to_string(),
         }
     }
 
-    s
+    #[test]
+    fn blocking_family_is_exact_fail_closed_and_uses_one_holm_pass() {
+        let names: Vec<String> = (0..EXPECTED_BLOCKING_CASES)
+            .map(|index| format!("case-{index:02}"))
+            .collect();
+        let expected: Vec<&str> = names.iter().map(String::as_str).collect();
+        let mut cases: Vec<TimingAnalysis> = expected
+            .iter()
+            .map(|name| synthetic_case(name, 1.0, 0.0))
+            .collect();
+
+        cases[0].primary_p_value = 0.000_01;
+        cases[0].mean_diff = 0.75;
+        cases[1].primary_p_value = 0.000_02;
+        cases[1].mean_diff = 0.25;
+        let family = analyze_blocking_family(&cases, &expected).unwrap();
+        assert!(family.decisions[0].holm_reject);
+        assert!(family.decisions[0].blocks_release);
+        assert!(family.decisions[1].holm_reject);
+        assert!(!family.decisions[1].blocks_release);
+
+        cases.pop();
+        assert!(analyze_blocking_family(&cases, &expected).is_err());
+
+        cases.push(synthetic_case(expected[0], 1.0, 0.0));
+        assert!(analyze_blocking_family(&cases, &expected).is_err());
+
+        cases[EXPECTED_BLOCKING_CASES - 1] =
+            synthetic_case(expected[EXPECTED_BLOCKING_CASES - 1], f64::NAN, 0.0);
+        assert!(analyze_blocking_family(&cases, &expected).is_err());
+    }
 }
