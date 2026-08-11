@@ -130,7 +130,7 @@
     "provisioningManifest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "id", "classification", "status", "subject", "layout", "checksum_policy", "network", "checkout_environment", "checkout_umask", "sandbox_environment", "commands", "subject_inputs", "observed_host_tools", "provisioning_policy_binding", "workspace_locks", "materialized_payloads", "blocked_operations", "claim"],
+      "required": ["schema_version", "id", "classification", "status", "subject", "layout", "checksum_policy", "network", "checkout_environment", "checkout_umask", "sandbox_environment", "commands", "toolchain_selection", "subject_inputs", "observed_host_tools", "provisioning_policy_binding", "workspace_locks", "materialized_payloads", "blocked_operations", "claim"],
       "properties": {
         "schema_version": {"const": 1},
         "id": {"const": "dcrypt-audit-provisioning-v1"},
@@ -212,6 +212,26 @@
               "operation": {"enum": ["checkout-preparation", "provision", "generation", "verification"]},
               "status": {"enum": ["required-external-preparation", "first-party-executable", "first-party-executable-after-evidence-commit"]}
             }
+          }
+        },
+        "toolchain_selection": {
+          "type": "object", "additionalProperties": false,
+          "required": ["root_configuration_files", "root_configuration_status", "selection_inputs", "distribution_status"],
+          "properties": {
+            "root_configuration_files": {"type": "array", "minItems": 0, "maxItems": 0, "items": {"type": "string"}},
+            "root_configuration_status": {"const": "absent-current-subject"},
+            "selection_inputs": {
+              "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true,
+              "items": {
+                "type": "object", "additionalProperties": false, "required": ["path", "sha256", "size"],
+                "properties": {
+                  "path": {"enum": [".github/workflows/security-validation.yml", "assurance/audit/provisioning-lock.toml", "assurance/ledger.toml"]},
+                  "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+                  "size": {"type": "integer", "minimum": 0}
+                }
+              }
+            },
+            "distribution_status": {"const": "blocked-not-materialized"}
           }
         },
         "subject_inputs": {

@@ -102,7 +102,6 @@ def make_fixture(repo: Path) -> str:
     for path in ("CHANGELOG.md", "CONSTANT_TIME_POLICY.md", "RELEASE_NOTES.md", "SECURITY.md", "VERSION_STRATEGY.md"):
         put(repo, path, f"# {path}\n")
     put(repo, "deny.toml", "[advisories]\nversion = 2\n")
-    put(repo, "rust-toolchain.toml", "[toolchain]\nchannel = \"1.93.1\"\n")
     put(repo, ".gitignore", "target/\n")
     put(repo, "src/lib.rs", "pub fn fixture() {}\n")
     put(repo, ".github/workflows/security-validation.yml", (HERE.parent / ".github/workflows/security-validation.yml").read_bytes())
@@ -442,6 +441,27 @@ def main() -> int:
         first = gen.build_bundle_bytes(fixture, subject)
         second = gen.build_bundle_bytes(fixture, subject)
         assert first == second
+        provisioning_manifest = json.loads(first["PROVISIONING-MANIFEST.json"])
+        assert not any(path in gen.PROVISIONING_SUBJECT_INPUT_PATHS for path in gen.ROOT_TOOLCHAIN_CONFIGURATION_PATHS)
+        assert provisioning_manifest["toolchain_selection"]["root_configuration_files"] == []
+        assert [
+            row["path"] for row in provisioning_manifest["toolchain_selection"]["selection_inputs"]
+        ] == list(gen.TOOLCHAIN_SELECTION_INPUT_PATHS)
+        real_repo = HERE.parent
+        real_subject = gen._git(real_repo, "rev-parse", "HEAD").decode("ascii").strip()
+        _, real_files, _ = gen.subject_files(real_repo, real_subject)
+        gen.validate_provisioning_subject_inputs(real_files)
+        assert not (set(gen.ROOT_TOOLCHAIN_CONFIGURATION_PATHS) & set(real_files))
+        assert set(gen.TOOLCHAIN_SELECTION_INPUT_PATHS).issubset(real_files)
+        print("ok - real subject has no invented root toolchain input and binds workflow/ledger policy")
+        for selection_path in gen.TOOLCHAIN_SELECTION_INPUT_PATHS:
+            missing_selection_input = dict(real_files)
+            del missing_selection_input[selection_path]
+            expect_failure(
+                f"missing authoritative provisioning input {selection_path}",
+                lambda candidate=missing_selection_input: gen.validate_provisioning_subject_inputs(candidate),
+                "provisioning handoff subject inputs are missing",
+            )
         source_manifest = json.loads(first["source-manifest.json"])
         gitignore_rows = [row for row in source_manifest["files"] if row["path"] == ".gitignore"]
         assert len(gitignore_rows) == 1 and gitignore_rows[0]["sha256"] == gen.sha256(b"target/\n")
@@ -1348,6 +1368,11 @@ def main() -> int:
             lambda repo: (repo / "assurance/threat-models/threat-models.toml").unlink(),
             "threat-model",
         )
+        subject_failure(
+            "unreviewed root toolchain configuration",
+            lambda repo: put(repo, "rust-toolchain.toml", "[toolchain]\nchannel = \"stable\"\n"),
+            "root toolchain configuration appeared",
+        )
         for label, command_target in (
             ("missing threat-model verifier command target", "assurance/threat-models/verify-threat-models.py"),
             ("missing threat-model selftest command target", "assurance/threat-models/threat-model-selftest.py"),
@@ -1397,6 +1422,17 @@ def main() -> int:
         gen.validate_json_schema(freeze_instance, freeze_schema, label="generated freeze fixture")
         provisioning_instance = tomllib.loads((HERE / "audit/provisioning-lock.toml").read_text())
         provisioning_schema = json.loads((HERE / "audit/provisioning.schema.json").read_text())
+        provisioning_manifest_schema = provisioning_schema["$defs"]["provisioningManifest"]
+        broken_provisioning_manifest = json.loads(json.dumps(provisioning_manifest))
+        del broken_provisioning_manifest["toolchain_selection"]
+        expect_failure(
+            "provisioning manifest toolchain-selection deletion",
+            lambda: gen.validate_json_schema(
+                broken_provisioning_manifest, provisioning_manifest_schema,
+                label="provisioning manifest fixture",
+            ),
+            "required",
+        )
         broken_provisioning = json.loads(json.dumps(provisioning_instance))
         del broken_provisioning["host-tool"][0]["path"]
         expect_failure(

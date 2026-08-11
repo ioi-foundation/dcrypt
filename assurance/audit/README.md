@@ -296,6 +296,12 @@ ledger validation, and cold-cache artifact rebuilding. The bench processor also
 lacks a tracked lock. No network acquisition command is authorized by this
 package, and no unresolved pseudo-command is presented as executable.
 
+The current subject intentionally has neither `rust-toolchain` nor
+`rust-toolchain.toml`; the handoff must not invent one. Toolchain and action
+selection is instead byte-bound to `.github/workflows/security-validation.yml`,
+`assurance/ledger.toml`, and `assurance/audit/provisioning-lock.toml`. Appearance
+of a root toolchain file is a policy change that fails generation until reviewed.
+
 A later, separately reviewed provisioning package must bind acquisition-tool
 binaries, URLs, response identities, licenses, acquisition times, archive
 checksums, extraction rules, full regular-file manifests, and an offline runner.

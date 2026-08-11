@@ -290,7 +290,7 @@ def validate_provisioning_manifest_shape(manifest: dict[str, Any], contents: dic
     expected_keys = {
         "schema_version", "id", "classification", "status", "subject", "layout",
         "checksum_policy", "network", "checkout_environment", "checkout_umask",
-        "sandbox_environment", "commands", "subject_inputs",
+        "sandbox_environment", "commands", "toolchain_selection", "subject_inputs",
         "observed_host_tools", "provisioning_policy_binding", "workspace_locks",
         "materialized_payloads", "blocked_operations", "claim",
     }
@@ -313,6 +313,35 @@ def validate_provisioning_manifest_shape(manifest: dict[str, Any], contents: dic
         fail("provisioning handoff network marker/policy drift")
     if manifest.get("materialized_payloads") != []:
         fail("provisioning handoff may not claim unavailable payload bytes")
+    subject_inputs = manifest.get("subject_inputs")
+    if not isinstance(subject_inputs, list) or any(
+        not isinstance(row, dict) or set(row) != {"path", "sha256", "size"}
+        for row in subject_inputs
+    ):
+        fail("provisioning handoff subject-input inventory is malformed")
+    subject_input_by_path: dict[str, dict[str, Any]] = {}
+    for row in subject_inputs:
+        path = row["path"]
+        if not isinstance(path, str) or path in subject_input_by_path:
+            fail("provisioning handoff subject-input inventory has a missing/duplicate path")
+        subject_input_by_path[path] = row
+    if not set(gen.TOOLCHAIN_SELECTION_INPUT_PATHS).issubset(subject_input_by_path):
+        fail("provisioning handoff omits an authoritative toolchain-selection input")
+    expected_selection_inputs = [
+        {
+            "path": path,
+            "sha256": subject_input_by_path[path]["sha256"],
+            "size": subject_input_by_path[path]["size"],
+        }
+        for path in gen.TOOLCHAIN_SELECTION_INPUT_PATHS
+    ]
+    if manifest.get("toolchain_selection") != {
+        "distribution_status": "blocked-not-materialized",
+        "root_configuration_files": [],
+        "root_configuration_status": "absent-current-subject",
+        "selection_inputs": expected_selection_inputs,
+    }:
+        fail("provisioning handoff toolchain-selection input/absence policy drift")
     if (
         manifest.get("checkout_environment") != gen.closed_git_environment()
         or manifest.get("checkout_umask") != "0022"

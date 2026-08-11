@@ -145,12 +145,18 @@ EXPECTED_CARGO_INPUT_SHA256 = {
     "verification/Cargo.lock": "2f05e057dc06ea3e5634afc880fd01b401abdeab22627f05bb97b58acb2ba0d5",
     "verification/Cargo.toml": "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8",
 }
+ROOT_TOOLCHAIN_CONFIGURATION_PATHS = ("rust-toolchain", "rust-toolchain.toml")
+TOOLCHAIN_SELECTION_INPUT_PATHS = (
+    ".github/workflows/security-validation.yml",
+    "assurance/audit/provisioning-lock.toml",
+    "assurance/ledger.toml",
+)
 PROVISIONING_SUBJECT_INPUT_PATHS = tuple(
     sorted(
         {
             *EXPECTED_CARGO_INPUT_SHA256,
+            *TOOLCHAIN_SELECTION_INPUT_PATHS,
             "implementation-boundary.toml",
-            "rust-toolchain.toml",
             "assurance/audit/README.md",
             "assurance/audit/audit-freeze.schema.json",
             "assurance/audit/freeze-envelope.schema.json",
@@ -317,10 +323,10 @@ EXPECTED_CONTAINER_IMAGES = {
 }
 EXPECTED_BOUND_CONTROL_SHA256 = {
     ".github/workflows/security-validation.yml": "1fb51314c1800679a2b4c3b7ac07318e2959a390eda6d7a80d421f9866ae7a69",
-    "assurance/audit/README.md": "703081498fea8d3bae88df4795ff29128ae42444b33863ce2f7331dcaa6e3262",
+    "assurance/audit/README.md": "ac5316b0156b8a7f60ce141b44313a8c3f2c934b74d996ac99ebcdf2adf20e9f",
     "assurance/audit/audit-freeze.schema.json": "d7a1e7a4302a2cc87cc5bdefae382e4f2f1757e4fb5619a51743d036c20913ae",
     "assurance/audit/freeze-envelope.schema.json": "68d20098b24133aa13fc930f14d013245534098e30a786802adce2d5eec6a20f",
-    "assurance/audit/provisioning.schema.json": "64d60d0e64ec573e35b66a32db3dd7ca5ccf9dcde3bdf5d14b42b72e1eb5e61e",
+    "assurance/audit/provisioning.schema.json": "681f7688b9a581af6384cd36723dd1f12462a625718e9bf131220b69c55db600",
     "assurance/audit/freeze-policy.toml": "5a7d3683e266887aca6ac93b42ef11d3c9d912cf9c3fbbf00813272d2b6a89bc",
     "assurance/audit/provisioning-lock.toml": "3733ed23be2f93e6a756162bde9a841ab4a165037ccc1c0a22d3e23bd5030177",
     "assurance/audit/historical-advisory-regressions.toml": "ce6fa84b1a8de37d938e51b82806e67b8cc6c7dcb4d3234cdcd44c76cf96acc7",
@@ -2787,11 +2793,36 @@ def workflow_document(files: dict[str, bytes], policy: dict[str, Any], provision
     }
 
 
+def validate_provisioning_subject_inputs(files: dict[str, bytes]) -> None:
+    missing = sorted(set(PROVISIONING_SUBJECT_INPUT_PATHS) - set(files))
+    if missing:
+        fail(f"provisioning handoff subject inputs are missing: {missing}")
+    unexpected_root_toolchain = sorted(set(ROOT_TOOLCHAIN_CONFIGURATION_PATHS) & set(files))
+    if unexpected_root_toolchain:
+        fail(
+            "root toolchain configuration appeared without a reviewed provisioning-policy update: "
+            f"{unexpected_root_toolchain}"
+        )
+
+
 def toolchain_document(files: dict[str, bytes], provisioning: dict[str, Any]) -> dict[str, Any]:
-    bound_paths = [path for path in ("rust-toolchain.toml", "rust-toolchain", "Cargo.toml", "implementation-boundary.toml") if path in files]
+    validate_provisioning_subject_inputs(files)
+    bound_paths = sorted(
+        {
+            "Cargo.toml", "implementation-boundary.toml", *TOOLCHAIN_SELECTION_INPUT_PATHS,
+        }
+    )
     return {
         "schema_version": 1,
         "bound_configuration": [{"path": path, "sha256": sha256(files[path])} for path in bound_paths],
+        "root_toolchain_configuration": {
+            "paths": [],
+            "status": "absent-current-subject-workflow-ledger-policy-authoritative",
+        },
+        "toolchain_selection_inputs": [
+            {"path": path, "sha256": sha256(files[path])}
+            for path in TOOLCHAIN_SELECTION_INPUT_PATHS
+        ],
         "acquisition_tools": sorted(provisioning["acquisition-tool"], key=lambda row: row["id"]),
         "toolchains": sorted(provisioning["toolchain"], key=lambda row: row["id"]),
         "host_tools": sorted(provisioning["host-tool"], key=lambda row: row["id"]),
@@ -2877,9 +2908,7 @@ def provisioning_manifest_document(
     Those byte classes remain typed blockers in the same manifest.
     """
 
-    missing = sorted(set(PROVISIONING_SUBJECT_INPUT_PATHS) - set(files))
-    if missing:
-        fail(f"provisioning handoff subject inputs are missing: {missing}")
+    validate_provisioning_subject_inputs(files)
     limitation_rows = {row["id"]: row for row in policy["limitation"]}
     blocked_specs = (
         ("dependency-registry-archives", "dependency-provision-bundle-unavailable"),
@@ -3006,6 +3035,15 @@ def provisioning_manifest_document(
         "checkout_umask": "0022",
         "sandbox_environment": sandbox_environment,
         "commands": commands,
+        "toolchain_selection": {
+            "root_configuration_files": [],
+            "root_configuration_status": "absent-current-subject",
+            "selection_inputs": [
+                {"path": path, "sha256": sha256(files[path]), "size": len(files[path])}
+                for path in TOOLCHAIN_SELECTION_INPUT_PATHS
+            ],
+            "distribution_status": "blocked-not-materialized",
+        },
         "subject_inputs": [
             {"path": path, "sha256": sha256(files[path]), "size": len(files[path])}
             for path in PROVISIONING_SUBJECT_INPUT_PATHS
