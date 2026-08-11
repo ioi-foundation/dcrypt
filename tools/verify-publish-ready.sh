@@ -123,7 +123,23 @@ require_command jq || true
 require_command curl || true
 require_command git || true
 require_command python3 || true
+require_command rustdoc || true
+require_command rustup || true
 if ((ERRORS > 0)); then
+    exit 1
+fi
+
+printf "\n${BLUE}Atomic public API assurance ledger${NC}\n"
+if cargo fetch --locked; then
+    pass "exact locked dependency closure fetched for offline assurance replay"
+else
+    fail "failed to fetch the exact locked dependency closure"
+    exit 1
+fi
+if python3 -B "$PROJECT_ROOT/assurance/verify-assurance-ledger.py" --mode release; then
+    pass "assurance ledger and live public API inventory passed"
+else
+    fail "assurance ledger or live public API inventory failed"
     exit 1
 fi
 

@@ -50,6 +50,7 @@ PUBLISH_ORDER = (
 # reviewed list here makes a newly missing CI job fail closed instead of letting
 # the single branch-ruleset context stand in for the complete release workflow.
 EXPECTED_CHECK_CONTEXTS = (
+    "Atomic public API assurance ledger",
     BOUNDARY_CHECK_CONTEXT,
     "Format and all-target workspace check",
     "Workspace crate tests",
@@ -1393,6 +1394,41 @@ class GateSelfTests(unittest.TestCase):
                 required_timing_invocation,
                 folded_yaml_run_commands(suffixed),
             )
+
+    def test_assurance_ledger_is_live_non_skippable_and_exactly_once(self) -> None:
+        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
+        workflow = (
+            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
+        ).read_text()
+        release_command = (
+            'python3 -B "$PROJECT_ROOT/assurance/verify-assurance-ledger.py" '
+            "--mode release"
+        )
+        ci_self_test = (
+            "python3 -B assurance/verify-assurance-ledger.py --self-test"
+        )
+        ci_command = "python3 -B assurance/verify-assurance-ledger.py --mode ci"
+        locked_fetch = "cargo fetch --locked"
+
+        self.assertEqual(publish_ready.count(release_command), 1)
+        self.assertEqual(publish_ready.count(locked_fetch), 1)
+        self.assertEqual(workflow.count(ci_self_test), 1)
+        self.assertEqual(workflow.count(ci_command), 1)
+        self.assertNotIn("--snapshot-only", publish_ready)
+
+        assurance_job = workflow.split("  assurance-ledger:", 1)[1].split(
+            "\n  implementation-boundary:", 1
+        )[0]
+        self.assertEqual(assurance_job.count("fetch-depth: 0"), 1)
+        self.assertIn("toolchain: nightly-2026-08-07", assurance_job)
+        for target in (
+            "aarch64-unknown-linux-gnu",
+            "wasm32-unknown-unknown",
+            "thumbv7em-none-eabihf",
+        ):
+            self.assertIn(target, assurance_job)
+        self.assertEqual(assurance_job.count(locked_fetch), 1)
+        self.assertNotIn("--snapshot-only", assurance_job)
 
     def test_assembly_gates_remain_in_release_and_ci_boundary_scope(self) -> None:
         publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
