@@ -102,22 +102,7 @@ fn shake_output(
 
 fn compare_or_record_output(case: &TestCase, output: &[u8]) -> Result<()> {
     let output_hex = hex::encode(output);
-    if let Some(expected) = case
-        .inputs
-        .get("md")
-        .or_else(|| case.inputs.get("output"))
-        .map(FlexValue::as_string)
-    {
-        let expected_bytes = hex::decode(&expected)?;
-        if expected_bytes != output {
-            return Err(EngineError::Mismatch {
-                expected,
-                actual: output_hex,
-            });
-        }
-    } else {
-        case.outputs.borrow_mut().insert("md".into(), output_hex);
-    }
+    case.outputs.borrow_mut().insert("md".into(), output_hex);
     Ok(())
 }
 
@@ -147,7 +132,11 @@ pub(crate) fn shake_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
     )?;
     let msg_bytes = decode_message_bits(&msg_hex, msg_len_bits)?;
     let output = shake_output(group, &msg_bytes, msg_len_bits, out_len_bits)?;
-    compare_or_record_output(case, &output)
+    compare_or_record_output(case, &output)?;
+    case.outputs
+        .borrow_mut()
+        .insert("outLen".into(), out_len_bits.to_string());
+    Ok(())
 }
 
 /// SHAKE Variable Output Test (VOT) handler
@@ -207,25 +196,26 @@ pub(crate) fn shake_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
         }
     };
 
-    if let Some(expected) = case.inputs.get("resultsArray") {
-        compare_shake_mct_results(expected, &results)
-    } else {
-        let response: Vec<_> = results
-            .iter()
-            .map(|(out_len, digest)| {
-                serde_json::json!({
-                    "md": hex::encode_upper(digest),
-                    "outLen": out_len * 8,
-                })
+    let response: Vec<_> = results
+        .iter()
+        .map(|(out_len, digest)| {
+            serde_json::json!({
+                "md": hex::encode_upper(digest),
+                "outLen": out_len * 8,
             })
-            .collect();
-        case.outputs.borrow_mut().insert(
-            "resultsArray".into(),
-            serde_json::to_string(&response)
-                .map_err(|error| EngineError::InvalidData(error.to_string()))?,
-        );
-        Ok(())
-    }
+        })
+        .collect();
+    case.outputs.borrow_mut().insert(
+        "resultsArray".into(),
+        serde_json::to_string(&response)
+            .map_err(|error| EngineError::InvalidData(error.to_string()))?,
+    );
+    // ACVP uses zero as the outer MCT placeholder; each iteration's real
+    // output length is carried in resultsArray and compared by the runner.
+    case.outputs
+        .borrow_mut()
+        .insert("outLen".into(), "0".into());
+    Ok(())
 }
 
 /// ACVP SHAKE MCT: each of 100 reported iterations contains 1000 SHAKE
@@ -260,44 +250,6 @@ fn shake_mct_inner<X: AcvpShake>(
         results.push((digest_out_len, digest));
     }
     Ok(results)
-}
-
-fn compare_shake_mct_results(expected: &FlexValue, actual: &[(usize, Vec<u8>)]) -> Result<()> {
-    let FlexValue::Array(expected) = expected else {
-        return Err(EngineError::InvalidData(
-            "resultsArray must be an array".into(),
-        ));
-    };
-    if expected.len() != actual.len() {
-        return Err(EngineError::Mismatch {
-            expected: format!("{} MCT results", expected.len()),
-            actual: format!("{} MCT results", actual.len()),
-        });
-    }
-
-    for (index, (expected, (actual_out_len, actual_digest))) in
-        expected.iter().zip(actual).enumerate()
-    {
-        let FlexValue::Object(expected) = expected else {
-            return Err(EngineError::InvalidData(format!(
-                "resultsArray[{}] must be an object",
-                index
-            )));
-        };
-        let expected_md = expected
-            .get("md")
-            .map(FlexValue::as_string)
-            .ok_or(EngineError::MissingField("resultsArray.md"))?;
-        let expected_out_len = usize_field(expected.get("outLen"), "resultsArray.outLen")?;
-        let actual_md = hex::encode(actual_digest);
-        if expected_out_len != actual_out_len * 8 || !super::hex_equal(&actual_md, &expected_md) {
-            return Err(EngineError::Mismatch {
-                expected: format!("{} bits: {}", expected_out_len, expected_md),
-                actual: format!("{} bits: {}", actual_out_len * 8, actual_md),
-            });
-        }
-    }
-    Ok(())
 }
 
 /// Large Data Test (LDT) handler for SHAKE

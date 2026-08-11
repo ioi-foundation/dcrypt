@@ -41,19 +41,19 @@ fn is_curve_supported(curve: &str) -> bool {
 
 /// ECDH shared secret computation (Component mode - just x-coordinate)
 pub(crate) fn ecdh_component(group: &TestGroup, case: &TestCase) -> Result<()> {
+    if group.algorithm == "KAS-ECC" {
+        case.mark_skipped(
+            "KAS-ECC protocol/KDF/key-confirmation profiles are not implemented by this raw ECDH handler",
+        );
+        return Ok(());
+    }
     // Get the curve from group defaults or test case
     let curve = lookup(case, group, &["curve"]).ok_or(EngineError::MissingField("curve"))?;
 
     // Check if curve is supported
     if !is_curve_supported(&curve) {
         // For unsupported curves, mark as skipped rather than failing
-        println!("Skipping unsupported curve: {}", curve);
-        case.outputs
-            .borrow_mut()
-            .insert("testPassed".into(), "false".into());
-        case.outputs
-            .borrow_mut()
-            .insert("reason".into(), format!("Unsupported curve: {}", curve));
+        case.mark_skipped(format!("unsupported raw ECDH curve {curve}"));
         return Ok(());
     }
 
@@ -222,19 +222,19 @@ pub(crate) fn ecdh_component(group: &TestGroup, case: &TestCase) -> Result<()> {
 
 /// ECDH validity test - checks if the computation would fail
 pub(crate) fn ecdh_validity(group: &TestGroup, case: &TestCase) -> Result<()> {
+    if group.algorithm == "KAS-ECC" {
+        case.mark_skipped(
+            "KAS-ECC protocol/KDF/key-confirmation profiles are not implemented by this raw ECDH handler",
+        );
+        return Ok(());
+    }
     // Get the curve first to check if it's supported
     let curve = lookup(case, group, &["curve"]).ok_or(EngineError::MissingField("curve"))?;
 
     // Check if curve is supported
     if !is_curve_supported(&curve) {
         // For unsupported curves in validity tests, mark as skipped
-        println!("Skipping validity test for unsupported curve: {}", curve);
-        case.outputs
-            .borrow_mut()
-            .insert("testPassed".into(), "false".into());
-        case.outputs
-            .borrow_mut()
-            .insert("reason".into(), format!("Unsupported curve: {}", curve));
+        case.mark_skipped(format!("unsupported raw ECDH curve {curve}"));
         return Ok(());
     }
 

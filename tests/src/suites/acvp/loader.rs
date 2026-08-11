@@ -1,6 +1,6 @@
 //! Loads ACVP test vectors from JSON files.
 
-use crate::suites::acvp::model::{FlexValue, TestSuite};
+use crate::suites::acvp::model::{FlexValue, TestGroup, TestSuite};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::{
     fs,
@@ -13,13 +13,31 @@ use std::{
 fn merge_expected_results(suite_dir: &Path, suite: &mut TestSuite) -> Result<(), String> {
     let expected_file = suite_dir.join("expectedResults.json");
     if !expected_file.exists() {
-        return Ok(());
+        return Err(format!(
+            "ACVP validation requires {}",
+            expected_file.display()
+        ));
     }
     let json = fs::read_to_string(&expected_file)
         .map_err(|error| format!("Failed to read {}: {}", expected_file.display(), error))?;
     let expected: serde_json::Value = serde_json::from_str(&json)
         .map_err(|error| format!("Failed to parse {}: {}", expected_file.display(), error))?;
     merge_expected_value(&expected, suite)
+}
+
+/// Load NIST's non-public replay material without merging it into either the
+/// prompt or expected-output namespace.  Projection data is optional because
+/// validation-only suites do not always publish it.
+fn merge_internal_projection(suite_dir: &Path, suite: &mut TestSuite) -> Result<(), String> {
+    let projection_file = suite_dir.join("internalProjection.json");
+    if !projection_file.exists() {
+        return Ok(());
+    }
+    let json = fs::read_to_string(&projection_file)
+        .map_err(|error| format!("Failed to read {}: {}", projection_file.display(), error))?;
+    let projection: serde_json::Value = serde_json::from_str(&json)
+        .map_err(|error| format!("Failed to parse {}: {}", projection_file.display(), error))?;
+    merge_projection_value(&projection, suite)
 }
 
 fn prompt_case_ids(suite: &TestSuite) -> Result<BTreeMap<u64, BTreeSet<u64>>, String> {
@@ -84,13 +102,45 @@ fn expected_case_ids(expected: &serde_json::Value) -> Result<BTreeMap<u64, BTree
 }
 
 fn merge_expected_value(expected: &serde_json::Value, suite: &mut TestSuite) -> Result<(), String> {
+    merge_companion_value(expected, suite, CompanionKind::Expected)
+}
+
+fn merge_projection_value(
+    projection: &serde_json::Value,
+    suite: &mut TestSuite,
+) -> Result<(), String> {
+    merge_companion_value(projection, suite, CompanionKind::Projection)
+}
+
+#[derive(Clone, Copy)]
+enum CompanionKind {
+    Expected,
+    Projection,
+}
+
+impl CompanionKind {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Expected => "expectedResults.json",
+            Self::Projection => "internalProjection.json",
+        }
+    }
+}
+
+fn merge_companion_value(
+    companion: &serde_json::Value,
+    suite: &mut TestSuite,
+    kind: CompanionKind,
+) -> Result<(), String> {
+    validate_companion_metadata(companion, suite, kind)?;
     let prompt_ids = prompt_case_ids(suite)?;
-    let expected_ids = expected_case_ids(expected)?;
+    let expected_ids = expected_case_ids(companion)?;
     let prompt_groups: BTreeSet<_> = prompt_ids.keys().copied().collect();
     let expected_groups: BTreeSet<_> = expected_ids.keys().copied().collect();
     if prompt_groups != expected_groups {
         return Err(format!(
-            "prompt/expected tgId sets differ: missing expected {:?}, unexpected expected {:?}",
+            "prompt/{} tgId sets differ: missing companion {:?}, unexpected companion {:?}",
+            kind.label(),
             prompt_groups
                 .difference(&expected_groups)
                 .collect::<Vec<_>>(),
@@ -105,7 +155,8 @@ fn merge_expected_value(expected: &serde_json::Value, suite: &mut TestSuite) -> 
             .ok_or_else(|| format!("expected result is missing tgId {}", group_id))?;
         if prompt_cases != expected_cases {
             return Err(format!(
-                "prompt/expected tcId sets differ for tgId {}: missing expected {:?}, unexpected expected {:?}",
+                "prompt/{} tcId sets differ for tgId {}: missing companion {:?}, unexpected companion {:?}",
+                kind.label(),
                 group_id,
                 prompt_cases.difference(expected_cases).collect::<Vec<_>>(),
                 expected_cases.difference(prompt_cases).collect::<Vec<_>>()
@@ -113,7 +164,7 @@ fn merge_expected_value(expected: &serde_json::Value, suite: &mut TestSuite) -> 
         }
     }
 
-    let groups = expected
+    let groups = companion
         .get("testGroups")
         .and_then(serde_json::Value::as_array)
         .ok_or_else(|| "expectedResults.json is missing testGroups".to_string())?;
@@ -127,6 +178,39 @@ fn merge_expected_value(expected: &serde_json::Value, suite: &mut TestSuite) -> 
             .iter_mut()
             .find(|group| group.group_name == group_id)
             .ok_or_else(|| format!("expected result references unknown tgId {}", group_id))?;
+        let group_fields = expected_group
+            .as_object()
+            .ok_or_else(|| format!("{} tgId {} is not an object", kind.label(), group_id))?;
+        for (name, value) in group_fields {
+            if matches!(name.as_str(), "tgId" | "tests") {
+                continue;
+            }
+            let value: FlexValue = serde_json::from_value(value.clone()).map_err(|error| {
+                format!(
+                    "invalid {} group field {} for tgId {}: {}",
+                    kind.label(),
+                    name,
+                    group_id,
+                    error
+                )
+            })?;
+            match kind {
+                CompanionKind::Expected => {
+                    group.insert_expected_output(name.clone(), value);
+                }
+                CompanionKind::Projection => {
+                    if let Some(prompt_value) = prompt_group_value(group, name)? {
+                        if prompt_value != value {
+                            return Err(format!(
+                                "prompt/internalProjection.json group field mismatch for tgId {group_id}/{name}"
+                            ));
+                        }
+                    } else {
+                        group.projection.insert(name.clone(), value);
+                    }
+                }
+            }
+        }
         let cases = expected_group
             .get("tests")
             .and_then(serde_json::Value::as_array)
@@ -162,9 +246,139 @@ fn merge_expected_value(expected: &serde_json::Value, suite: &mut TestSuite) -> 
                         name, group_id, case_id, error
                     )
                 })?;
-                case.inputs.insert(name.clone(), value);
+                match kind {
+                    CompanionKind::Expected => {
+                        case.insert_expected_output(name.clone(), value);
+                    }
+                    CompanionKind::Projection => {
+                        if let Some(prompt_value) = prompt_case_value(case, name) {
+                            if prompt_value != value {
+                                return Err(format!(
+                                    "prompt/internalProjection.json case field mismatch for tgId {group_id}/tcId {case_id}/{name}"
+                                ));
+                            }
+                        } else {
+                            case.projection.insert(name.clone(), value);
+                        }
+                    }
+                }
             }
         }
+    }
+    Ok(())
+}
+
+fn prompt_group_value(group: &TestGroup, name: &str) -> Result<Option<FlexValue>, String> {
+    let value = match name {
+        "testType" => Some(FlexValue::String(group.test_type.clone())),
+        "algorithm" => Some(FlexValue::String(group.algorithm.clone())),
+        "direction" => group.direction.clone().map(FlexValue::String),
+        "keyLen" => group
+            .key_len
+            .map(|value| FlexValue::Number(serde_json::Number::from(value))),
+        "params" => group
+            .params
+            .as_ref()
+            .map(|value| {
+                serde_json::from_value(value.clone())
+                    .map_err(|error| format!("invalid prompt params: {error}"))
+            })
+            .transpose()?,
+        _ => group.defaults.get(name).cloned(),
+    };
+    Ok(value)
+}
+
+fn prompt_case_value(case: &crate::suites::acvp::model::TestCase, name: &str) -> Option<FlexValue> {
+    match name {
+        "description" => case.description.clone().map(FlexValue::String),
+        _ => case.inputs.get(name).cloned(),
+    }
+}
+
+fn optional_string_metadata<'a>(
+    object: &'a serde_json::Map<String, serde_json::Value>,
+    name: &str,
+    kind: CompanionKind,
+) -> Result<Option<&'a str>, String> {
+    match object.get(name) {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::String(value)) => Ok(Some(value)),
+        Some(_) => Err(format!("{} {name} must be a string or null", kind.label())),
+    }
+}
+
+fn optional_bool_metadata(
+    object: &serde_json::Map<String, serde_json::Value>,
+    name: &str,
+    kind: CompanionKind,
+) -> Result<Option<bool>, String> {
+    match object.get(name) {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Bool(value)) => Ok(Some(*value)),
+        Some(_) => Err(format!("{} {name} must be a boolean or null", kind.label())),
+    }
+}
+
+fn validate_companion_metadata(
+    companion: &serde_json::Value,
+    suite: &TestSuite,
+    kind: CompanionKind,
+) -> Result<(), String> {
+    let object = companion
+        .as_object()
+        .ok_or_else(|| format!("{} root is not an object", kind.label()))?;
+    let vector_set_id = object
+        .get("vsId")
+        .and_then(serde_json::Value::as_u64)
+        .ok_or_else(|| format!("{} is missing numeric vsId", kind.label()))?;
+    if vector_set_id != suite.suite_name {
+        return Err(format!(
+            "prompt/{} vsId mismatch: {} != {}",
+            kind.label(),
+            suite.suite_name,
+            vector_set_id
+        ));
+    }
+    let algorithm = object
+        .get("algorithm")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| format!("{} is missing string algorithm", kind.label()))?;
+    if algorithm != suite.algorithm {
+        return Err(format!(
+            "prompt/{} algorithm mismatch: {:?} != {:?}",
+            kind.label(),
+            suite.algorithm,
+            algorithm
+        ));
+    }
+
+    let companion_mode = optional_string_metadata(object, "mode", kind)?;
+    if companion_mode != suite.mode.as_deref() {
+        return Err(format!(
+            "prompt/{} mode mismatch: {:?} != {:?}",
+            kind.label(),
+            suite.mode,
+            companion_mode
+        ));
+    }
+    let companion_revision = optional_string_metadata(object, "revision", kind)?;
+    if companion_revision != suite.revision.as_deref() {
+        return Err(format!(
+            "prompt/{} revision mismatch: {:?} != {:?}",
+            kind.label(),
+            suite.revision,
+            companion_revision
+        ));
+    }
+    let companion_sample = optional_bool_metadata(object, "isSample", kind)?;
+    if companion_sample != suite.is_sample {
+        return Err(format!(
+            "prompt/{} isSample mismatch: {:?} != {:?}",
+            kind.label(),
+            suite.is_sample,
+            companion_sample
+        ));
     }
     Ok(())
 }
@@ -246,6 +460,7 @@ pub fn load_suite_by_name(suite_name: &str) -> Result<TestSuite, String> {
     let mut suite: TestSuite =
         serde_json::from_str(&json).map_err(|e| format!("Failed to parse JSON: {}", e))?;
     merge_expected_results(&suite_dir, &mut suite)?;
+    merge_internal_projection(&suite_dir, &mut suite)?;
 
     // Normalize the suite-level algorithm (strip ACVP- prefix, trailing hyphens)
     let base_alg = normalize_algorithm(&suite.algorithm);
@@ -353,9 +568,18 @@ mod tests {
         })
     }
 
+    fn companion(groups: serde_json::Value) -> serde_json::Value {
+        json!({
+            "vsId": 1,
+            "algorithm": "SHA2-256",
+            "isSample": null,
+            "testGroups": groups,
+        })
+    }
+
     fn merge_error(prompt_groups: serde_json::Value, expected_groups: serde_json::Value) -> String {
         let mut prompt = suite(prompt_groups);
-        merge_expected_value(&json!({ "testGroups": expected_groups }), &mut prompt)
+        merge_expected_value(&companion(expected_groups), &mut prompt)
             .expect_err("malformed identifier sets must be rejected")
     }
 
@@ -363,13 +587,18 @@ mod tests {
     fn expected_results_require_an_exact_unique_group_and_case_join() {
         let mut exact = suite(json!([prompt_group(1, &[1, 2]), prompt_group(2, &[3])]));
         merge_expected_value(
-            &json!({
-                "testGroups": [expected_group(2, &[3]), expected_group(1, &[2, 1])],
-            }),
+            &companion(json!([expected_group(2, &[3]), expected_group(1, &[2, 1])])),
             &mut exact,
         )
         .expect("array order must not affect the identifier join");
-        assert_eq!(exact.groups[0].tests[0].inputs["md"].as_string(), "00");
+        assert_eq!(
+            exact.groups[0].tests[0]
+                .expected_output_for_test("md")
+                .expect("expected md")
+                .as_string(),
+            "00"
+        );
+        assert!(!exact.groups[0].tests[0].inputs.contains_key("md"));
 
         assert!(merge_error(
             json!([prompt_group(1, &[1]), prompt_group(1, &[2])]),
@@ -397,7 +626,7 @@ mod tests {
             json!([expected_group(1, &[1])]),
         );
         assert!(
-            missing_case.contains("missing expected [2]"),
+            missing_case.contains("missing companion [2]"),
             "{missing_case}"
         );
         let unexpected_case = merge_error(
@@ -405,7 +634,7 @@ mod tests {
             json!([expected_group(1, &[1, 2])]),
         );
         assert!(
-            unexpected_case.contains("unexpected expected [2]"),
+            unexpected_case.contains("unexpected companion [2]"),
             "{unexpected_case}"
         );
         let missing_group = merge_error(
@@ -413,8 +642,99 @@ mod tests {
             json!([expected_group(1, &[1])]),
         );
         assert!(
-            missing_group.contains("missing expected [2]"),
+            missing_group.contains("missing companion [2]"),
             "{missing_group}"
         );
+    }
+
+    #[test]
+    fn companion_root_metadata_is_typed_and_exact() {
+        for (field, value, diagnostic) in [
+            ("vsId", json!(2), "vsId mismatch"),
+            ("algorithm", json!("SHA2-384"), "algorithm mismatch"),
+            ("mode", json!(7), "mode must be a string or null"),
+            (
+                "revision",
+                json!(false),
+                "revision must be a string or null",
+            ),
+            (
+                "isSample",
+                json!("false"),
+                "isSample must be a boolean or null",
+            ),
+        ] {
+            let mut expected = companion(json!([expected_group(1, &[1])]));
+            expected[field] = value;
+            let error = merge_expected_value(&expected, &mut suite(json!([prompt_group(1, &[1])])))
+                .expect_err("metadata mutation must fail");
+            assert!(error.contains(diagnostic), "{field}: {error}");
+        }
+    }
+
+    #[test]
+    fn projection_cannot_override_prompt_group_or_case_data() {
+        let prompt = json!([{
+            "tgId": 1,
+            "testType": "AFT",
+            "curve": "P-256",
+            "tests": [{"tcId": 1, "msg": "00"}],
+        }]);
+
+        let mut exact = suite(prompt.clone());
+        merge_projection_value(
+            &companion(json!([{
+                "tgId": 1,
+                "testType": "AFT",
+                "curve": "P-256",
+                "replaySecret": "01",
+                "tests": [{"tcId": 1, "msg": "00", "nonce": "02"}],
+            }])),
+            &mut exact,
+        )
+        .expect("identical duplicated metadata and replay-only values should load");
+        assert!(!exact.groups[0].projection.contains_key("curve"));
+        assert_eq!(exact.groups[0].projection["replaySecret"].as_string(), "01");
+        assert!(!exact.groups[0].tests[0].projection.contains_key("msg"));
+        assert_eq!(
+            exact.groups[0].tests[0].projection["nonce"].as_string(),
+            "02"
+        );
+
+        let mut wrong_group = suite(prompt.clone());
+        let error = merge_projection_value(
+            &companion(json!([{
+                "tgId": 1,
+                "testType": "AFT",
+                "curve": "P-384",
+                "tests": [{"tcId": 1, "msg": "00"}],
+            }])),
+            &mut wrong_group,
+        )
+        .expect_err("projection group metadata drift must fail");
+        assert!(error.contains("tgId 1/curve"), "{error}");
+
+        let mut wrong_case = suite(prompt);
+        let error = merge_projection_value(
+            &companion(json!([{
+                "tgId": 1,
+                "testType": "AFT",
+                "curve": "P-256",
+                "tests": [{"tcId": 1, "msg": "01"}],
+            }])),
+            &mut wrong_case,
+        )
+        .expect_err("projection case input drift must fail");
+        assert!(error.contains("tgId 1/tcId 1/msg"), "{error}");
+    }
+
+    #[test]
+    fn validation_requires_an_expected_results_file() {
+        let error = merge_expected_results(
+            Path::new("/dcrypt-acvp-fixture-that-does-not-exist"),
+            &mut suite(json!([prompt_group(1, &[1])])),
+        )
+        .expect_err("validation without expectedResults.json must fail");
+        assert!(error.contains("ACVP validation requires"), "{error}");
     }
 }

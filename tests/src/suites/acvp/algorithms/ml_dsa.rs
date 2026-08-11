@@ -19,8 +19,6 @@ use dcrypt_internal::random::{CryptoRng, Error as RngError, RngCore};
 use dcrypt_sign::mldsa::{
     MlDsa44, MlDsa65, MlDsa87, MlDsaPublicKey, MlDsaSecretKey, MlDsaSignature,
 };
-use once_cell::sync::Lazy;
-use std::{collections::HashMap, fs, path::Path};
 
 #[derive(Clone, Copy)]
 enum ParameterSet {
@@ -125,120 +123,6 @@ impl RngCore for ReplayRng {
 }
 
 impl CryptoRng for ReplayRng {}
-
-type ExpectedMap = HashMap<(u64, u64), serde_json::Map<String, serde_json::Value>>;
-type ExpectedLoad = core::result::Result<ExpectedMap, String>;
-
-fn load_expected_results(suite: &str) -> ExpectedLoad {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src")
-        .join("vectors")
-        .join("acvp_json")
-        .join(suite)
-        .join("expectedResults.json");
-    let contents = fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-    let root: serde_json::Value = serde_json::from_str(&contents)
-        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
-    let groups = root
-        .get("testGroups")
-        .and_then(serde_json::Value::as_array)
-        .ok_or_else(|| format!("{} has no testGroups array", path.display()))?;
-
-    let mut results = HashMap::new();
-    for group in groups {
-        let group_id = group
-            .get("tgId")
-            .and_then(serde_json::Value::as_u64)
-            .ok_or_else(|| format!("{} contains a group without tgId", path.display()))?;
-        let tests = group
-            .get("tests")
-            .and_then(serde_json::Value::as_array)
-            .ok_or_else(|| format!("group {group_id} in {} has no tests", path.display()))?;
-        for test in tests {
-            let test_id = test
-                .get("tcId")
-                .and_then(serde_json::Value::as_u64)
-                .ok_or_else(|| {
-                    format!(
-                        "group {group_id} in {} has a test without tcId",
-                        path.display()
-                    )
-                })?;
-            let object = test
-                .as_object()
-                .cloned()
-                .ok_or_else(|| format!("test {test_id} in {} is not an object", path.display()))?;
-            results.insert((group_id, test_id), object);
-        }
-    }
-    Ok(results)
-}
-
-static KEYGEN_EXPECTED: Lazy<ExpectedLoad> =
-    Lazy::new(|| load_expected_results("ML-DSA-keyGen-FIPS204"));
-static SIGGEN_EXPECTED: Lazy<ExpectedLoad> =
-    Lazy::new(|| load_expected_results("ML-DSA-sigGen-FIPS204"));
-static SIGVER_EXPECTED: Lazy<ExpectedLoad> =
-    Lazy::new(|| load_expected_results("ML-DSA-sigVer-FIPS204"));
-
-fn expected_case<'a>(
-    expected: &'a Lazy<ExpectedLoad>,
-    group: &TestGroup,
-    case: &TestCase,
-) -> Result<Option<&'a serde_json::Map<String, serde_json::Value>>> {
-    match expected.as_ref() {
-        Ok(results) => Ok(results.get(&(group.group_name, case.test_id))),
-        Err(error) => Err(EngineError::InvalidData(error.clone())),
-    }
-}
-
-fn check_expected_hex(
-    expected: &Lazy<ExpectedLoad>,
-    group: &TestGroup,
-    case: &TestCase,
-    field: &'static str,
-    actual: &[u8],
-) -> Result<()> {
-    let Some(result) = expected_case(expected, group, case)? else {
-        return Ok(());
-    };
-    let encoded = result
-        .get(field)
-        .and_then(serde_json::Value::as_str)
-        .ok_or(EngineError::MissingField(field))?;
-    let wanted = hex::decode(encoded)?;
-    if wanted != actual {
-        return Err(EngineError::Mismatch {
-            expected: hex::encode(wanted),
-            actual: hex::encode(actual),
-        });
-    }
-    Ok(())
-}
-
-fn check_expected_bool(
-    expected: &Lazy<ExpectedLoad>,
-    group: &TestGroup,
-    case: &TestCase,
-    field: &'static str,
-    actual: bool,
-) -> Result<()> {
-    let Some(result) = expected_case(expected, group, case)? else {
-        return Ok(());
-    };
-    let wanted = result
-        .get(field)
-        .and_then(serde_json::Value::as_bool)
-        .ok_or(EngineError::MissingField(field))?;
-    if wanted != actual {
-        return Err(EngineError::Mismatch {
-            expected: wanted.to_string(),
-            actual: actual.to_string(),
-        });
-    }
-    Ok(())
-}
 
 fn keypair<R: CryptoRng + RngCore>(
     parameter_set: ParameterSet,
@@ -557,9 +441,6 @@ pub(crate) fn ml_dsa_keygen(group: &TestGroup, case: &TestCase) -> Result<()> {
     }
     let (public_key, secret_key) = keypair(parameter_set, &mut ReplayRng::new(seed))?;
 
-    check_expected_hex(&KEYGEN_EXPECTED, group, case, "pk", public_key.to_bytes())?;
-    check_expected_hex(&KEYGEN_EXPECTED, group, case, "sk", secret_key.to_bytes())?;
-
     case.outputs
         .borrow_mut()
         .insert("pk".into(), hex::encode(public_key.to_bytes()));
@@ -633,7 +514,6 @@ pub(crate) fn ml_dsa_siggen(group: &TestGroup, case: &TestCase) -> Result<()> {
             parameter_set.signature_len()
         )));
     }
-    check_expected_hex(&SIGGEN_EXPECTED, group, case, "signature", &signature)?;
     case.outputs
         .borrow_mut()
         .insert("signature".into(), hex::encode(signature));
@@ -680,7 +560,6 @@ pub(crate) fn ml_dsa_sigver(group: &TestGroup, case: &TestCase) -> Result<()> {
     } else {
         false
     };
-    check_expected_bool(&SIGVER_EXPECTED, group, case, "testPassed", test_passed)?;
     case.outputs
         .borrow_mut()
         .insert("testPassed".into(), test_passed.to_string());

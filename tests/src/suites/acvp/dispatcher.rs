@@ -47,12 +47,30 @@ pub fn insert(
     kind: &str, // Corresponds to "testType" like "AFT", "MCT"
     handler: HandlerFn,
 ) {
-    map.insert(
-        DispatchKey {
-            algo: algo.to_string(),
-            dir: dir.to_string(),
-            kind: kind.to_string(),
-        },
-        handler,
+    let key = DispatchKey {
+        algo: algo.to_string(),
+        dir: dir.to_string(),
+        kind: kind.to_string(),
+    };
+    assert!(
+        map.insert(key.clone(), handler).is_none(),
+        "duplicate ACVP handler registration for {key:?}"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture(_group: &TestGroup, _case: &TestCase) -> Result<()> {
+        Ok(())
+    }
+
+    #[test]
+    #[should_panic(expected = "duplicate ACVP handler registration")]
+    fn duplicate_registration_is_fatal() {
+        let mut handlers = HashMap::new();
+        insert(&mut handlers, "fixture", "verify", "AFT", fixture);
+        insert(&mut handlers, "fixture", "verify", "AFT", fixture);
+    }
 }

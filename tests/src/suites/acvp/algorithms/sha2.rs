@@ -92,7 +92,13 @@ pub(crate) fn sha2_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 }
 
 /// SHA-2 Monte Carlo Test (MCT) handler
+#[allow(unreachable_code)] // Keep the legacy draft below for a future complete response implementation.
 pub(crate) fn sha2_mct(group: &TestGroup, case: &TestCase) -> Result<()> {
+    debug_assert_eq!(group.test_type, "MCT");
+    case.mark_skipped(
+        "SHA-2 ACVP MCT requires the complete 100-result response sequence; the legacy handler computes only one inner round",
+    );
+    return Ok(());
     // Get the initial seed
     let seed_hex = case
         .inputs

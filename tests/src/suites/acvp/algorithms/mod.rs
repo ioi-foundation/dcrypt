@@ -36,4 +36,30 @@ mod tests {
         assert!(!hex_equal("not-hex", "not-hex"));
         assert!(!hex_equal("0", "0"));
     }
+
+    #[test]
+    fn handlers_cannot_consult_expected_result_values() {
+        let sources = [
+            include_str!("aes_cbc.rs"),
+            include_str!("aes_ctr.rs"),
+            include_str!("aes_gcm.rs"),
+            include_str!("ecdh.rs"),
+            include_str!("ecdsa.rs"),
+            include_str!("eddsa.rs"),
+            include_str!("hkdf.rs"),
+            include_str!("hmac.rs"),
+            include_str!("ml_dsa.rs"),
+            include_str!("ml_kem.rs"),
+            include_str!("pbkdf2.rs"),
+            include_str!("sha2.rs"),
+            include_str!("sha3.rs"),
+            include_str!("shake.rs"),
+        ];
+        for source in sources {
+            assert!(
+                !source.contains("expected_outputs"),
+                "ACVP handlers must emit computed values without reading the oracle"
+            );
+        }
+    }
 }

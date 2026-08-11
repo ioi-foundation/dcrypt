@@ -34,22 +34,13 @@ pub(crate) fn hkdf_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
 
     let info_hex = lookup(case, group, &["otherInfo", "info", "infoHex"]);
 
-    // Get length - ACVP uses "keyLength" in this suite.
+    // ACVP's HKDF `keyLength` is expressed in octets (the expected
+    // `derivedKey` contains exactly twice this many hexadecimal digits).
     let length_str = lookup(case, group, &["keyLength", "l", "dkLen", "okmLen"])
         .ok_or(EngineError::MissingField("keyLength"))?;
-    // The length in the JSON is in BITS, but the derive function needs BYTES.
-    let length_bits = length_str
+    let length = length_str
         .parse::<usize>()
         .map_err(|_| EngineError::InvalidData(format!("Invalid keyLength: {}", length_str)))?;
-    if length_bits % 8 != 0 {
-        return Err(EngineError::InvalidData(
-            "keyLength must be a multiple of 8".into(),
-        ));
-    }
-    let length = length_bits / 8;
-
-    // Get expected OKM if provided.
-    let expected_okm = lookup(case, group, &["okm", "dkm", "outputKeyingMaterial"]);
 
     // Decode inputs
     let ikm = hex::decode(&ikm_hex)?;
@@ -154,20 +145,9 @@ pub(crate) fn hkdf_aft(group: &TestGroup, case: &TestCase) -> Result<()> {
         }
     };
 
-    // Check result if expected value was provided
-    if let Some(expected) = expected_okm {
-        if !super::hex_equal(&okm_hex, &expected) {
-            return Err(EngineError::Mismatch {
-                expected,
-                actual: okm_hex,
-            });
-        }
-    } else {
-        // Store result for response generation. The field name should be `outputKeyingMaterial`.
-        case.outputs
-            .borrow_mut()
-            .insert("outputKeyingMaterial".into(), okm_hex);
-    }
+    case.outputs
+        .borrow_mut()
+        .insert("derivedKey".into(), okm_hex);
 
     Ok(())
 }

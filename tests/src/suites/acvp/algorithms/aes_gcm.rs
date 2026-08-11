@@ -7,21 +7,15 @@ use dcrypt_algorithms::aead::gcm::Gcm;
 use dcrypt_algorithms::block::aes::{Aes128, Aes192, Aes256};
 use dcrypt_algorithms::block::BlockCipher;
 use dcrypt_algorithms::types::{Nonce, SecretBytes};
-use subtle::ConstantTimeEq;
 use zeroize::Zeroize;
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
-use super::super::runner::SKIP_MARKER;
-
 fn skip_unsupported_tag(case: &TestCase, tag_len: usize) -> Result<bool> {
     if tag_len < 12 {
-        case.outputs.borrow_mut().insert(
-            SKIP_MARKER.into(),
-            format!(
-                "{}-bit GCM tags are intentionally unsupported; minimum is 96 bits",
-                tag_len * 8
-            ),
-        );
+        case.mark_skipped(format!(
+            "{}-bit GCM tags are intentionally unsupported; minimum is 96 bits",
+            tag_len * 8
+        ));
         return Ok(true);
     }
     if tag_len > 16 {
@@ -86,14 +80,6 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
 
     // AAD is optional
     let aad_hex = case.inputs.get("aad").map(|v| v.as_string());
-
-    // Expected outputs (optional for generation)
-    let expected_ct_hex = case
-        .inputs
-        .get("ct")
-        .or_else(|| case.inputs.get("cipherText"))
-        .map(|v| v.as_string());
-    let expected_tag_hex = case.inputs.get("tag").map(|v| v.as_string());
 
     // Decode hex values
     let mut key_bytes = hex::decode(&key_hex)?;
@@ -182,37 +168,14 @@ pub(crate) fn aes_gcm_encrypt(group: &TestGroup, case: &TestCase) -> Result<()> 
     // Split result into ciphertext and tag
     let (ciphertext, tag) = result.split_at(result.len() - tag_len);
 
-    // Check results if expected values were provided
-    if let Some(exp_ct_hex) = expected_ct_hex {
-        let expected_ct = hex::decode(&exp_ct_hex)?;
-        if ciphertext.ct_eq(&expected_ct).unwrap_u8() != 1 {
-            return Err(EngineError::Mismatch {
-                expected: exp_ct_hex,
-                actual: hex::encode(ciphertext),
-            });
-        }
-    } else {
-        // Store ciphertext for response generation
-        case.outputs
-            .borrow_mut()
-            .insert("ct".into(), hex::encode(ciphertext));
-    }
-
-    if let Some(exp_tag_hex) = expected_tag_hex {
-        let expected_tag = hex::decode(&exp_tag_hex)?;
-        if tag.ct_eq(&expected_tag).unwrap_u8() != 1 {
-            return Err(EngineError::Mismatch {
-                expected: exp_tag_hex,
-                actual: hex::encode(tag),
-            });
-        }
-    } else {
-        // Store tag for response generation
-        case.outputs
-            .borrow_mut()
-            .insert("tag".into(), hex::encode(tag));
-    }
-
+    // Emit computed values only.  The runner owns all comparison with the
+    // separately loaded expected-results namespace.
+    case.outputs
+        .borrow_mut()
+        .insert("ct".into(), hex::encode(ciphertext));
+    case.outputs
+        .borrow_mut()
+        .insert("tag".into(), hex::encode(tag));
     Ok(())
 }
 
@@ -243,20 +206,6 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
 
     // AAD is optional
     let aad_hex = case.inputs.get("aad").map(|v| v.as_string());
-
-    // Expected plaintext (optional)
-    let expected_pt_hex = case
-        .inputs
-        .get("pt")
-        .or_else(|| case.inputs.get("plainText"))
-        .map(|v| v.as_string());
-
-    // For decryption tests, ACVP might include a "fail" flag
-    let should_fail = case
-        .inputs
-        .get("fail")
-        .map(|v| v.as_string() == "true")
-        .unwrap_or(false);
 
     // Decode hex values
     let mut key_bytes = hex::decode(&key_hex)?;
@@ -347,50 +296,23 @@ pub(crate) fn aes_gcm_decrypt(_group: &TestGroup, case: &TestCase) -> Result<()>
     // Zeroize sensitive data
     key_bytes.zeroize();
 
-    // Handle the result based on whether we expect failure
-    match (decrypt_result, should_fail) {
-        (Ok(plaintext), false) => {
-            // Successful decryption when expected
-            if let Some(exp_pt_hex) = expected_pt_hex {
-                let expected_pt = hex::decode(&exp_pt_hex)?;
-                if plaintext.ct_eq(&expected_pt).unwrap_u8() != 1 {
-                    return Err(EngineError::Mismatch {
-                        expected: exp_pt_hex,
-                        actual: hex::encode(&plaintext),
-                    });
-                }
-            } else {
-                // Store plaintext for response generation
-                case.outputs
-                    .borrow_mut()
-                    .insert("pt".into(), hex::encode(&plaintext));
-            }
-            Ok(())
-        }
-        (Err(_), true) => {
-            // Failed decryption when expected (authentication failure)
-            // This is a pass - the implementation correctly rejected invalid data
+    // The expected validity bit is evidence, never an input.  Only the typed
+    // authentication rejection is a computed negative verdict; every other
+    // operational error remains a harness failure.
+    match decrypt_result {
+        Ok(plaintext) => {
             case.outputs
                 .borrow_mut()
-                .insert("testPassed".into(), "true".into());
+                .insert("pt".into(), hex::encode(plaintext));
             Ok(())
         }
-        (Ok(_), true) => {
-            // Successful decryption when failure was expected
-            Err(EngineError::Mismatch {
-                expected: "authentication failure".into(),
-                actual: "successful decryption".into(),
-            })
-        }
-        (Err(_), false) => {
-            // Failed decryption when success was expected
-            // For ACVP, some test cases are expected to fail authentication
-            // These should be marked as testPassed = false, not errors
+        Err(dcrypt_algorithms::error::Error::Authentication { .. }) => {
             case.outputs
                 .borrow_mut()
                 .insert("testPassed".into(), "false".into());
             Ok(())
         }
+        Err(error) => Err(EngineError::from(error)),
     }
 }
 
