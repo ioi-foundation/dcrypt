@@ -26,6 +26,8 @@ def _load_generator():
 
 
 gen = _load_generator()
+RELEASE_BLOCKED_EXIT = 3
+EXPECTED_RELEASE_BLOCKERS = 9319
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 MAX_BUNDLE_FILE_BYTES = 128 * 1024 * 1024
 MAX_BUNDLE_TOTAL_BYTES = 256 * 1024 * 1024
@@ -37,6 +39,7 @@ FREEZE_KEYS = frozenset(
         "classification",
         "freeze_date",
         "valid_through",
+        "supersession",
         "subject",
         "release_subject",
         "canonicalization",
@@ -64,6 +67,23 @@ ENVELOPE_KEYS = frozenset(
         "status",
     )
 )
+
+
+class ReleaseBlockedError(gen.FreezeError):
+    """A fully validated release candidate that still has assurance blockers."""
+
+    def __init__(self, blockers: int):
+        if blockers != EXPECTED_RELEASE_BLOCKERS:
+            raise gen.FreezeError(
+                "release blocker count drift cannot use the validated-blocked exit: "
+                f"{blockers} != {EXPECTED_RELEASE_BLOCKERS}"
+            )
+        self.blockers = blockers
+        super().__init__(f"release verification rejected {blockers} unresolved blockers")
+
+
+def verification_failure_exit_code(exc: gen.FreezeError) -> int:
+    return RELEASE_BLOCKED_EXIT if isinstance(exc, ReleaseBlockedError) else 1
 
 
 def fail(message: str) -> None:
@@ -248,6 +268,8 @@ def validate_freeze_shape(freeze: dict[str, Any]) -> None:
         fail("freeze release gate is not fail-closed")
     if freeze["generated_evidence_status"] != "first-party-unreplayed":
         fail("generated candidate evidence is incorrectly represented as independently replayed")
+    if freeze["supersession"] != gen.SUPERSESSION_RECORD:
+        fail("freeze supersession/invalidation record drift")
     commands = freeze["commands"]
     expectations = freeze["command_expectations"]
     if not isinstance(commands, list) or not all(isinstance(item, str) and item for item in commands):
@@ -290,7 +312,7 @@ def validate_provisioning_manifest_shape(manifest: dict[str, Any], contents: dic
     expected_keys = {
         "schema_version", "id", "classification", "status", "subject", "layout",
         "checksum_policy", "network", "checkout_environment", "checkout_umask",
-        "sandbox_environment", "commands", "toolchain_selection", "subject_inputs",
+        "sandbox_environment", "operator_stdio", "commands", "toolchain_selection", "subject_inputs",
         "observed_host_tools", "provisioning_policy_binding", "workspace_locks",
         "materialized_payloads", "blocked_operations", "claim",
     }
@@ -313,6 +335,8 @@ def validate_provisioning_manifest_shape(manifest: dict[str, Any], contents: dic
         fail("provisioning handoff network marker/policy drift")
     if manifest.get("materialized_payloads") != []:
         fail("provisioning handoff may not claim unavailable payload bytes")
+    if manifest.get("operator_stdio") != gen.operator_stdio_policy():
+        fail("provisioning handoff operator standard-I/O contract drift")
     subject_inputs = manifest.get("subject_inputs")
     if not isinstance(subject_inputs, list) or any(
         not isinstance(row, dict) or set(row) != {"path", "sha256", "size"}
@@ -660,7 +684,12 @@ def _verify_bundle_internal(
     gen.require_clean_checkout(subject_repo, subject, label="subject replay final")
     blockers = result["release_blockers"]
     if mode == "release" and blockers:
-        fail(f"release verification rejected {blockers} unresolved blockers")
+        if blockers != EXPECTED_RELEASE_BLOCKERS:
+            fail(
+                "release blocker count drift cannot use the validated-blocked exit: "
+                f"{blockers} != {EXPECTED_RELEASE_BLOCKERS}"
+            )
+        raise ReleaseBlockedError(blockers)
     if mode == "replay":
         if blockers:
             fail(f"replay verification rejected {blockers} unresolved blockers")
@@ -777,9 +806,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"freeze.json sha256={result['freeze_json_sha256']}")
         print(f"subject={result['subject_commit']} tree={result['subject_tree']}")
         return 0
+    except ReleaseBlockedError as exc:
+        print(
+            "audit-freeze release blocked after complete structural validation: "
+            f"blockers={exc.blockers}",
+            file=sys.stderr,
+        )
+        return RELEASE_BLOCKED_EXIT
     except gen.FreezeError as exc:
         print(f"audit-freeze verification failed: {exc}", file=sys.stderr)
-        return 1
+        return verification_failure_exit_code(exc)
 
 
 if __name__ == "__main__":

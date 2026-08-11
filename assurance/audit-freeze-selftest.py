@@ -11,6 +11,7 @@ import io
 import json
 import os
 from pathlib import Path
+import pty
 import re
 import shutil
 import socket
@@ -168,11 +169,8 @@ def make_fixture(repo: Path) -> str:
     put(repo, "assurance/threat-models/threat-models.toml", "\n".join(threat) + "\n")
     put(repo, "assurance/threat-models/verify-threat-models.py", "# fixture\n")
     put(repo, "assurance/threat-models/threat-model-selftest.py", "# fixture\n")
-    put(repo, "assurance/audit/sow/RFP-SOW.md", "# Fixture RFP/SOW\nExact subject bytes are bound by the generated envelope.\n")
-    put(repo, "assurance/audit/sow/audit-policy.toml", 'schema-version = 1\nstatus = "candidate-uncommissioned"\nexternal-contact-authorized = false\naudit-commissioned = false\n')
-    put(repo, "assurance/audit/sow/audit-scope.toml", "schema-version = 1\n")
-    put(repo, "assurance/audit/sow/verify-sow.py", "# fixture\n")
-    put(repo, "assurance/audit/sow/selftest.py", "# fixture\n")
+    for sow_path in gen.EXPECTED_SOW_CONTROL_SHA256:
+        put(repo, sow_path, (HERE.parent / sow_path).read_bytes())
     for path in (
         "tools/release-dcrypt.sh",
         "tools/verify-publish-ready.sh",
@@ -277,6 +275,275 @@ def main() -> int:
     print("ok - documented sandbox cannot reach an external TEST-NET address")
     with tempfile.TemporaryDirectory(prefix="dcrypt-audit-freeze-selftest-") as temporary:
         root = Path(temporary)
+        stdio_probe = (
+            'import importlib.util;from pathlib import Path;'
+            'p=Path("/dcrypt/assurance/generate-audit-freeze.py");'
+            's=importlib.util.spec_from_file_location("stdio_probe",p);'
+            'm=importlib.util.module_from_spec(s);s.loader.exec_module(m);'
+            'm.require_non_tty_stdio();print("stdio-contract-ok")'
+        )
+        master, slave = pty.openpty()
+        try:
+            pty_probe = subprocess.run(
+                ["/usr/bin/python3.12", "-I", "-B", "-S", "-c", stdio_probe],
+                stdin=slave, stdout=slave, stderr=slave, close_fds=True,
+                env=dict(os.environ), timeout=10,
+            )
+        finally:
+            os.close(slave)
+        try:
+            pty_output = os.read(master, 65536)
+        except OSError:
+            pty_output = b""
+        finally:
+            os.close(master)
+        if pty_probe.returncode == 0 or b"requires non-TTY standard I/O" not in pty_output:
+            raise AssertionError("interactive PTY standard I/O did not fail closed")
+        redirected_log = root / "redirected-pty-probe.log"
+        with Path("/dev/null").open("rb") as null_input, redirected_log.open("w+b") as log_stream:
+            redirected_probe = subprocess.run(
+                ["/usr/bin/python3.12", "-I", "-B", "-S", "-c", stdio_probe],
+                stdin=null_input, stdout=log_stream, stderr=subprocess.STDOUT,
+                close_fds=True, env=dict(os.environ), timeout=10,
+            )
+        redirected_status = redirected_log.stat()
+        if (
+            redirected_probe.returncode != 0
+            or redirected_status.st_nlink != 1
+            or redirected_status.st_size > gen.MAX_OPERATOR_LOG_BYTES
+            or b"stdio-contract-ok" not in redirected_log.read_bytes()
+        ):
+            raise AssertionError("all-descriptor redirected PTY probe did not satisfy the stdio contract")
+        print("ok - rejects interactive PTY stdio and accepts exact all-descriptor redirection")
+
+        wrapper_readme = (HERE / "audit" / "README.md").read_text(encoding="utf-8")
+        if "/usr/bin/cat" in wrapper_readme or "cat <&9" in wrapper_readme:
+            raise AssertionError("documented wrapper still renders untrusted operator-log bytes")
+        for prefix in ("PROVISION", "GENERATION", "STRUCTURAL", "RELEASE", "SELFTEST"):
+            snapshot_marker = f"{prefix}_LOG_SNAPSHOT=$(/usr/bin/stat"
+            size_marker = f"{prefix}_LOG_SIZE=$(/usr/bin/stat"
+            size_recheck = (
+                'test "$(/usr/bin/stat -Lc %s /proc/$$/fd/8)" = '
+                f'"${prefix}_LOG_SIZE"'
+            )
+            summary_marker = (
+                "operator_log_path_untrusted=%s operator_log_size=%s child_exit=%s"
+            )
+            snapshot_position = wrapper_readme.find(snapshot_marker)
+            size_position = wrapper_readme.find(size_marker)
+            if snapshot_position < 0 or size_position < 0 or snapshot_position > size_position:
+                raise AssertionError(f"{prefix} wrapper does not snapshot before reporting held size")
+            if wrapper_readme.find(size_recheck, size_position) < 0:
+                raise AssertionError(f"{prefix} wrapper does not recheck its reported held size")
+            block_end = wrapper_readme.find("```", size_position)
+            if summary_marker not in wrapper_readme[size_position:block_end]:
+                raise AssertionError(f"{prefix} wrapper lacks the controlled metadata-only summary")
+        if 'test "$RELEASE_RC" -eq 3' not in wrapper_readme:
+            raise AssertionError("release wrapper does not require the distinct validated-blocked exit three")
+        print("ok - all documented wrappers snapshot before size and render metadata only")
+
+        external_log_target = root / "external-log-target"
+        external_log_target.write_bytes(b"external-bytes-must-not-change\n")
+        preopen_log = root / "preopen-log"
+        preopen_log.symlink_to(external_log_target)
+        expect_failure(
+            "pre-open operator-log symlink substitution",
+            lambda: gen.open_exclusive_operator_log(preopen_log),
+            "exclusive creation failed",
+        )
+
+        during_directory = root / "during-run-log"
+        during_directory.mkdir(mode=0o700)
+        during_path = during_directory / "operator.log"
+        during_write, during_read = gen.open_exclusive_operator_log(during_path)
+        try:
+            displaced_during_path = during_directory / "displaced.log"
+            during_path.rename(displaced_during_path)
+            during_path.symlink_to(external_log_target)
+            during_probe = subprocess.run(
+                ["/usr/bin/printf", "held-during-run-output\\n"],
+                stdin=subprocess.DEVNULL,
+                stdout=during_write,
+                stderr=during_write,
+                close_fds=True,
+                timeout=10,
+            )
+            if during_probe.returncode != 0:
+                raise AssertionError("held-descriptor during-run probe failed")
+            expect_failure(
+                "during-run operator-log path substitution",
+                lambda: gen.require_held_operator_log(during_path, during_write, during_read),
+                "nonsymlink regular file",
+            )
+            if os.pread(during_read, 65536, 0) != b"held-during-run-output\n":
+                raise AssertionError("during-run log was not readable through its held descriptor")
+            if external_log_target.read_bytes() != b"external-bytes-must-not-change\n":
+                raise AssertionError("during-run path substitution overwrote the external target")
+        finally:
+            os.close(during_read)
+            os.close(during_write)
+
+        display_directory = root / "pre-display-log"
+        display_directory.mkdir(mode=0o700)
+        display_path = display_directory / "operator.log"
+        display_write, display_read = gen.open_exclusive_operator_log(display_path)
+        try:
+            display_probe = subprocess.run(
+                ["/usr/bin/printf", "held-pre-display-output\\n"],
+                stdin=subprocess.DEVNULL,
+                stdout=display_write,
+                stderr=display_write,
+                close_fds=True,
+                timeout=10,
+            )
+            if display_probe.returncode != 0:
+                raise AssertionError("held-descriptor pre-display probe failed")
+            gen.require_held_operator_log(display_path, display_write, display_read)
+            displaced_display_path = display_directory / "displaced.log"
+            display_path.rename(displaced_display_path)
+            display_path.symlink_to(external_log_target)
+            expect_failure(
+                "pre-display operator-log path substitution",
+                lambda: gen.require_held_operator_log(display_path, display_write, display_read),
+                "nonsymlink regular file",
+            )
+            if os.pread(display_read, 65536, 0) != b"held-pre-display-output\n":
+                raise AssertionError("pre-display log was substituted for the held review stream")
+            if external_log_target.read_bytes() != b"external-bytes-must-not-change\n":
+                raise AssertionError("pre-display path substitution altered the external target")
+        finally:
+            os.close(display_read)
+            os.close(display_write)
+        print("ok - held operator logs reject pre-open, during-run, and pre-display path substitution")
+
+        metadata_directory = root / "metadata-only-log"
+        metadata_directory.mkdir(mode=0o700)
+        metadata_path = metadata_directory / "operator.log"
+        metadata_write, metadata_read = gen.open_exclusive_operator_log(metadata_path)
+        hostile_log_bytes = b"untrusted-control-bytes:\x1b[2J\x00must-not-render\n"
+        try:
+            os.write(metadata_write, hostile_log_bytes)
+            metadata_snapshot = gen.require_held_operator_log(
+                metadata_path, metadata_write, metadata_read
+            )
+            original_os_read = gen.os.read
+            gen.os.read = lambda *_args: (_ for _ in ()).throw(
+                AssertionError("metadata-only summary attempted to read untrusted log bytes")
+            )
+            try:
+                metadata_summary = gen.operator_log_metadata_summary(
+                    metadata_path, metadata_write, metadata_read,
+                    child_exit=0, expected_snapshot=metadata_snapshot,
+                )
+            finally:
+                gen.os.read = original_os_read
+            if (
+                "operator_log_path_untrusted=" not in metadata_summary
+                or f"operator_log_size={len(hostile_log_bytes)}" not in metadata_summary
+                or "child_exit=0" not in metadata_summary
+                or "untrusted-control-bytes" in metadata_summary
+                or "\x1b" in metadata_summary
+                or "\x00" in metadata_summary
+            ):
+                raise AssertionError("metadata-only operator-log summary exposed untrusted bytes")
+            os.ftruncate(metadata_write, 0)
+            expect_failure(
+                "operator-log ftruncate during metadata review",
+                lambda: gen.operator_log_metadata_summary(
+                    metadata_path, metadata_write, metadata_read,
+                    child_exit=0, expected_snapshot=metadata_snapshot,
+                ),
+                "changed after the bounded metadata snapshot",
+            )
+        finally:
+            os.close(metadata_read)
+            os.close(metadata_write)
+
+        append_directory = root / "append-during-review-log"
+        append_directory.mkdir(mode=0o700)
+        append_path = append_directory / "operator.log"
+        append_write, append_read = gen.open_exclusive_operator_log(append_path)
+        try:
+            os.write(append_write, b"bounded\n")
+            append_snapshot = gen.require_held_operator_log(
+                append_path, append_write, append_read
+            )
+            os.write(append_write, b"late-append\n")
+            expect_failure(
+                "operator-log append during metadata review",
+                lambda: gen.operator_log_metadata_summary(
+                    append_path, append_write, append_read,
+                    child_exit=0, expected_snapshot=append_snapshot,
+                ),
+                "changed after the bounded metadata snapshot",
+            )
+        finally:
+            os.close(append_read)
+            os.close(append_write)
+
+        oversized_directory = root / "oversized-log"
+        oversized_directory.mkdir(mode=0o700)
+        oversized_path = oversized_directory / "operator.log"
+        oversized_write, oversized_read = gen.open_exclusive_operator_log(oversized_path)
+        try:
+            os.ftruncate(oversized_write, gen.MAX_OPERATOR_LOG_BYTES + 1)
+            expect_failure(
+                "oversized operator log before metadata review",
+                lambda: gen.require_held_operator_log(
+                    oversized_path, oversized_write, oversized_read
+                ),
+                "exceeds the 16 MiB review bound",
+            )
+        finally:
+            os.close(oversized_read)
+            os.close(oversized_write)
+        print("ok - operator-log review is metadata-only, bounded, and mutation fail closed")
+
+        wrong_operation_directory = root / "wrong-operation-log"
+        wrong_operation_directory.mkdir(mode=0o700)
+        wrong_operation_path = wrong_operation_directory / "operator.log"
+        wrong_write, wrong_read = gen.open_exclusive_operator_log(wrong_operation_path)
+        try:
+            wrong_environment = dict(os.environ)
+            wrong_environment["DCRYPT_AUDIT_OPERATION"] = "provision"
+            wrong_operation = subprocess.run(
+                [
+                    "/usr/bin/python3.12", "-I", "-B", "-S",
+                    "/dcrypt/assurance/verify-audit-freeze.py", "--self-test",
+                ],
+                stdin=subprocess.DEVNULL,
+                stdout=wrong_write,
+                stderr=wrong_write,
+                close_fds=True,
+                env=wrong_environment,
+                timeout=10,
+            )
+            gen.require_held_operator_log(wrong_operation_path, wrong_write, wrong_read)
+            wrong_output = os.pread(wrong_read, gen.MAX_OPERATOR_LOG_BYTES + 1, 0)
+            if wrong_operation.returncode != 1 or b"exact documented sandbox" not in wrong_output:
+                raise AssertionError("wrong-operation wrapper probe did not produce the expected rejection")
+            expect_failure(
+                "wrong-operation wrapper result masking",
+                lambda: gen.require_expected_operator_exit(
+                    wrong_operation.returncode, 0, operation="self-test"
+                ),
+                "expected exit 0, observed 1",
+            )
+        finally:
+            os.close(wrong_read)
+            os.close(wrong_write)
+        gen.require_expected_operator_exit(3, 3, operation="release verification")
+        expect_failure(
+            "release wrong-reason exit-one masking",
+            lambda: gen.require_expected_operator_exit(1, 3, operation="release verification"),
+            "expected exit 3, observed 1",
+        )
+        expect_failure(
+            "release success status masking",
+            lambda: gen.require_expected_operator_exit(0, 3, operation="release verification"),
+            "expected exit 3, observed 0",
+        )
+        print("ok - wrappers distinguish validation exit one from release-blocked exit three")
         original_epoch = os.environ["SOURCE_DATE_EPOCH"]
         os.environ["SOURCE_DATE_EPOCH"] = str(int(original_epoch) + 1)
         expect_failure(
@@ -679,6 +946,13 @@ def main() -> int:
             ),
             "exact read-only mapping /provision",
         )
+        expect_failure(
+            "superseded candidate identifier reuse",
+            lambda: gen.freeze_command_inventory(
+                subject, gen.SUPERSESSION_RECORD["supersedes_freeze_id"]
+            ),
+            "reviewed candidate identifier",
+        )
         print("ok - production CLI paths are fixed to the documented sandbox mappings")
 
         put(fixture, "untracked-input", "must fail\n")
@@ -689,11 +963,79 @@ def main() -> int:
         )
         (fixture / "untracked-input").unlink()
 
-        expect_failure(
-            "release mode with unresolved blockers",
-            lambda: verify._verify_bundle_internal(evidence_repo, fixture, bundle, mode="release", as_of=dt.date(2026, 8, 11)),
-            "blockers",
-        )
+        try:
+            verify._verify_bundle_internal(
+                evidence_repo, fixture, bundle, mode="release",
+                as_of=dt.date(2026, 8, 11),
+            )
+        except verify.ReleaseBlockedError as exc:
+            if exc.blockers != 9319 or verify.verification_failure_exit_code(exc) != 3:
+                raise AssertionError("validated release blocker outcome did not map to exact exit three")
+        except gen.FreezeError as exc:
+            raise AssertionError(f"release blocker outcome used generic validation failure: {exc}") from exc
+        else:
+            raise AssertionError("release mode with unresolved blockers unexpectedly passed")
+        print("ok - validated exact 9319-blocker release outcome maps only to exit three")
+
+        corrupt_release = copy_bundle(bundle, root, "corrupt-release-exit")
+        corrupt_freeze = json.loads((corrupt_release / "freeze.json").read_text(encoding="utf-8"))
+        corrupt_freeze["subject"]["tree"] = "0" * 40
+        (corrupt_release / "freeze.json").write_bytes(gen.canonical_json(corrupt_freeze))
+        try:
+            verify._verify_bundle_documents(
+                corrupt_release, mode="release", as_of=dt.date(2026, 8, 11)
+            )
+        except verify.ReleaseBlockedError as exc:
+            raise AssertionError("corrupt evidence was misclassified as validated release-blocked") from exc
+        except (gen.FreezeError, verify.gen.FreezeError) as exc:
+            if verify.verification_failure_exit_code(exc) != 1:
+                raise AssertionError("corrupt evidence did not map to generic validation exit one") from exc
+        else:
+            raise AssertionError("corrupt release evidence unexpectedly passed")
+        print("ok - corrupt release evidence remains validation exit one, never blocker exit three")
+
+        original_require_isolated = verify.gen.require_isolated_python
+        original_reject_backdate = verify.reject_backdated_verification
+        original_runtime = verify.gen.require_documented_sandbox_runtime
+        original_validate_paths = verify.validate_verification_cli_paths
+        original_verify_bundle = verify.verify_bundle
+        verify.gen.require_isolated_python = lambda: None
+        verify.reject_backdated_verification = lambda _as_of: None
+        verify.gen.require_documented_sandbox_runtime = lambda **_kwargs: None
+        verify.validate_verification_cli_paths = lambda *_args: None
+
+        def public_release_blocked(*_args, **_kwargs):
+            raise verify.ReleaseBlockedError(9319)
+
+        def public_corrupt_failure(*_args, **_kwargs):
+            raise verify.gen.FreezeError("corrupt evidence fixture")
+
+        public_args = [
+            "--repo", "/evidence", "--subject-repo", "/dcrypt",
+            "--provision", "/provision",
+            "--bundle", f"/evidence/assurance/audit/freezes/{gen.PRODUCTION_FREEZE_ID}",
+            "--mode", "release",
+        ]
+        try:
+            verify.verify_bundle = public_release_blocked
+            release_stderr = io.StringIO()
+            with contextlib.redirect_stderr(release_stderr):
+                release_exit = verify.main(public_args)
+            if release_exit != 3 or "blockers=9319" not in release_stderr.getvalue():
+                raise AssertionError("public release-blocked outcome did not return exact exit three")
+            verify.verify_bundle = public_corrupt_failure
+            corrupt_stderr = io.StringIO()
+            with contextlib.redirect_stderr(corrupt_stderr):
+                corrupt_exit = verify.main(public_args)
+            if corrupt_exit != 1 or "corrupt evidence fixture" not in corrupt_stderr.getvalue():
+                raise AssertionError("public corrupt-evidence outcome did not remain exit one")
+        finally:
+            verify.gen.require_isolated_python = original_require_isolated
+            verify.reject_backdated_verification = original_reject_backdate
+            verify.gen.require_documented_sandbox_runtime = original_runtime
+            verify.validate_verification_cli_paths = original_validate_paths
+            verify.verify_bundle = original_verify_bundle
+        print("ok - public verifier preserves distinct release-blocked and validation exits")
         expect_failure(
             "replay mode without independent evidence",
             lambda: verify._verify_bundle_internal(evidence_repo, fixture, bundle, mode="replay", as_of=dt.date(2026, 8, 11)),
@@ -1383,9 +1725,23 @@ def main() -> int:
                 lambda repo, path=command_target: (repo / path).unlink(),
                 "required assurance/audit input",
             )
+        subject_failure(
+            "unexpected SOW input",
+            lambda repo: put(repo, "assurance/audit/sow/unreviewed.txt", "unreviewed\n"),
+            "SOW exact input set drift",
+        )
+        subject_failure(
+            "SOW versioned control drift",
+            lambda repo: put(
+                repo,
+                "assurance/audit/sow/fixtures/README.md",
+                (repo / "assurance/audit/sow/fixtures/README.md").read_text() + "drift\n",
+            ),
+            "SOW versioned control digest differs",
+        )
 
         def add_self_reference(repo: Path) -> None:
-            put(repo, "assurance/audit/freezes/dcrypt-v3.0.0-audit-candidate-001/freeze.json", "{}\n")
+            put(repo, "assurance/audit/freezes/dcrypt-v3.0.0-audit-candidate-002/freeze.json", "{}\n")
 
         subject_failure("subject self-reference", add_self_reference, "own freeze output")
         subject_failure(
@@ -1407,6 +1763,22 @@ def main() -> int:
         # The bound schemas are executable closed contracts, not documentation-only files.
         freeze_instance = json.loads(first["freeze.json"])
         freeze_schema = json.loads((HERE / "audit/audit-freeze.schema.json").read_text())
+        missing_supersession = json.loads(json.dumps(freeze_instance))
+        del missing_supersession["supersession"]
+        expect_failure(
+            "schema candidate supersession deletion",
+            lambda: gen.validate_json_schema(
+                missing_supersession, freeze_schema, label="freeze supersession fixture"
+            ),
+            "required",
+        )
+        invalid_supersession = json.loads(json.dumps(freeze_instance))
+        invalid_supersession["supersession"]["status"] = "accepted"
+        expect_failure(
+            "semantic candidate supersession promotion",
+            lambda: verify.validate_freeze_shape(invalid_supersession),
+            "supersession/invalidation",
+        )
         nested_missing = json.loads(json.dumps(freeze_instance))
         del nested_missing["release_gate"]["independent_replay_required"]
         expect_failure(
@@ -1430,6 +1802,16 @@ def main() -> int:
             lambda: gen.validate_json_schema(
                 broken_provisioning_manifest, provisioning_manifest_schema,
                 label="provisioning manifest fixture",
+            ),
+            "required",
+        )
+        broken_operator_stdio = json.loads(json.dumps(provisioning_manifest))
+        del broken_operator_stdio["operator_stdio"]["regular_log_rendering"]
+        expect_failure(
+            "provisioning manifest held-log contract deletion",
+            lambda: gen.validate_json_schema(
+                broken_operator_stdio, provisioning_manifest_schema,
+                label="provisioning manifest held-log fixture",
             ),
             "required",
         )

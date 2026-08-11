@@ -30,7 +30,29 @@ from typing import Any, Iterable
 
 SCHEMA_VERSION = 1
 CONTENT_POLICY = "dcrypt-audit-freeze-v1"
-PRODUCTION_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-001"
+PRODUCTION_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-002"
+SUPERSESSION_RECORD = {
+    "supersedes_freeze_id": "dcrypt-v3.0.0-audit-candidate-001",
+    "superseded_subject_commit": "de9f8a118c227643a938251ddae3d8bc426aaa98",
+    "superseded_subject_tree": "0f2065bfac6c5c33573425f1ab7e54b11c461395",
+    "superseded_evidence_commit": "d8c7949a94c53cda00efdff99ff6b55413a5e1a6",
+    "superseded_evidence_tree": "608623469de5bfb610965764d88520679691be99",
+    "superseded_freeze_json_sha256": "9626178073ae95381542358bfc0bbfa39cb514735ab4be13239ca314320b1189",
+    "superseded_provisioning_manifest_sha256": "bd8154f202734a2af248032765b5d2405034edd65245afd41bb72f21ec44b640",
+    "status": "invalidated-after-partial-independent-replay-before-acceptance",
+    "reason": (
+        "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch "
+        "invalidated candidate-001 after partial independent replay observations but before "
+        "completion and acceptance under the full required replay contract."
+    ),
+    "partial_independent_replay_observed": True,
+    "required_complete_independent_replay_completed": False,
+    "external_review_completed": False,
+    "audit_evidence_accepted": False,
+}
+EXPECTED_SUPERSESSION_POLICY = {
+    key.replace("_", "-"): value for key, value in SUPERSESSION_RECORD.items()
+}
 PROVISIONING_HANDOFF_ID = "dcrypt-audit-provisioning-v1"
 PROVISIONING_HANDOFF_FILES = frozenset(("PROVISIONING-MANIFEST.json", "SHA256SUMS"))
 EXPECTED_COUNTS = {
@@ -323,13 +345,21 @@ EXPECTED_CONTAINER_IMAGES = {
 }
 EXPECTED_BOUND_CONTROL_SHA256 = {
     ".github/workflows/security-validation.yml": "1fb51314c1800679a2b4c3b7ac07318e2959a390eda6d7a80d421f9866ae7a69",
-    "assurance/audit/README.md": "ac5316b0156b8a7f60ce141b44313a8c3f2c934b74d996ac99ebcdf2adf20e9f",
-    "assurance/audit/audit-freeze.schema.json": "d7a1e7a4302a2cc87cc5bdefae382e4f2f1757e4fb5619a51743d036c20913ae",
-    "assurance/audit/freeze-envelope.schema.json": "68d20098b24133aa13fc930f14d013245534098e30a786802adce2d5eec6a20f",
-    "assurance/audit/provisioning.schema.json": "681f7688b9a581af6384cd36723dd1f12462a625718e9bf131220b69c55db600",
-    "assurance/audit/freeze-policy.toml": "5a7d3683e266887aca6ac93b42ef11d3c9d912cf9c3fbbf00813272d2b6a89bc",
+    "assurance/audit/README.md": "9d1f44d1f6ed8d219073e0da6ab02d84b743a861d08555f5de5108d37fa8740b",
+    "assurance/audit/audit-freeze.schema.json": "28949404fe29c0ce868e701b4535a2bc261384e1fe61ed6214ef45ee005f644c",
+    "assurance/audit/freeze-envelope.schema.json": "3c0e2eb77b2a8d744301931e5bf11742ec10e32928185f2210c3194b4bced0b0",
+    "assurance/audit/provisioning.schema.json": "ff1b6d215f4ecc9612dec231d097fff9ee13ab2de19620644c3d9a90c3a05b6e",
+    "assurance/audit/freeze-policy.toml": "6e22029504a88f9f7d563dc4f973e7bed147814cd008be94a55c36c8fa9692e5",
     "assurance/audit/provisioning-lock.toml": "3733ed23be2f93e6a756162bde9a841ab4a165037ccc1c0a22d3e23bd5030177",
     "assurance/audit/historical-advisory-regressions.toml": "ce6fa84b1a8de37d938e51b82806e67b8cc6c7dcb4d3234cdcd44c76cf96acc7",
+}
+EXPECTED_SOW_CONTROL_SHA256 = {
+    "assurance/audit/sow/RFP-SOW.md": "a67531bbdb65d09bb75fc7e31890e81791bbc747d55755a5ea187ef3a88f4179",
+    "assurance/audit/sow/audit-policy.toml": "3dd2871f0e9fcfd470a280a61f898d4b14c06a4c15a77552ebd3488d98509bd0",
+    "assurance/audit/sow/audit-scope.toml": "25bc2a5bd185b49d16751ccf80097305032d74c52cc971fce0aeb7058b1142c2",
+    "assurance/audit/sow/fixtures/README.md": "bc1177c30f6cbebba6adce9115762d3a58765696f27313859ade98e18eaeb4ad",
+    "assurance/audit/sow/selftest.py": "61ecc20cc4f2adea4fad8fdcab2dfe4c53ab090da50f22ab7aec5f103c136d5f",
+    "assurance/audit/sow/verify-sow.py": "6b1fcbeb9427b3635b41f482b252375e3192d28ac2f3c420e092bee90b174575",
 }
 GIT_EXECUTABLE = Path("/usr/bin/git")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
@@ -355,6 +385,8 @@ JSON_FILES = tuple(
 ALLOWED_BUNDLE_FILES = frozenset((*JSON_FILES, "PROVISIONING-SHA256SUMS", "SHA256SUMS"))
 MAX_BUNDLE_FILE_BYTES = 128 * 1024 * 1024
 MAX_BUNDLE_TOTAL_BYTES = 256 * 1024 * 1024
+MAX_OPERATOR_LOG_BYTES = 16 * 1024 * 1024
+_BOUND_OPERATOR_STDIO_CONTRACT: tuple[Any, ...] | None = None
 SUBJECT_COMMAND_TARGETS = (
     "assurance/audit/sow/selftest.py",
     "assurance/audit/sow/verify-sow.py",
@@ -431,7 +463,7 @@ def freeze_command_inventory(subject: str, freeze_id: str) -> tuple[list[str], l
         {"command_index": 13, "expected": "not-executed-by-generator-requires-exact-provision-sandbox"},
         {"command_index": 14, "expected": "not-executed-by-generator-requires-exact-generation-sandbox"},
         {"command_index": 15, "expected": "not-executed-by-generator-structural-result-must-be-blocked"},
-        {"command_index": 16, "expected": "not-executed-by-generator-release-result-must-fail-blocked"},
+        {"command_index": 16, "expected": "not-executed-by-generator-release-result-must-exit-3-for-9319-blockers"},
     ]
     referenced_targets = {
         match.removeprefix("/dcrypt/")
@@ -934,6 +966,7 @@ def require_documented_sandbox_runtime(
     *, expected_source_date_epoch: int | None = None, require_empty_output: bool = False,
     require_evidence: bool = False, require_provision: bool = False,
 ) -> None:
+    require_non_tty_stdio()
     if os.environ.get("DCRYPT_AUDIT_SANDBOX") != "unshare-all-v1":
         fail("documented generation/replay requires the bound bubblewrap --unshare-all wrapper")
     required_environment = {
@@ -1091,6 +1124,205 @@ def require_documented_sandbox_runtime(
     }
     if interfaces != {"lo"}:
         fail(f"sandbox network namespace exposes non-loopback interfaces: {sorted(interfaces)}")
+
+
+def operator_stdio_policy() -> dict[str, Any]:
+    return {
+        "tty": "forbidden",
+        "interactive_dev_console_mount": "forbidden",
+        "stdin": "dev-null-or-captured-pipe",
+        "stdout_stderr": "captured-pipes-or-dev-null-or-one-o-excl-held-link-count-one-regular-log",
+        "regular_log_creation": "private-directory-o-excl-held-write-and-read-descriptors",
+        "regular_log_child_descriptors": "only-stdio-duplicates-extra-held-descriptors-closed-before-exec",
+        "regular_log_postcondition": "two-fstat-snapshots-match-held-descriptors-and-surviving-nonsymlink-path",
+        "regular_log_rendering": "forbidden-untrusted-bytes-metadata-only",
+        "operator_exit_status": "capture-before-postchecks-and-compare-exact-expected-exit-last",
+        "regular_log_initial_size": 0,
+        "regular_log_max_bytes_after_run": MAX_OPERATOR_LOG_BYTES,
+    }
+
+
+def require_non_tty_stdio() -> None:
+    """Reject PTYs and constrain the inherited operator I/O descriptors.
+
+    Bubblewrap exposes a controlling terminal as an additional /dev/console
+    mount.  Production wrappers therefore use either captured pipes or a
+    pre-created empty, uniquely linked regular log for both stdout and stderr,
+    with stdin supplied by /dev/null or a pipe.
+    """
+
+    global _BOUND_OPERATOR_STDIO_CONTRACT
+    try:
+        statuses = [os.fstat(descriptor) for descriptor in (0, 1, 2)]
+    except OSError as exc:
+        fail(f"sandbox standard-I/O descriptor is unavailable: {exc}")
+    tty_descriptors = [descriptor for descriptor in (0, 1, 2) if os.isatty(descriptor)]
+    if tty_descriptors:
+        fail(
+            "documented sandbox requires non-TTY standard I/O; redirect stdin, stdout, and stderr "
+            f"before Bubblewrap (TTY descriptors: {tty_descriptors})"
+        )
+    try:
+        null_status = os.stat("/dev/null", follow_symlinks=False)
+    except OSError as exc:
+        fail(f"cannot identify /dev/null for the standard-I/O contract: {exc}")
+    stdin_status = statuses[0]
+    stdin_is_null = (
+        stat.S_ISCHR(stdin_status.st_mode)
+        and stat.S_ISCHR(null_status.st_mode)
+        and stdin_status.st_rdev == null_status.st_rdev
+    )
+    if not stdin_is_null and not stat.S_ISFIFO(stdin_status.st_mode):
+        fail("sandbox stdin must be /dev/null or a captured pipe")
+    stdin_contract: tuple[Any, ...] = (
+        ("dev-null", stdin_status.st_rdev)
+        if stdin_is_null
+        else ("pipe", stdin_status.st_dev, stdin_status.st_ino)
+    )
+    stdout_status, stderr_status = statuses[1:]
+    if stat.S_ISFIFO(stdout_status.st_mode) and stat.S_ISFIFO(stderr_status.st_mode):
+        output_contract: tuple[Any, ...] = (
+            "pipes",
+            stdout_status.st_dev, stdout_status.st_ino,
+            stderr_status.st_dev, stderr_status.st_ino,
+        )
+    else:
+        outputs_are_null = all(
+            stat.S_ISCHR(row.st_mode) and row.st_rdev == null_status.st_rdev
+            for row in (stdout_status, stderr_status)
+        )
+        if outputs_are_null:
+            output_contract = ("dev-null", null_status.st_rdev)
+        else:
+            outputs_are_one_log = (
+                stat.S_ISREG(stdout_status.st_mode)
+                and stat.S_ISREG(stderr_status.st_mode)
+                and (stdout_status.st_dev, stdout_status.st_ino)
+                == (stderr_status.st_dev, stderr_status.st_ino)
+            )
+            if not outputs_are_one_log:
+                fail(
+                    "sandbox stdout/stderr must be captured pipes, /dev/null, "
+                    "or one pre-created regular log"
+                )
+            if stdout_status.st_nlink != 1 or stderr_status.st_nlink != 1:
+                fail("sandbox operator log must have link count one")
+            if max(stdout_status.st_size, stderr_status.st_size) > MAX_OPERATOR_LOG_BYTES:
+                fail("sandbox operator log exceeds the 16 MiB review bound")
+            output_contract = ("regular-log", stdout_status.st_dev, stdout_status.st_ino)
+    observed_contract = (stdin_contract, output_contract)
+    if _BOUND_OPERATOR_STDIO_CONTRACT is None:
+        if output_contract[0] == "regular-log" and (
+            stdout_status.st_size != 0 or stderr_status.st_size != 0
+        ):
+            fail("sandbox operator log must be empty when the sandbox process starts")
+        _BOUND_OPERATOR_STDIO_CONTRACT = observed_contract
+    elif _BOUND_OPERATOR_STDIO_CONTRACT != observed_contract:
+        fail("sandbox standard-I/O descriptor identity changed during execution")
+
+
+def open_exclusive_operator_log(path: Path) -> tuple[int, int]:
+    """Create one operator log and hold independent write/read descriptors.
+
+    This mirrors the documented shell wrapper's noclobber/O_EXCL contract and
+    exists so the adversarial self-test can exercise path substitution without
+    ever reopening the pathname for child output or review reads.
+    """
+
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_CLOEXEC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        write_descriptor = os.open(path, flags, 0o600)
+    except OSError as exc:
+        fail(f"operator log exclusive creation failed: {exc}")
+    try:
+        read_descriptor = os.open(
+            f"/proc/self/fd/{write_descriptor}", os.O_RDONLY | os.O_CLOEXEC
+        )
+    except OSError as exc:
+        os.close(write_descriptor)
+        fail(f"operator log held read descriptor creation failed: {exc}")
+    return write_descriptor, read_descriptor
+
+
+def require_held_operator_log(
+    path: Path, write_descriptor: int, read_descriptor: int,
+    *, expected_snapshot: tuple[int, ...] | None = None,
+) -> tuple[int, ...]:
+    """Validate the bounded log through held descriptors and its surviving path."""
+
+    try:
+        write_status = os.fstat(write_descriptor)
+        read_status = os.fstat(read_descriptor)
+    except OSError as exc:
+        fail(f"operator log held descriptor is unavailable: {exc}")
+    for label, observed in (("write", write_status), ("read", read_status)):
+        if not stat.S_ISREG(observed.st_mode):
+            fail(f"operator log held {label} descriptor is not regular")
+        if observed.st_nlink != 1:
+            fail(f"operator log held {label} descriptor must have link count one")
+        if stat.S_IMODE(observed.st_mode) != 0o600:
+            fail(f"operator log held {label} descriptor mode must be 0600")
+        if observed.st_size > MAX_OPERATOR_LOG_BYTES:
+            fail(f"operator log held {label} descriptor exceeds the 16 MiB review bound")
+    held_identity = (write_status.st_dev, write_status.st_ino)
+    if (read_status.st_dev, read_status.st_ino) != held_identity:
+        fail("operator log held read/write descriptor identity drift")
+    try:
+        path_status = path.lstat()
+    except OSError as exc:
+        fail(f"operator log surviving path is unavailable: {exc}")
+    if not stat.S_ISREG(path_status.st_mode):
+        fail("operator log surviving path is not a nonsymlink regular file")
+    if path_status.st_nlink != 1:
+        fail("operator log surviving path must have link count one")
+    if stat.S_IMODE(path_status.st_mode) != 0o600:
+        fail("operator log surviving path mode must be 0600")
+    if (path_status.st_dev, path_status.st_ino) != held_identity:
+        fail("operator log surviving path identity drift")
+    if path_status.st_size != write_status.st_size:
+        fail("operator log surviving path size drift")
+    fields = ("st_dev", "st_ino", "st_mode", "st_nlink", "st_size", "st_mtime_ns", "st_ctime_ns")
+    snapshot = tuple(getattr(write_status, field) for field in fields)
+    if tuple(getattr(read_status, field) for field in fields) != snapshot:
+        fail("operator log held read/write metadata drift")
+    if tuple(getattr(path_status, field) for field in fields) != snapshot:
+        fail("operator log surviving path metadata drift")
+    if expected_snapshot is not None and snapshot != expected_snapshot:
+        fail("operator log changed after the bounded metadata snapshot")
+    return snapshot
+
+
+def operator_log_metadata_summary(
+    path: Path, write_descriptor: int, read_descriptor: int, *,
+    child_exit: int, expected_snapshot: tuple[int, ...],
+) -> str:
+    """Return controlled metadata without reading or rendering untrusted log bytes."""
+
+    if type(child_exit) is not int or child_exit < 0 or child_exit > 255:
+        fail("operator child exit status is malformed")
+    snapshot = require_held_operator_log(
+        path, write_descriptor, read_descriptor, expected_snapshot=expected_snapshot
+    )
+    path_text = os.fspath(path)
+    if not path_text or any(ord(character) < 0x20 or ord(character) == 0x7f for character in path_text):
+        fail("operator log path is not safe for a metadata-only summary")
+    return (
+        f"operator_log_path_untrusted={path_text} "
+        f"operator_log_size={snapshot[4]} child_exit={child_exit}"
+    )
+
+
+def require_expected_operator_exit(actual: int, expected: int, *, operation: str) -> None:
+    """Reject wrapper postchecks that would mask an unexpected child status."""
+
+    if type(actual) is not int or type(expected) is not int or expected not in {0, 3}:
+        fail("operator expected-exit contract is malformed")
+    if not isinstance(operation, str) or not operation:
+        fail("operator expected-exit operation is missing")
+    if actual != expected:
+        fail(f"{operation} expected exit {expected}, observed {actual}")
 
 
 def lexical_absolute(path: Path) -> Path:
@@ -1800,6 +2032,7 @@ def validate_policy(policy: dict[str, Any]) -> None:
     expected_top_keys = {
             "schema-version", "freeze-id", "classification", "content-policy",
             "freeze-date", "valid-through", "release-subject", "commissioning-worktree",
+            "supersession",
             "canonical-json", "environment", "cargo-workspace", "required-artifact",
             "limitation", "expected-public-api-units", "expected-atomic-operations",
             "expected-ledger-evidence-records", "expected-action-occurrences",
@@ -1814,6 +2047,8 @@ def validate_policy(policy: dict[str, Any]) -> None:
         fail(f"freeze policy identifier must be {PRODUCTION_FREEZE_ID}")
     if policy["classification"] != "candidate-rehearsal":
         fail("only candidate-rehearsal freezes are supported by this commission")
+    if toml_json_value(policy["supersession"]) != EXPECTED_SUPERSESSION_POLICY:
+        fail("candidate supersession/invalidation record drift")
     if policy["freeze-date"] != "2026-08-11" or policy["valid-through"] != "2026-09-10":
         fail("candidate freeze dates differ from the reviewed commission")
     for key, expected in EXPECTED_COUNTS.items():
@@ -2845,6 +3080,7 @@ def environment_document(repo: Path, subject: str, policy: dict[str, Any], provi
         "runner_images": sorted(provisioning["runner-image"], key=lambda row: row["id"]),
         "container_images": sorted(provisioning["container-image"], key=lambda row: row["id"]),
         "observed_host_tools": observed_host_tools(provisioning),
+        "operator_stdio": operator_stdio_policy(),
         "python_execution": {
             "argv_prefix": ["/usr/bin/python3.12", "-I", "-B", "-S"],
             "isolated": True,
@@ -3034,6 +3270,7 @@ def provisioning_manifest_document(
         "checkout_environment": closed_git_environment(),
         "checkout_umask": "0022",
         "sandbox_environment": sandbox_environment,
+        "operator_stdio": operator_stdio_policy(),
         "commands": commands,
         "toolchain_selection": {
             "root_configuration_files": [],
@@ -3342,6 +3579,18 @@ def assurance_document(files: dict[str, bytes], all_paths: set[str], policy: dic
         or sow_policy.get("audit-commissioned") is not False
     ):
         fail("SOW issuance fail-closed state drift")
+    if set(sow_paths) != set(EXPECTED_SOW_CONTROL_SHA256):
+        fail(
+            "SOW exact input set drift: "
+            f"expected {sorted(EXPECTED_SOW_CONTROL_SHA256)}, got {sow_paths}"
+        )
+    for path, expected_digest in EXPECTED_SOW_CONTROL_SHA256.items():
+        actual_digest = sha256(files[path])
+        if actual_digest != expected_digest:
+            fail(
+                f"SOW versioned control digest differs for {path}: "
+                f"expected {expected_digest}, got {actual_digest}"
+            )
     all_valid_through = [
         *(parse_bound_date(row["valid_through"], label="ledger freshness") for row in ledger_freshness),
         *(parse_bound_date(row["valid_through"], label="threat freshness") for row in threat_freshness),
@@ -3553,6 +3802,7 @@ def build_bundle_bytes(repo: Path, subject: str) -> dict[str, bytes]:
         "classification": policy["classification"],
         "freeze_date": policy["freeze-date"],
         "valid_through": policy["valid-through"],
+        "supersession": SUPERSESSION_RECORD,
         "subject": {
             "commit": subject,
             "tree": tree,

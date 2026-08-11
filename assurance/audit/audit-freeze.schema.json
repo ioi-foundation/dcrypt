@@ -4,14 +4,33 @@
   "title": "dcrypt candidate audit freeze",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "content_policy", "freeze_id", "classification", "freeze_date", "valid_through", "subject", "release_subject", "canonicalization", "manifest_files", "counts", "release_gate", "generated_evidence_status", "commands", "command_expectations"],
+  "required": ["schema_version", "content_policy", "freeze_id", "classification", "freeze_date", "valid_through", "supersession", "subject", "release_subject", "canonicalization", "manifest_files", "counts", "release_gate", "generated_evidence_status", "commands", "command_expectations"],
   "properties": {
     "schema_version": {"const": 1},
     "content_policy": {"const": "dcrypt-audit-freeze-v1"},
-    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-001"},
+    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-002"},
     "classification": {"const": "candidate-rehearsal"},
     "freeze_date": {"const": "2026-08-11"},
     "valid_through": {"const": "2026-09-10"},
+    "supersession": {
+      "type": "object", "additionalProperties": false,
+      "required": ["supersedes_freeze_id", "superseded_subject_commit", "superseded_subject_tree", "superseded_evidence_commit", "superseded_evidence_tree", "superseded_freeze_json_sha256", "superseded_provisioning_manifest_sha256", "status", "reason", "partial_independent_replay_observed", "required_complete_independent_replay_completed", "external_review_completed", "audit_evidence_accepted"],
+      "properties": {
+        "supersedes_freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-001"},
+        "superseded_subject_commit": {"const": "de9f8a118c227643a938251ddae3d8bc426aaa98"},
+        "superseded_subject_tree": {"const": "0f2065bfac6c5c33573425f1ab7e54b11c461395"},
+        "superseded_evidence_commit": {"const": "d8c7949a94c53cda00efdff99ff6b55413a5e1a6"},
+        "superseded_evidence_tree": {"const": "608623469de5bfb610965764d88520679691be99"},
+        "superseded_freeze_json_sha256": {"const": "9626178073ae95381542358bfc0bbfa39cb514735ab4be13239ca314320b1189"},
+        "superseded_provisioning_manifest_sha256": {"const": "bd8154f202734a2af248032765b5d2405034edd65245afd41bb72f21ec44b640"},
+        "status": {"const": "invalidated-after-partial-independent-replay-before-acceptance"},
+        "reason": {"const": "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract."},
+        "partial_independent_replay_observed": {"const": true},
+        "required_complete_independent_replay_completed": {"const": false},
+        "external_review_completed": {"const": false},
+        "audit_evidence_accepted": {"const": false}
+      }
+    },
     "subject": {
       "type": "object", "additionalProperties": false,
       "required": ["commit", "tree", "commit_payload_sha256", "tree_payload_sha256"],

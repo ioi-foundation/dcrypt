@@ -130,7 +130,7 @@
     "provisioningManifest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "id", "classification", "status", "subject", "layout", "checksum_policy", "network", "checkout_environment", "checkout_umask", "sandbox_environment", "commands", "toolchain_selection", "subject_inputs", "observed_host_tools", "provisioning_policy_binding", "workspace_locks", "materialized_payloads", "blocked_operations", "claim"],
+      "required": ["schema_version", "id", "classification", "status", "subject", "layout", "checksum_policy", "network", "checkout_environment", "checkout_umask", "sandbox_environment", "operator_stdio", "commands", "toolchain_selection", "subject_inputs", "observed_host_tools", "provisioning_policy_binding", "workspace_locks", "materialized_payloads", "blocked_operations", "claim"],
       "properties": {
         "schema_version": {"const": 1},
         "id": {"const": "dcrypt-audit-provisioning-v1"},
@@ -198,6 +198,23 @@
             "CARGO_NET_OFFLINE": {"const": "true"}, "DCRYPT_AUDIT_SANDBOX": {"const": "unshare-all-v1"},
             "HOME": {"const": "/nonexistent"}, "LANG": {"const": "C.UTF-8"}, "LC_ALL": {"const": "C.UTF-8"},
             "PWD": {"const": "/dcrypt"}, "SOURCE_DATE_EPOCH": {"type": "string", "pattern": "^[0-9]+$"}, "TZ": {"const": "UTC"}
+          }
+        },
+        "operator_stdio": {
+          "type": "object", "additionalProperties": false,
+          "required": ["tty", "interactive_dev_console_mount", "stdin", "stdout_stderr", "regular_log_creation", "regular_log_child_descriptors", "regular_log_postcondition", "regular_log_rendering", "operator_exit_status", "regular_log_initial_size", "regular_log_max_bytes_after_run"],
+          "properties": {
+            "tty": {"const": "forbidden"},
+            "interactive_dev_console_mount": {"const": "forbidden"},
+            "stdin": {"const": "dev-null-or-captured-pipe"},
+            "stdout_stderr": {"const": "captured-pipes-or-dev-null-or-one-o-excl-held-link-count-one-regular-log"},
+            "regular_log_creation": {"const": "private-directory-o-excl-held-write-and-read-descriptors"},
+            "regular_log_child_descriptors": {"const": "only-stdio-duplicates-extra-held-descriptors-closed-before-exec"},
+            "regular_log_postcondition": {"const": "two-fstat-snapshots-match-held-descriptors-and-surviving-nonsymlink-path"},
+            "regular_log_rendering": {"const": "forbidden-untrusted-bytes-metadata-only"},
+            "operator_exit_status": {"const": "capture-before-postchecks-and-compare-exact-expected-exit-last"},
+            "regular_log_initial_size": {"const": 0},
+            "regular_log_max_bytes_after_run": {"const": 16777216}
           }
         },
         "commands": {
