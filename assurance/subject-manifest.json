@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "source_commit": "8ef506577911ff34cbe021f649b991612982c8df",
-  "source_tree": "43ee82bda5ce9c6619aaa68b4952d132d102591f",
+  "source_commit": "4582fc9c69e4119713671118869375d21473d486",
+  "source_tree": "56b4cf7761f4ecb406695a7d62ee7910acdfcbd1",
   "roots": [
     "."
   ],
@@ -25,7 +25,7 @@
   "files": [
     {
       "path": ".github/workflows/security-validation.yml",
-      "sha256": "e5d4ae3e3c0693008ce5b0ad031d1918c172fd88ebcae3a38cf27cab4b6082ae",
+      "sha256": "1fb51314c1800679a2b4c3b7ac07318e2959a390eda6d7a80d421f9866ae7a69",
       "git_mode": "100644"
     },
     {
@@ -35,7 +35,7 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "0028118623292c97b16725337847e24684fc5e6b3f49e5d5d2aae91d8a31dcef",
+      "sha256": "af93545ff57853ffb8d0d208b9b8a125ea6f659330244ff094db54c806da819c",
       "git_mode": "100644"
     },
     {
@@ -55,7 +55,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "7e3d3b4f7a73b7e15244f26045dd08f1f4cad3738c3d73893fcfb6097871e849",
+      "sha256": "c10a456c23658aae4c910db1edd6e73d7725eb714d0f67befccae6d036a5474e",
       "git_mode": "100644"
     },
     {
@@ -165,7 +165,7 @@
     },
     {
       "path": "crates/algorithms/src/aead/gcm/ghash/mod.rs",
-      "sha256": "ac74dafe22235346f40b40a2683151d2e653ec833246b556593afdd7b8b2f7a3",
+      "sha256": "4d1b79a485aea1cc4a8e39eac0ef30376b7424428bb9aa43f03be25081f341c4",
       "git_mode": "100644"
     },
     {
@@ -175,12 +175,12 @@
     },
     {
       "path": "crates/algorithms/src/aead/gcm/mod.rs",
-      "sha256": "58f4688418e4cd16ffc8ceb67051f0280587454a64ac69ff2fcb0d823152b37e",
+      "sha256": "f6277b561ec6cea72f77e9f7440b21581a016e36f19c7ed7e2be5b0be5879d9f",
       "git_mode": "100644"
     },
     {
       "path": "crates/algorithms/src/aead/gcm/tests.rs",
-      "sha256": "f66f0440a8ed57a85cbfd4faeb8e71a4472f15197285a0dc1307a4124e4386a0",
+      "sha256": "267c4b70fd68cfa59326fe22dd6c4f8a97520bae43411a6f1a463e6deadc0a5b",
       "git_mode": "100644"
     },
     {
@@ -540,7 +540,7 @@
     },
     {
       "path": "crates/algorithms/src/hash/sha2/tests.rs",
-      "sha256": "532ec4585ba12a999a220b152f58f68b703944358c6d6ab015c101223f74c7bb",
+      "sha256": "bd0ff9582de56e48925caf3662d27350f07d6bef4da2ccf9b3009d5f62f739fb",
       "git_mode": "100644"
     },
     {
@@ -1360,7 +1360,7 @@
     },
     {
       "path": "crates/sign/src/dilithium/tests/mod.rs",
-      "sha256": "7ac03125373e87af81ce612a6a599ecc0254cb1d1b9108fa8802257a9cdc78d7",
+      "sha256": "7bc13222b797a7fbc6797fe58b4dd8893feb20fa6bcadbe819a6bc2646a1e472",
       "git_mode": "100644"
     },
     {
@@ -1615,7 +1615,7 @@
     },
     {
       "path": "docs/algorithms/aead/gcm/README.md",
-      "sha256": "777c3125e01b3994ee89e549f30f2b29dbfc9ad5d5e08505f23897a96959f5d1",
+      "sha256": "34aef3f689c99b00a648092cf81e832c033b4d3ab9e1d14df79e62a58fc1f791",
       "git_mode": "100644"
     },
     {
@@ -1845,7 +1845,7 @@
     },
     {
       "path": "docs/kem/ml_kem/README.md",
-      "sha256": "f977550ef21fd9d150f7faa4b476ed55cee0f2a3c9bbbb83e624662b9aab6199",
+      "sha256": "0f83bb085e395540a514cbfb8b4014388e808534a4a6d511eb461bbcfb3e6ff5",
       "git_mode": "100644"
     },
     {
@@ -1920,7 +1920,7 @@
     },
     {
       "path": "docs/security/DCRYPT-2026-0008.md",
-      "sha256": "1561083bb6dbf5797beb78daacb51fd80ab0879707416302a0d23fd7d19ae224",
+      "sha256": "5f0c2b0724fa70795365eff8d1ffaf18708b7acc41dde9bcbb5851b420624c8f",
       "git_mode": "100644"
     },
     {
@@ -2135,7 +2135,7 @@
     },
     {
       "path": "tests/README.md",
-      "sha256": "e328f9e58051f1a234dd5917dbcb3b31be366f31ea73f05794183162ae651404",
+      "sha256": "4aa7db9e77d3f4ba2cffafc816e5894c38c291e49fc2e4aba5f36b2450ded32a",
       "git_mode": "100644"
     },
     {
@@ -2185,12 +2185,12 @@
     },
     {
       "path": "tests/src/suites/acvp/algorithms/ml_dsa.rs",
-      "sha256": "7623db0df912c31a0652d9054c8c0eb464e1840488c4303c6380b81b63591e78",
+      "sha256": "ae1e627c5df6b0b39645bb1b76b7d1ff20a0b2618acd7836af905849e7a5ec02",
       "git_mode": "100644"
     },
     {
       "path": "tests/src/suites/acvp/algorithms/ml_kem.rs",
-      "sha256": "9d493f9e637e68fd2a5e3beee4882ff352047f5d0146c57838020a66a981622e",
+      "sha256": "49e9d302301cbf0a10297cce57849b93ac210498465c519153e4a512319fb5da",
       "git_mode": "100644"
     },
     {
