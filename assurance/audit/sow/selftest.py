@@ -47,7 +47,48 @@ def mutate_status(root: Path) -> None:
 
 
 def mutate_freeze_id(root: Path) -> None:
-    replace(root / "audit-scope.toml", 'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"', 'candidate-freeze-id = "unbound"')
+    replace(root / "audit-scope.toml", 'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"', 'candidate-freeze-id = "unbound"')
+
+
+def mutate_old_freeze_id(root: Path) -> None:
+    for filename in ("audit-policy.toml", "audit-scope.toml"):
+        replace(
+            root / filename,
+            'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"',
+            'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"',
+        )
+
+
+def mutate_superseded_external_review(root: Path) -> None:
+    replace(
+        root / "audit-policy.toml",
+        "external-review-completed = false",
+        "external-review-completed = true",
+    )
+
+
+def mutate_partial_replay_erased(root: Path) -> None:
+    replace(
+        root / "audit-policy.toml",
+        "partial-independent-replay-observed = true",
+        "partial-independent-replay-observed = false",
+    )
+
+
+def mutate_required_complete_replay_claimed(root: Path) -> None:
+    replace(
+        root / "audit-scope.toml",
+        "required-complete-independent-replay-completed = false",
+        "required-complete-independent-replay-completed = true",
+    )
+
+
+def mutate_superseded_audit_evidence(root: Path) -> None:
+    replace(
+        root / "audit-scope.toml",
+        "audit-evidence-accepted = false",
+        "audit-evidence-accepted = true",
+    )
 
 
 def mutate_content_identity(root: Path) -> None:
@@ -183,7 +224,12 @@ def mutate_unexpected(root: Path) -> None:
 
 FIXTURES: list[tuple[str, Callable[[Path], None], str]] = [
     ("commissioned-state", mutate_status, "must remain candidate-uncommissioned"),
-    ("freeze-id-drift", mutate_freeze_id, "candidate freeze ID differs"),
+    ("policy-scope-freeze-id-mismatch", mutate_freeze_id, "scope candidate freeze ID differs"),
+    ("old-freeze-id-reuse", mutate_old_freeze_id, "policy candidate freeze ID differs"),
+    ("partial-independent-replay-erased", mutate_partial_replay_erased, "policy freeze supersession differs"),
+    ("required-complete-replay-falsely-claimed", mutate_required_complete_replay_claimed, "scope freeze supersession differs"),
+    ("superseded-external-review-claimed", mutate_superseded_external_review, "policy freeze supersession differs"),
+    ("superseded-audit-evidence-accepted", mutate_superseded_audit_evidence, "scope freeze supersession differs"),
     ("embedded-later-freeze-digest", mutate_content_identity, "defer content identity"),
     ("published-v3-inferred", mutate_subject_boundary, "subject-boundary differs from the exact candidate-versus-published-byte contract"),
     ("public-api-source-escape", mutate_public_api_source, "scope public-api-source differs from the exact versioned contract"),

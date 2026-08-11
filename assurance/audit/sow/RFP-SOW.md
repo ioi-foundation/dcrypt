@@ -1,14 +1,24 @@
 # Request for Proposal and Statement of Work: dcrypt external cryptographic audit
 
 - Status: **candidate / uncommissioned — do not issue**
-- Candidate freeze ID: `dcrypt-v3.0.0-audit-candidate-001`
+- Candidate freeze ID: `dcrypt-v3.0.0-audit-candidate-002`
 - Candidate freeze content identity: `resolved-by-post-subject-evidence-envelope`
-- Machine policy SHA-256: `8bc62e2963cbe0c31894b8d7778b7378d5dff62f535f9bb7703d659c56348d38`
-- Machine scope SHA-256: `3a370f191e1ef8e4908480fb4ea68d481e737dea08a8e4f4a088c59f8178ea48`
+- Supersedes freeze ID: `dcrypt-v3.0.0-audit-candidate-001`
+- Superseded freeze state: `invalidated-after-partial-independent-replay-before-acceptance`
+- Machine policy SHA-256: `3dd2871f0e9fcfd470a280a61f898d4b14c06a4c15a77552ebd3488d98509bd0`
+- Machine scope SHA-256: `25bc2a5bd185b49d16751ccf80097305032d74c52cc971fce0aeb7058b1142c2`
 
 This document is a vendor-ready template, not evidence that an audit has been
 commissioned, scheduled, started, or completed. No vendor contact is authorized
-by this file. Before issue, the candidate freeze must be independently replayed;
+by this file. Candidate-002 supersedes candidate-001, which was invalidated after
+partial independent replay observations but before acceptance. The reviewer
+observed a non-PTY self-test, materialization, 13-file regeneration, and
+structural/release replay for candidate-001. A documented PTY wrapper mismatch
+then showed that candidate-001 had not completed the full required replay
+contract. Those partial observations are not a completed required independent
+replay, acceptance, completed external review, external audit, or accepted audit
+or assurance evidence for candidate-001; it must not be issued. Before issue,
+candidate-002 must be independently replayed;
 a post-subject evidence envelope must map the stable ID to the canonical
 `freeze.json`, policy, scope, and SOW SHA-256 digests; and the security lead must
 separately authorize vendor contact. The in-subject SOW is not rewritten with
@@ -17,7 +27,7 @@ the later freeze digest, avoiding a self-referential freeze.
 ## 1. Subject and objective
 
 dcrypt requests an independent security assessment of the exact
-post-v3.0.0 assurance-branch candidate bytes bound by the candidate freeze. The
+post-v3.0.0 assurance-branch candidate-002 bytes bound by the candidate freeze. The
 objective is to find correctness, forgery, key-recovery, authentication,
 domain-separation, nonce, parsing, implementation, protocol-composition,
 side-channel, fault, dependency, build, and supply-chain defects before those

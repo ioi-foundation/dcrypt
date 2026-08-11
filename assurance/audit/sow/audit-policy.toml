@@ -1,13 +1,22 @@
-schema-version = 1
-document-id = "dcrypt-external-cryptographic-audit-policy-v1"
+schema-version = 2
+document-id = "dcrypt-external-cryptographic-audit-policy-v2"
 status = "candidate-uncommissioned"
-candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
+candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"
 candidate-freeze-content-identity = "resolved-by-post-subject-evidence-envelope"
 content-identity-policy = "The immutable in-subject SOW binds the stable candidate freeze ID. A later post-subject evidence envelope maps that ID to the canonical freeze.json SHA-256 and the policy, scope, and SOW SHA-256 digests without mutating these subject documents."
 owner = "dcrypt security assurance lead"
 approver = "independent dcrypt security reviewer"
 external-contact-authorized = false
 audit-commissioned = false
+
+[freeze-supersession]
+superseded-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
+status = "invalidated-after-partial-independent-replay-before-acceptance"
+reason = "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract."
+partial-independent-replay-observed = true
+required-complete-independent-replay-completed = false
+external-review-completed = false
+audit-evidence-accepted = false
 
 [subject-boundary]
 subject = "post-v3.0.0 assurance-branch candidate bytes identified by the candidate freeze"
@@ -247,6 +256,7 @@ scope-limitation-clears-row = false
 requirements = [
     "a post-subject evidence envelope maps the stable candidate freeze ID to a lowercase 64-character canonical freeze.json SHA-256 digest and the policy, scope, and SOW SHA-256 digests",
     "candidate freeze is independently regenerated and replayed",
+    "the superseded candidate-001 remains invalidated after partial independent replay, without completed required replay or acceptance, unissued, and unacceptable as audit or assurance evidence",
     "the issued SOW identifies the post-v3.0.0 candidate as its subject and does not imply that published v3.0.0 registry bytes were audited",
     "all required audit artifacts are present or explicitly recorded as release-blocking limitations",
     "policy, scope and SOW digest binding passes assurance/audit/sow/verify-sow.py",

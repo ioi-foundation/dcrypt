@@ -12,14 +12,24 @@ import tomllib
 from typing import Any
 
 
-FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-001"
+FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-002"
+SUPERSEDED_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-001"
 VERSIONED_DOCUMENT_SHA256 = {
-    "audit-policy.toml": "8bc62e2963cbe0c31894b8d7778b7378d5dff62f535f9bb7703d659c56348d38",
-    "audit-scope.toml": "3a370f191e1ef8e4908480fb4ea68d481e737dea08a8e4f4a088c59f8178ea48",
-    "RFP-SOW.md": "6dc4374e54b6ce5c99f9b79c8c90c4155d73b231b32cb2cb501688e4627ccc2f",
+    "audit-policy.toml": "3dd2871f0e9fcfd470a280a61f898d4b14c06a4c15a77552ebd3488d98509bd0",
+    "audit-scope.toml": "25bc2a5bd185b49d16751ccf80097305032d74c52cc971fce0aeb7058b1142c2",
+    "RFP-SOW.md": "a67531bbdb65d09bb75fc7e31890e81791bbc747d55755a5ea187ef3a88f4179",
+}
+FREEZE_SUPERSESSION = {
+    "superseded-freeze-id": SUPERSEDED_FREEZE_ID,
+    "status": "invalidated-after-partial-independent-replay-before-acceptance",
+    "reason": "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract.",
+    "partial-independent-replay-observed": True,
+    "required-complete-independent-replay-completed": False,
+    "external-review-completed": False,
+    "audit-evidence-accepted": False,
 }
 POLICY_SCALARS = {
-    "document-id": "dcrypt-external-cryptographic-audit-policy-v1",
+    "document-id": "dcrypt-external-cryptographic-audit-policy-v2",
     "content-identity-policy": "The immutable in-subject SOW binds the stable candidate freeze ID. A later post-subject evidence envelope maps that ID to the canonical freeze.json SHA-256 and the policy, scope, and SOW SHA-256 digests without mutating these subject documents.",
     "owner": "dcrypt security assurance lead",
     "approver": "independent dcrypt security reviewer",
@@ -32,7 +42,7 @@ SUBJECT_BOUNDARY = {
     "rule": "Audit work and conclusions apply only to bytes bound by the candidate freeze. They do not apply to the published v3.0.0 tag or registry archives unless the auditor verifies an explicit byte-for-byte comparison and the final report names that extension.",
 }
 SCOPE_SCALARS = {
-    "document-id": "dcrypt-v3-external-cryptographic-audit-scope-v1",
+    "document-id": "dcrypt-v3-external-cryptographic-audit-scope-v2",
     "subject-version-label": "post-v3.0.0 assurance-branch candidate",
     "atomic-row-source": "assurance/atomic-operations.toml",
     "public-api-source": "assurance/public-api-snapshot.json",
@@ -60,6 +70,7 @@ POLICY_TOP_KEYS = {
     "approver",
     "external-contact-authorized",
     "audit-commissioned",
+    "freeze-supersession",
     "subject-boundary",
     "independence",
     "specialist",
@@ -79,6 +90,7 @@ SCOPE_TOP_KEYS = {
     "status",
     "candidate-freeze-id",
     "candidate-freeze-content-identity",
+    "freeze-supersession",
     "subject-version-label",
     "atomic-row-source",
     "public-api-source",
@@ -353,6 +365,7 @@ FORBIDDEN_REDACTIONS = (
 ISSUANCE_REQUIREMENTS = {
     "a post-subject evidence envelope maps the stable candidate freeze ID to a lowercase 64-character canonical freeze.json SHA-256 digest and the policy, scope, and SOW SHA-256 digests",
     "candidate freeze is independently regenerated and replayed",
+    "the superseded candidate-001 remains invalidated after partial independent replay, without completed required replay or acceptance, unissued, and unacceptable as audit or assurance evidence",
     "the issued SOW identifies the post-v3.0.0 candidate as its subject and does not imply that published v3.0.0 registry bytes were audited",
     "all required audit artifacts are present or explicitly recorded as release-blocking limitations",
     "policy, scope and SOW digest binding passes assurance/audit/sow/verify-sow.py",
@@ -454,10 +467,11 @@ def verify_files(root: Path) -> None:
 
 def verify_common_identity(policy: dict[str, Any], scope: dict[str, Any]) -> None:
     for name, doc in (("policy", policy), ("scope", scope)):
-        require(doc.get("schema-version") == 1, f"{name} schema-version must be 1")
+        require(doc.get("schema-version") == 2, f"{name} schema-version must be 2")
         require(doc.get("status") == "candidate-uncommissioned", f"{name} must remain candidate-uncommissioned")
         require(doc.get("candidate-freeze-id") == FREEZE_ID, f"{name} candidate freeze ID differs")
         require(doc.get("candidate-freeze-content-identity") == "resolved-by-post-subject-evidence-envelope", f"{name} must defer content identity to the post-subject evidence envelope")
+        require(doc.get("freeze-supersession") == FREEZE_SUPERSESSION, f"{name} freeze supersession differs from the exact invalidated candidate-001 disposition")
     require(policy["external-contact-authorized"] is False, "external contact must remain unauthorized")
     require(policy["audit-commissioned"] is False, "audit must remain uncommissioned")
 
@@ -670,6 +684,8 @@ def verify_markdown(root: Path, policy: dict[str, Any], scope: dict[str, Any]) -
         "Status: **candidate / uncommissioned — do not issue**",
         f"Candidate freeze ID: `{FREEZE_ID}`",
         "Candidate freeze content identity: `resolved-by-post-subject-evidence-envelope`",
+        f"Supersedes freeze ID: `{SUPERSEDED_FREEZE_ID}`",
+        "Superseded freeze state: `invalidated-after-partial-independent-replay-before-acceptance`",
         f"Machine policy SHA-256: `{sha256(root / 'audit-policy.toml')}`",
         f"Machine scope SHA-256: `{sha256(root / 'audit-scope.toml')}`",
     }
@@ -679,6 +695,10 @@ def verify_markdown(root: Path, policy: dict[str, Any], scope: dict[str, Any]) -
         require(workstream["title"] in markdown, f"SOW does not name workstream title: {workstream['title']}")
     required_phrases = [
         "No vendor contact is authorized",
+        "Candidate-002 supersedes candidate-001, which was invalidated after partial independent replay observations but before acceptance",
+        "non-PTY self-test, materialization, 13-file regeneration",
+        "documented PTY wrapper mismatch",
+        "not a completed required independent replay, acceptance, completed external review, external audit, or accepted audit or assurance evidence for candidate-001",
         "do **not** apply to the published v3.0.0 Git tag or registry archives",
         "Every confirmed finding requires a regression test, remediation record, and",
         "mandatory independent retest",

@@ -1,7 +1,7 @@
-schema-version = 1
-document-id = "dcrypt-v3-external-cryptographic-audit-scope-v1"
+schema-version = 2
+document-id = "dcrypt-v3-external-cryptographic-audit-scope-v2"
 status = "candidate-uncommissioned"
-candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
+candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"
 candidate-freeze-content-identity = "resolved-by-post-subject-evidence-envelope"
 subject-version-label = "post-v3.0.0 assurance-branch candidate"
 atomic-row-source = "assurance/atomic-operations.toml"
@@ -10,6 +10,15 @@ threat-model-source = "assurance/threat-models/"
 scope-rule = "All public atomic assurance rows matching an in-scope algorithm, primitive, composition, format or error path are in scope; generated aliases are traced to their owning implementation."
 finding-mapping-rule = "Every finding must map to one or more exact assurance row IDs, or create an explicit new row when the affected behavior was absent from the inventory."
 exclusion-rule = "No scope exclusion is effective unless listed in the candidate freeze, justified by the auditor, approved by the release authority, and retained as a release-blocking limitation for affected rows."
+
+[freeze-supersession]
+superseded-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
+status = "invalidated-after-partial-independent-replay-before-acceptance"
+reason = "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract."
+partial-independent-replay-observed = true
+required-complete-independent-replay-completed = false
+external-review-completed = false
+audit-evidence-accepted = false
 
 [[workstream]]
 id = "ml-kem"
