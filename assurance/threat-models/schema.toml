@@ -1,0 +1,86 @@
+schema-version = 1
+document-schema-version = 1
+coverage-schema-version = 1
+coverage-policy = "conservative-all-atomic-rows-v1"
+expected-atomic-row-count = 9298
+expected-release-blocked-count = 9298
+maximum-validity-days = 180
+review-evidence-kind = "threat-model-independent-review"
+review-evidence-purpose = "threat-model-independent-review"
+mitigation-evidence-kind = "threat-model-mitigation-verification"
+mitigation-evidence-purpose = "threat-model-mitigation-verification"
+review-evidence-artifact-role = "threat-model-independent-review-record"
+mitigation-evidence-artifact-role = "threat-model-mitigation-verification-record"
+
+required-model-ids = [
+  "TM-DEPENDENCY-ORACLE-COMMON-MODE",
+  "TM-DOS-RESOURCE-BOUNDS",
+  "TM-EMBEDDED-PHYSICAL-ACCESS",
+  "TM-FAULT-INJECTION",
+  "TM-LOCAL-CORESIDENT-CACHE",
+  "TM-POWER-EM",
+  "TM-PROTOCOL-MISUSE",
+  "TM-REMOTE-MALICIOUS-INPUT",
+  "TM-RNG-FAILURE",
+  "TM-SECRET-LIFECYCLE",
+  "TM-SUPPLY-CHAIN-TOOLCHAIN",
+]
+
+required-string-fields = [
+  "id",
+  "title",
+  "status",
+  "owner",
+  "reviewer",
+  "independent-review-status",
+  "public-entrypoint-scope",
+  "atomic-row-selector",
+  "affected-row-set",
+]
+
+conditional-list-fields = [
+  "independent-review-evidence",
+]
+
+required-list-fields = [
+  "affected-algorithms",
+  "affected-operations",
+  "affected-profiles",
+  "affected-platforms",
+  "trust-boundaries",
+  "attacker-capabilities",
+  "preconditions",
+  "excluded-capabilities",
+  "assumptions",
+  "known-limitations",
+  "required-evidence-tiers",
+  "claim-invalidation-conditions",
+]
+
+required-residual-risk-fields = [
+  "likelihood",
+  "impact",
+  "rating",
+  "disposition",
+  "rationale",
+  "acceptance-authority",
+]
+
+allowed-statuses = ["active", "candidate", "retired"]
+allowed-independent-review-statuses = ["complete", "required"]
+allowed-mitigation-statuses = ["implemented-unverified", "planned", "verified"]
+allowed-risk-levels = ["low", "moderate", "high", "critical"]
+allowed-risk-dispositions = ["accept", "avoid", "mitigate", "transfer"]
+allowed-evidence-tiers = [
+  "dedicated-side-channel",
+  "deterministic-regression",
+  "external-audit",
+  "fault-analysis",
+  "independent-interoperability",
+  "persistent-fuzz",
+  "physical-validation",
+  "platform-runtime",
+  "resource-bound-analysis",
+  "source-policy",
+  "supply-chain-reproducibility",
+]

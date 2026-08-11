@@ -1,0 +1,619 @@
+# Candidate threat models for the exact Leg 2 atomic assurance inventory.
+# These records declare scope and residual risk. They do not promote any
+# assurance evidence or clear any release blocker.
+schema-version = 1
+model-set-version = "2026-08-11-candidate-1"
+coverage-policy = "conservative-all-atomic-rows-v1"
+source-ledger = "../ledger.toml"
+source-ledger-sha256 = "96adbbbb2076cc15c6d3cf49359e90b6e8fb7ef1596520a3a808b21d4d67589c"
+source-operations = "../atomic-operations.toml"
+source-operations-sha256 = "c053122686ce623d3a688a0dca3eabff1d6a3139be1f63987ae4f411cfa17072"
+source-api-snapshot = "../public-api-snapshot.json"
+source-api-snapshot-sha256 = "dcfe5911f06c1cef3ab3d32d8b1124fb81542bbbeb7ff7f84b9bbc36c1c31386"
+generated-coverage = "coverage.json"
+generated-document = "THREAT-MODELS.md"
+expected-atomic-row-count = 9298
+expected-release-blocked-count = 9298
+
+[[model]]
+id = "TM-REMOTE-MALICIOUS-INPUT"
+title = "Remote malicious inputs and network-controlled cryptographic objects"
+status = "candidate"
+owner = "dcrypt security assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "All operation-bearing public bindings and parameter/data surfaces; exact bindings are recorded per row in coverage.json."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-REMOTE-MALICIOUS-INPUT"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "cryptographic-authenticity", security-properties = ["authenticity", "integrity"] },
+  { id = "secret-keys-and-shared-secrets", security-properties = ["confidentiality", "unpredictability"] },
+  { id = "parser-and-protocol-state", security-properties = ["availability", "fail-closed validation"] },
+]
+trust-boundaries = [
+  "Public key, signature, ciphertext, tag, nonce, AAD, context, DST, framing, and serialized-key inputs cross from an untrusted caller into dcrypt.",
+  "Returned success, error, plaintext, shared secret, or verification verdict crosses back to the caller.",
+]
+attacker-capabilities = [
+  "Choose, truncate, extend, mutate, replay, reorder, or make noncanonical every externally accepted byte string.",
+  "Repeat calls and observe public results, errors, output lengths, process termination, and coarse remote timing.",
+]
+preconditions = [
+  "An application exposes at least one dcrypt operation to data influenced by an untrusted remote party.",
+  "The attacker can distinguish success, failure, output, connection behavior, or service availability."
+]
+excluded-capabilities = [
+  "Direct process-memory read/write, privileged host control, physical probing, and precise co-resident cache observation are covered by separate models.",
+]
+assumptions = [
+  "Callers preserve the documented type, key, nonce, context, and protocol preconditions that are outside the library's validation boundary.",
+  "The implementation and dependency bytes are those bound by the assurance ledger; supply-chain substitution is covered separately.",
+]
+known-limitations = [
+  "The 8,632 semantically unreviewed low-level rows require conservative inclusion, so this model is intentionally broader than a final operation-specific remote surface.",
+  "Persistent semantic fuzzing, complete independent interoperability, and an independent external cryptographic audit are not complete.",
+]
+required-evidence-tiers = ["deterministic-regression", "external-audit", "independent-interoperability", "persistent-fuzz", "resource-bound-analysis"]
+claim-invalidation-conditions = [
+  "Any malformed or noncanonical input accepted contrary to the applicable standard or wire contract.",
+  "Any forgery, authentication bypass, key recovery, predictable shared secret, panic, memory exhaustion, unbounded loop, or fail-open verdict reachable from attacker-controlled input.",
+]
+mitigations = [
+  { id = "strict-parser-regressions", status = "implemented-unverified", evidence = ["acvp-harness-integrity", "public-api-inventory-integrity"], description = "Existing strict parser and ACVP regression layers are source evidence only." },
+  { id = "persistent-semantic-fuzzing", status = "planned", evidence = [], description = "Leg 5 persistent semantic and differential campaigns remain required." },
+  { id = "external-cryptographic-audit", status = "planned", evidence = [], description = "Independent review of all remote input and failure paths remains required." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "Broad public parsing and cryptographic verification surfaces remain unaudited and incompletely fuzzed; a correctness defect can enable authentication bypass, key compromise, or denial of service.", acceptance-authority = "dcrypt security release authority; Critical residual risk is not releasable" }
+
+[[model]]
+id = "TM-PROTOCOL-MISUSE"
+title = "Protocol misuse, nonce reuse, downgrade, replay, and domain separation"
+status = "candidate"
+owner = "dcrypt security assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "Every public operation and low-level composition surface that can participate in a protocol; exact rows are recorded in coverage.json."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-PROTOCOL-MISUSE"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "protocol-transcripts", security-properties = ["domain separation", "context binding", "downgrade resistance"] },
+  { id = "nonces-and-one-time-keys", security-properties = ["uniqueness", "single use"] },
+  { id = "serialized-objects", security-properties = ["version integrity", "canonical interpretation"] },
+]
+trust-boundaries = [
+  "Applications choose algorithms, features, keys, nonces, AAD, contexts, DSTs, prehash modes, and framing around dcrypt operations.",
+  "Custom ECIES, hybrid, and streaming transcripts cross between dcrypt and application protocol state."
+]
+attacker-capabilities = [
+  "Influence protocol negotiation, replay complete or partial objects, substitute contexts/DSTs/AAD, and induce nonce or key reuse through application workflows.",
+  "Exploit ambiguity between standard, legacy, transitional, custom, and versioned formats."
+]
+preconditions = [
+  "A caller composes dcrypt operations into a stateful or multi-party protocol.",
+  "At least one required uniqueness, ordering, version, context, or domain-separation property is enforced partly outside dcrypt."
+]
+excluded-capabilities = [
+  "Cryptanalysis that breaks a correctly instantiated primitive without protocol misuse is outside this model and remains external-audit scope.",
+]
+assumptions = [
+  "Applications authenticate algorithm negotiation and provide replay state where whole-object replay is a threat.",
+  "Callers never reinterpret legacy dcrypt encodings as standardized objects and preserve explicit provenance during migration."
+]
+known-limitations = [
+  "Whole-stream replay prevention remains application-owned, and custom ECIES/hybrid transcript specifications have not yet received clean-room interoperability review.",
+  "Low-level generic exports permit compositions whose complete protocol semantics are not captured by the current ledger."
+]
+required-evidence-tiers = ["deterministic-regression", "external-audit", "independent-interoperability", "persistent-fuzz"]
+claim-invalidation-conditions = [
+  "Any nonce, context, prehash, DST, AAD, version, recipient-key, or transcript component is omitted, ignored, ambiguously encoded, or accepted under the wrong profile.",
+  "Any replay, reorder, truncation, downgrade, duplicate-message, or rogue-key case succeeds contrary to the declared protocol contract."
+]
+mitigations = [
+  { id = "versioned-framing-and-transcripts", status = "implemented-unverified", evidence = ["fuzz-hybrid", "fuzz-symmetric"], description = "Existing framing and decoder regressions are bounded source evidence, not protocol assurance." },
+  { id = "clean-room-protocol-references", status = "planned", evidence = [], description = "Leg 4 must freeze wire specifications and build independent references." },
+  { id = "protocol-audit", status = "planned", evidence = [], description = "The external audit must review misuse resistance and domain separation end to end." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "Historical nonce, framing, standards-label, and domain-separation defects demonstrate that composition errors can defeat otherwise sound primitives.", acceptance-authority = "dcrypt security release authority; unresolved nonce or domain-separation risk is not releasable" }
+
+[[model]]
+id = "TM-LOCAL-CORESIDENT-CACHE"
+title = "Local and co-resident timing, cache, branch, and memory-address observation"
+status = "candidate"
+owner = "dcrypt side-channel assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "All atomic rows are conservatively included until every low-level secret/public data flow is classified."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-LOCAL-CORESIDENT-CACHE"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "secret-dependent-execution", security-properties = ["secret-independent control flow", "secret-independent memory access"] },
+  { id = "long-term-and-ephemeral-secrets", security-properties = ["confidentiality"] },
+]
+trust-boundaries = [
+  "Secret-bearing code executes on a CPU shared with operating-system, process, VM, container, or co-resident adversaries.",
+  "Compiler, target, microcode, caches, predictors, and memory hierarchy mediate source behavior."
+]
+attacker-capabilities = [
+  "Collect repeated high-resolution timings and branch/cache/memory-address observations under attacker-selected public inputs.",
+  "Co-schedule code or otherwise create a local observation channel without arbitrary process-memory access."
+]
+preconditions = [
+  "The deployment threat profile includes local or co-resident adversaries and repeated operations under related or identical secret material.",
+]
+excluded-capabilities = [
+  "Direct physical power/EM probing, invasive fault injection, and privileged arbitrary memory read are modeled separately."
+]
+assumptions = [
+  "A constant-time claim is limited to exact source, compiler, flags, target, binary, microarchitecture, and measured environment.",
+  "Public lengths and protocol state may vary unless a protocol explicitly treats them as secret."
+]
+known-limitations = [
+  "The in-repository statistical suite is not dudect or ctgrind and does not provide dedicated cache evidence.",
+  "Only selected BLS and GHASH emissions have dedicated assembly guards; transitive optimized secret paths remain incomplete."
+]
+required-evidence-tiers = ["dedicated-side-channel", "external-audit", "platform-runtime", "source-policy"]
+claim-invalidation-conditions = [
+  "Any reproducible secret-dependent branch, memory address, cache signal, or statistically meaningful timing signal in the claimed scope.",
+  "Any compiler or target change not covered by current source/binary/disassembly-bound evidence."
+]
+mitigations = [
+  { id = "constant-time-policy", status = "implemented-unverified", evidence = ["constant-time-smoke", "implementation-boundary"], description = "Current policy, statistical smoke, and selected assembly gates are regression layers only." },
+  { id = "dedicated-dudect-and-taint", status = "planned", evidence = [], description = "Leg 6 must add dedicated-host fixed-vs-random and secret-taint branch/address analysis." },
+  { id = "transitive-assembly-review", status = "planned", evidence = [], description = "Every claimed secret path requires compiler/target-bound assembly review." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "Historical GHASH compiler behavior demonstrates that source masks and smoke timing alone cannot support a broad constant-time claim.", acceptance-authority = "dcrypt security release authority; reproducible secret-dependent execution blocks release" }
+
+[[model]]
+id = "TM-EMBEDDED-PHYSICAL-ACCESS"
+title = "Embedded deployment and physical-access adversaries"
+status = "candidate"
+owner = "dcrypt embedded assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "All atomic rows and declared Thumb/no_std profiles, conservatively including code that may be linked into embedded products."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-EMBEDDED-PHYSICAL-ACCESS"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "embedded-secret-material", security-properties = ["confidentiality", "integrity", "availability"] },
+  { id = "firmware-and-boot-state", security-properties = ["code integrity", "rollback resistance"] },
+]
+trust-boundaries = [
+  "Dcrypt code and caller-owned RNG state execute on devices an adversary may possess or instrument.",
+  "Memory, debug interfaces, storage, firmware update, and board-level signals are outside dcrypt's direct control."
+]
+attacker-capabilities = [
+  "Possess a device, repeat operations, inspect externally exposed buses or debug facilities, and collect physical side-channel observations.",
+  "Reset, brown out, or manipulate the surrounding execution environment within the device threat profile."
+]
+preconditions = [
+  "A product deploys dcrypt on supported allocator-backed no_std/Thumb or comparable embedded hardware.",
+]
+excluded-capabilities = [
+  "No claim is made against invasive semiconductor modification or arbitrary privileged firmware compromise without a product-specific model."
+]
+assumptions = [
+  "The integrator defines secure boot, debug-lock, storage, memory-protection, entropy, and key-erasure controls outside dcrypt.",
+  "Cross-compilation alone is not runtime or physical assurance."
+]
+known-limitations = [
+  "The repository has Thumb compilation/assembly checks but no native embedded runtime, board, secure-boot, debug-interface, or physical-lab evidence.",
+  "Safe-Rust zeroization cannot guarantee removal of historical register, stack, allocator, swap, or crash-dump copies."
+]
+required-evidence-tiers = ["external-audit", "physical-validation", "platform-runtime", "source-policy"]
+claim-invalidation-conditions = [
+  "A documented embedded deployment claim lacks product-specific memory, entropy, debug, update, and physical-access assumptions.",
+  "A reproducible physical observation or device-state manipulation leaks a key or bypasses authentication."
+]
+mitigations = [
+  { id = "thumb-boundary-build", status = "implemented-unverified", evidence = ["implementation-boundary"], description = "Declared Thumb profile compilation is implementation-boundary evidence only." },
+  { id = "embedded-profile-validation", status = "planned", evidence = [], description = "Representative native-device execution and integrator threat profiles remain required." },
+  { id = "physical-lab-assessment", status = "planned", evidence = [], description = "Power/EM and fault work is required where the product profile justifies it." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "No repository-only test establishes resistance on a physically accessible embedded product, and crucial controls belong to the integrator.", acceptance-authority = "product security authority plus dcrypt security release authority" }
+
+[[model]]
+id = "TM-POWER-EM"
+title = "Power and electromagnetic side-channel observation"
+status = "candidate"
+owner = "dcrypt physical side-channel assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "All atomic rows are conservatively included; product-specific scope must later identify secret-bearing operations and physical profiles."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-POWER-EM"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "physical-leakage-profile", security-properties = ["secret confidentiality", "trace non-distinguishability"] },
+]
+trust-boundaries = [
+  "Instruction/data activity becomes device-level power and electromagnetic emissions outside the language abstraction.",
+  "Measurement fixtures, probes, acquisition equipment, and analysis code form an external evidence boundary."
+]
+attacker-capabilities = [
+  "Collect aligned or unaligned power/EM traces across chosen or fixed inputs and repeat operations under a target secret.",
+]
+preconditions = [
+  "The deployment permits sufficiently close physical access and repeated measurement, or the product makes a physical side-channel claim."
+]
+excluded-capabilities = [
+  "Fault injection and arbitrary firmware compromise are covered by separate models."
+]
+assumptions = [
+  "Trace collection hardware, firmware build, trigger path, analysis version, and environmental controls are recorded and independently replayable.",
+]
+known-limitations = [
+  "No TVLA, power, or EM trace corpus currently exists in the repository.",
+  "Portable source structure and timing tests do not establish physical leakage resistance."
+]
+required-evidence-tiers = ["dedicated-side-channel", "external-audit", "physical-validation", "platform-runtime"]
+claim-invalidation-conditions = [
+  "A reproducible leakage assessment produces a statistically meaningful secret-correlated signal in a claimed profile.",
+  "Required raw traces, build identity, device identity, harness parameters, or analysis provenance are missing."
+]
+mitigations = [
+  { id = "physical-evidence-policy", status = "planned", evidence = [], description = "Leg 6 must define evidence capture and disposition for relevant physical profiles." },
+  { id = "representative-tvla-campaign", status = "planned", evidence = [], description = "Run TVLA-class and deeper assessment only for justified embedded/physical profiles." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "There is currently no physical trace evidence, so dcrypt cannot make a power/EM resistance claim.", acceptance-authority = "product security authority plus dcrypt side-channel authority" }
+
+[[model]]
+id = "TM-FAULT-INJECTION"
+title = "Fault injection against authentication and secret operations"
+status = "candidate"
+owner = "dcrypt fault-analysis assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "All atomic rows are included until operation-level fault relevance is independently classified."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-FAULT-INJECTION"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "authentication-decisions", security-properties = ["fail-closed verification", "integrity"] },
+  { id = "secret-computation-state", security-properties = ["confidentiality", "correctness"] },
+]
+trust-boundaries = [
+  "Hardware execution, memory, clock, voltage, reset, and instruction delivery can deviate from the fault-free Rust abstract machine.",
+  "Caller retry and error-handling behavior can amplify or expose a faulted result."
+]
+attacker-capabilities = [
+  "Induce transient data, instruction-skip, clock, voltage, reset, or memory faults and observe whether an operation succeeds, fails, or leaks correlated output.",
+]
+preconditions = [
+  "The deployment threat model permits physical or privileged fault induction and repeated observations."
+]
+excluded-capabilities = [
+  "Ordinary malformed input without induced execution faults is covered by the remote-input model."
+]
+assumptions = [
+  "Fault resistance is not inherited from memory safety, constant-time structure, or correct fault-free test vectors.",
+  "Product-specific redundancy, sensors, reset policy, and key invalidation are external unless explicitly bound."
+]
+known-limitations = [
+  "No instruction-skip, data-fault, voltage/clock, or fault-simulation campaign currently exists.",
+  "Implicit rejection and authentication checks have not been assessed for faulted control flow."
+]
+required-evidence-tiers = ["external-audit", "fault-analysis", "physical-validation", "platform-runtime"]
+claim-invalidation-conditions = [
+  "A reproducible fault causes acceptance of invalid data, predictable/recovered secret material, unauthenticated plaintext, or bypass of a required failure path.",
+  "A product claims fault resistance without exact fault model, device/build identity, campaign parameters, and independent review."
+]
+mitigations = [
+  { id = "fault-path-analysis", status = "planned", evidence = [], description = "Audit authentication, implicit rejection, key validation, and error paths for plausible fault outcomes." },
+  { id = "fault-campaign", status = "planned", evidence = [], description = "Run simulation or physical campaigns where product threat profiles justify them." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "Fault behavior is presently untested and may invalidate authentication or secret-handling assumptions even when fault-free behavior is correct.", acceptance-authority = "product security authority plus dcrypt security release authority" }
+
+[[model]]
+id = "TM-SUPPLY-CHAIN-TOOLCHAIN"
+title = "Source, dependency, toolchain, action, runner, and artifact compromise"
+status = "candidate"
+owner = "dcrypt supply-chain assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "Every atomic row, published crate, excluded workspace, workflow, build input, and generated evidence path."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-SUPPLY-CHAIN-TOOLCHAIN"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "source-and-release-artifacts", security-properties = ["integrity", "provenance", "reproducibility"] },
+  { id = "dependency-and-toolchain-closures", security-properties = ["integrity", "availability", "policy compliance"] },
+  { id = "assurance-evidence", security-properties = ["authenticity", "freshness", "independent replayability"] },
+]
+trust-boundaries = [
+  "Git objects, crates.io archives, dependency registries, Rust toolchains, linkers, containers, GitHub Actions, runners, caches, and generated evidence cross administrative boundaries.",
+  "Local build products and downloaded artifacts may be attacker-controlled until independently verified."
+]
+attacker-capabilities = [
+  "Substitute source, dependency, action, compiler, linker, container, registry archive, cache entry, or generated evidence.",
+  "Compromise a maintainer credential or build runner without necessarily changing reviewed source."
+]
+preconditions = [
+  "A release or assurance conclusion consumes an external or generated input without an independently verified immutable binding."
+]
+excluded-capabilities = [
+  "Cryptographic compromise of SHA-256 or Git object hashing is outside the current model and would require an immediate model revision."
+]
+assumptions = [
+  "Immutable identifiers are verified from at least one independently controlled source and clean-room replay is separated from evidence generation.",
+  "Secrets and credentials are not written into manifests, logs, or command lines."
+]
+known-limitations = [
+  "SBOMs, signed attestations, container digests, independent clean-room rebuilds, and complete published-archive replay are not yet bound by the ledger.",
+  "The current dependency exception lacks machine-enforced ownership and expiry; Leg 8 remains required."
+]
+required-evidence-tiers = ["external-audit", "platform-runtime", "source-policy", "supply-chain-reproducibility"]
+claim-invalidation-conditions = [
+  "Any bound source, lockfile, toolchain, action, container, archive, artifact, or evidence digest differs or cannot be independently obtained and replayed.",
+  "A generated result is treated as trusted without independent replay or an unclassified dependency/workspace enters scope."
+]
+mitigations = [
+  { id = "implementation-boundary", status = "implemented-unverified", evidence = ["implementation-boundary", "assurance-ledger-control"], description = "Exact package/dependency/source controls exist but remain informational evidence." },
+  { id = "reproducible-audit-freeze", status = "planned", evidence = [], description = "Leg 3 must bind all audit inputs and clearly record missing artifacts." },
+  { id = "signed-clean-room-attestations", status = "planned", evidence = [], description = "Leg 8 must add SBOM, signing, and independent offline rebuild evidence." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "Current source and closure controls are strong but do not yet establish independent artifact reproducibility or protect every build-service trust boundary.", acceptance-authority = "dcrypt release and supply-chain security authorities" }
+
+[[model]]
+id = "TM-DEPENDENCY-ORACLE-COMMON-MODE"
+title = "Dependency and interoperability-oracle common-mode failure"
+status = "candidate"
+owner = "dcrypt interoperability assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "Every atomic row and every vector/oracle result used to support its correctness or interoperability classification."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-DEPENDENCY-ORACLE-COMMON-MODE"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "correctness-oracles", security-properties = ["independence", "provenance", "semantic agreement"] },
+  { id = "standards-and-vectors", security-properties = ["authenticity", "correct interpretation"] },
+]
+trust-boundaries = [
+  "External libraries, reference implementations, generated vectors, standards text, and adapters are separate evidence producers.",
+  "Shared source ancestry, arithmetic, tables, FFI backends, or generators can silently remove implementation independence."
+]
+attacker-capabilities = [
+  "Exploit a shared defect or compromised upstream that appears consistently in dcrypt and its nominal oracle.",
+  "Supply incomplete, transformed, stale, or incorrectly attributed vectors and provenance."
+]
+preconditions = [
+  "An assurance conclusion relies on agreement with a dependency, oracle, vector corpus, or common specification interpretation."
+]
+excluded-capabilities = [
+  "A mathematically independent implementation with separately verified provenance and no shared lineage is outside the common-mode condition but still requires review."
+]
+assumptions = [
+  "Different package or language names do not establish independence; lineage must be documented and reviewed.",
+  "Oracle execution is offline after a pinned provisioning step and cannot mutate production dependencies."
+]
+known-limitations = [
+  "Current independent-oracle coverage is incomplete and lineage/provenance is uneven; the ACVP-format corpus has no verified upstream acquisition identity.",
+  "A second independent BLS lineage and several standardized algorithm oracles remain Leg 4 work."
+]
+required-evidence-tiers = ["external-audit", "independent-interoperability", "source-policy", "supply-chain-reproducibility"]
+claim-invalidation-conditions = [
+  "An accepted oracle has unknown/shared lineage, unpinned source, checksum drift, missing license/provenance, or requires network access during final verification.",
+  "Dcrypt and its oracle agree only because they share the implementation, arithmetic backend, tables, generator, or malformed vector interpretation."
+]
+mitigations = [
+  { id = "isolated-verification-workspace", status = "implemented-unverified", evidence = ["implementation-boundary", "bls-interoperability", "xchacha-interoperability"], description = "Oracle dependencies are isolated, but existing records are informational and not complete lineage evidence." },
+  { id = "oracle-provenance-dossiers", status = "planned", evidence = [], description = "Leg 4 must bind source, version, checksum, license, acquisition, and lineage." },
+  { id = "multi-lineage-review", status = "planned", evidence = [], description = "Critical standardized rows require genuinely independent implementations and human lineage review." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "Common-mode implementation or vector defects can produce convincing but false agreement across the current test stack.", acceptance-authority = "dcrypt security assurance plus independent oracle-lineage reviewer" }
+
+[[model]]
+id = "TM-RNG-FAILURE"
+title = "Caller-owned RNG failure, entropy degradation, and randomness misuse"
+status = "candidate"
+owner = "dcrypt randomness assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "Every atomic row is conservatively included until all randomness-consuming and randomness-dependent low-level operations are classified."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-RNG-FAILURE"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "generated-secrets-and-nonces", security-properties = ["unpredictability", "uniqueness", "uniformity"] },
+  { id = "failure-path-state", security-properties = ["fail-closed behavior", "clearing on partial write"] },
+]
+trust-boundaries = [
+  "Caller-owned `CryptoRng + RngCore` implementations supply all cryptographic randomness across the public API.",
+  "Partial writes, errors, deterministic test RNGs, entropy sources, seeding, reseeding, and process-fork behavior are outside dcrypt's implementation boundary."
+]
+attacker-capabilities = [
+  "Influence entropy availability or quality, trigger partial-write/error paths, force state reuse/forking, or cause deterministic/repeated outputs through caller integration.",
+]
+preconditions = [
+  "An operation generates a key, scalar, nonce, salt, seed, encapsulation randomness, or hedged-signing randomness from caller state."
+]
+excluded-capabilities = [
+  "A correct and uncompromised caller RNG with sufficient entropy is assumed unpredictable; its internal design is not audited as dcrypt code."
+]
+assumptions = [
+  "Applications select, seed, protect, reseed, and monitor a suitable cryptographic RNG for their platform and threat model.",
+  "Dcrypt propagates RNG errors and clears partially initialized secret destinations before returning."
+]
+known-limitations = [
+  "The type contract cannot prove entropy quality, fork safety, hardware RNG health, or application key/nonce uniqueness.",
+  "Randomness failure and fault combinations have not received an independent cross-surface audit."
+]
+required-evidence-tiers = ["deterministic-regression", "external-audit", "fault-analysis", "platform-runtime"]
+claim-invalidation-conditions = [
+  "An RNG failure is ignored, transformed into success, leaks a partially initialized secret, or permits repeated/predictable cryptographic output.",
+  "Documentation or API behavior implies that the `CryptoRng` trait alone proves entropy quality or nonce uniqueness."
+]
+mitigations = [
+  { id = "caller-owned-rng-contract", status = "implemented-unverified", evidence = ["implementation-boundary"], description = "Published code excludes OS entropy and exposes caller-owned RNG/error paths; this is source-policy evidence only." },
+  { id = "rng-failure-audit", status = "planned", evidence = [], description = "The external audit must trace every random destination, partial write, clear, and returned error." },
+  { id = "platform-rng-integration-guidance", status = "planned", evidence = [], description = "Platform-specific integration fixtures and limitations remain required." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "All key-generation security ultimately depends on caller RNG quality and exact failure propagation, neither of which is established by the current boundary gate alone.", acceptance-authority = "application security authority plus dcrypt security release authority" }
+
+[[model]]
+id = "TM-SECRET-LIFECYCLE"
+title = "Secret ownership, copying, logging, persistence, and zeroization limitations"
+status = "candidate"
+owner = "dcrypt secret-lifecycle assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "Every atomic row is included because unreviewed low-level declarations may create, copy, format, serialize, retain, or destroy secret-derived state."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-SECRET-LIFECYCLE"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "owned-secret-bytes", security-properties = ["confidentiality", "bounded lifetime", "redacted diagnostics"] },
+  { id = "secret-derived-intermediates", security-properties = ["best-effort clearing", "copy minimization"] },
+]
+trust-boundaries = [
+  "Secrets cross public construction, serialization, result/error, allocator, stack/register, compiler, logging, crash-dump, swap, and caller ownership boundaries.",
+  "Safe-Rust zeroization requests cross into compiler optimization and platform memory behavior that dcrypt cannot universally control."
+]
+attacker-capabilities = [
+  "Read process memory, crash dumps, swap, allocator reuse, logs, diagnostics, or stale copies after an operation, subject to deployment privileges.",
+  "Induce errors, clones, replacement, resizing, serialization, or panics that extend or expose secret lifetime."
+]
+preconditions = [
+  "A dcrypt operation or caller holds secret key material, password data, shared secrets, derived keys, nonces, or secret-dependent intermediates."
+]
+excluded-capabilities = [
+  "Guaranteed physical erasure of every historical register, stack, allocator, device, or externally copied value is explicitly outside the portable library claim."
+]
+assumptions = [
+  "Callers control serialized secret destinations, logging, crash dumps, swap, process isolation, backups, and downstream copies.",
+  "Best-effort clearing reduces exposure but is not a proof of physical erasure."
+]
+known-limitations = [
+  "Historical copies can survive compiler transformations, moves, stack/register allocation, allocator behavior, panic paths, and caller serialization.",
+  "The complete transitive secret-data inventory and compiler-emission review remain unfinished."
+]
+required-evidence-tiers = ["dedicated-side-channel", "external-audit", "platform-runtime", "source-policy"]
+claim-invalidation-conditions = [
+  "A public debug/error path reveals secret bytes, an owned secret retains avoidable stale capacity, or a documented clearing path does not execute on an ordinary replacement/drop/error path.",
+  "Documentation promises physical erasure or universal zeroization beyond the exact tested implementation scope."
+]
+mitigations = [
+  { id = "exact-size-secret-owners", status = "implemented-unverified", evidence = ["implementation-boundary"], description = "Exact-size secret types and source scans exist but are not an independent lifecycle audit." },
+  { id = "transitive-secret-inventory", status = "planned", evidence = [], description = "Leg 6 and the external audit must trace all secret-derived state and compiler emissions." },
+  { id = "platform-lifecycle-validation", status = "planned", evidence = [], description = "Representative platform runtime evidence must record unavoidable limitations." },
+]
+residual-risk = { likelihood = "high", impact = "critical", rating = "critical", disposition = "mitigate", rationale = "Portable Rust can reduce unnecessary retention but cannot guarantee physical erasure, and the transitive secret lifecycle has not been independently audited.", acceptance-authority = "dcrypt security release authority with deployment-specific risk owner" }
+
+[[model]]
+id = "TM-DOS-RESOURCE-BOUNDS"
+title = "Denial of service through lengths, allocations, streams, decoding, and rejection loops"
+status = "candidate"
+owner = "dcrypt availability assurance"
+reviewer = "dcrypt release assurance review (independent review pending)"
+independent-review-status = "required"
+independent-review-evidence = []
+reviewed-at = 2026-08-11
+valid-through = 2026-11-09
+public-entrypoint-scope = "All atomic rows, including low-level parsing/data surfaces and operations with caller-controlled lengths, iterations, streams, or rejection work."
+atomic-row-selector = "all-atomic-rows"
+affected-row-set = "coverage.json#/models/TM-DOS-RESOURCE-BOUNDS"
+affected-algorithms = ["coverage.json#/dimensions/algorithms/values"]
+affected-operations = ["coverage.json#/dimensions/operations/values"]
+affected-profiles = ["coverage.json#/dimensions/feature_profiles/values"]
+affected-platforms = ["coverage.json#/dimensions/platforms/values"]
+assets = [
+  { id = "service-resources", security-properties = ["availability", "bounded CPU", "bounded memory", "bounded stack"] },
+  { id = "parser-and-stream-state", security-properties = ["progress", "bounded buffering", "fail-closed termination"] },
+]
+trust-boundaries = [
+  "Attacker-controlled lengths, iteration counts, encoded points, signatures, ciphertexts, streams, and malformed objects drive allocation and computation.",
+  "Caller-provided readers/writers and no_std allocators may have different blocking and resource behavior."
+]
+attacker-capabilities = [
+  "Submit pathological lengths, encodings, rejection patterns, iteration counts, partial streams, decompression points, and repeated expensive invalid operations.",
+  "Hold connections or repeatedly invoke public endpoints to amplify bounded per-call cost."
+]
+preconditions = [
+  "An application exposes parsing, verification, derivation, streaming, or migration work to untrusted or weakly rate-limited inputs."
+]
+excluded-capabilities = [
+  "Network-layer rate limiting, quotas, scheduling, admission control, and global memory limits are application responsibilities unless explicitly bound."
+]
+assumptions = [
+  "Public API limits are validated before allocation or expensive secret work where the format permits it.",
+  "Product operators provision quotas and timeouts for legitimate worst-case cryptographic cost."
+]
+known-limitations = [
+  "There is no machine-readable cross-surface resource budget or adversarial allocation/timeout campaign.",
+  "Rejection loops, password-work factors, arbitrary streams, and point decoding have uneven worst-case evidence."
+]
+required-evidence-tiers = ["external-audit", "persistent-fuzz", "platform-runtime", "resource-bound-analysis"]
+claim-invalidation-conditions = [
+  "Attacker-controlled input causes unbounded allocation, nontermination, panic, stack exhaustion, integer overflow, or cost beyond a declared limit.",
+  "A release lacks explicit time, memory, length, and iteration limits for a remotely reachable parser or loop."
+]
+mitigations = [
+  { id = "bounded-stream-regressions", status = "implemented-unverified", evidence = ["fuzz-symmetric", "fuzz-hybrid"], description = "Streaming and decoder regression/fuzz smoke exists but is not sustained resource-bound evidence." },
+  { id = "resource-budget-registry", status = "planned", evidence = [], description = "Every parser, stream, migration path, and rejection loop needs declared limits." },
+  { id = "adversarial-resource-campaign", status = "planned", evidence = [], description = "Persistent fuzz and dedicated OOM/timeout tests must exercise worst-case inputs." },
+]
+residual-risk = { likelihood = "high", impact = "high", rating = "high", disposition = "mitigate", rationale = "Historical streaming allocations approached 4 GiB, and the current repository lacks complete cross-surface worst-case resource evidence.", acceptance-authority = "dcrypt security release authority plus service operator" }
