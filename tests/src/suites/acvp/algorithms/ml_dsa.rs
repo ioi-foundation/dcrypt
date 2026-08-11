@@ -4,7 +4,8 @@
 //! accepted and emitted only in the exact Algorithm 24 encoding containing a
 //! 64-byte `tr`; the removed 32-byte-`tr` dcrypt format is not adapted. The
 //! handler covers the external pure, external pre-hash, internal `M'`, and
-//! externally supplied `mu` interfaces in the official FIPS 204 vector set.
+//! externally supplied `mu` interfaces in the repository FIPS 204 ACVP-format
+//! corpus, whose upstream acquisition provenance is unverified.
 
 use super::super::dispatcher::{insert, DispatchKey, HandlerFn};
 use crate::suites::acvp::error::{EngineError, Result};

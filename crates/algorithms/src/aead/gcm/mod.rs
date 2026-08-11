@@ -6,9 +6,10 @@
 //!
 //! ## Implementation Note
 //!
-//! This implementation is tested against official NIST Cryptographic Algorithm
-//! Validation Program (CAVP/ACVP) known-answer data. Vector tests are not a FIPS
-//! validation or certification claim.
+//! This implementation is tested against the repository's byte-bound
+//! CAVP/ACVP-format known-answer data. The local fixtures' upstream acquisition
+//! provenance is unverified; vector tests are not a FIPS validation or
+//! certification claim.
 //!
 //! ## Timing behavior
 //!

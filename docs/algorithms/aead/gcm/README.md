@@ -19,7 +19,7 @@ security properties are confidentiality and authenticity.
     *   `Gcm<Aes128>`
     *   `Gcm<Aes192>`
     *   `Gcm<Aes256>`
-*   **NIST vectors:** Supported tag/IV combinations are tested against NIST CAVP/ACVP known-answer data for correctness and interoperability.
+*   **Known-answer vectors:** Supported tag/IV combinations are tested against the repository's byte-bound CAVP/ACVP-format data for correctness. Upstream acquisition provenance for those local fixtures has not been independently verified.
 *   **Supported Nonce Sizes:** The public nonce types support 96-, 120-, and 128-bit (12-, 15-, and 16-byte) IVs. The non-96-bit `J0` derivation follows NIST SP 800-38D; arbitrary IV lengths are not exposed by this API.
 *   **Safe Tag Lengths:** Uses a 128-bit (16-byte) tag by default. The compatibility constructor permits only 96- through 128-bit tags (12 through 16 bytes).
 

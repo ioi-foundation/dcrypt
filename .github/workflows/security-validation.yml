@@ -112,7 +112,7 @@ jobs:
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
           toolchain: stable
-      - name: Run every official ACVP and regression-vector test
+      - name: Run every repository ACVP-format and regression-vector test
         run: >-
           cargo test --release -p dcrypt-tests --test acvp_tests
           -- --test-threads=1 --nocapture

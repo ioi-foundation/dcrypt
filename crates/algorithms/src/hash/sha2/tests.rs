@@ -105,7 +105,8 @@ fn test_sha512_256_abc() {
 
 #[test]
 fn test_sha2_non_byte_aligned_acvp_vectors() {
-    // Published NIST ACVP vectors. Input bits are stored MSB-first.
+    // Repository ACVP-format fixtures. Input bits are stored MSB-first; the
+    // fixtures' upstream acquisition provenance is unverified.
     let sha224 =
         Sha224::digest_bits(&hex::decode("7CACC1C2B56D26A96D3A5B7648").unwrap(), 102).unwrap();
     assert_eq!(

@@ -43,10 +43,11 @@ exists to make cryptographic assurance reproducible rather than inherited:
     family or one era of cryptanalysis. Separate implementations are still
     required when implementation diversity is part of the threat model.
 *   **Scope every claim.** Release evidence records the applicable release,
-    configuration, toolchain, target, property, and threat model. ACVP
-    conformance is a correctness gate, not FIPS validation; statistical timing
-    results are evidence, not a constant-time proof. A claim without enough
-    scope to evaluate it is treated as a defect.
+    configuration, toolchain, target, property, and threat model. Replay of the
+    repository's byte-bound ACVP-format corpus is a correctness gate, not FIPS
+    validation or authenticated upstream provenance; statistical timing results
+    are evidence, not a constant-time proof. A claim without enough scope to
+    evaluate it is treated as a defect.
 *   **Revoke claims when the evidence fails.** When a release violates the
     assurance contract, the release is withdrawn rather than the contract
     weakened — as practiced in the
@@ -66,8 +67,8 @@ the most independently reproducible evidence.
 
 dcrypt provides capabilities for the transition to quantum-safe and decentralized computing:
 
-1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use dcrypt-owned safe-Rust key generation, signing, verification, sampling, arithmetic, and exact encodings. Public APIs support deterministic signing and hedged signing with caller-provided randomness and contexts. All 615 official ACVP cases pass exactly; independent implementations are confined to the excluded verification workspace. This is not a claim that dcrypt is formally verified, audited, or FIPS validated.
-2.  **Pure-Rust FIPS 203 (ML-KEM)**: Final-standard ML-KEM-512, ML-KEM-768, and ML-KEM-1024 use owned safe-Rust arithmetic, encoding, and SHA3/SHAKE primitives. All 240 official ACVP cases pass exactly; this project is not a FIPS-validated cryptographic module.
+1.  **Pure-Rust FIPS 204 (ML-DSA)**: Final-standard `ML-DSA-44`, `ML-DSA-65`, and `ML-DSA-87` use dcrypt-owned safe-Rust key generation, signing, verification, sampling, arithmetic, and exact encodings. Public APIs support deterministic signing and hedged signing with caller-provided randomness and contexts. All expected fields for 615 cases in the repository's byte-bound ACVP-format corpus pass exactly; the upstream URL, revision, acquisition record, and original download digest of those fixtures remain unverified. Independent implementations are confined to the excluded verification workspace. This is not a claim that dcrypt is formally verified, audited, FIPS validated, or that the local fixtures have authenticated upstream provenance.
+2.  **Pure-Rust FIPS 203 (ML-KEM)**: Final-standard ML-KEM-512, ML-KEM-768, and ML-KEM-1024 use owned safe-Rust arithmetic, encoding, and SHA3/SHAKE primitives. All expected fields for 240 cases in the repository's byte-bound ACVP-format corpus pass exactly; their upstream acquisition provenance remains unverified. This project is not a FIPS-validated cryptographic module.
 3.  **Native Hybrid Cryptography**: First-class support for hybrid Key Encapsulation Mechanisms (e.g., `ECDH P-256 + ML-KEM-768`) and hybrid Digital Signatures, designed to combine independent primitive families.
 4.  **BLS12-381 Signatures and Pairings**: Safe-Rust group arithmetic, optimal Ate pairings, strict point decoding, and RFC 9380 hash-to-curve support high-level minimum-public-key Basic, Message Augmentation, and Proof of Possession schemes pinned to CFRG BLS draft-07. A separately named adapter preserves Ethereum's draft-v4 PoP and empty fast-aggregate semantics. No external runtime hash-to-curve library is required.
 
@@ -218,7 +219,7 @@ The repository contains a custom statistical regression engine (`dcrypt-tests/sr
 
 ### Standards testing
 *   **ACVP Test Harness**: Includes an ACVP JSON test harness for supported parameter sets. Passing vectors is a correctness gate, not NIST validation or certification.
-*   **ML-DSA Interoperability**: Runtime key generation, signing, verification, and complete expanded-key validation use only the dcrypt-owned implementation. The official key-generation, signature-generation, and signature-verification ACVP results are checked exactly. A separate non-published workspace performs bidirectional and byte-for-byte tests against `fips204`, libcrux, and RustCrypto. Bare expanded keys are validated coherently and retain their derived public key; paired import additionally rejects a mismatched public key.
+*   **ML-DSA Interoperability**: Runtime key generation, signing, verification, and complete expanded-key validation use only the dcrypt-owned implementation. The expected key-generation, signature-generation, and signature-verification fields in the repository's byte-bound ACVP-format corpus are checked exactly; upstream acquisition provenance for those fixtures remains unverified. A separate non-published workspace performs bidirectional and byte-for-byte tests against `fips204`, libcrux, and RustCrypto. Bare expanded keys are validated coherently and retain their derived public key; paired import additionally rejects a mismatched public key.
 *   **BLS Interoperability**: Ethereum-compatible KeyGen is checked against the four published EIP-2333 master-key vectors. Draft-07 KeyGen and all four minimum-public-key domains (Basic, Augmentation, PoP signatures, and PoP proofs) are checked byte-for-byte against an independent implementation confined to the excluded verification workspace. Draft-07 Appendix B still marks G2/minimum-public-key vectors as TBA, so no nonexistent official signature-vector claim is made.
 *   **No certification claim**: dcrypt is not a FIPS-validated cryptographic module. Each algorithm and encoding must be assessed independently.
 

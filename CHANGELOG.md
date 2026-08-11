@@ -150,10 +150,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   mean exceeds the unchanged practical threshold. Paired-bootstrap intervals,
   Welch tests, and KS tests remain descriptive, while the versioned `paired-v1`
   noise profile cannot consume legacy-harness baselines.
-- Exact official ACVP gates cover 240 ML-KEM cases (75 key generation, 75
+- Exact repository ACVP-format gates cover 240 ML-KEM cases (75 key generation, 75
   encapsulation, 30 decapsulation, and 60 key-validation cases) and all 615
   ML-DSA cases (75 key generation, 360 signature generation, and 180 signature
-  verification cases) across every standardized parameter set.
+  verification cases) across every standardized parameter set. The local
+  fixture bytes are content-bound; their upstream acquisition provenance is
+  unverified.
 - RFC 9380 vectors, independent G1/G2 hash-to-curve and encoding oracles,
   four published EIP-2333 master-key vectors, draft-07 BLS domain separation,
   and Ethereum aggregate behavior cover the standard BLS surface.
@@ -264,7 +266,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ML-DSA expanded private keys now emit the full 64-byte `tr = SHAKE256(pk, 64)` field required by FIPS 204. Paired import rejects the former 32-byte field plus synthetic padding through `tr` and sign/verify coherence checks. Bare expanded bytes have no version tag, so provenance or versioned framing is required to distinguish overlapping syntactic encodings reliably.
 - Bare expanded-key imports are syntactically decoded but do not attempt public-key derivation. `from_bytes_with_public_key` verifies `tr` and performs a libcrux sign/verify coherence check, caches the paired public key, and is required when callers need `secret_key.public_key()` after import.
 - ML-DSA signature decoding now rejects duplicate or unsorted hint indices, non-monotonic hint boundaries, and nonzero unused hint bytes.
-- Added NIST ACVP key-generation known-answer gates and bidirectional interoperability tests between libcrux-backed dcrypt operations and the independent `fips204` API for all three parameter sets.
+- Added repository ACVP-format key-generation known-answer gates and bidirectional interoperability tests between libcrux-backed dcrypt operations and the independent `fips204` API for all three parameter sets. Upstream acquisition provenance for the local ACVP-format fixtures is unverified.
 
 ### Migration
 - The remediation release is SemVer-major. It must not be published as `1.2.x`:

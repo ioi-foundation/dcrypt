@@ -12,8 +12,11 @@ are intentionally absent.
 
 Randomized key generation and encapsulation require a caller-provided fallible
 `CryptoRng + RngCore`. Deterministic `d`, `z`, and `m` entry points exist for
-official validation and callers that explicitly own deterministic inputs.
+validation replay and callers that explicitly own deterministic inputs.
 
-The official NIST ACVP release files are checked exactly: 75 key-generation,
-75 encapsulation, 30 decapsulation, and 60 key-validation cases. Passing those
-vectors is not FIPS validation or an independent security audit.
+The repository checks every expected field in its byte-bound ACVP-format
+corpus: 75 key-generation, 75 encapsulation, 30 decapsulation, and 60
+key-validation cases. The fixtures' upstream URL, revision, acquisition record,
+and original download digest have not been independently verified. Passing
+them is not FIPS validation, authenticated upstream provenance, or an
+independent security audit.

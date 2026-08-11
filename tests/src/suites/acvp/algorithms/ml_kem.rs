@@ -1,4 +1,4 @@
-//! Official FIPS 203 ML-KEM ACVP handlers.
+//! FIPS 203 ML-KEM handlers for the repository's ACVP-format corpus.
 //!
 //! Deterministic key-generation vectors exercise the standard's permitted seed
 //! import interface. Encapsulation vectors feed `m` through a test-only caller
@@ -165,7 +165,7 @@ fn ml_kem_decapsulation_key_check(group: &TestGroup, case: &TestCase) -> Result<
     dispatch_parameter_set!(group, case, decapsulation_key_check_for)
 }
 
-/// Register every ML-KEM operation present in the official ACVP files.
+/// Register every ML-KEM operation present in the repository ACVP-format files.
 pub fn register(map: &mut std::collections::HashMap<DispatchKey, HandlerFn>) {
     insert(map, "ML-KEM-keyGen", "AFT", "AFT", ml_kem_keygen);
     insert(

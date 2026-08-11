@@ -7,8 +7,9 @@
 //!
 //! NIST SP 800-38D allows for multiple valid implementations of the Galois field
 //! arithmetic that underpins GHASH. This implementation has been tested against
-//! official NIST vectors for the complete GCM algorithm, checking
-//! interoperability and correctness of the overall authenticated encryption.
+//! the repository's byte-bound GCM known-answer corpus, checking correctness of
+//! the overall authenticated encryption. Upstream acquisition provenance for
+//! the local fixtures is unverified.
 //!
 //! The Galois field multiplication in particular may produce intermediate values
 //! that differ from other implementations (like OpenSSL, Bouncy Castle, etc.)
@@ -19,8 +20,9 @@
 //! 2. Polynomial reduction implementation
 //! 3. Internal state representation
 //!
-//! The tests include NIST CAVP/ACVP data for GCM mode. Passing those vectors is
-//! a correctness gate, not formal module validation or certification.
+//! The tests include repository CAVP/ACVP-format data for GCM mode. Passing
+//! those locally bound fixtures is a correctness gate, not authenticated
+//! upstream provenance, formal module validation, or certification.
 //!
 //! ## Timing-sensitive implementation properties
 //!

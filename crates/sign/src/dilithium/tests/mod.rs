@@ -201,9 +201,11 @@ macro_rules! nist_keygen_kat {
     ) => {
         #[test]
         fn $name() {
-            // NIST ACVP ML-DSA-keyGen-FIPS204 internalProjection.json.
-            // The digests keep the repository fixture compact while pinning every
-            // byte of the official public and expanded-private-key outputs.
+            // Repository ACVP-format ML-DSA-keyGen-FIPS204
+            // internalProjection.json. The digests keep the local fixture
+            // compact while pinning every byte of the expected public and
+            // expanded-private-key outputs; upstream acquisition provenance is
+            // unverified.
             let mut rng = ReplayRng::from_hex($seed);
             let (public, secret) = <$scheme>::keypair(&mut rng).unwrap();
             assert_eq!(sha256_hex(public.as_ref()), $public_sha256);

@@ -217,10 +217,11 @@ fn test_gcm_non_standard_nonce() {
 
 #[test]
 fn nist_120_bit_iv_known_answer_with_full_safe_tag() {
-    // NIST ACVP AES-GCM 1.0 internalProjection.json, tgId 2 / tcId 16.
-    // The source group publishes only a 32-bit tag. We generate the safe full
-    // tag and compare the published prefix, validating non-96-bit J0 without
-    // exposing a short-tag verification API.
+    // Repository ACVP-format AES-GCM 1.0 internalProjection.json, tgId 2 /
+    // tcId 16. The local group contains only a 32-bit tag. We generate the safe
+    // full tag and compare that fixture prefix, validating non-96-bit J0
+    // without exposing a short-tag verification API. Upstream acquisition
+    // provenance for the fixture is unverified.
     let key: [u8; 16] = hex::decode("49bfa3bf9492dc7bcc93edafc725c730")
         .unwrap()
         .try_into()
