@@ -1,0 +1,265 @@
+schema-version = 1
+document-id = "dcrypt-v3-external-cryptographic-audit-scope-v1"
+status = "candidate-uncommissioned"
+candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
+candidate-freeze-content-identity = "resolved-by-post-subject-evidence-envelope"
+subject-version-label = "post-v3.0.0 assurance-branch candidate"
+atomic-row-source = "assurance/atomic-operations.toml"
+public-api-source = "assurance/public-api-snapshot.json"
+threat-model-source = "assurance/threat-models/"
+scope-rule = "All public atomic assurance rows matching an in-scope algorithm, primitive, composition, format or error path are in scope; generated aliases are traced to their owning implementation."
+finding-mapping-rule = "Every finding must map to one or more exact assurance row IDs, or create an explicit new row when the affected behavior was absent from the inventory."
+exclusion-rule = "No scope exclusion is effective unless listed in the candidate freeze, justified by the auditor, approved by the release authority, and retained as a release-blocking limitation for affected rows."
+
+[[workstream]]
+id = "ml-kem"
+title = "ML-KEM-512/768/1024"
+standards = ["FIPS 203"]
+parameter-sets = ["ML-KEM-512", "ML-KEM-768", "ML-KEM-1024"]
+topics = [
+    "key generation",
+    "encapsulation",
+    "decapsulation",
+    "implicit rejection",
+    "parsing",
+    "canonical encoding",
+    "NTT arithmetic",
+    "sampling",
+    "randomness behavior",
+    "failure behavior",
+]
+required-specialists = ["pqc", "side-channel", "protocols"]
+
+[[workstream]]
+id = "ml-dsa"
+title = "ML-DSA-44/65/87"
+standards = ["FIPS 204"]
+parameter-sets = ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
+topics = [
+    "key generation",
+    "deterministic signing",
+    "hedged signing",
+    "verification",
+    "contexts",
+    "prehash modes",
+    "rejection sampling",
+    "canonical encoding",
+    "malformed signatures",
+    "randomness and failure behavior",
+]
+required-specialists = ["pqc", "side-channel", "protocols"]
+
+[[workstream]]
+id = "bls12-381"
+title = "BLS12-381 arithmetic and signatures"
+standards = ["RFC 9380", "IETF BLS signatures", "Ethereum consensus BLS profile"]
+parameter-sets = ["BLS12-381", "BLS12-381-G2"]
+topics = [
+    "field arithmetic",
+    "group arithmetic",
+    "pairing arithmetic",
+    "subgroup arithmetic and validation",
+    "hash-to-curve",
+    "domain separation",
+    "KeyGen",
+    "Basic profile",
+    "Augmented profile",
+    "Proof-of-Possession profile",
+    "Ethereum profile",
+    "aggregation",
+    "duplicate-message attacks",
+    "rogue-key attacks",
+    "invalid-point attacks",
+]
+required-specialists = ["pairing-ecc", "side-channel", "protocols"]
+
+[[workstream]]
+id = "ed25519"
+title = "Ed25519"
+standards = ["RFC 8032"]
+parameter-sets = ["Ed25519"]
+topics = [
+    "key generation",
+    "signing",
+    "strict verification",
+    "canonical encoding",
+    "small-order points",
+    "identity points",
+    "signature malleability",
+    "malformed keys and signatures",
+]
+required-specialists = ["pairing-ecc", "side-channel", "protocols"]
+
+[[workstream]]
+id = "weierstrass-curves"
+title = "P-curves and secp256k1"
+standards = ["FIPS 186-5", "RFC 6979", "SEC 1"]
+parameter-sets = ["P-224", "P-256", "P-384", "P-521", "secp256k1"]
+topics = [
+    "field and scalar arithmetic",
+    "point arithmetic",
+    "ECDSA signing",
+    "ECDSA strict verification",
+    "RFC6979 deterministic nonce generation",
+    "DER encoding and parsing",
+    "low-S rules",
+    "ECDH",
+    "point validation",
+    "invalid-point attacks",
+    "ECIES protocols",
+    "ECIES transcripts",
+]
+required-specialists = ["pairing-ecc", "side-channel", "protocols"]
+
+[[workstream]]
+id = "aes-gcm-ghash"
+title = "AES-128/256-GCM and GHASH"
+standards = ["FIPS 197", "SP 800-38D"]
+parameter-sets = ["AES-128-GCM", "AES-256-GCM", "GHASH"]
+topics = [
+    "AES field and round arithmetic",
+    "GHASH field arithmetic",
+    "encryption and decryption",
+    "authentication behavior",
+    "nonce handling",
+    "tag generation",
+    "tag verification",
+    "tampering and truncation behavior",
+    "compiler output",
+    "platform-specific implementations",
+]
+required-specialists = ["symmetric", "side-channel", "protocols"]
+
+[[workstream]]
+id = "chacha-poly1305"
+title = "ChaCha-family and Poly1305 constructions"
+standards = ["RFC 8439", "XChaCha draft construction"]
+parameter-sets = ["ChaCha20", "HChaCha20", "Poly1305", "ChaCha20-Poly1305", "XChaCha20-Poly1305"]
+topics = [
+    "ChaCha20 core and stream generation",
+    "HChaCha20 subkey derivation",
+    "Poly1305 arithmetic",
+    "ChaCha20-Poly1305 seal and open",
+    "XChaCha20-Poly1305 seal and open",
+    "nonce handling",
+    "AAD and transcript construction",
+    "tag verification",
+    "canonical framing",
+    "tampering and truncation behavior",
+]
+required-specialists = ["symmetric", "side-channel", "protocols"]
+
+[[workstream]]
+id = "kdfs-passwords"
+title = "KDFs and password-derived operations"
+standards = ["RFC 5869", "RFC 8018", "SP 800-132", "RFC 9106"]
+parameter-sets = ["HKDF", "PBKDF2", "Argon2d", "Argon2i", "Argon2id", "dcrypt key-derivation profiles"]
+topics = [
+    "extract and expand semantics",
+    "salt and context handling",
+    "domain separation",
+    "password and secret lifecycle",
+    "parameter validation",
+    "resource bounds",
+    "random salt generation",
+    "RNG failure propagation",
+]
+required-specialists = ["symmetric", "side-channel", "protocols"]
+
+[[workstream]]
+id = "hybrids-ecies-framing"
+title = "Hybrid constructions, ECIES and framing"
+standards = ["dcrypt v3 wire and transcript specifications"]
+parameter-sets = ["ECDH+ML-KEM hybrid KEMs", "ECDSA+ML-DSA hybrid signatures", "dcrypt ECIES", "streaming formats", "migration formats"]
+topics = [
+    "wire encoding",
+    "framing",
+    "transcript construction",
+    "domain separation",
+    "KDF inputs",
+    "key confirmation",
+    "component failure composition",
+    "downgrade and version negotiation",
+    "tampering and truncation behavior",
+    "migration compatibility",
+]
+required-specialists = ["pqc", "pairing-ecc", "symmetric", "protocols"]
+
+[[workstream]]
+id = "rng-errors-lifecycle"
+title = "RNG, errors and secret lifecycle"
+standards = ["caller-owned CryptoRng contract", "dcrypt v3 compatibility contract"]
+parameter-sets = ["all secret-generating and randomized operations"]
+topics = [
+    "entropy acquisition assumptions",
+    "entropy degradation",
+    "RNG failure propagation",
+    "partial-output behavior",
+    "operation-scoped errors",
+    "deprecated global error registry behavior",
+    "secret creation and ownership",
+    "secret copying and exposure",
+    "zeroization behavior",
+    "documented zeroization limitations",
+    "panic and fault behavior",
+]
+required-specialists = ["pqc", "pairing-ecc", "symmetric", "protocols", "supply-chain"]
+
+[[workstream]]
+id = "historical-regressions"
+title = "Historical-advisory regression and variant analysis"
+standards = ["dcrypt security advisory records"]
+parameter-sets = ["DCRYPT-2026-0001 through DCRYPT-2026-0011"]
+topics = [
+    "error-registry memory unsafety",
+    "Ed25519 universal forgery",
+    "GCM ignored operation nonce",
+    "unauthenticated streaming framing",
+    "predictable legacy ECDH-KEM secret",
+    "BLS subgroup-validation bypass",
+    "BLS hash-to-curve incompatibility",
+    "pre-final ML-KEM incompatibility",
+    "XChaCha zero-nonce reuse",
+    "nonstandard XChaCha construction",
+    "GHASH secret-dependent compiled branches",
+    "variant analysis for shared root causes",
+]
+required-specialists = ["pqc", "pairing-ecc", "symmetric", "side-channel", "protocols", "supply-chain"]
+
+[[workstream]]
+id = "build-supply-chain"
+title = "Build, dependency and supply-chain assurance"
+standards = ["dcrypt implementation-boundary and release policies"]
+parameter-sets = ["all twelve published crates and isolated assurance workspaces"]
+topics = [
+    "dependency closure and lockfiles",
+    "published package contents",
+    "unsafe-code boundary",
+    "native-code and FFI boundary",
+    "isolated oracle and fuzz workspaces",
+    "toolchain and target binding",
+    "action and container pinning",
+    "SBOM completeness",
+    "registry archive correspondence",
+    "reproducible build claims",
+    "clean-room replay",
+]
+required-specialists = ["supply-chain", "side-channel"]
+
+[cross-cutting]
+topics = [
+    "canonical parsing and encoding",
+    "malformed and noncanonical inputs",
+    "empty, boundary and maximum inputs",
+    "denial of service and resource bounds",
+    "secret-dependent control flow",
+    "secret-dependent memory access",
+    "compiler and platform variance",
+    "fault injection and partial computation",
+    "public API and feature-profile drift",
+    "oracle and dependency common-mode failure",
+]
+
+[out-of-scope-policy]
+permitted = false
+statement = "This candidate does not pre-authorize exclusions. A proposed exclusion requires row-level written disposition and remains release-blocking unless the affected public functionality is removed from the audited release."

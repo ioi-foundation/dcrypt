@@ -1,0 +1,254 @@
+schema-version = 1
+document-id = "dcrypt-external-cryptographic-audit-policy-v1"
+status = "candidate-uncommissioned"
+candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
+candidate-freeze-content-identity = "resolved-by-post-subject-evidence-envelope"
+content-identity-policy = "The immutable in-subject SOW binds the stable candidate freeze ID. A later post-subject evidence envelope maps that ID to the canonical freeze.json SHA-256 and the policy, scope, and SOW SHA-256 digests without mutating these subject documents."
+owner = "dcrypt security assurance lead"
+approver = "independent dcrypt security reviewer"
+external-contact-authorized = false
+audit-commissioned = false
+
+[subject-boundary]
+subject = "post-v3.0.0 assurance-branch candidate bytes identified by the candidate freeze"
+published-v3-registry-bytes-inferred-in-scope = false
+rule = "Audit work and conclusions apply only to bytes bound by the candidate freeze. They do not apply to the published v3.0.0 tag or registry archives unless the auditor verifies an explicit byte-for-byte comparison and the final report names that extension."
+
+[independence]
+organizationally-independent = true
+conflict-disclosure-required = true
+prior-material-contributors-prohibited = true
+prior-material-contribution-window-months = 24
+subcontractor-disclosure-required = true
+financial-interest-disclosure-required = true
+shared-tooling-and-lineage-disclosure-required = true
+retest-independent-from-remediation = true
+minimum-rules = [
+    "The auditing organization, every assigned specialist, and every subcontractor must disclose financial, employment, authorship, advisory, and dependency-maintainer conflicts before access is granted.",
+    "No assigned auditor may have materially authored, designed, or merged the audited dcrypt implementation or its assurance evidence during the preceding 24 months.",
+    "Prior assessment work is permitted only when disclosed; prior material implementation contribution is not.",
+    "The auditor must identify shared reference code, generated tables, arithmetic backends, test-vector generators, and other common-mode dependencies used in its analysis.",
+    "Remediation retesting must be performed by an auditor who did not author the remediation and must independently reproduce the original finding before evaluating the fix.",
+]
+
+[[specialist]]
+id = "pqc"
+role = "Post-quantum cryptography specialist"
+minimum-competence = "FIPS 203 and FIPS 204 implementations, lattice arithmetic, NTTs, sampling, rejection and failure behavior"
+required = true
+
+[[specialist]]
+id = "pairing-ecc"
+role = "Pairing and elliptic-curve cryptography specialist"
+minimum-competence = "BLS12-381 pairings and hash-to-curve, RFC 8032, ECDSA/ECDH, point validation, subgroup and malleability attacks"
+required = true
+
+[[specialist]]
+id = "symmetric"
+role = "Symmetric cryptography specialist"
+minimum-competence = "AES-GCM, GHASH, ChaCha/HChaCha, Poly1305, AEAD nonce and tag behavior, KDFs and compiler emission"
+required = true
+
+[[specialist]]
+id = "side-channel"
+role = "Side-channel specialist"
+minimum-competence = "Secret-dependent control flow and memory access, optimized assembly, cache/timing analysis, and physical leakage methods"
+required = true
+
+[[specialist]]
+id = "protocols"
+role = "Protocol and composition specialist"
+minimum-competence = "Domain separation, transcripts, hybrids, ECIES, framing, misuse resistance and protocol-state analysis"
+required = true
+
+[[specialist]]
+id = "supply-chain"
+role = "Build and supply-chain specialist"
+minimum-competence = "Rust dependency closure, Cargo packaging, toolchain/build provenance, SBOMs, reproducibility and CI trust boundaries"
+required = true
+
+[methodology]
+required-methods = [
+    "Manual source review against the named standards, profiles, threat models, implementation boundary and public assurance rows.",
+    "Independent test derivation, negative testing and differential testing without treating repository-generated evidence as trusted by default.",
+    "Review of parsers, canonical encodings, validation order, error behavior, resource bounds, randomness, secret lifecycle and zeroization limitations.",
+    "Transitive secret-path review through optimized assembly for the exact compiler, target, features and flags included in the candidate freeze.",
+    "Review and replay of historical-advisory regressions and examination for variant and common-root defects.",
+    "Inspection of published-package boundaries, isolated test/oracle workspaces, dependency locks, unsafe/native/FFI controls and artifact provenance.",
+]
+generated-evidence-trusted-by-default = false
+scaffolding-counts-as-evidence = false
+inconclusive-counts-as-pass = false
+
+[artifact-access]
+required = [
+    "candidate freeze manifest and complete SHA-256 manifest",
+    "subject Git commit and tree",
+    "source archive and expected registry archives",
+    "all root and isolated-workspace lockfiles and dependency closures",
+    "published and non-published feature/profile matrix",
+    "implementation-boundary.toml",
+    "compiler, Cargo, rustdoc, LLVM, linker, target, container and GitHub Action identities",
+    "SBOMs and build logs",
+    "build artifacts and bound disassemblies where available",
+    "assurance ledger, atomic rows, public-API snapshot and generated supported-algorithm documentation",
+    "threat models and known-limitations inventory",
+    "historical-advisory regression inventory, fixtures and replay commands",
+    "ACVP-format corpus manifest with its explicit upstream-provenance limitations",
+    "isolated interoperability-oracle provenance dossiers and offline replay materials",
+]
+missing-artifact-disposition = "record as a scope limitation and release blocker; never infer it from metadata or substitute an unbound artifact"
+
+[finding-format]
+required-fields = [
+    "finding-id",
+    "title",
+    "severity",
+    "defect-class",
+    "status",
+    "affected-assurance-row-ids",
+    "affected-public-paths",
+    "affected-commit-and-tree",
+    "affected-features-targets-and-toolchains",
+    "threat-model-and-attacker-preconditions",
+    "security-impact",
+    "reproduction-steps",
+    "evidence-and-artifact-hashes",
+    "root-cause",
+    "variant-analysis",
+    "recommended-remediation",
+    "regression-test-id",
+    "remediation-record-id",
+    "retest-record-id",
+    "disclosure-state",
+]
+assurance-row-source = "assurance/atomic-operations.toml"
+empty-affected-row-list-permitted = false
+new-row-required-when-no-existing-row-matches = true
+
+[[severity]]
+id = "critical"
+definition = "Practical or broadly exploitable key recovery, signature or authentication forgery, remote code execution or memory unsafety across a common/default use, catastrophic systemic protocol break, or equivalent impact."
+acknowledgement-hours = 4
+containment-plan-hours = 24
+remediation-calendar-days = 3
+independent-retest-business-days = 5
+coordinated-disclosure-calendar-days = 30
+release-blocking = true
+
+[[severity]]
+id = "high"
+definition = "Key recovery, forgery, authentication bypass, material confidentiality/integrity loss, exploitable side channel, or standards/correctness failure under realistic preconditions."
+acknowledgement-hours = 24
+containment-plan-hours = 72
+remediation-calendar-days = 14
+independent-retest-business-days = 10
+coordinated-disclosure-calendar-days = 60
+release-blocking = true
+
+[[severity]]
+id = "medium"
+definition = "Security weakness requiring restrictive conditions, meaningful denial of service, defense-in-depth failure, or correctness defect with limited security reach."
+acknowledgement-hours = 72
+containment-plan-hours = 240
+remediation-calendar-days = 45
+independent-retest-business-days = 15
+coordinated-disclosure-calendar-days = 90
+release-blocking = false
+
+[[severity]]
+id = "low"
+definition = "Limited-impact hardening, misuse-resistance, diagnostic, documentation or non-default weakness without a demonstrated material compromise."
+acknowledgement-hours = 120
+containment-plan-hours = 720
+remediation-calendar-days = 90
+independent-retest-business-days = 20
+coordinated-disclosure-calendar-days = 120
+release-blocking = false
+
+[[severity]]
+id = "informational"
+definition = "Observation with no current security impact that records an assumption, limitation, quality improvement or future risk."
+acknowledgement-hours = 120
+containment-plan-hours = 1440
+remediation-calendar-days = 180
+independent-retest-business-days = 20
+coordinated-disclosure-calendar-days = 180
+release-blocking = false
+
+[sla-policy]
+clock-start = "Auditor delivery to the designated private reporting channel"
+business-day-definition = "One business day in the project security lead's published timezone, excluding published local holidays"
+calendar-day-definition = "Continuous 24-hour periods"
+missed-sla = "Escalate to the security lead and release authority; a missed Critical or High remediation or retest SLA blocks release unless a documented risk decision withdraws the affected functionality."
+extensions = "Require written agreement from the security lead and auditor, a reason, a replacement date, affected assurance rows, and an explicit release disposition. Critical and High findings cannot be risk-accepted for release."
+
+[coordinated-disclosure]
+private-reporting-required = true
+need-to-know-access-required = true
+embargo-start = "first private report"
+embargo-end = "the earliest coordinated publication date agreed by dcrypt and the auditor, or the applicable disclosure SLA"
+vendor-and-downstream-notice = "Notify affected dependencies and downstreams privately when their action is required, using least disclosure necessary during embargo."
+credential-handling = "No secrets, signing credentials, registry tokens or production keys may enter audit artifacts; suspected credential exposure triggers the incident-response procedure immediately."
+public-report-required = true
+public-report-timing = "after remediation and independent retest, or at the coordinated-disclosure deadline when remediation is incomplete"
+permitted-redactions = [
+    "active exploit details during an agreed embargo",
+    "personal data",
+    "third-party confidential material not needed to understand risk or remediation",
+    "credentials and infrastructure secrets",
+]
+forbidden-redactions = [
+    "finding existence",
+    "final severity",
+    "affected algorithms and assurance rows",
+    "security impact",
+    "remediation status",
+    "whether independent retesting passed",
+    "material scope limitations or conflicts",
+]
+
+[deliverables]
+required = [
+    "signed independence and conflict disclosure for the organization, specialists and subcontractors",
+    "audit plan and coverage map to exact assurance row IDs",
+    "private interim finding records in the required machine-readable format",
+    "final technical report with methodology, coverage, findings, limitations and unresolved questions",
+    "public report suitable for repository publication with only permitted redactions",
+    "finding-to-regression-test and remediation traceability matrix",
+    "independent retest letter covering every confirmed finding and exact remediated commit/tree",
+    "artifact-return and confidential-data-destruction attestation",
+]
+
+[release-acceptance]
+unresolved-severities-forbidden = ["critical", "high"]
+unresolved-defect-classes-forbidden = [
+    "correctness",
+    "forgery",
+    "key-recovery",
+    "nonce",
+    "domain-separation",
+    "secret-dependent-control-flow",
+    "secret-dependent-memory-address",
+]
+required-closure-records = [
+    "regression-test",
+    "remediation-record",
+    "independent-retest",
+]
+confirmed-finding-must-have-regression = true
+auditor-mandatory-independent-retest = true
+inconclusive-is-accepted = false
+unreplayed-generated-evidence-is-accepted = false
+scaffolded-evidence-is-accepted = false
+scope-limitation-clears-row = false
+
+[issuance-gate]
+requirements = [
+    "a post-subject evidence envelope maps the stable candidate freeze ID to a lowercase 64-character canonical freeze.json SHA-256 digest and the policy, scope, and SOW SHA-256 digests",
+    "candidate freeze is independently regenerated and replayed",
+    "the issued SOW identifies the post-v3.0.0 candidate as its subject and does not imply that published v3.0.0 registry bytes were audited",
+    "all required audit artifacts are present or explicitly recorded as release-blocking limitations",
+    "policy, scope and SOW digest binding passes assurance/audit/sow/verify-sow.py",
+    "security lead separately authorizes vendor contact and commissioning",
+]
