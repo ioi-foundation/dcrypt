@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcrypt.example/schemas/audit-freeze-envelope-v1.json",
+  "title": "dcrypt post-subject audit-freeze envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "freeze_id",
+    "freeze_json_sha256",
+    "audit_policy_path",
+    "audit_policy_sha256",
+    "audit_scope_path",
+    "audit_scope_sha256",
+    "sow_path",
+    "sow_sha256",
+    "subject_commit",
+    "subject_tree",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-001"},
+    "freeze_json_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "audit_policy_path": {"const": "assurance/audit/sow/audit-policy.toml"},
+    "audit_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "audit_scope_path": {"const": "assurance/audit/sow/audit-scope.toml"},
+    "audit_scope_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sow_path": {"const": "assurance/audit/sow/RFP-SOW.md"},
+    "sow_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "subject_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "subject_tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "status": {"const": "candidate-first-party-unreplayed"}
+  }
+}

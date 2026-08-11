@@ -1,0 +1,172 @@
+schema-version = 1
+status = "blocked"
+limitation = "dependency-provision-bundle-unavailable"
+network-boundary = "Only an explicit provisioning phase may use the network; generation and replay must be network-disabled."
+cargo-package-source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[provisioning-procedure]
+id = "dcrypt-audit-provisioning-v1"
+status = "observed-structural-handoff-executable-full-provisioning-blocked"
+authorization = "local-observed-handoff-authorized-network-acquisition-separate"
+staging-root = "/provision"
+manifest = "/provision/PROVISIONING-MANIFEST.json"
+checksums = "/provision/SHA256SUMS"
+network-cutoff = "unshare-all-loopback-only-for-handoff-generation-and-replay"
+cold-cache-policy = "empty-host-caches-only-use-bound-provisioning-tree"
+offline-replay-status = "source-structural-executable-live-cargo-and-build-blocked"
+registry-archive-materialization = "not-executed-blocked"
+vendor-tree-materialization = "not-executed-blocked"
+action-archive-materialization = "not-executed-blocked"
+toolchain-distribution-acquisition = "not-executed-blocked"
+manifest-and-checksum-generation = "observed-structural-only-executable-full-bundle-blocked"
+clean-host-transfer-and-offline-replay = "source-structural-executable-cold-cache-build-blocked"
+limitation = "dependency-provision-bundle-unavailable"
+
+[[acquisition-tool]]
+id = "cargo"
+path = "blocked"
+binary-sha256 = "blocked"
+availability = "unavailable"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[acquisition-tool]]
+id = "rustup"
+path = "blocked"
+binary-sha256 = "blocked"
+availability = "unavailable"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[toolchain]]
+id = "public-api-inventory"
+requested = "nightly-2026-08-07"
+rustc-commit = "1a98b1e135b254f209c67d447b6d8bcd56a859e0"
+cargo-commit = "c79e8f89441b3e73d6d65d125c0c745792808c74"
+rustdoc-commit = "1a98b1e135b254f209c67d447b6d8bcd56a859e0"
+llvm = "23.1.0"
+host = "x86_64-unknown-linux-gnu"
+targets = ["aarch64-unknown-linux-gnu", "thumbv7em-none-eabihf", "wasm32-unknown-unknown", "x86_64-unknown-linux-gnu"]
+availability = "metadata-only-blocked"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[toolchain]]
+id = "release-stable-reviewed"
+requested = "1.93.1"
+rustc-commit = "01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf"
+cargo-commit = "083ac5135f967fd9dc906ab057a2315861c7a80d"
+rustdoc-commit = "01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf"
+llvm = "21.1.8"
+host = "x86_64-unknown-linux-gnu"
+targets = ["aarch64-unknown-linux-gnu", "thumbv7em-none-eabihf", "wasm32-unknown-unknown", "x86_64-unknown-linux-gnu"]
+availability = "metadata-only-blocked"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[toolchain]]
+id = "assembly-reviewed-alternate"
+requested = "1.97.1"
+rustc-commit = "8bab26f4f68e0e26f0bb7960be334d5b520ea452"
+cargo-commit = "c980f4866141969fab6254a680546a277789d6f0"
+rustdoc-commit = "8bab26f4f68e0e26f0bb7960be334d5b520ea452"
+llvm = "22.1.6"
+host = "x86_64-unknown-linux-gnu"
+targets = ["aarch64-unknown-linux-gnu", "thumbv7em-none-eabihf", "wasm32-unknown-unknown", "x86_64-unknown-linux-gnu"]
+availability = "metadata-only-blocked"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[github-action]]
+id = "actions-checkout"
+repository = "actions/checkout"
+commit = "3d3c42e5aac5ba805825da76410c181273ba90b1"
+source-archive-sha256 = "blocked"
+availability = "commit-pinned-source-unavailable"
+limitation = "action-source-archives-unavailable"
+
+[[github-action]]
+id = "dtolnay-rust-toolchain"
+repository = "dtolnay/rust-toolchain"
+commit = "6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772"
+source-archive-sha256 = "blocked"
+availability = "commit-pinned-source-unavailable"
+limitation = "action-source-archives-unavailable"
+
+[[host-tool]]
+id = "git"
+identity = "git version 2.43.0"
+path = "/usr/bin/git"
+binary-sha256 = "2a8c18fbf43da9f692d75474c72bea9dfd796c260b0f3dfe456376abc3bbd668"
+availability = "locally-observed-unprovisioned"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[host-tool]]
+id = "python3"
+identity = "Python 3.12.3"
+path = "/usr/bin/python3.12"
+binary-sha256 = "e1efa562c2cc2e35521a5c9c9b9939921001ff8ca9708a13ef15ace68cc2ccd7"
+availability = "locally-observed-unprovisioned"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[host-tool]]
+id = "bubblewrap"
+identity = "bubblewrap 0.11.0"
+path = "/usr/bin/bwrap"
+binary-sha256 = "a6203eb2d9ebc2e0e9549c55cda170df85a4e269d4369db3f58dc6c2413d1ba3"
+availability = "locally-observed-unprovisioned"
+limitation = "sandbox-kernel-assumptions-unbound"
+
+[[host-tool]]
+id = "linker-binutils"
+identity = "unbound"
+path = "blocked"
+binary-sha256 = "blocked"
+availability = "blocked"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[security-tool]]
+id = "cargo-audit"
+version = "0.22.2"
+binary-sha256 = "blocked"
+availability = "version-pinned-binary-unavailable"
+limitation = "rustsec-database-unbound"
+
+[[security-tool]]
+id = "cargo-deny"
+version = "0.20.2"
+binary-sha256 = "blocked"
+availability = "version-pinned-binary-unavailable"
+limitation = "rustsec-database-unbound"
+
+[[security-tool]]
+id = "cargo-fuzz"
+version = "0.13.2"
+binary-sha256 = "blocked"
+availability = "version-pinned-binary-unavailable"
+limitation = "dependency-provision-bundle-unavailable"
+
+[[security-tool]]
+id = "cargo-release"
+version = "unbound"
+binary-sha256 = "blocked"
+availability = "blocked"
+limitation = "toolchain-distribution-bundle-unavailable"
+
+[[advisory-database]]
+id = "rustsec-advisory-db"
+commit = "blocked"
+archive-sha256 = "blocked"
+availability = "unavailable"
+limitation = "rustsec-database-unbound"
+
+[[runner-image]]
+id = "github-ubuntu-24.04"
+requested = "ubuntu-24.04"
+manifest-digest = "blocked"
+platform-digest = "blocked"
+availability = "mutable-label-only"
+limitation = "runner-image-identity-unavailable"
+
+[[container-image]]
+id = "audit-build-environment"
+requested = "none"
+manifest-digest = "blocked"
+platform-digest = "blocked"
+availability = "unavailable"
+limitation = "container-image-unavailable"

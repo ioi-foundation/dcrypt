@@ -1,0 +1,411 @@
+schema-version = 1
+freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
+classification = "candidate-rehearsal"
+content-policy = "dcrypt-audit-freeze-v1"
+freeze-date = "2026-08-11"
+valid-through = "2026-09-10"
+expected-public-api-units = 19021
+expected-atomic-operations = 9298
+expected-ledger-evidence-records = 17
+expected-action-occurrences = 22
+expected-unique-actions = 2
+expected-runner-occurrences = 11
+
+[release-subject]
+tag = "v3.0.0"
+tag-object = "c3f1dc869df7e61a2c0d4a23833ea6accb5c8b33"
+commit = "2ad99cae96efef1636cf5b75e40d5b1d3135b34d"
+tree = "f869553e03b3854849f44f7df7b474a78d4d6c46"
+classification = "published-v3.0.0-historical-subject"
+
+[commissioning-worktree]
+permitted-path = ".gitignore"
+file-sha256 = "e4887e3f444e25b7baad39bd6ff3da3ae770f8dc5b3f7cf2c87a117219a8fe2c"
+binary-diff-sha256 = "caa005fda38ed3a65d8b92a5b788169ebba47e7106c1389bf4cd7bff980c6552"
+generation-checkout = "clean"
+replay-checkout = "clean"
+reason = "Initial uncommitted .gitignore working-tree delta observation only; the delta never enters clean generation or replay, while the committed .gitignore blob remains a bound audit-subject source input."
+
+[canonical-json]
+encoding = "UTF-8"
+normalization = "NFC"
+key-order = "Unicode code-point ascending"
+separators = "comma-and-colon-without-whitespace"
+final-newline = true
+floats = "forbidden"
+duplicate-keys = "forbidden"
+
+[environment]
+network-during-generation = "forbidden"
+network-during-replay = "forbidden"
+ambient-cargo-config = "forbidden"
+ambient-cache = "forbidden"
+umask = "0022"
+timezone = "UTC"
+locale = "C.UTF-8"
+source-date-epoch = "subject-commit-timestamp"
+virtual-repository-root = "/dcrypt"
+virtual-output-root = "/output"
+virtual-cargo-home = "/cargo"
+required = [
+    "CARGO_INCREMENTAL=0",
+    "CARGO_NET_OFFLINE=true",
+    "LANG=C.UTF-8",
+    "LC_ALL=C.UTF-8",
+    "TZ=UTC",
+]
+forbidden-exact = [
+    "AR", "CC", "CFLAGS", "CXX", "CXXFLAGS", "LD", "LDFLAGS",
+    "RUSTC", "RUSTDOC", "RUSTFLAGS", "RUSTDOCFLAGS",
+    "RUSTC_WRAPPER", "RUSTC_WORKSPACE_WRAPPER",
+    "CARGO_BUILD_RUSTC", "CARGO_BUILD_RUSTDOC", "CARGO_BUILD_TARGET",
+    "CARGO_BUILD_RUSTFLAGS", "CARGO_BUILD_RUSTDOCFLAGS",
+    "CARGO_ENCODED_RUSTFLAGS", "CARGO_ENCODED_RUSTDOCFLAGS",
+]
+forbidden-prefixes = ["CARGO_TARGET_", "PKG_CONFIG_"]
+
+[[cargo-workspace]]
+id = "published-root"
+manifest = "Cargo.toml"
+lockfile = "Cargo.lock"
+classification = "published-and-test-workspace"
+lock-required = true
+status = "classified"
+
+[[cargo-workspace]]
+id = "verification"
+manifest = "verification/Cargo.toml"
+lockfile = "verification/Cargo.lock"
+classification = "isolated-non-published-oracle-workspace"
+lock-required = true
+status = "classified-with-transitive-review-blocker"
+limitation = "verification-transitive-closure-review-required"
+
+[[cargo-workspace]]
+id = "fuzz"
+manifest = "fuzz/Cargo.toml"
+lockfile = "fuzz/Cargo.lock"
+classification = "isolated-non-published-fuzz-workspace"
+lock-required = true
+status = "classified"
+
+[[cargo-workspace]]
+id = "legacy-xchacha-migration"
+manifest = "migration/legacy-xchacha20poly1305/Cargo.toml"
+lockfile = "migration/legacy-xchacha20poly1305/Cargo.lock"
+classification = "isolated-non-published-migration-workspace"
+lock-required = true
+status = "classified"
+
+[[cargo-workspace]]
+id = "bench-processor"
+manifest = "tools/bench-processor/Cargo.toml"
+lockfile = "tools/bench-processor/Cargo.lock"
+classification = "auxiliary-workspace-not-in-audit-command-graph"
+lock-required = false
+status = "blocked"
+limitation = "bench-processor-unclassified-lock"
+
+[[required-artifact]]
+id = "sbom-production"
+class = "sbom"
+status = "blocked"
+limitation = "audit-sbom-unavailable"
+
+[[required-artifact]]
+id = "sbom-verification"
+class = "sbom"
+status = "blocked"
+limitation = "audit-sbom-unavailable"
+
+[[required-artifact]]
+id = "sbom-fuzz"
+class = "sbom"
+status = "blocked"
+limitation = "audit-sbom-unavailable"
+
+[[required-artifact]]
+id = "sbom-migration"
+class = "sbom"
+status = "blocked"
+limitation = "audit-sbom-unavailable"
+
+[[required-artifact]]
+id = "sbom-bench-processor"
+class = "sbom"
+status = "blocked"
+limitation = "audit-sbom-unavailable"
+
+[[required-artifact]]
+id = "dependency-provision-bundle"
+class = "offline-provisioning"
+status = "blocked"
+limitation = "dependency-provision-bundle-unavailable"
+
+[[required-artifact]]
+id = "github-action-source-archives"
+class = "action-source"
+status = "blocked"
+limitation = "action-source-archives-unavailable"
+
+[[required-artifact]]
+id = "runner-image-manifest"
+class = "runner-image"
+status = "blocked"
+limitation = "runner-image-identity-unavailable"
+
+[[required-artifact]]
+id = "container-oci-layout"
+class = "container-image"
+status = "blocked"
+limitation = "container-image-unavailable"
+
+[[required-artifact]]
+id = "canonical-source-archive"
+class = "source-archive"
+status = "blocked"
+limitation = "source-archive-unavailable"
+
+[[required-artifact]]
+id = "candidate-crate-archives"
+class = "package-archives"
+status = "blocked"
+limitation = "candidate-package-archives-unavailable"
+expected-members = [
+    { name = "dcrypt-internal", version = "3.0.0", archive = "dcrypt-internal-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-params", version = "3.0.0", archive = "dcrypt-params-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-api", version = "3.0.0", archive = "dcrypt-api-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-common", version = "3.0.0", archive = "dcrypt-common-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-algorithms", version = "3.0.0", archive = "dcrypt-algorithms-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-symmetric", version = "3.0.0", archive = "dcrypt-symmetric-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-kem", version = "3.0.0", archive = "dcrypt-kem-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-sign", version = "3.0.0", archive = "dcrypt-sign-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-pke", version = "3.0.0", archive = "dcrypt-pke-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-utils", version = "3.0.0", archive = "dcrypt-utils-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-hybrid", version = "3.0.0", archive = "dcrypt-hybrid-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt", version = "3.0.0", archive = "dcrypt-3.0.0.crate", sha256 = "blocked" },
+]
+
+[[required-artifact]]
+id = "published-v3-registry-archives"
+class = "registry-archives"
+status = "blocked"
+limitation = "registry-package-archives-unavailable"
+expected-members = [
+    { name = "dcrypt-internal", version = "3.0.0", archive = "dcrypt-internal-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-params", version = "3.0.0", archive = "dcrypt-params-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-api", version = "3.0.0", archive = "dcrypt-api-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-common", version = "3.0.0", archive = "dcrypt-common-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-algorithms", version = "3.0.0", archive = "dcrypt-algorithms-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-symmetric", version = "3.0.0", archive = "dcrypt-symmetric-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-kem", version = "3.0.0", archive = "dcrypt-kem-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-sign", version = "3.0.0", archive = "dcrypt-sign-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-pke", version = "3.0.0", archive = "dcrypt-pke-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-utils", version = "3.0.0", archive = "dcrypt-utils-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt-hybrid", version = "3.0.0", archive = "dcrypt-hybrid-3.0.0.crate", sha256 = "blocked" },
+    { name = "dcrypt", version = "3.0.0", archive = "dcrypt-3.0.0.crate", sha256 = "blocked" },
+]
+
+[[required-artifact]]
+id = "compiled-artifact-matrix"
+class = "build-artifacts"
+status = "blocked"
+limitation = "compiled-build-artifacts-unavailable"
+
+[[required-artifact]]
+id = "bls-complete-assembly-emissions"
+class = "disassembly"
+status = "blocked"
+limitation = "bls-disassembly-replay-unavailable"
+
+[[required-artifact]]
+id = "ghash-complete-assembly-emissions"
+class = "disassembly"
+status = "blocked"
+limitation = "ghash-binding-incomplete"
+
+[[required-artifact]]
+id = "historical-advisory-replay"
+class = "advisory-regression"
+status = "blocked"
+limitation = "historical-advisory-replay-unavailable"
+
+[[required-artifact]]
+id = "rustsec-database-snapshot"
+class = "advisory-database"
+status = "blocked"
+limitation = "rustsec-database-unbound"
+
+[[required-artifact]]
+id = "independent-replay-report"
+class = "independent-replay"
+status = "blocked"
+limitation = "independent-replay-unavailable"
+
+[[limitation]]
+id = "audit-sbom-unavailable"
+class = "supply-chain"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "No independently schema-validated production or isolated-workspace SBOM is frozen."
+
+[[limitation]]
+id = "dependency-provision-bundle-unavailable"
+class = "supply-chain"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "Locked dependency archive bytes and a cold-cache offline provisioning bundle are not frozen."
+
+[[limitation]]
+id = "action-source-archives-unavailable"
+class = "supply-chain"
+owner = "dcrypt CI security"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "Workflow action commits are pinned but their source archives and transitive action content are not frozen."
+
+[[limitation]]
+id = "runner-image-identity-unavailable"
+class = "build-environment"
+owner = "dcrypt CI security"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "ubuntu-24.04 is a mutable hosted-runner label without an image manifest digest."
+
+[[limitation]]
+id = "container-image-unavailable"
+class = "build-environment"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "No immutable OCI build environment is declared or available."
+
+[[limitation]]
+id = "source-archive-unavailable"
+class = "artifact"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "No canonical source archive has been generated and independently replayed."
+
+[[limitation]]
+id = "candidate-package-archives-unavailable"
+class = "artifact"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "The twelve post-v3 candidate .crate archives have not been rebuilt from the freeze subject."
+
+[[limitation]]
+id = "registry-package-archives-unavailable"
+class = "artifact"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "The twelve published v3 registry archives have not been acquired into an offline evidence bundle."
+
+[[limitation]]
+id = "compiled-build-artifacts-unavailable"
+class = "artifact"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "No target-qualified compiled-artifact byte manifest exists for the freeze subject."
+
+[[limitation]]
+id = "bls-disassembly-replay-unavailable"
+class = "side-channel"
+owner = "dcrypt side-channel review"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "BLS expected hashes exist in source, but fresh complete emissions are not retained or independently replayed."
+
+[[limitation]]
+id = "ghash-binding-incomplete"
+class = "side-channel"
+owner = "dcrypt side-channel review"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "GHASH has structural assembly checks but no exact compiler allowlist and complete-emission hash binding."
+
+[[limitation]]
+id = "historical-advisory-replay-unavailable"
+class = "regression-evidence"
+owner = "dcrypt security assurance"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "Historical advisory sources are inventoried, but the exact freeze has not replayed every regression."
+
+[[limitation]]
+id = "bench-processor-unclassified-lock"
+class = "supply-chain"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "tools/bench-processor is a tracked Cargo workspace with an ignored lockfile and non-exact dependency requirements."
+
+[[limitation]]
+id = "verification-transitive-closure-review-required"
+class = "oracle-isolation"
+owner = "dcrypt interoperability review"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "The exact verification lock graph is reconciled, but independent-oracle lineage, acquisition provenance, and common-mode dependency review are incomplete."
+
+[[limitation]]
+id = "toolchain-distribution-bundle-unavailable"
+class = "build-environment"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "Compiler metadata is pinned, but distribution, target-component, sysroot, and executable bytes are not bundled."
+
+[[limitation]]
+id = "sandbox-kernel-assumptions-unbound"
+class = "build-environment"
+owner = "dcrypt release engineering"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "The locally observed bubblewrap binary can remove the network namespace for structural replay, but its distribution, kernel, namespace policy, and host isolation assumptions are not provisioned or independently bound."
+
+[[limitation]]
+id = "independent-replay-unavailable"
+class = "independence"
+owner = "independent assurance reviewer"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "All candidate evidence remains first-party generated until a separate reviewer reproduces it."
+
+[[limitation]]
+id = "stable-toolchain-alias-in-workflows"
+class = "build-environment"
+owner = "dcrypt CI security"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "Several CI jobs request mutable stable rather than an exact Rust release and component digest."
+
+[[limitation]]
+id = "rustsec-database-unbound"
+class = "supply-chain"
+owner = "dcrypt dependency security"
+deadline = "2026-09-10"
+release-blocking = true
+reason = "RustSec checks do not bind the advisory database commit/archive or installed tool bytes."
+
+[[limitation]]
+id = "ledger-atomic-assurance-incomplete"
+class = "assurance"
+owner = "dcrypt security assurance"
+deadline = "2026-11-09"
+release-blocking = true
+reason = "All 9,298 atomic assurance rows remain release-blocked; a freeze does not promote them."
+
+[[limitation]]
+id = "native-runtime-evidence-unavailable"
+class = "platform"
+owner = "dcrypt platform assurance"
+deadline = "2026-11-09"
+release-blocking = true
+reason = "Cross-compilation is not native AArch64, macOS, or Windows runtime evidence."

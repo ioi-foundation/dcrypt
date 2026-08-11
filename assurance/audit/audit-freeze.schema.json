@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcrypt.example/schemas/audit-freeze-v1.json",
+  "title": "dcrypt candidate audit freeze",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "content_policy", "freeze_id", "classification", "freeze_date", "valid_through", "subject", "release_subject", "canonicalization", "manifest_files", "counts", "release_gate", "generated_evidence_status", "commands", "command_expectations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "content_policy": {"const": "dcrypt-audit-freeze-v1"},
+    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-001"},
+    "classification": {"const": "candidate-rehearsal"},
+    "freeze_date": {"const": "2026-08-11"},
+    "valid_through": {"const": "2026-09-10"},
+    "subject": {
+      "type": "object", "additionalProperties": false,
+      "required": ["commit", "tree", "commit_payload_sha256", "tree_payload_sha256"],
+      "properties": {
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "commit_payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "tree_payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "release_subject": {
+      "type": "object", "additionalProperties": false,
+      "required": ["tag", "tag-object", "commit", "tree", "classification", "tag_payload_sha256", "commit_payload_sha256", "tree_payload_sha256", "tag_peels_to_commit", "commit_tree", "reachable_tree_object_records", "object_replacement_policy"],
+      "properties": {
+        "tag": {"const": "v3.0.0"},
+        "tag-object": {"const": "c3f1dc869df7e61a2c0d4a23833ea6accb5c8b33"},
+        "commit": {"const": "2ad99cae96efef1636cf5b75e40d5b1d3135b34d"},
+        "tree": {"const": "f869553e03b3854849f44f7df7b474a78d4d6c46"},
+        "classification": {"const": "published-v3.0.0-historical-subject"},
+        "tag_payload_sha256": {"const": "819f6a945952c052ac5458f687dc6cbe6aa03de5e67dcc3c7459a0cbaf474ec7"},
+        "commit_payload_sha256": {"const": "d0a2a36003c315dcd94550fcb157fc049f5da6d429a693e045cc1126179cc515"},
+        "tree_payload_sha256": {"const": "9e54917c2b2e29ca5ddbec6aeeb5dfb25056146411d937b0a96bc00a2c975635"},
+        "tag_peels_to_commit": {"const": "2ad99cae96efef1636cf5b75e40d5b1d3135b34d"},
+        "commit_tree": {"const": "f869553e03b3854849f44f7df7b474a78d4d6c46"},
+        "reachable_tree_object_records": {"type": "integer", "minimum": 1},
+        "object_replacement_policy": {"const": "GIT_NO_REPLACE_OBJECTS=1; replace/graft/alternate/promisor state rejected"}
+      }
+    },
+    "canonicalization": {
+      "type": "object", "additionalProperties": false,
+      "required": ["encoding", "normalization", "key-order", "separators", "final-newline", "floats", "duplicate-keys"],
+      "properties": {
+        "encoding": {"const": "UTF-8"}, "normalization": {"const": "NFC"},
+        "key-order": {"const": "Unicode code-point ascending"},
+        "separators": {"const": "comma-and-colon-without-whitespace"},
+        "final-newline": {"const": true}, "floats": {"const": "forbidden"},
+        "duplicate-keys": {"const": "forbidden"}
+      }
+    },
+    "manifest_files": {
+      "type": "array", "minItems": 8, "maxItems": 8, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "enum": ["actions-and-runners.json", "artifact-manifest.json", "assurance-inputs.json", "environment.json", "limitations.json", "source-manifest.json", "toolchains.json", "workspace-dependencies.json"]},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["authoritative_atomic_rows", "atomic_assurance_rows", "atomic_release_blockers", "blocked_artifacts", "infrastructure_release_blockers", "ledger_evidence_records", "facade_alias_rows", "locked_packages", "public_api_units", "registry_packages", "source_files", "unreviewed_atomic_gaps", "workspaces"],
+      "properties": {
+        "authoritative_atomic_rows": {"const": 314}, "atomic_assurance_rows": {"const": 9298},
+        "atomic_release_blockers": {"const": 9298}, "blocked_artifacts": {"const": 18},
+        "infrastructure_release_blockers": {"const": 21}, "ledger_evidence_records": {"const": 17},
+        "facade_alias_rows": {"const": 352}, "locked_packages": {"const": 239},
+        "public_api_units": {"const": 19021}, "registry_packages": {"const": 223},
+        "source_files": {"type": "integer", "minimum": 1}, "unreviewed_atomic_gaps": {"const": 8632},
+        "workspaces": {"const": 5}
+      }
+    },
+    "release_gate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "total_blockers", "counting_semantics", "structural_verification_may_pass_with_blockers", "release_verification_must_fail_with_blockers", "independent_replay_required"],
+      "properties": {
+        "status": {"const": "blocked"}, "total_blockers": {"const": 9319},
+        "counting_semantics": {"type": "string", "minLength": 1},
+        "structural_verification_may_pass_with_blockers": {"const": true},
+        "release_verification_must_fail_with_blockers": {"const": true},
+        "independent_replay_required": {"const": true}
+      }
+    },
+    "generated_evidence_status": {"const": "first-party-unreplayed"},
+    "commands": {"type": "array", "minItems": 17, "maxItems": 17, "items": {"type": "string", "minLength": 1}},
+    "command_expectations": {
+      "type": "array", "minItems": 17, "maxItems": 17,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["command_index", "expected"],
+        "properties": {"command_index": {"type": "integer", "minimum": 0}, "expected": {"type": "string", "minLength": 1}}
+      }
+    }
+  }
+}

@@ -1,0 +1,274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcrypt.example/schemas/audit-provisioning-v1.json",
+  "title": "dcrypt audit provisioning policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema-version", "status", "limitation", "network-boundary", "cargo-package-source", "provisioning-procedure", "acquisition-tool", "toolchain", "github-action", "host-tool", "security-tool", "advisory-database", "runner-image", "container-image"],
+  "properties": {
+    "schema-version": {"const": 1},
+    "status": {"const": "blocked"},
+    "limitation": {"const": "dependency-provision-bundle-unavailable"},
+    "network-boundary": {"const": "Only an explicit provisioning phase may use the network; generation and replay must be network-disabled."},
+    "cargo-package-source": {"const": "registry+https://github.com/rust-lang/crates.io-index"},
+    "provisioning-procedure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "status", "authorization", "staging-root", "manifest", "checksums", "network-cutoff", "cold-cache-policy", "offline-replay-status", "registry-archive-materialization", "vendor-tree-materialization", "action-archive-materialization", "toolchain-distribution-acquisition", "manifest-and-checksum-generation", "clean-host-transfer-and-offline-replay", "limitation"],
+      "properties": {
+        "id": {"const": "dcrypt-audit-provisioning-v1"},
+        "status": {"const": "observed-structural-handoff-executable-full-provisioning-blocked"},
+        "authorization": {"const": "local-observed-handoff-authorized-network-acquisition-separate"},
+        "staging-root": {"const": "/provision"},
+        "manifest": {"const": "/provision/PROVISIONING-MANIFEST.json"},
+        "checksums": {"const": "/provision/SHA256SUMS"},
+        "network-cutoff": {"const": "unshare-all-loopback-only-for-handoff-generation-and-replay"},
+        "cold-cache-policy": {"const": "empty-host-caches-only-use-bound-provisioning-tree"},
+        "offline-replay-status": {"const": "source-structural-executable-live-cargo-and-build-blocked"},
+        "registry-archive-materialization": {"const": "not-executed-blocked"},
+        "vendor-tree-materialization": {"const": "not-executed-blocked"},
+        "action-archive-materialization": {"const": "not-executed-blocked"},
+        "toolchain-distribution-acquisition": {"const": "not-executed-blocked"},
+        "manifest-and-checksum-generation": {"const": "observed-structural-only-executable-full-bundle-blocked"},
+        "clean-host-transfer-and-offline-replay": {"const": "source-structural-executable-cold-cache-build-blocked"},
+        "limitation": {"const": "dependency-provision-bundle-unavailable"}
+      }
+    },
+    "acquisition-tool": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "path", "binary-sha256", "availability", "limitation"],
+        "properties": {
+          "id": {"enum": ["cargo", "rustup"]}, "path": {"const": "blocked"},
+          "binary-sha256": {"const": "blocked"}, "availability": {"const": "unavailable"},
+          "limitation": {"const": "toolchain-distribution-bundle-unavailable"}
+        }
+      }
+    },
+    "toolchain": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "requested", "rustc-commit", "cargo-commit", "rustdoc-commit", "llvm", "host", "targets", "availability", "limitation"],
+        "properties": {
+          "id": {"enum": ["public-api-inventory", "release-stable-reviewed", "assembly-reviewed-alternate"]}, "requested": {"enum": ["nightly-2026-08-07", "1.93.1", "1.97.1"]},
+          "rustc-commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "cargo-commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "rustdoc-commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+          "llvm": {"type": "string", "minLength": 1}, "host": {"const": "x86_64-unknown-linux-gnu"},
+          "targets": {"type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "availability": {"const": "metadata-only-blocked"},
+          "limitation": {"const": "toolchain-distribution-bundle-unavailable"}
+        }
+      }
+    },
+    "github-action": {
+      "type": "array", "minItems": 2, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "repository", "commit", "source-archive-sha256", "availability", "limitation"],
+        "properties": {
+          "id": {"enum": ["actions-checkout", "dtolnay-rust-toolchain"]}, "repository": {"enum": ["actions/checkout", "dtolnay/rust-toolchain"]},
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "source-archive-sha256": {"const": "blocked"},
+          "availability": {"const": "commit-pinned-source-unavailable"}, "limitation": {"const": "action-source-archives-unavailable"}
+        }
+      }
+    },
+    "host-tool": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "identity", "path", "binary-sha256", "availability", "limitation"],
+        "properties": {
+          "id": {"enum": ["git", "python3", "bubblewrap", "linker-binutils"]}, "identity": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1}, "binary-sha256": {"type": "string", "minLength": 7},
+          "availability": {"enum": ["locally-observed-unprovisioned", "blocked"]},
+          "limitation": {"enum": ["toolchain-distribution-bundle-unavailable", "sandbox-kernel-assumptions-unbound"]}
+        }
+      }
+    },
+    "security-tool": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "version", "binary-sha256", "availability", "limitation"],
+        "properties": {
+          "id": {"enum": ["cargo-audit", "cargo-deny", "cargo-fuzz", "cargo-release"]},
+          "version": {"enum": ["0.22.2", "0.20.2", "0.13.2", "unbound"]},
+          "binary-sha256": {"const": "blocked"},
+          "availability": {"enum": ["version-pinned-binary-unavailable", "blocked"]},
+          "limitation": {"enum": ["rustsec-database-unbound", "dependency-provision-bundle-unavailable", "toolchain-distribution-bundle-unavailable"]}
+        }
+      }
+    },
+    "advisory-database": {
+      "type": "array", "minItems": 1, "maxItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "commit", "archive-sha256", "availability", "limitation"],
+        "properties": {"id": {"const": "rustsec-advisory-db"}, "commit": {"const": "blocked"}, "archive-sha256": {"const": "blocked"}, "availability": {"const": "unavailable"}, "limitation": {"const": "rustsec-database-unbound"}}
+      }
+    },
+    "runner-image": {
+      "type": "array", "minItems": 1, "maxItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "requested", "manifest-digest", "platform-digest", "availability", "limitation"],
+        "properties": {"id": {"const": "github-ubuntu-24.04"}, "requested": {"const": "ubuntu-24.04"}, "manifest-digest": {"const": "blocked"}, "platform-digest": {"const": "blocked"}, "availability": {"const": "mutable-label-only"}, "limitation": {"const": "runner-image-identity-unavailable"}}
+      }
+    },
+    "container-image": {
+      "type": "array", "minItems": 1, "maxItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "requested", "manifest-digest", "platform-digest", "availability", "limitation"],
+        "properties": {"id": {"const": "audit-build-environment"}, "requested": {"const": "none"}, "manifest-digest": {"const": "blocked"}, "platform-digest": {"const": "blocked"}, "availability": {"const": "unavailable"}, "limitation": {"const": "container-image-unavailable"}}
+      }
+    }
+  },
+  "$defs": {
+    "provisioningManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "id", "classification", "status", "subject", "layout", "checksum_policy", "network", "checkout_environment", "checkout_umask", "sandbox_environment", "commands", "subject_inputs", "observed_host_tools", "provisioning_policy_binding", "workspace_locks", "materialized_payloads", "blocked_operations", "claim"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "id": {"const": "dcrypt-audit-provisioning-v1"},
+        "classification": {"const": "observed-structural-inputs-only"},
+        "status": {"const": "first-party-materializable-release-blocked"},
+        "subject": {
+          "type": "object", "additionalProperties": false,
+          "required": ["commit", "tree", "commit_timestamp"],
+          "properties": {
+            "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "commit_timestamp": {"type": "integer", "minimum": 0}
+          }
+        },
+        "layout": {
+          "type": "object", "additionalProperties": false,
+          "required": ["checksums", "directory_mode", "manifest", "payload_root", "payload_status", "regular_file_mode", "root"],
+          "properties": {
+            "checksums": {"const": "/provision/SHA256SUMS"}, "directory_mode": {"const": "0555"},
+            "manifest": {"const": "/provision/PROVISIONING-MANIFEST.json"},
+            "payload_root": {"const": "/provision/payload"}, "payload_status": {"const": "absent-blocked"},
+            "regular_file_mode": {"const": "0644"}, "root": {"const": "/provision"}
+          }
+        },
+        "checksum_policy": {
+          "type": "object", "additionalProperties": false,
+          "required": ["algorithm", "manifest_hashes", "self_reference"],
+          "properties": {
+            "algorithm": {"const": "SHA-256"},
+            "manifest_hashes": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"const": "PROVISIONING-MANIFEST.json"}},
+            "self_reference": {"const": "forbidden"}
+          }
+        },
+        "network": {
+          "type": "object", "additionalProperties": false,
+          "required": ["acquisition_authorized", "materialization_used_network", "offline_replay_required", "required_interfaces", "marker"],
+          "properties": {
+            "acquisition_authorized": {"const": false}, "materialization_used_network": {"const": false},
+            "offline_replay_required": {"const": true},
+            "required_interfaces": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"const": "lo"}},
+            "marker": {"const": "network-disabled-observed-loopback-only"}
+          }
+        },
+        "checkout_environment": {
+          "type": "object", "additionalProperties": false,
+          "required": ["LANG", "LC_ALL", "TZ", "GIT_ALLOW_PROTOCOL", "GIT_ASKPASS", "GIT_ATTR_NOSYSTEM", "GIT_CONFIG_COUNT", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_SYSTEM", "GIT_LFS_SKIP_SMUDGE", "GIT_NO_REPLACE_OBJECTS", "GIT_NO_LAZY_FETCH", "GIT_OPTIONAL_LOCKS", "GIT_PAGER", "GIT_PROTOCOL_FROM_USER", "GIT_TERMINAL_PROMPT", "PAGER", "SSH_ASKPASS"],
+          "properties": {
+            "LANG": {"const": "C.UTF-8"}, "LC_ALL": {"const": "C.UTF-8"}, "TZ": {"const": "UTC"},
+            "GIT_ALLOW_PROTOCOL": {"const": "file"}, "GIT_ASKPASS": {"const": "/bin/false"},
+            "GIT_ATTR_NOSYSTEM": {"const": "1"}, "GIT_CONFIG_COUNT": {"const": "0"},
+            "GIT_CONFIG_GLOBAL": {"const": "/dev/null"}, "GIT_CONFIG_NOSYSTEM": {"const": "1"},
+            "GIT_CONFIG_SYSTEM": {"const": "/dev/null"}, "GIT_LFS_SKIP_SMUDGE": {"const": "1"},
+            "GIT_NO_REPLACE_OBJECTS": {"const": "1"}, "GIT_NO_LAZY_FETCH": {"const": "1"},
+            "GIT_OPTIONAL_LOCKS": {"const": "0"}, "GIT_PAGER": {"const": "cat"},
+            "GIT_PROTOCOL_FROM_USER": {"const": "0"}, "GIT_TERMINAL_PROMPT": {"const": "0"},
+            "PAGER": {"const": "cat"}, "SSH_ASKPASS": {"const": "/bin/false"}
+          }
+        },
+        "checkout_umask": {"const": "0022"},
+        "sandbox_environment": {
+          "type": "object", "additionalProperties": false,
+          "required": ["CARGO_HOME", "CARGO_INCREMENTAL", "CARGO_NET_OFFLINE", "DCRYPT_AUDIT_SANDBOX", "HOME", "LANG", "LC_ALL", "PWD", "SOURCE_DATE_EPOCH", "TZ"],
+          "properties": {
+            "CARGO_HOME": {"const": "/cargo"}, "CARGO_INCREMENTAL": {"const": "0"},
+            "CARGO_NET_OFFLINE": {"const": "true"}, "DCRYPT_AUDIT_SANDBOX": {"const": "unshare-all-v1"},
+            "HOME": {"const": "/nonexistent"}, "LANG": {"const": "C.UTF-8"}, "LC_ALL": {"const": "C.UTF-8"},
+            "PWD": {"const": "/dcrypt"}, "SOURCE_DATE_EPOCH": {"type": "string", "pattern": "^[0-9]+$"}, "TZ": {"const": "UTC"}
+          }
+        },
+        "commands": {
+          "type": "array", "minItems": 5, "maxItems": 5,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["argv", "id", "network", "operation", "status"],
+            "properties": {
+              "argv": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+              "id": {"enum": ["prepare-no-hardlink-checkout", "select-exact-subject", "materialize-observed-structural-handoff", "generate-candidate-from-read-only-handoff", "offline-two-checkout-structural-replay"]},
+              "network": {"enum": ["forbidden", "forbidden-file-transport-only", "forbidden-unshare-all"]},
+              "operation": {"enum": ["checkout-preparation", "provision", "generation", "verification"]},
+              "status": {"enum": ["required-external-preparation", "first-party-executable", "first-party-executable-after-evidence-commit"]}
+            }
+          }
+        },
+        "subject_inputs": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["path", "sha256", "size"],
+            "properties": {"path": {"type": "string", "minLength": 1}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "size": {"type": "integer", "minimum": 0}}
+          }
+        },
+        "observed_host_tools": {
+          "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["availability", "binary_sha256", "id", "identity", "limitation", "path"],
+            "properties": {
+              "availability": {"const": "locally-observed-unprovisioned"},
+              "binary_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "id": {"enum": ["git", "python3", "bubblewrap"]}, "identity": {"type": "string", "minLength": 1},
+              "limitation": {"enum": ["toolchain-distribution-bundle-unavailable", "sandbox-kernel-assumptions-unbound"]},
+              "path": {"type": "string", "pattern": "^/usr/bin/[^/]+$"}
+            }
+          }
+        },
+        "provisioning_policy_binding": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path", "sha256", "status", "limitation"],
+          "properties": {
+            "path": {"const": "assurance/audit/provisioning-lock.toml"},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "status": {"const": "blocked"},
+            "limitation": {"const": "dependency-provision-bundle-unavailable"}
+          }
+        },
+        "workspace_locks": {
+          "type": "array", "minItems": 4, "maxItems": 4, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["path", "sha256", "status"],
+            "properties": {
+              "path": {"enum": ["Cargo.lock", "fuzz/Cargo.lock", "migration/legacy-xchacha20poly1305/Cargo.lock", "verification/Cargo.lock"]},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}, "status": {"const": "bytes-bound-no-archives"}
+            }
+          }
+        },
+        "materialized_payloads": {"type": "array", "minItems": 0, "maxItems": 0, "items": {"type": "object", "additionalProperties": false, "required": [], "properties": {}}},
+        "blocked_operations": {
+          "type": "array", "minItems": 10, "maxItems": 10, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["deadline", "id", "limitation", "owner", "status"],
+            "properties": {
+              "deadline": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+              "id": {"enum": ["dependency-registry-archives", "cargo-vendor-tree", "github-action-source-archives", "rust-toolchain-distributions", "security-tool-binaries", "rustsec-advisory-database", "runner-image", "container-image", "live-cargo-ledger-validation", "cold-cache-artifact-rebuild"]},
+              "limitation": {"enum": ["dependency-provision-bundle-unavailable", "action-source-archives-unavailable", "toolchain-distribution-bundle-unavailable", "rustsec-database-unbound", "runner-image-identity-unavailable", "container-image-unavailable"]},
+              "owner": {"type": "string", "minLength": 1}, "status": {"const": "blocked-not-materialized"}
+            }
+          }
+        },
+        "claim": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

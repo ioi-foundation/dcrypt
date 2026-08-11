@@ -1,0 +1,86 @@
+schema-version = 1
+status = "inventory-only-replay-required"
+owner = "dcrypt security assurance"
+review-deadline = "2026-09-10"
+limitation = "historical-advisory-replay-unavailable"
+
+# These rows bind regression entry points.  They are not replay evidence until
+# the exact freeze subject is run in the frozen environment and a result
+# artifact is independently reproduced.
+
+[[regression]]
+id = "DCRYPT-2026-0001"
+name = "global-error-registry-cross-association"
+source = "crates/api/src/error/registry.rs"
+command = "cargo test --locked -p dcrypt-api --lib error::registry"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0002"
+name = "ed25519-identity-and-universal-forgery"
+source = "crates/sign/src/eddsa/ed25519/tests.rs"
+command = "cargo test --locked -p dcrypt-sign --lib rejects_identity_public_key_and_universal_forgery"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0003"
+name = "aes-gcm-operation-nonce-reuse"
+source = "crates/algorithms/src/aead/gcm/tests.rs"
+command = "cargo test --locked -p dcrypt-algorithms --lib operation_builder_uses_each_operation_nonce"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0004"
+name = "streaming-authentication-boundaries"
+source = "crates/symmetric/src/streaming"
+command = "cargo test --locked -p dcrypt-symmetric --lib streaming"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0005"
+name = "legacy-b283-arithmetic"
+source = "verification/tests/legacy_b283_advisory.rs"
+command = "cargo test --release --locked --offline --manifest-path verification/Cargo.toml --test legacy_b283_advisory"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0006"
+name = "bls12-381-subgroup-decoding"
+source = "crates/algorithms/src/ec/bls12_381"
+command = "cargo test --locked -p dcrypt-algorithms --lib checked_decoders_reject_on_curve_non_subgroup_point"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0007"
+name = "bls12-381-rfc9380-interoperability"
+source = "verification/tests/bls12_381_interop.rs"
+command = "cargo test --release --locked --offline --manifest-path verification/Cargo.toml --test bls12_381_interop"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0008"
+name = "ml-kem-acvp-regressions"
+source = "tests/src/suites/acvp/algorithms/ml_kem.rs"
+command = "cargo test --release --locked --offline -p dcrypt-tests --test acvp_tests test_ml_kem"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0009"
+name = "legacy-xchacha20poly1305-compatibility"
+source = "migration/legacy-xchacha20poly1305"
+command = "cargo test --release --locked --offline --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0010"
+name = "xchacha20poly1305-independent-vectors"
+source = "verification/tests/xchacha20poly1305.rs"
+command = "cargo test --release --locked --offline --manifest-path verification/Cargo.toml --test xchacha20poly1305"
+status = "source-bound-replay-required"
+
+[[regression]]
+id = "DCRYPT-2026-0011"
+name = "ghash-compiler-emission-guards"
+source = "tools/verify-ghash-assembly.sh"
+command = "tools/verify-ghash-assembly.sh"
+status = "source-bound-replay-required"
