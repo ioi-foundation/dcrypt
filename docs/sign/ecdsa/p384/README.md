@@ -1,4 +1,4 @@
-# ECDSA with NIST P-384 (`sign::traditional::ecdsa::p384`)
+# ECDSA with NIST P-384 (`dcrypt_sign::ecdsa::p384`)
 
 This module implements the Elliptic Curve Digital Signature Algorithm (ECDSA) using the NIST P-384 curve (also known as secp384r1). The signature scheme adheres to FIPS 186-4 for the core algorithm and incorporates deterministic nonce generation as per RFC 6979, hedged with additional entropy (inspired by FIPS 186-5 recommendations) for enhanced security. SHA-384 is used as the hash function, as specified for P-384 in FIPS 186-4/5.
 

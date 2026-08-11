@@ -187,7 +187,7 @@ dcrypt provides a unified API for classical, post-quantum, and hybrid operations
 | **Key Exchange / KEM** | `ECDH` (P-224, P-256, P-384, P-521, K-256) |
 | **Pairing-Friendly Curves** | `BLS12-381` (G1, G2, Gt, Pairings, Hash-to-Curve) |
 | **Post-Quantum KEMs**| `ML-KEM-512`, `ML-KEM-768`, `ML-KEM-1024` (final FIPS 203) |
-| **Hybrid Schemes** | `EcdhP256MlKem768`, `EcdhP384MlKem1024`, `EcdsaMlDsa65Hybrid` |
+| **Hybrid Schemes** | `EcdhK256MlKem512`, `EcdhP256MlKem512`, `EcdhP256MlKem768`, `EcdhP384MlKem1024`, `EcdhP521MlKem1024`, `EcdsaMlDsa65Hybrid` |
 
 ## 🏗️ Architecture
 

@@ -65,6 +65,9 @@ The crate provides a broad range of cryptographic primitives, categorized as fol
     approximately 112-bit security and is retained for transition and
     interoperability, not as the preferred choice for new high-security uses.
 *   **Koblitz Curve:** `secp256k1`.
+*   **X25519 type markers:** `X25519Algorithm`, `X25519PublicKey`, and
+    `X25519SecretKey` are marker/byte-wrapper surfaces only in v3. This crate
+    does not expose an X25519 key-agreement operation through those types.
 *   **Pairing-Friendly Curve:** BLS12-381, including G1/G2 operations, strict
     decoding, RFC 9380 hash-to-curve, and optimal Ate pairing. These are the
     runtime building blocks for the high-level standard profiles in

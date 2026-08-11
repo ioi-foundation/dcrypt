@@ -8,6 +8,11 @@ Key generation and hedged signing require randomness supplied by the caller.
 Deterministic signing is also available as the optional deterministic FIPS 204
 mode. Contexts may contain at most 255 bytes.
 
+Verification is exposed both through `Signature::verify` for the pure,
+empty-context mode and through `MlDsa::verify_with_context` for an explicit
+FIPS 204 context. Version 3 does not expose an ML-DSA prehash entry point; that
+mode must not be inferred from the pure or context APIs.
+
 ```rust,no_run
 use dcrypt_api::Signature;
 use dcrypt_internal::{CryptoRng, RngCore};

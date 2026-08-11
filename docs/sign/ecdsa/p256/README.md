@@ -1,4 +1,4 @@
-# ECDSA with NIST P-256 (`sign::traditional::ecdsa::p256`)
+# ECDSA with NIST P-256 (`dcrypt_sign::ecdsa::p256`)
 
 This module implements ECDSA using the P-256 curve (also called `secp256r1` or
 `prime256v1`) and SHA-256. It uses RFC 6979-style deterministic nonce generation

@@ -1,4 +1,4 @@
-# ECDSA Signature Implementations (`sign::traditional::ecdsa`)
+# ECDSA Signature Implementations (`dcrypt_sign::ecdsa`)
 
 This module implements the **Elliptic Curve Digital Signature Algorithm
 (ECDSA)** for several NIST prime curves. The implementation targets the ECDSA

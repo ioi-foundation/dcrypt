@@ -1,4 +1,4 @@
-# ECDSA with NIST P-521 (`sign::traditional::ecdsa::p521`)
+# ECDSA with NIST P-521 (`dcrypt_sign::ecdsa::p521`)
 
 This module implements the Elliptic Curve Digital Signature Algorithm (ECDSA) using the NIST P-521 curve (also known as secp521r1). The signature scheme adheres to FIPS 186-4/5, utilizing SHA-512 as the hash function, which is recommended for P-521. Deterministic nonce generation as per RFC 6979, hedged with additional entropy, is employed for enhanced security.
 
