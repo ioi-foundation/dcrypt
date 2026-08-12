@@ -311,6 +311,134 @@ def entry(snapshot: dict[str, Any], path: str) -> dict[str, Any]:
 def ledger_validation_tests(checks: Checks) -> None:
     checks.equal("schema-positive", ledger_errors(), [])
 
+    def exact_oracle_replay_records(
+        ledger: dict[str, Any], _operations: dict[str, Any], _snapshot: dict[str, Any]
+    ) -> None:
+        artifacts = sorted(VERIFY.ORACLE_REPLAY_REQUIRED_ARTIFACTS)
+        for identifier in sorted(VERIFY.ORACLE_REPLAY_EVIDENCE_IDS):
+            record = evidence(identifier, artifacts)
+            record["command"] = VERIFY.ORACLE_REPLAY_COMMAND
+            record["verdict"] = "informational"
+            ledger["evidence"].append(record)
+
+    checks.equal(
+        "exact-cold-oracle-replay-positive",
+        ledger_errors(exact_oracle_replay_records),
+        [],
+    )
+
+    def old_free_filter(
+        ledger: dict[str, Any], operations: dict[str, Any], snapshot: dict[str, Any]
+    ) -> None:
+        exact_oracle_replay_records(ledger, operations, snapshot)
+        target = next(
+            item for item in ledger["evidence"] if item["id"] == "bls-interoperability"
+        )
+        target["command"] = (
+            "cargo test --release --locked --offline "
+            "--manifest-path verification/Cargo.toml bls"
+        )
+
+    checks.equal(
+        "vacuous-oracle-filter-rejected",
+        ledger_errors(old_free_filter),
+        [
+            "evidence bls-interoperability command differs from the exact cold "
+            "oracle replay contract"
+        ],
+    )
+
+    def direct_cargo_without_offline(
+        ledger: dict[str, Any], operations: dict[str, Any], snapshot: dict[str, Any]
+    ) -> None:
+        exact_oracle_replay_records(ledger, operations, snapshot)
+        target = next(
+            item
+            for item in ledger["evidence"]
+            if item["id"] == "acvp-traditional-ec"
+        )
+        target["command"] = (
+            "cargo test --release --locked --manifest-path verification/Cargo.toml "
+            "--test traditional_ec_interop"
+        )
+
+    checks.equal(
+        "nonoffline-oracle-command-rejected",
+        ledger_errors(direct_cargo_without_offline),
+        [
+            "evidence acvp-traditional-ec command differs from the exact cold "
+            "oracle replay contract"
+        ],
+    )
+
+    def false_oracle_promotion(
+        ledger: dict[str, Any], operations: dict[str, Any], snapshot: dict[str, Any]
+    ) -> None:
+        exact_oracle_replay_records(ledger, operations, snapshot)
+        target = next(
+            item
+            for item in ledger["evidence"]
+            if item["id"] == "acvp-post-quantum"
+        )
+        target["verdict"] = "pass"
+
+    checks.equal(
+        "candidate-oracle-evidence-promotion-rejected",
+        ledger_errors(false_oracle_promotion),
+        [
+            "evidence acvp-post-quantum must remain informational until an oracle "
+            "dossier and independent replay are accepted"
+        ],
+    )
+
+    def missing_replay_subject_library(
+        ledger: dict[str, Any], operations: dict[str, Any], snapshot: dict[str, Any]
+    ) -> None:
+        exact_oracle_replay_records(ledger, operations, snapshot)
+        target = next(
+            item
+            for item in ledger["evidence"]
+            if item["id"] == "xchacha-interoperability"
+        )
+        target["artifacts"] = [
+            item
+            for item in target["artifacts"]
+            if item["path"] != "verification/oracle-provisioning/subject_lib.py"
+        ]
+
+    checks.equal(
+        "cold-oracle-subject-library-required",
+        ledger_errors(missing_replay_subject_library),
+        [
+            "evidence xchacha-interoperability cold replay artifact set differs "
+            "from the exact contract: "
+            "missing=['verification/oracle-provisioning/subject_lib.py'] unexpected=[]"
+        ],
+    )
+
+    def unexpected_replay_artifact(
+        ledger: dict[str, Any], operations: dict[str, Any], snapshot: dict[str, Any]
+    ) -> None:
+        exact_oracle_replay_records(ledger, operations, snapshot)
+        target = next(
+            item
+            for item in ledger["evidence"]
+            if item["id"] == "acvp-traditional-ec"
+        )
+        target["artifacts"].append(
+            {"path": "tests/tests/acvp_tests.rs", "sha256": "0" * 64}
+        )
+
+    checks.equal(
+        "cold-oracle-surplus-artifact-rejected",
+        ledger_errors(unexpected_replay_artifact),
+        [
+            "evidence acvp-traditional-ec cold replay artifact set differs from "
+            "the exact contract: missing=[] "
+            "unexpected=['tests/tests/acvp_tests.rs']"
+        ],
+    )
+
     def unclassified(_l: Any, _o: Any, snapshot: Any) -> None:
         fresh = api_entry(
             path="fixture::new_secret", kind="function", canonical="fixture::new_secret", refs=[],

@@ -24,9 +24,9 @@ maximum-validity-days = 90
 
 [inputs]
 atomic-operations = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
-public-api-snapshot = "dcfe5911f06c1cef3ab3d32d8b1124fb81542bbbeb7ff7f84b9bbc36c1c31386"
-assurance-ledger = "96adbbbb2076cc15c6d3cf49359e90b6e8fb7ef1596520a3a808b21d4d67589c"
-implementation-boundary = "685516a55c33b5c03faef22a2ddb4e53224ac6cdbe857d6b41718c1f6b342f83"
+public-api-snapshot = "04a000202ef3e72d1a7b21549548607a3b4b5105efc27558763c150d2421eeaa"
+assurance-ledger = "7828158ae9e69e1f70576c84e8ea995a3148e4edb2501534e587f3e855a3361b"
+implementation-boundary = "50483ab0f94c81e32a861035c245d61a59927c75cb02943226279386b47921a6"
 root-manifest = "0dcf0e8826cd4f9e5aee6e120df981ead7a01923e3eb33aa36f4054da426baaf"
 root-lockfile = "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd"
 verification-manifest = "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8"

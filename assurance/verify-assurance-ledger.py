@@ -131,6 +131,42 @@ TARGET_CFG_NON_API_ALLOWLIST = {
     },
 }
 
+# These four historical evidence rows previously accepted free-form libtest
+# filters.  Two of those filters selected zero tests while Cargo still exited
+# successfully.  Package B binds them to one exact cold runner which itself
+# code-pins the six target names, all 30 test names, their source bytes, the
+# complete verification lock closure, and Cargo's release/locked/offline mode.
+ORACLE_REPLAY_COMMAND = (
+    'python3 -B verification/oracle-provisioning/replay.py '
+    '--manifest verification/oracle-provisioning/manifest.json '
+    '--lock verification/Cargo.lock '
+    '--archives "${DCRYPT_ORACLE_ARCHIVES:?}" '
+    '--materialized "${DCRYPT_ORACLE_MATERIALIZED:?}" '
+    '--toolchain-root "${DCRYPT_ORACLE_TOOLCHAIN_ROOT:?}"'
+)
+ORACLE_REPLAY_EVIDENCE_IDS = {
+    "acvp-traditional-ec",
+    "acvp-post-quantum",
+    "bls-interoperability",
+    "xchacha-interoperability",
+}
+ORACLE_REPLAY_REQUIRED_ARTIFACTS = {
+    "verification/Cargo.lock",
+    "verification/Cargo.toml",
+    "verification/oracle-provisioning/bundle_lib.py",
+    "verification/oracle-provisioning/manifest.json",
+    "verification/oracle-provisioning/replay.py",
+    "verification/oracle-provisioning/run-targets.py",
+    "verification/oracle-provisioning/subject_lib.py",
+    "verification/oracle-provisioning/subject-inputs.json",
+    "verification/tests/bls12_381_interop.rs",
+    "verification/tests/ethereum_consensus_bls.rs",
+    "verification/tests/legacy_xchacha20poly1305.rs",
+    "verification/tests/ml_dsa_interop.rs",
+    "verification/tests/traditional_ec_interop.rs",
+    "verification/tests/xchacha20poly1305.rs",
+}
+
 
 def subject_path_included(path_value: str) -> bool:
     """Select every tracked input under the exact reviewed subject roots."""
@@ -1413,6 +1449,21 @@ def validate_ledger(
             errors.append(f"evidence {identifier} must declare required = true/false")
         if record.get("verdict") not in {"pass", "inconclusive", "fail", "informational"}:
             errors.append(f"evidence {identifier} has invalid verdict")
+        if (
+            identifier in ORACLE_REPLAY_EVIDENCE_IDS
+            and record.get("verdict") != "informational"
+        ):
+            errors.append(
+                f"evidence {identifier} must remain informational until an oracle "
+                "dossier and independent replay are accepted"
+            )
+        if (
+            identifier in ORACLE_REPLAY_EVIDENCE_IDS
+            and record.get("command") != ORACLE_REPLAY_COMMAND
+        ):
+            errors.append(
+                f"evidence {identifier} command differs from the exact cold oracle replay contract"
+            )
         if record.get("source-commit") != source_commit or record.get("source-tree") != source_tree:
             errors.append(f"evidence {identifier} source provenance mismatch")
         reviewed_at = parse_date(record.get("reviewed-at"), f"evidence {identifier} reviewed-at", errors)
@@ -1446,6 +1497,19 @@ def validate_ledger(
                     path = safe_repo_file(repo, path_value, f"{label} path", errors)
                     if path is not None and isinstance(digest, str) and sha256_file(path) != digest:
                         errors.append(f"evidence artifact digest mismatch: {identifier}: {path_value}")
+            if identifier in ORACLE_REPLAY_EVIDENCE_IDS:
+                missing_replay_artifacts = sorted(
+                    ORACLE_REPLAY_REQUIRED_ARTIFACTS - seen_paths
+                )
+                unexpected_replay_artifacts = sorted(
+                    seen_paths - ORACLE_REPLAY_REQUIRED_ARTIFACTS
+                )
+                if missing_replay_artifacts or unexpected_replay_artifacts:
+                    errors.append(
+                        f"evidence {identifier} cold replay artifact set differs from "
+                        f"the exact contract: missing={missing_replay_artifacts} "
+                        f"unexpected={unexpected_replay_artifacts}"
+                    )
 
     for identifier, operation in operations.items():
         required_evidence = operation.get("required-evidence", [])

@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -64,6 +65,74 @@ def refresh_manifest(spec_dir: Path) -> None:
     """Simulate an attacker coherently rebinding the mutable package manifest."""
     lines = [f"{sha256(spec_dir / name)}  {name}" for name in sorted(MANIFESTED_FILES)]
     (spec_dir / "ARTIFACTS.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def replace_verifier_assignment(path: Path, name: str, replacement: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    pattern = re.compile(rf"^{re.escape(name)} = .*?$", re.MULTILINE)
+    text, count = pattern.subn(f"{name} = {replacement}", text)
+    if count != 1:
+        raise SelfTestError(f"synthetic verifier assignment is not unique: {name}")
+    path.write_text(text, encoding="utf-8")
+
+
+def replace_verifier_digest(path: Path, name: str, digest: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    pattern = re.compile(
+        rf'^(    "{re.escape(name)}": ")[0-9a-f]{{64}}(",)$',
+        re.MULTILINE,
+    )
+    text, count = pattern.subn(rf"\g<1>{digest}\g<2>", text)
+    if count != 1:
+        raise SelfTestError(f"synthetic verifier digest pin is not unique: {name}")
+    path.write_text(text, encoding="utf-8")
+
+
+def prepare_interim_gate_fixture(spec_dir: Path, temp_root: Path) -> Path:
+    """Build a coherent interim fixture without assuming the live package stage."""
+    fixture = temp_root / "interim-binding-gate"
+    shutil.copytree(spec_dir, fixture, symlinks=True)
+
+    registry_path = fixture / "current-behavior.json"
+    registry = load(registry_path)
+    registry["subject_binding"]["binding_stage"] = "interim-rebind-required"
+    registry["subject_binding"]["final_rebind_required"] = True
+    canonical_write(registry_path, registry)
+
+    rendering_path = fixture / "CURRENT-BEHAVIOR.md"
+    rendering = rendering_path.read_text(encoding="utf-8")
+    old = (
+        "This candidate currently has a "
+        "**final-subject-candidate-review-required** binding."
+    )
+    new = "This candidate currently has an **interim-rebind-required** binding."
+    if rendering.count(old) != 1:
+        raise SelfTestError("synthetic interim rendering anchor is not unique")
+    rendering_path.write_text(rendering.replace(old, new), encoding="utf-8")
+
+    verifier_path = fixture / "verify-protocol-specs.py"
+    replace_verifier_assignment(
+        verifier_path,
+        "EXPECTED_BINDING_STAGE",
+        repr("interim-rebind-required"),
+    )
+    replace_verifier_assignment(
+        verifier_path,
+        "EXPECTED_FINAL_REBIND_REQUIRED",
+        "True",
+    )
+    replace_verifier_digest(
+        verifier_path,
+        "CURRENT-BEHAVIOR.md",
+        sha256(rendering_path),
+    )
+    replace_verifier_digest(
+        verifier_path,
+        "current-behavior.json",
+        sha256(registry_path),
+    )
+    refresh_manifest(fixture)
+    return fixture
 
 
 def run_verifier(
@@ -907,6 +976,69 @@ def exercise_complete_subject_mutations(
     return len(cases)
 
 
+def exercise_binding_stage_gate(
+    verifier: Path,
+    spec_dir: Path,
+    repo_root: Path,
+) -> None:
+    binding_stage = load(spec_dir / "current-behavior.json")["subject_binding"][
+        "binding_stage"
+    ]
+    if binding_stage == "interim-rebind-required":
+        interim_dir = spec_dir
+        interim_verifier = verifier
+    elif binding_stage == "final-subject-candidate-review-required":
+        final_gate = run_verifier(
+            verifier,
+            spec_dir,
+            repo_root,
+            "--require-final-subject",
+        )
+        require_command_success(final_gate, "live final-subject binding gate")
+        print("binding-stage positive: PASS (final subject accepted by final gate)")
+        with tempfile.TemporaryDirectory(
+            prefix="dcrypt-protocol-interim-gate-selftest-"
+        ) as temp_text:
+            interim_dir = prepare_interim_gate_fixture(spec_dir, Path(temp_text))
+            interim_verifier = interim_dir / "verify-protocol-specs.py"
+            interim_baseline = run_verifier(
+                interim_verifier,
+                interim_dir,
+                repo_root,
+            )
+            require_command_success(
+                interim_baseline,
+                "coherently resealed interim binding fixture",
+            )
+            interim_final_gate = run_verifier(
+                interim_verifier,
+                interim_dir,
+                repo_root,
+                "--require-final-subject",
+            )
+            require_rejection(
+                interim_final_gate,
+                "interim-binding-cannot-pass-final-gate",
+                "final subject binding is required but this freeze remains interim-rebind-required",
+            )
+    else:
+        raise SelfTestError(f"unexpected reviewed binding stage: {binding_stage}")
+
+    if binding_stage == "interim-rebind-required":
+        interim_final_gate = run_verifier(
+            interim_verifier,
+            interim_dir,
+            repo_root,
+            "--require-final-subject",
+        )
+        require_rejection(
+            interim_final_gate,
+            "interim-binding-cannot-pass-final-gate",
+            "final subject binding is required but this freeze remains interim-rebind-required",
+        )
+    print("binding-stage negative: PASS (interim subject rejected by final gate)")
+
+
 def run() -> None:
     spec_dir = Path(__file__).absolute().parent
     repo_root = spec_dir.parents[2]
@@ -920,18 +1052,7 @@ def run() -> None:
             + baseline.stderr
         )
 
-    interim_final_gate = run_verifier(
-        verifier,
-        spec_dir,
-        repo_root,
-        "--require-final-subject",
-    )
-    require_rejection(
-        interim_final_gate,
-        "interim-binding-cannot-pass-final-gate",
-        "final subject binding is required but this freeze remains interim-rebind-required",
-    )
-    print("binding-stage negative: PASS (interim subject rejected by final gate)")
+    exercise_binding_stage_gate(verifier, spec_dir, repo_root)
 
     with tempfile.TemporaryDirectory(prefix="dcrypt-protocol-spec-selftest-") as temp_text:
         temp_root = Path(temp_text)
