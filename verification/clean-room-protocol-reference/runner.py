@@ -25,10 +25,19 @@ from common import (
 
 ROOT = Path(__file__).resolve().parent
 WORKER = ROOT / "worker.py"
-# Deliberately empty. Adding an independently reviewed dossier requires a
-# reviewed source change, not a self-attested JSON status flip.
+# The immutable reviewed source-package blob is an input contract, not a crypto
+# backend or evidence source. Later subject rebind fields are excluded from its
+# pinned semantic projection.
+REVIEWED_PROTOCOL_SOURCE_SHA256 = (
+    "07c79d695b906a0cd7a7be4f10f473c0414438390f3d0bdc18c2e9017d6b6035"
+)
+REVIEWED_PROTOCOL_SEMANTIC_PROJECTION_SHA256 = (
+    "37b0ecf19b57cf4c526af6bcfbbbf51a3f6bfe034dd19e50a0040fd8742c8eff"
+)
+# Deliberately empty. Installing a reference implementation requires reviewed
+# source and backend dossier pins through a source change, not a JSON status flip.
+APPROVED_REFERENCE_SOURCE_SHA256: frozenset[str] = frozenset()
 APPROVED_BACKEND_DOSSIER_SHA256: frozenset[str] = frozenset()
-PINNED_PROTOCOL_CONTRACT_SHA256: frozenset[str] = frozenset()
 
 
 def parser() -> argparse.ArgumentParser:
