@@ -12,24 +12,59 @@ import tomllib
 from typing import Any
 
 
-FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-002"
-SUPERSEDED_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-001"
+FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-003"
+DIRECTLY_SUPERSEDED_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-002"
 VERSIONED_DOCUMENT_SHA256 = {
-    "audit-policy.toml": "3dd2871f0e9fcfd470a280a61f898d4b14c06a4c15a77552ebd3488d98509bd0",
-    "audit-scope.toml": "25bc2a5bd185b49d16751ccf80097305032d74c52cc971fce0aeb7058b1142c2",
-    "RFP-SOW.md": "a67531bbdb65d09bb75fc7e31890e81791bbc747d55755a5ea187ef3a88f4179",
+    "audit-policy.toml": "eda28392c5e52b6242a7b796562afeb5c4af342ae17a31f1115b83e3463b4a99",
+    "audit-scope.toml": "066f83e994f0a3fa15b6c8180048290b65d68a856f3cd8cfac476db0efef2a58",
+    "RFP-SOW.md": "e7332306b6f956a1684c3f2ec7eebbc8c32f50cc7877131bdefb1d57b38bc868",
 }
-FREEZE_SUPERSESSION = {
-    "superseded-freeze-id": SUPERSEDED_FREEZE_ID,
-    "status": "invalidated-after-partial-independent-replay-before-acceptance",
-    "reason": "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract.",
-    "partial-independent-replay-observed": True,
-    "required-complete-independent-replay-completed": False,
-    "external-review-completed": False,
-    "audit-evidence-accepted": False,
-}
+FREEZE_SUPERSESSION_HISTORY = [
+    {
+        "superseded-freeze-id": "dcrypt-v3.0.0-audit-candidate-001",
+        "status": "invalidated-after-partial-independent-replay-before-acceptance",
+        "reason": "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract.",
+        "partial-independent-replay-observed": True,
+        "required-complete-independent-replay-completed": False,
+        "external-review-completed": False,
+        "audit-evidence-accepted": False,
+    },
+    {
+        "superseded-freeze-id": DIRECTLY_SUPERSEDED_FREEZE_ID,
+        "status": "invalidated-after-first-party-diagnostic-before-valid-wrapper-compliant-generation",
+        "reason": "Candidate-003 directly supersedes candidate-002 because the provision and generation README fences could return exit status 0 after a failed gate due to a trailing assignment; candidate-002 was invalidated after first-party diagnostic temporary materialization and diagnostic bundle creation but before valid wrapper-compliant materialization, valid candidate generation, an evidence commit, complete independent replay, or acceptance.",
+        "subject-commit": "852c771c7d764752e23322ab412b419925fb5a5f",
+        "subject-tree": "ae5779e73b64b60cc4ce198468ef9fd781cda2df",
+        "parent-sow-commit": "8e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02",
+        "triggering-invalidation-defect": "provision/generation README fences could return 0 after failed gate due trailing assignment",
+        "known-invalidation-defects": [
+            "provision/generation README fences could return 0 after failed gate due trailing assignment",
+            "clone fence could continue to checkout preexisting repo after failed clone",
+            "candidate import fence could mask mkdir/middle install failures and omitted prose-required unexpected-source-entry rejection",
+            "provisioning transfer fence could mask intermediate failures",
+        ],
+        "known-invalidation-defects-exhaustive": True,
+        "diagnostic-artifact-classification": "typed-first-party-diagnostic-non-evidence",
+        "independent-review-scope": "source-selftest-and-fence-diagnostic-only-not-bundle-evidence",
+        "diagnostic-provisioning-manifest-sha256": "f48385357526d1bdb141dbb624ae355c094b3c292f4b4d191a06095f29067e69",
+        "diagnostic-provisioning-sums-sha256": "e6adb59c5ec6e687c6652dd7938b5213ac310418a85cf8384b1e348f1633f1a6",
+        "diagnostic-freeze-sha256": "ed7e7a26c9ee645350d53245a71468e82b9a77310367a71b737d8691fa418335",
+        "diagnostic-sha256sums-sha256": "8c8d4948cf3d6356028bf4dffaead4f256bb2e755a5882e4c07bb88e67335b43",
+        "diagnostic_first_party_materialization_observed": True,
+        "diagnostic_first_party_bundle_observed": True,
+        "wrapper_contract_valid": False,
+        "valid_materialization_completed": False,
+        "valid_candidate_bundle_generated": False,
+        "evidence_commit_created": False,
+        "required_complete_independent_replay_completed": False,
+        "external_review_completed": False,
+        "audit_evidence_accepted": False,
+        "external_audit_occurred": False,
+        "vendor_contact_occurred": False,
+    },
+]
 POLICY_SCALARS = {
-    "document-id": "dcrypt-external-cryptographic-audit-policy-v2",
+    "document-id": "dcrypt-external-cryptographic-audit-policy-v3",
     "content-identity-policy": "The immutable in-subject SOW binds the stable candidate freeze ID. A later post-subject evidence envelope maps that ID to the canonical freeze.json SHA-256 and the policy, scope, and SOW SHA-256 digests without mutating these subject documents.",
     "owner": "dcrypt security assurance lead",
     "approver": "independent dcrypt security reviewer",
@@ -42,7 +77,7 @@ SUBJECT_BOUNDARY = {
     "rule": "Audit work and conclusions apply only to bytes bound by the candidate freeze. They do not apply to the published v3.0.0 tag or registry archives unless the auditor verifies an explicit byte-for-byte comparison and the final report names that extension.",
 }
 SCOPE_SCALARS = {
-    "document-id": "dcrypt-v3-external-cryptographic-audit-scope-v2",
+    "document-id": "dcrypt-v3-external-cryptographic-audit-scope-v3",
     "subject-version-label": "post-v3.0.0 assurance-branch candidate",
     "atomic-row-source": "assurance/atomic-operations.toml",
     "public-api-source": "assurance/public-api-snapshot.json",
@@ -65,6 +100,7 @@ POLICY_TOP_KEYS = {
     "status",
     "candidate-freeze-id",
     "candidate-freeze-content-identity",
+    "directly-supersedes-freeze-id",
     "content-identity-policy",
     "owner",
     "approver",
@@ -90,6 +126,7 @@ SCOPE_TOP_KEYS = {
     "status",
     "candidate-freeze-id",
     "candidate-freeze-content-identity",
+    "directly-supersedes-freeze-id",
     "freeze-supersession",
     "subject-version-label",
     "atomic-row-source",
@@ -364,8 +401,8 @@ FORBIDDEN_REDACTIONS = (
 )
 ISSUANCE_REQUIREMENTS = {
     "a post-subject evidence envelope maps the stable candidate freeze ID to a lowercase 64-character canonical freeze.json SHA-256 digest and the policy, scope, and SOW SHA-256 digests",
-    "candidate freeze is independently regenerated and replayed",
-    "the superseded candidate-001 remains invalidated after partial independent replay, without completed required replay or acceptance, unissued, and unacceptable as audit or assurance evidence",
+    "candidate-003 freeze is independently regenerated and replayed",
+    "the ordered candidate-001 and candidate-002 supersession records remain exact, candidate-003 directly supersedes candidate-002, and neither superseded candidate may be reused, promoted, issued, or treated as audit or assurance evidence",
     "the issued SOW identifies the post-v3.0.0 candidate as its subject and does not imply that published v3.0.0 registry bytes were audited",
     "all required audit artifacts are present or explicitly recorded as release-blocking limitations",
     "policy, scope and SOW digest binding passes assurance/audit/sow/verify-sow.py",
@@ -467,11 +504,13 @@ def verify_files(root: Path) -> None:
 
 def verify_common_identity(policy: dict[str, Any], scope: dict[str, Any]) -> None:
     for name, doc in (("policy", policy), ("scope", scope)):
-        require(doc.get("schema-version") == 2, f"{name} schema-version must be 2")
+        require(doc.get("schema-version") == 3, f"{name} schema-version must be 3")
         require(doc.get("status") == "candidate-uncommissioned", f"{name} must remain candidate-uncommissioned")
         require(doc.get("candidate-freeze-id") == FREEZE_ID, f"{name} candidate freeze ID differs")
         require(doc.get("candidate-freeze-content-identity") == "resolved-by-post-subject-evidence-envelope", f"{name} must defer content identity to the post-subject evidence envelope")
-        require(doc.get("freeze-supersession") == FREEZE_SUPERSESSION, f"{name} freeze supersession differs from the exact invalidated candidate-001 disposition")
+        require(doc.get("directly-supersedes-freeze-id") == DIRECTLY_SUPERSEDED_FREEZE_ID, f"{name} direct supersession differs")
+        require(isinstance(doc.get("freeze-supersession"), list), f"{name} freeze supersession history must be an ordered array")
+        require(doc.get("freeze-supersession") == FREEZE_SUPERSESSION_HISTORY, f"{name} freeze supersession history differs from the exact ordered candidate-001 and candidate-002 dispositions")
     require(policy["external-contact-authorized"] is False, "external contact must remain unauthorized")
     require(policy["audit-commissioned"] is False, "audit must remain uncommissioned")
 
@@ -684,8 +723,10 @@ def verify_markdown(root: Path, policy: dict[str, Any], scope: dict[str, Any]) -
         "Status: **candidate / uncommissioned — do not issue**",
         f"Candidate freeze ID: `{FREEZE_ID}`",
         "Candidate freeze content identity: `resolved-by-post-subject-evidence-envelope`",
-        f"Supersedes freeze ID: `{SUPERSEDED_FREEZE_ID}`",
-        "Superseded freeze state: `invalidated-after-partial-independent-replay-before-acceptance`",
+        f"Directly supersedes freeze ID: `{DIRECTLY_SUPERSEDED_FREEZE_ID}`",
+        "Ordered supersession history: `dcrypt-v3.0.0-audit-candidate-001`, then `dcrypt-v3.0.0-audit-candidate-002`",
+        "Candidate-001 superseded state: `invalidated-after-partial-independent-replay-before-acceptance`",
+        "Candidate-002 superseded state: `invalidated-after-first-party-diagnostic-before-valid-wrapper-compliant-generation`",
         f"Machine policy SHA-256: `{sha256(root / 'audit-policy.toml')}`",
         f"Machine scope SHA-256: `{sha256(root / 'audit-scope.toml')}`",
     }
@@ -695,10 +736,29 @@ def verify_markdown(root: Path, policy: dict[str, Any], scope: dict[str, Any]) -
         require(workstream["title"] in markdown, f"SOW does not name workstream title: {workstream['title']}")
     required_phrases = [
         "No vendor contact is authorized",
-        "Candidate-002 supersedes candidate-001, which was invalidated after partial independent replay observations but before acceptance",
+        "Candidate-003 directly supersedes candidate-002",
+        "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract",
         "non-PTY self-test, materialization, 13-file regeneration",
         "documented PTY wrapper mismatch",
         "not a completed required independent replay, acceptance, completed external review, external audit, or accepted audit or assurance evidence for candidate-001",
+        "852c771c7d764752e23322ab412b419925fb5a5f",
+        "ae5779e73b64b60cc4ce198468ef9fd781cda2df",
+        "8e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02",
+        "provision/generation README fences could return 0 after failed gate due trailing assignment",
+        "exact ordered, exhaustive set of all four known candidate-002 invalidation defects",
+        "clone fence could continue to checkout preexisting repo after failed clone",
+        "candidate import fence could mask mkdir/middle install failures and omitted prose-required unexpected-source-entry rejection",
+        "provisioning transfer fence could mask intermediate failures",
+        "first-party diagnostic temporary materialization and diagnostic bundle creation",
+        "before valid wrapper-compliant materialization, valid candidate generation, an evidence commit, complete independent replay, or acceptance",
+        "source, self-test, and fence diagnostics only, not candidate-002 bundle evidence",
+        "typed first-party diagnostic non-evidence only",
+        "f48385357526d1bdb141dbb624ae355c094b3c292f4b4d191a06095f29067e69",
+        "e6adb59c5ec6e687c6652dd7938b5213ac310418a85cf8384b1e348f1633f1a6",
+        "ed7e7a26c9ee645350d53245a71468e82b9a77310367a71b737d8691fa418335",
+        "8c8d4948cf3d6356028bf4dffaead4f256bb2e755a5882e4c07bb88e67335b43",
+        "Candidate-002 is non-evidence and must not be reused, promoted, or issued",
+        "No external audit occurred and no vendor was contacted for either superseded candidate",
         "do **not** apply to the published v3.0.0 Git tag or registry archives",
         "Every confirmed finding requires a regression test, remediation record, and",
         "mandatory independent retest",

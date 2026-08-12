@@ -1,33 +1,72 @@
 # Request for Proposal and Statement of Work: dcrypt external cryptographic audit
 
 - Status: **candidate / uncommissioned — do not issue**
-- Candidate freeze ID: `dcrypt-v3.0.0-audit-candidate-002`
+- Candidate freeze ID: `dcrypt-v3.0.0-audit-candidate-003`
 - Candidate freeze content identity: `resolved-by-post-subject-evidence-envelope`
-- Supersedes freeze ID: `dcrypt-v3.0.0-audit-candidate-001`
-- Superseded freeze state: `invalidated-after-partial-independent-replay-before-acceptance`
-- Machine policy SHA-256: `3dd2871f0e9fcfd470a280a61f898d4b14c06a4c15a77552ebd3488d98509bd0`
-- Machine scope SHA-256: `25bc2a5bd185b49d16751ccf80097305032d74c52cc971fce0aeb7058b1142c2`
+- Directly supersedes freeze ID: `dcrypt-v3.0.0-audit-candidate-002`
+- Ordered supersession history: `dcrypt-v3.0.0-audit-candidate-001`, then `dcrypt-v3.0.0-audit-candidate-002`
+- Candidate-001 superseded state: `invalidated-after-partial-independent-replay-before-acceptance`
+- Candidate-002 superseded state: `invalidated-after-first-party-diagnostic-before-valid-wrapper-compliant-generation`
+- Machine policy SHA-256: `eda28392c5e52b6242a7b796562afeb5c4af342ae17a31f1115b83e3463b4a99`
+- Machine scope SHA-256: `066f83e994f0a3fa15b6c8180048290b65d68a856f3cd8cfac476db0efef2a58`
 
 This document is a vendor-ready template, not evidence that an audit has been
 commissioned, scheduled, started, or completed. No vendor contact is authorized
-by this file. Candidate-002 supersedes candidate-001, which was invalidated after
-partial independent replay observations but before acceptance. The reviewer
-observed a non-PTY self-test, materialization, 13-file regeneration, and
-structural/release replay for candidate-001. A documented PTY wrapper mismatch
-then showed that candidate-001 had not completed the full required replay
-contract. Those partial observations are not a completed required independent
-replay, acceptance, completed external review, external audit, or accepted audit
-or assurance evidence for candidate-001; it must not be issued. Before issue,
-candidate-002 must be independently replayed;
-a post-subject evidence envelope must map the stable ID to the canonical
-`freeze.json`, policy, scope, and SOW SHA-256 digests; and the security lead must
-separately authorize vendor contact. The in-subject SOW is not rewritten with
-the later freeze digest, avoiding a self-referential freeze.
+by this file. Candidate-003 directly supersedes candidate-002; the ordered,
+immutable supersession history is candidate-001 followed by candidate-002.
+
+Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch
+invalidated candidate-001 after partial independent replay observations but
+before completion and acceptance under the full required replay contract. The
+reviewer observed a non-PTY self-test, materialization, 13-file regeneration,
+and structural/release replay for candidate-001. Those partial observations are
+not a completed required independent replay, acceptance, completed external
+review, external audit, or accepted audit or assurance evidence for
+candidate-001; it must not be reused, promoted, or issued.
+
+Candidate-002 bound subject commit
+`852c771c7d764752e23322ab412b419925fb5a5f`, subject tree
+`ae5779e73b64b60cc4ce198468ef9fd781cda2df`, and parent/SOW commit
+`8e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02`. It was invalidated after
+first-party diagnostic temporary materialization and diagnostic bundle creation,
+but before valid wrapper-compliant materialization, valid candidate generation,
+an evidence commit, complete independent replay, or acceptance. The triggering
+invalidation defect was `provision/generation README fences could return 0 after
+failed gate due trailing assignment`. The exact ordered, exhaustive set of all
+four known candidate-002 invalidation defects is:
+
+1. Triggering defect: `provision/generation README fences could return 0 after failed gate due trailing assignment`.
+2. `clone fence could continue to checkout preexisting repo after failed clone`.
+3. `candidate import fence could mask mkdir/middle install failures and omitted prose-required unexpected-source-entry rejection`.
+4. `provisioning transfer fence could mask intermediate failures`.
+
+The independent review covered source, self-test, and fence diagnostics only,
+not candidate-002 bundle evidence. Its diagnostic hashes are typed first-party
+diagnostic non-evidence only:
+
+- provisioning manifest: `f48385357526d1bdb141dbb624ae355c094b3c292f4b4d191a06095f29067e69`;
+- provisioning sums: `e6adb59c5ec6e687c6652dd7938b5213ac310418a85cf8384b1e348f1633f1a6`;
+- freeze: `ed7e7a26c9ee645350d53245a71468e82b9a77310367a71b737d8691fa418335`; and
+- `SHA256SUMS`: `8c8d4948cf3d6356028bf4dffaead4f256bb2e755a5882e4c07bb88e67335b43`.
+
+For candidate-002, diagnostic first-party materialization and bundle observation
+are true; wrapper-contract validity, valid materialization, valid candidate
+bundle generation, evidence-commit creation, complete independent replay,
+external-review completion, and audit-evidence acceptance are all false. No
+external audit occurred and no vendor contact occurred for candidate-002.
+Candidate-002 is non-evidence and must not be reused, promoted, or issued.
+
+Before issue, candidate-003 must be independently replayed; a post-subject
+evidence envelope must map the stable ID to the canonical `freeze.json`, policy,
+scope, and SOW SHA-256 digests; and the security lead must separately authorize
+vendor contact. The in-subject SOW is not rewritten with the later freeze digest,
+avoiding a self-referential freeze. No external audit occurred and no vendor was
+contacted for either superseded candidate.
 
 ## 1. Subject and objective
 
 dcrypt requests an independent security assessment of the exact
-post-v3.0.0 assurance-branch candidate-002 bytes bound by the candidate freeze. The
+post-v3.0.0 assurance-branch candidate-003 bytes bound by the candidate freeze. The
 objective is to find correctness, forgery, key-recovery, authentication,
 domain-separation, nonce, parsing, implementation, protocol-composition,
 side-channel, fault, dependency, build, and supply-chain defects before those

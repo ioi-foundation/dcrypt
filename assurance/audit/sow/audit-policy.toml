@@ -1,15 +1,16 @@
-schema-version = 2
-document-id = "dcrypt-external-cryptographic-audit-policy-v2"
+schema-version = 3
+document-id = "dcrypt-external-cryptographic-audit-policy-v3"
 status = "candidate-uncommissioned"
-candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"
+candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-003"
 candidate-freeze-content-identity = "resolved-by-post-subject-evidence-envelope"
+directly-supersedes-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"
 content-identity-policy = "The immutable in-subject SOW binds the stable candidate freeze ID. A later post-subject evidence envelope maps that ID to the canonical freeze.json SHA-256 and the policy, scope, and SOW SHA-256 digests without mutating these subject documents."
 owner = "dcrypt security assurance lead"
 approver = "independent dcrypt security reviewer"
 external-contact-authorized = false
 audit-commissioned = false
 
-[freeze-supersession]
+[[freeze-supersession]]
 superseded-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
 status = "invalidated-after-partial-independent-replay-before-acceptance"
 reason = "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract."
@@ -17,6 +18,39 @@ partial-independent-replay-observed = true
 required-complete-independent-replay-completed = false
 external-review-completed = false
 audit-evidence-accepted = false
+
+[[freeze-supersession]]
+superseded-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"
+status = "invalidated-after-first-party-diagnostic-before-valid-wrapper-compliant-generation"
+reason = "Candidate-003 directly supersedes candidate-002 because the provision and generation README fences could return exit status 0 after a failed gate due to a trailing assignment; candidate-002 was invalidated after first-party diagnostic temporary materialization and diagnostic bundle creation but before valid wrapper-compliant materialization, valid candidate generation, an evidence commit, complete independent replay, or acceptance."
+subject-commit = "852c771c7d764752e23322ab412b419925fb5a5f"
+subject-tree = "ae5779e73b64b60cc4ce198468ef9fd781cda2df"
+parent-sow-commit = "8e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02"
+triggering-invalidation-defect = "provision/generation README fences could return 0 after failed gate due trailing assignment"
+known-invalidation-defects = [
+    "provision/generation README fences could return 0 after failed gate due trailing assignment",
+    "clone fence could continue to checkout preexisting repo after failed clone",
+    "candidate import fence could mask mkdir/middle install failures and omitted prose-required unexpected-source-entry rejection",
+    "provisioning transfer fence could mask intermediate failures",
+]
+known-invalidation-defects-exhaustive = true
+diagnostic-artifact-classification = "typed-first-party-diagnostic-non-evidence"
+independent-review-scope = "source-selftest-and-fence-diagnostic-only-not-bundle-evidence"
+diagnostic-provisioning-manifest-sha256 = "f48385357526d1bdb141dbb624ae355c094b3c292f4b4d191a06095f29067e69"
+diagnostic-provisioning-sums-sha256 = "e6adb59c5ec6e687c6652dd7938b5213ac310418a85cf8384b1e348f1633f1a6"
+diagnostic-freeze-sha256 = "ed7e7a26c9ee645350d53245a71468e82b9a77310367a71b737d8691fa418335"
+diagnostic-sha256sums-sha256 = "8c8d4948cf3d6356028bf4dffaead4f256bb2e755a5882e4c07bb88e67335b43"
+diagnostic_first_party_materialization_observed = true
+diagnostic_first_party_bundle_observed = true
+wrapper_contract_valid = false
+valid_materialization_completed = false
+valid_candidate_bundle_generated = false
+evidence_commit_created = false
+required_complete_independent_replay_completed = false
+external_review_completed = false
+audit_evidence_accepted = false
+external_audit_occurred = false
+vendor_contact_occurred = false
 
 [subject-boundary]
 subject = "post-v3.0.0 assurance-branch candidate bytes identified by the candidate freeze"
@@ -255,8 +289,8 @@ scope-limitation-clears-row = false
 [issuance-gate]
 requirements = [
     "a post-subject evidence envelope maps the stable candidate freeze ID to a lowercase 64-character canonical freeze.json SHA-256 digest and the policy, scope, and SOW SHA-256 digests",
-    "candidate freeze is independently regenerated and replayed",
-    "the superseded candidate-001 remains invalidated after partial independent replay, without completed required replay or acceptance, unissued, and unacceptable as audit or assurance evidence",
+    "candidate-003 freeze is independently regenerated and replayed",
+    "the ordered candidate-001 and candidate-002 supersession records remain exact, candidate-003 directly supersedes candidate-002, and neither superseded candidate may be reused, promoted, issued, or treated as audit or assurance evidence",
     "the issued SOW identifies the post-v3.0.0 candidate as its subject and does not imply that published v3.0.0 registry bytes were audited",
     "all required audit artifacts are present or explicitly recorded as release-blocking limitations",
     "policy, scope and SOW digest binding passes assurance/audit/sow/verify-sow.py",

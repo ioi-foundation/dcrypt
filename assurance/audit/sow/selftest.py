@@ -23,6 +23,13 @@ if SPEC is None or SPEC.loader is None:
 VERIFY = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VERIFY)
 
+KNOWN_INVALIDATION_DEFECTS = (
+    "provision/generation README fences could return 0 after failed gate due trailing assignment",
+    "clone fence could continue to checkout preexisting repo after failed clone",
+    "candidate import fence could mask mkdir/middle install failures and omitted prose-required unexpected-source-entry rejection",
+    "provisioning transfer fence could mask intermediate failures",
+)
+
 
 def replace(path: Path, old: str, new: str, count: int = 1) -> None:
     text = path.read_text(encoding="utf-8")
@@ -47,16 +54,236 @@ def mutate_status(root: Path) -> None:
 
 
 def mutate_freeze_id(root: Path) -> None:
-    replace(root / "audit-scope.toml", 'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"', 'candidate-freeze-id = "unbound"')
+    replace(root / "audit-scope.toml", 'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-003"', 'candidate-freeze-id = "unbound"')
 
 
 def mutate_old_freeze_id(root: Path) -> None:
     for filename in ("audit-policy.toml", "audit-scope.toml"):
         replace(
             root / filename,
-            'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"',
+            'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-003"',
             'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"',
         )
+
+
+def mutate_candidate002_reuse(root: Path) -> None:
+    for filename in ("audit-policy.toml", "audit-scope.toml"):
+        replace(
+            root / filename,
+            'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-003"',
+            'candidate-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"',
+        )
+
+
+def mutate_direct_supersession(root: Path) -> None:
+    replace(
+        root / "audit-policy.toml",
+        'directly-supersedes-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"',
+        'directly-supersedes-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"',
+    )
+
+
+def mutate_supersession_order(root: Path) -> None:
+    path = root / "audit-scope.toml"
+    text = path.read_text(encoding="utf-8")
+    start = text.index("[[freeze-supersession]]")
+    end = text.index("[[workstream]]", start)
+    history = text[start:end]
+    records = history.split("[[freeze-supersession]]\n")[1:]
+    if len(records) != 2:
+        raise RuntimeError("expected exactly two supersession records")
+    reordered = "".join(f"[[freeze-supersession]]\n{record}" for record in reversed(records))
+    path.write_text(text[:start] + reordered + text[end:], encoding="utf-8")
+
+
+def mutate_candidate002_subject_commit(root: Path) -> None:
+    replace(
+        root / "audit-policy.toml",
+        'subject-commit = "852c771c7d764752e23322ab412b419925fb5a5f"',
+        'subject-commit = "052c771c7d764752e23322ab412b419925fb5a5f"',
+    )
+
+
+def mutate_candidate002_subject_tree(root: Path) -> None:
+    replace(
+        root / "audit-scope.toml",
+        'subject-tree = "ae5779e73b64b60cc4ce198468ef9fd781cda2df"',
+        'subject-tree = "0e5779e73b64b60cc4ce198468ef9fd781cda2df"',
+    )
+
+
+def mutate_candidate002_parent_sow(root: Path) -> None:
+    replace(
+        root / "audit-policy.toml",
+        'parent-sow-commit = "8e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02"',
+        'parent-sow-commit = "0e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02"',
+    )
+
+
+def mutate_candidate002_triggering_defect(root: Path) -> None:
+    replace(
+        root / "audit-scope.toml",
+        f'triggering-invalidation-defect = "{KNOWN_INVALIDATION_DEFECTS[0]}"',
+        'triggering-invalidation-defect = "trigger erased"',
+    )
+
+
+def mutate_candidate002_known_defect(root: Path, index: int) -> None:
+    defect = KNOWN_INVALIDATION_DEFECTS[index]
+    replace(
+        root / "audit-policy.toml",
+        f'    "{defect}",',
+        f'    "mutated known invalidation defect {index + 1}",',
+    )
+
+
+def remove_candidate002_known_defect(root: Path, index: int) -> None:
+    defect = KNOWN_INVALIDATION_DEFECTS[index]
+    replace(root / "audit-scope.toml", f'    "{defect}",\n', "")
+
+
+def mutate_candidate002_known_defect_1(root: Path) -> None:
+    mutate_candidate002_known_defect(root, 0)
+
+
+def mutate_candidate002_known_defect_2(root: Path) -> None:
+    mutate_candidate002_known_defect(root, 1)
+
+
+def mutate_candidate002_known_defect_3(root: Path) -> None:
+    mutate_candidate002_known_defect(root, 2)
+
+
+def mutate_candidate002_known_defect_4(root: Path) -> None:
+    mutate_candidate002_known_defect(root, 3)
+
+
+def remove_candidate002_known_defect_1(root: Path) -> None:
+    remove_candidate002_known_defect(root, 0)
+
+
+def remove_candidate002_known_defect_2(root: Path) -> None:
+    remove_candidate002_known_defect(root, 1)
+
+
+def remove_candidate002_known_defect_3(root: Path) -> None:
+    remove_candidate002_known_defect(root, 2)
+
+
+def remove_candidate002_known_defect_4(root: Path) -> None:
+    remove_candidate002_known_defect(root, 3)
+
+
+def reorder_candidate002_known_defects(root: Path) -> None:
+    first = KNOWN_INVALIDATION_DEFECTS[0]
+    second = KNOWN_INVALIDATION_DEFECTS[1]
+    replace(
+        root / "audit-policy.toml",
+        f'    "{first}",\n    "{second}",',
+        f'    "{second}",\n    "{first}",',
+    )
+
+
+def add_unknown_candidate002_known_defect(root: Path) -> None:
+    last = KNOWN_INVALIDATION_DEFECTS[-1]
+    replace(
+        root / "audit-scope.toml",
+        f'    "{last}",\n]',
+        f'    "{last}",\n    "unknown fifth invalidation defect",\n]',
+    )
+
+
+def mutate_candidate002_defect_exhaustiveness(root: Path) -> None:
+    replace(
+        root / "audit-policy.toml",
+        "known-invalidation-defects-exhaustive = true",
+        "known-invalidation-defects-exhaustive = false",
+    )
+
+
+def mutate_candidate002_classification(root: Path) -> None:
+    replace(
+        root / "audit-policy.toml",
+        'diagnostic-artifact-classification = "typed-first-party-diagnostic-non-evidence"',
+        'diagnostic-artifact-classification = "accepted-evidence"',
+    )
+
+
+def mutate_candidate002_review_scope(root: Path) -> None:
+    replace(
+        root / "audit-scope.toml",
+        'independent-review-scope = "source-selftest-and-fence-diagnostic-only-not-bundle-evidence"',
+        'independent-review-scope = "complete-bundle-evidence-review"',
+    )
+
+
+def mutate_candidate002_hash(root: Path, field: str, digest: str) -> None:
+    replacement = ("0" if digest[0] != "0" else "1") + digest[1:]
+    replace(root / "audit-policy.toml", f'{field} = "{digest}"', f'{field} = "{replacement}"')
+
+
+def mutate_candidate002_provisioning_manifest_hash(root: Path) -> None:
+    mutate_candidate002_hash(root, "diagnostic-provisioning-manifest-sha256", "f48385357526d1bdb141dbb624ae355c094b3c292f4b4d191a06095f29067e69")
+
+
+def mutate_candidate002_provisioning_sums_hash(root: Path) -> None:
+    mutate_candidate002_hash(root, "diagnostic-provisioning-sums-sha256", "e6adb59c5ec6e687c6652dd7938b5213ac310418a85cf8384b1e348f1633f1a6")
+
+
+def mutate_candidate002_freeze_hash(root: Path) -> None:
+    mutate_candidate002_hash(root, "diagnostic-freeze-sha256", "ed7e7a26c9ee645350d53245a71468e82b9a77310367a71b737d8691fa418335")
+
+
+def mutate_candidate002_sha256sums_hash(root: Path) -> None:
+    mutate_candidate002_hash(root, "diagnostic-sha256sums-sha256", "8c8d4948cf3d6356028bf4dffaead4f256bb2e755a5882e4c07bb88e67335b43")
+
+
+def mutate_candidate002_bool(root: Path, field: str, old: str, new: str) -> None:
+    replace(root / "audit-scope.toml", f"{field} = {old}", f"{field} = {new}")
+
+
+def mutate_candidate002_materialization_observation(root: Path) -> None:
+    mutate_candidate002_bool(root, "diagnostic_first_party_materialization_observed", "true", "false")
+
+
+def mutate_candidate002_bundle_observation(root: Path) -> None:
+    mutate_candidate002_bool(root, "diagnostic_first_party_bundle_observed", "true", "false")
+
+
+def mutate_candidate002_wrapper_promotion(root: Path) -> None:
+    mutate_candidate002_bool(root, "wrapper_contract_valid", "false", "true")
+
+
+def mutate_candidate002_materialization_promotion(root: Path) -> None:
+    mutate_candidate002_bool(root, "valid_materialization_completed", "false", "true")
+
+
+def mutate_candidate002_bundle_promotion(root: Path) -> None:
+    mutate_candidate002_bool(root, "valid_candidate_bundle_generated", "false", "true")
+
+
+def mutate_candidate002_evidence_commit_promotion(root: Path) -> None:
+    mutate_candidate002_bool(root, "evidence_commit_created", "false", "true")
+
+
+def mutate_candidate002_replay_promotion(root: Path) -> None:
+    mutate_candidate002_bool(root, "required_complete_independent_replay_completed", "false", "true")
+
+
+def mutate_candidate002_external_review_promotion(root: Path) -> None:
+    mutate_candidate002_bool(root, "external_review_completed", "false", "true")
+
+
+def mutate_candidate002_evidence_promotion(root: Path) -> None:
+    mutate_candidate002_bool(root, "audit_evidence_accepted", "false", "true")
+
+
+def mutate_candidate002_external_audit_claim(root: Path) -> None:
+    mutate_candidate002_bool(root, "external_audit_occurred", "false", "true")
+
+
+def mutate_candidate002_vendor_contact_claim(root: Path) -> None:
+    mutate_candidate002_bool(root, "vendor_contact_occurred", "false", "true")
 
 
 def mutate_superseded_external_review(root: Path) -> None:
@@ -176,7 +403,7 @@ def mutate_approver(root: Path) -> None:
 
 
 def mutate_independent_replay_issuance(root: Path) -> None:
-    replace(root / "audit-policy.toml", '    "candidate freeze is independently regenerated and replayed",\n', "")
+    replace(root / "audit-policy.toml", '    "candidate-003 freeze is independently regenerated and replayed",\n', "")
 
 
 def mutate_envelope_issuance(root: Path) -> None:
@@ -225,11 +452,46 @@ def mutate_unexpected(root: Path) -> None:
 FIXTURES: list[tuple[str, Callable[[Path], None], str]] = [
     ("commissioned-state", mutate_status, "must remain candidate-uncommissioned"),
     ("policy-scope-freeze-id-mismatch", mutate_freeze_id, "scope candidate freeze ID differs"),
-    ("old-freeze-id-reuse", mutate_old_freeze_id, "policy candidate freeze ID differs"),
-    ("partial-independent-replay-erased", mutate_partial_replay_erased, "policy freeze supersession differs"),
-    ("required-complete-replay-falsely-claimed", mutate_required_complete_replay_claimed, "scope freeze supersession differs"),
-    ("superseded-external-review-claimed", mutate_superseded_external_review, "policy freeze supersession differs"),
-    ("superseded-audit-evidence-accepted", mutate_superseded_audit_evidence, "scope freeze supersession differs"),
+    ("candidate001-reuse", mutate_old_freeze_id, "policy candidate freeze ID differs"),
+    ("candidate002-reuse", mutate_candidate002_reuse, "policy candidate freeze ID differs"),
+    ("direct-supersession-rewritten", mutate_direct_supersession, "policy direct supersession differs"),
+    ("supersession-history-reordered", mutate_supersession_order, "scope freeze supersession history differs"),
+    ("candidate001-partial-independent-replay-erased", mutate_partial_replay_erased, "policy freeze supersession history differs"),
+    ("candidate001-required-complete-replay-falsely-claimed", mutate_required_complete_replay_claimed, "scope freeze supersession history differs"),
+    ("candidate001-external-review-claimed", mutate_superseded_external_review, "policy freeze supersession history differs"),
+    ("candidate001-audit-evidence-accepted", mutate_superseded_audit_evidence, "scope freeze supersession history differs"),
+    ("candidate002-subject-commit-drift", mutate_candidate002_subject_commit, "policy freeze supersession history differs"),
+    ("candidate002-subject-tree-drift", mutate_candidate002_subject_tree, "scope freeze supersession history differs"),
+    ("candidate002-parent-sow-drift", mutate_candidate002_parent_sow, "policy freeze supersession history differs"),
+    ("candidate002-triggering-defect-erased", mutate_candidate002_triggering_defect, "scope freeze supersession history differs"),
+    ("candidate002-known-defect-1-mutated", mutate_candidate002_known_defect_1, "policy freeze supersession history differs"),
+    ("candidate002-known-defect-2-mutated", mutate_candidate002_known_defect_2, "policy freeze supersession history differs"),
+    ("candidate002-known-defect-3-mutated", mutate_candidate002_known_defect_3, "policy freeze supersession history differs"),
+    ("candidate002-known-defect-4-mutated", mutate_candidate002_known_defect_4, "policy freeze supersession history differs"),
+    ("candidate002-known-defect-1-removed", remove_candidate002_known_defect_1, "scope freeze supersession history differs"),
+    ("candidate002-known-defect-2-removed", remove_candidate002_known_defect_2, "scope freeze supersession history differs"),
+    ("candidate002-known-defect-3-removed", remove_candidate002_known_defect_3, "scope freeze supersession history differs"),
+    ("candidate002-known-defect-4-removed", remove_candidate002_known_defect_4, "scope freeze supersession history differs"),
+    ("candidate002-known-defects-reordered", reorder_candidate002_known_defects, "policy freeze supersession history differs"),
+    ("candidate002-unknown-defect-added", add_unknown_candidate002_known_defect, "scope freeze supersession history differs"),
+    ("candidate002-defect-set-not-exhaustive", mutate_candidate002_defect_exhaustiveness, "policy freeze supersession history differs"),
+    ("candidate002-diagnostic-promoted", mutate_candidate002_classification, "policy freeze supersession history differs"),
+    ("candidate002-review-scope-promoted", mutate_candidate002_review_scope, "scope freeze supersession history differs"),
+    ("candidate002-provisioning-manifest-hash-drift", mutate_candidate002_provisioning_manifest_hash, "policy freeze supersession history differs"),
+    ("candidate002-provisioning-sums-hash-drift", mutate_candidate002_provisioning_sums_hash, "policy freeze supersession history differs"),
+    ("candidate002-freeze-hash-drift", mutate_candidate002_freeze_hash, "policy freeze supersession history differs"),
+    ("candidate002-sha256sums-hash-drift", mutate_candidate002_sha256sums_hash, "policy freeze supersession history differs"),
+    ("candidate002-materialization-observation-erased", mutate_candidate002_materialization_observation, "scope freeze supersession history differs"),
+    ("candidate002-bundle-observation-erased", mutate_candidate002_bundle_observation, "scope freeze supersession history differs"),
+    ("candidate002-wrapper-promoted", mutate_candidate002_wrapper_promotion, "scope freeze supersession history differs"),
+    ("candidate002-materialization-promoted", mutate_candidate002_materialization_promotion, "scope freeze supersession history differs"),
+    ("candidate002-bundle-promoted", mutate_candidate002_bundle_promotion, "scope freeze supersession history differs"),
+    ("candidate002-evidence-commit-promoted", mutate_candidate002_evidence_commit_promotion, "scope freeze supersession history differs"),
+    ("candidate002-replay-promoted", mutate_candidate002_replay_promotion, "scope freeze supersession history differs"),
+    ("candidate002-external-review-promoted", mutate_candidate002_external_review_promotion, "scope freeze supersession history differs"),
+    ("candidate002-audit-evidence-promoted", mutate_candidate002_evidence_promotion, "scope freeze supersession history differs"),
+    ("candidate002-external-audit-claimed", mutate_candidate002_external_audit_claim, "scope freeze supersession history differs"),
+    ("candidate002-vendor-contact-claimed", mutate_candidate002_vendor_contact_claim, "scope freeze supersession history differs"),
     ("embedded-later-freeze-digest", mutate_content_identity, "defer content identity"),
     ("published-v3-inferred", mutate_subject_boundary, "subject-boundary differs from the exact candidate-versus-published-byte contract"),
     ("public-api-source-escape", mutate_public_api_source, "scope public-api-source differs from the exact versioned contract"),
