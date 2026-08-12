@@ -25,9 +25,9 @@ from typing import Any, Iterable
 
 SCHEMA_VERSION = 1
 STATUS = "STABLE-final-subject-bound"
-FRAMEWORK_SUBJECT_COMMIT = "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48"
-FRAMEWORK_SUBJECT_TREE = "21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92"
-FRAMEWORK_SUBJECT_MANIFEST_SHA256 = "3e3615c19ecd0405882a9af03e45a8a4ef8d94347c37c767f242b3287ed15101"
+FRAMEWORK_SUBJECT_COMMIT = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
+FRAMEWORK_SUBJECT_TREE = "28c04fffd98b76f447d55aa313fba13881604649"
+FRAMEWORK_SUBJECT_MANIFEST_SHA256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
 CONTENT_PREFIX = "dcrypt-fuzzing"
 FRAMEWORK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = FRAMEWORK_DIR.parent.parent
@@ -44,10 +44,10 @@ EXPECTED_CRITICAL_ROWS = 372
 EXPECTED_EXPLICIT_BLOCKERS = EXPECTED_TOTAL_ROWS - EXPECTED_CRITICAL_ROWS
 
 PACKAGE_C_CONTROL_INPUTS = {
-    ".github/workflows/security-validation.yml": ("a51b74a4934c14dd3d014af6121d53911a878d65da15e6efd0c01dafede7d47b", "100644"),
-    "tools/release-dcrypt.sh": ("b0c254235731439aabf0ebff473bb4c75fa45e92aeea4adb22bce81a9ce0943d", "100755"),
-    "tools/verify-publish-ready.sh": ("8be3f17df0081d2d7c860fd00b090d50fb02463b93f10d439278e993d7820b48", "100755"),
-    "tools/verify-remote-release-ready.py": ("c08deb4060adb421006c4fe0144bfcbd2ff0f39a9d47de52fcd0b6f8417403a4", "100755"),
+    ".github/workflows/security-validation.yml": ("0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52", "100644"),
+    "tools/release-dcrypt.sh": ("813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7", "100755"),
+    "tools/verify-publish-ready.sh": ("db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5", "100755"),
+    "tools/verify-remote-release-ready.py": ("08581d04df268a9d859a70207d91e68b0c80631be8aaf94ce7e84e19f2bd4d3d", "100755"),
 }
 
 WEEKLY_CRITICAL_CORE_SECONDS = 72 * 60 * 60
@@ -70,7 +70,7 @@ INTEGRATED_ASAN_FUNCTION_SYMBOLS = (
 
 # These are replaced once from the canonical in-code projections.  They are
 # literal trust anchors so a coherent data-only rewrite cannot promote itself.
-EXPECTED_POLICY_SEMANTIC_SHA256 = "9fc633823ef7cb80ca559ded936707c4fd0065223c51e37ad231d064df7e8d5a"
+EXPECTED_POLICY_SEMANTIC_SHA256 = "a9f3be423ccfe187963dc45436dfcb3df1f0db876af8e6310b5ee58ff989f305"
 EXPECTED_REGISTRY_SEMANTIC_SHA256 = "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b"
 
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")

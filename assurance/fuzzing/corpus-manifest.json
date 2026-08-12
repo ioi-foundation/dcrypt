@@ -5,7 +5,7 @@
     "reviewed_seed_files": 69,
     "targets": 17
   },
-  "files_sha256": "3aae51a0b03f4badaab66a9407bb7300849f555a5bacf98efa21a0958680ee36",
+  "files_sha256": "33b2685c77591bca995348fd34388363e1b3dd64314297fda34eefac6d6f153f",
   "operational_object_template": {
     "confidentiality": "private-campaign-corpus",
     "first_seen": null,
@@ -59,9 +59,9 @@
   "registry_semantic_sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
   "schema_version": 1,
   "source_binding": {
-    "framework_subject_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-    "framework_subject_manifest_sha256": "3e3615c19ecd0405882a9af03e45a8a4ef8d94347c37c767f242b3287ed15101",
-    "framework_subject_tree": "21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92",
+    "framework_subject_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+    "framework_subject_manifest_sha256": "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b",
+    "framework_subject_tree": "28c04fffd98b76f447d55aa313fba13881604649",
     "package_b_assurance_commit": "682947afafdce5bf19339c90bc1a3e768fa15772",
     "package_b_assurance_tree": "7112eb96c4dc92ce24c277d512c286f183b04cf5",
     "package_b_subject_commit": "ba2685293bf326cef611f33445269071e9fddef1",
@@ -92,14 +92,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -155,14 +155,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -201,14 +201,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -254,14 +254,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -317,14 +317,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -370,14 +370,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -433,14 +433,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -479,14 +479,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -525,14 +525,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -571,14 +571,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -617,14 +617,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -670,14 +670,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -733,14 +733,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -786,14 +786,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -849,14 +849,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -895,14 +895,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -941,14 +941,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -987,14 +987,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1033,14 +1033,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1086,14 +1086,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1149,14 +1149,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1195,14 +1195,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1241,14 +1241,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1287,14 +1287,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1333,14 +1333,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1379,14 +1379,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1425,14 +1425,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1471,14 +1471,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1517,14 +1517,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1563,14 +1563,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1609,14 +1609,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1655,14 +1655,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1701,14 +1701,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1747,14 +1747,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1793,14 +1793,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1839,14 +1839,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1885,14 +1885,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1931,14 +1931,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -1977,14 +1977,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2023,14 +2023,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2069,14 +2069,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2115,14 +2115,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2161,14 +2161,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2207,14 +2207,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2260,14 +2260,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2314,14 +2314,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2360,14 +2360,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2406,14 +2406,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2452,14 +2452,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2505,14 +2505,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2568,14 +2568,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2621,14 +2621,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2675,14 +2675,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2728,14 +2728,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2782,14 +2782,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2828,14 +2828,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2874,14 +2874,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2920,14 +2920,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -2966,14 +2966,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3012,14 +3012,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3065,14 +3065,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3128,14 +3128,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3181,14 +3181,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3244,14 +3244,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3290,14 +3290,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3336,14 +3336,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3389,14 +3389,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3452,14 +3452,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3498,14 +3498,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3544,14 +3544,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3590,14 +3590,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3636,14 +3636,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3682,14 +3682,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3735,14 +3735,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3798,14 +3798,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3844,14 +3844,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3890,14 +3890,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -3943,14 +3943,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4006,14 +4006,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4052,14 +4052,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4098,14 +4098,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4151,14 +4151,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4205,14 +4205,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4251,14 +4251,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4304,14 +4304,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null
@@ -4367,14 +4367,14 @@
             "attestation_sha256": null,
             "authenticated_writer": false,
             "from_fork": false,
-            "reviewer": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "reviewer": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "status": "blocked-authoritative-writer-unprovisioned"
           },
           "provenance": {
             "in_repo_author": "package-c-fuzz-writer-reviewed-bootstrap",
             "lineage": "authored-public-bootstrap-v1",
-            "review_id": "package-c-bootstrap-review-v1:b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-            "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+            "review_id": "package-c-bootstrap-review-v1:a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+            "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
             "source_kind": "in-repository-authored-bootstrap",
             "source_uri": null,
             "writer_identity": null

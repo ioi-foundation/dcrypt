@@ -1,0 +1,286 @@
+schema-version = 1
+content-policy = "dcrypt-package-d-reviewed-inventory-v1"
+status = "HOLD"
+subject-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
+subject-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+subject-manifest-sha256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+atomic-operations-sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
+public-api-snapshot-sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
+
+production-source-policy = "root-src-lib-plus-crates-src-rust-v1"
+expected-production-rust-sources = 255
+expected-atomic-rows = 9298
+expected-curated-rows = 666
+expected-unreviewed-gap-rows = 8632
+atomic-row-ids-sha256 = "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723"
+production-source-paths-sha256 = "5aae5258561c750a920b36be67c2652f28ea1c8536ad7527f73967633a62b804"
+production-source-rows-sha256 = "67f0ebc742d494943a2a42a9698e3f0c47543dbfcb612e485420839bc161280c"
+production-source-roots-sha256 = "3bdf8ea3f968c18983d73ef3d4523e915e4b1c3fa4f7d8949e73d07b97ec298f"
+
+local-timing-cases = [
+  "AES-128",
+  "SHA-256",
+  "SHA3-256",
+  "HMAC-SHA256",
+  "ChaCha20",
+  "SHAKE-256",
+  "BLAKE3-XOF",
+  "HKDF",
+  "PBKDF2",
+  "Argon2id Verify",
+  "Argon2 Comparison",
+  "GCM Success Path",
+  "GCM Invalid Ciphertext Data",
+  "GCM First-vs-Last Tag Mismatch",
+  "ChaChaPoly Success Path",
+  "ChaChaPoly Invalid Ciphertext Data",
+  "ChaChaPoly First-vs-Last Tag Mismatch",
+  "BLS12-381 G1 secret scalar multiplication",
+  "BLS12-381 G2 secret scalar multiplication",
+  "ECDH P-224 Scalar Mult",
+  "ECDH P-256 Scalar Mult",
+  "ECDH K-256 Scalar Mult",
+  "ECDH P-384 Scalar Mult",
+  "ECDH P-521 Scalar Mult",
+  "Hybrid KEM Decapsulate Success",
+  "Hybrid KEM Decapsulate Reject",
+  "MlKem768 Decapsulate Success",
+  "MlKem768 Decapsulate Reject",
+  "ML-DSA-65 Verify Reject",
+]
+
+dedicated-timing-profile-ids = [
+  "linux-aarch64-fixed-vs-random-v1",
+  "linux-x86_64-fixed-vs-random-v1",
+]
+secret-taint-kinds = ["address", "branch"]
+compiler-targets = [
+  "aarch64-unknown-linux-gnu",
+  "thumbv7em-none-eabihf",
+  "wasm32-unknown-unknown",
+  "x86_64-unknown-linux-gnu",
+]
+bls-compiler-profiles = ["rust-1.93.1", "rust-1.97.1"]
+physical-kinds = ["electromagnetic", "power"]
+lifecycle-categories = [
+  "allocator-capacity",
+  "caller-handoff",
+  "compiler-emission",
+  "copy-clone",
+  "derived-state",
+  "drop-error-panic",
+  "replace-resize",
+  "result-error-debug-log",
+  "serialization",
+  "source",
+]
+release-blockers = [
+  "acceptance-and-promotion-disabled",
+  "dedicated-fixed-vs-random-unprovisioned",
+  "external-audit-unaccepted",
+  "physical-profile-unselected",
+  "platform-runtime-unaccepted",
+  "secret-taint-unprovisioned",
+  "transitive-compiler-closure-incomplete",
+  "transitive-secret-flow-incomplete",
+]
+
+physical-required-metadata = [
+  "artifact-closure",
+  "authenticated-operator",
+  "authenticated-reviewer",
+  "binary-source-identity",
+  "calibration-record",
+  "clock-voltage-state",
+  "device-board-identity",
+  "disposition-retention-destruction",
+  "firmware-identity",
+  "negative-control",
+  "positive-control",
+  "preprocessing-code-and-config",
+  "private-storage",
+  "probe-oscilloscope-identity",
+  "randomization-and-blinding-description",
+  "raw-traces",
+  "sampling-and-trigger-configuration",
+  "shielding-and-ambient-conditions",
+]
+
+[[dedicated-timing-contract]]
+profile-id = "linux-aarch64-fixed-vs-random-v1"
+target-triple = "aarch64-unknown-linux-gnu"
+class-definition = "fixed-secret-versus-random-secret-with-equal-public-metadata"
+dedicated-host = true
+multiple-test-policy = "holm-familywise-predeclared"
+negative-control-required = true
+observation-type = "raw-integer"
+positive-control-required = true
+randomized-balanced-labels = true
+setup-outside-measurement = true
+stopping-policy = "fixed-preregistered-sample-count-no-optional-stopping"
+
+[[dedicated-timing-contract]]
+profile-id = "linux-x86_64-fixed-vs-random-v1"
+target-triple = "x86_64-unknown-linux-gnu"
+class-definition = "fixed-secret-versus-random-secret-with-equal-public-metadata"
+dedicated-host = true
+multiple-test-policy = "holm-familywise-predeclared"
+negative-control-required = true
+observation-type = "raw-integer"
+positive-control-required = true
+randomized-balanced-labels = true
+setup-outside-measurement = true
+stopping-policy = "fixed-preregistered-sample-count-no-optional-stopping"
+
+[[input]]
+path = "assurance/atomic-operations.toml"
+sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
+git-mode = "100644"
+
+[[input]]
+path = "assurance/public-api-snapshot.json"
+sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
+git-mode = "100644"
+
+[[input]]
+path = "assurance/subject-manifest.json"
+sha256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+git-mode = "100644"
+
+[[input]]
+path = ".github/workflows/security-validation.yml"
+sha256 = "0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52"
+git-mode = "100644"
+
+[[input]]
+path = "tools/release-dcrypt.sh"
+sha256 = "813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7"
+git-mode = "100755"
+
+[[input]]
+path = "tools/verify-publish-ready.sh"
+sha256 = "db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5"
+git-mode = "100755"
+
+[[input]]
+path = "tools/verify-remote-release-ready.py"
+sha256 = "08581d04df268a9d859a70207d91e68b0c80631be8aaf94ce7e84e19f2bd4d3d"
+git-mode = "100755"
+
+[[input]]
+path = "tools/verify-bls-secret-assembly.sh"
+sha256 = "208f4f6f622fab553cb7d89f2663959ea113600c1a20ce8843764957b873179b"
+git-mode = "100755"
+
+[[input]]
+path = "tools/verify-bls-secret-assembly.py"
+sha256 = "919d49adcb6af1669c9da364d3d6030e5c9eb6aed357445dfc38b2a80a587f64"
+git-mode = "100755"
+
+[[input]]
+path = "tools/verify-ghash-assembly.sh"
+sha256 = "f630b02d1e156efb0f6ccfeb92514a6cfa309e3e69952306db492d71994ffd5a"
+git-mode = "100755"
+
+[[input]]
+path = "tools/verify-ghash-assembly.py"
+sha256 = "46ceb835b8c02246a0f52f311c550eefd7392ef47746da5c508b25a5c72dc7c8"
+git-mode = "100755"
+
+[[input]]
+path = "tests/tests/constant_time/mod.rs"
+sha256 = "18f4cbbc8a5176d53ecead79e8058148bc7373c358ce4ff009983b97e8f034ea"
+git-mode = "100644"
+
+[[input]]
+path = "tests/src/suites/constant_time/tester.rs"
+sha256 = "e696904c3bb8988325c993c296d11a8aca612c2dca32cc1e0ffaf592f00c9b1f"
+git-mode = "100644"
+
+[[bls-compiler-cell]]
+profile = "rust-1.93.1"
+version = "rustc 1.93.1 (01f6ddf75 2026-02-11)"
+target = "aarch64-unknown-linux-gnu"
+emission-sha256 = "40671f0204ffdeff45d7b0a5fb9956f5f74eedab21f286626e1f078b886f9401"
+promotion-eligible = false
+transitive-closure = false
+
+[[bls-compiler-cell]]
+profile = "rust-1.93.1"
+version = "rustc 1.93.1 (01f6ddf75 2026-02-11)"
+target = "thumbv7em-none-eabihf"
+emission-sha256 = "075495bf71d75b5704ccfe7e64dbde9cb2b0347dda96dca5113d1a42a43e5aa6"
+promotion-eligible = false
+transitive-closure = false
+
+[[bls-compiler-cell]]
+profile = "rust-1.93.1"
+version = "rustc 1.93.1 (01f6ddf75 2026-02-11)"
+target = "wasm32-unknown-unknown"
+emission-sha256 = "2f5dcb4b658514298d03d18797f9dbfca4fecb9292bb7b29736ac8e575751242"
+promotion-eligible = false
+transitive-closure = false
+
+[[bls-compiler-cell]]
+profile = "rust-1.93.1"
+version = "rustc 1.93.1 (01f6ddf75 2026-02-11)"
+target = "x86_64-unknown-linux-gnu"
+emission-sha256 = "826f4b279ad95274f18c9c816cbceee21867e6f1f49c07a31b4ea52fb6af7398"
+promotion-eligible = false
+transitive-closure = false
+
+[[bls-compiler-cell]]
+profile = "rust-1.97.1"
+version = "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+target = "aarch64-unknown-linux-gnu"
+emission-sha256 = "318bc73bd59e254876307cccba62114c1d0c8ab808df33040ab5730fe7936b3c"
+promotion-eligible = false
+transitive-closure = false
+
+[[bls-compiler-cell]]
+profile = "rust-1.97.1"
+version = "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+target = "thumbv7em-none-eabihf"
+emission-sha256 = "c869f95ca2645a6de23fdac69a26c92f92cfc680e37cee37dbc6291ce8237ad6"
+promotion-eligible = false
+transitive-closure = false
+
+[[bls-compiler-cell]]
+profile = "rust-1.97.1"
+version = "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+target = "wasm32-unknown-unknown"
+emission-sha256 = "1e680f70b1345650b822b0f37032c94d91d8cd5861522ebc070f80f46f1b884e"
+promotion-eligible = false
+transitive-closure = false
+
+[[bls-compiler-cell]]
+profile = "rust-1.97.1"
+version = "rustc 1.97.1 (8bab26f4f 2026-07-14)"
+target = "x86_64-unknown-linux-gnu"
+emission-sha256 = "4881e81e8c6fbb86a4c554ddfb18e0d8b0e31321356d47c3d09fd63d86298f3e"
+promotion-eligible = false
+transitive-closure = false
+
+[[ghash-compiler-cell]]
+target = "aarch64-unknown-linux-gnu"
+shape = "b.ne"
+promotion-eligible = false
+transitive-closure = false
+
+[[ghash-compiler-cell]]
+target = "thumbv7em-none-eabihf"
+shape = "bne.w"
+promotion-eligible = false
+transitive-closure = false
+
+[[ghash-compiler-cell]]
+target = "wasm32-unknown-unknown"
+shape = "br_if"
+promotion-eligible = false
+transitive-closure = false
+
+[[ghash-compiler-cell]]
+target = "x86_64-unknown-linux-gnu"
+shape = "jne"
+promotion-eligible = false
+transitive-closure = false

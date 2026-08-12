@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Review-gated Package C transition from the R subject to final A bytes."""
+"""Review-gated Package C binding refresh and Package-C-era transition checks."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ REPO = FRAMEWORK.parent.parent
 MODEL = FRAMEWORK / "fuzzing_lib.py"
 MANIFEST = REPO / "assurance/subject-manifest.json"
 FINAL_STATUS = "STABLE-final-subject-bound"
-NORMALIZED_MODEL_SHA256 = "1e070d3bab9eb7374842e2d2513e92d8d9eb41095ebea3a40ed93b7658b7da6f"
+NORMALIZED_MODEL_SHA256 = "9ad5c9423332fbb2272a943f983683d7dfa74506a307bc66a7a2916c44b284ef"
 ALLOWLISTED_ASSIGNMENTS = (
     "STATUS",
     "FRAMEWORK_SUBJECT_COMMIT",
@@ -172,6 +172,24 @@ PACKAGE_C_RELATIVE_PATHS = (
     "verify.py",
 )
 PACKAGE_C_MODES = {f"assurance/fuzzing/{path}": "100644" for path in PACKAGE_C_RELATIVE_PATHS}
+PACKAGE_D_REFRESH_RELATIVE_PATHS = (
+    "ARTIFACTS.json",
+    "campaign-status.json",
+    "corpus-manifest.json",
+    "fuzzing_lib.py",
+    "policy.json",
+    "rebind-final-subject.py",
+    "row-mapping.json",
+    "source-bindings.json",
+)
+PACKAGE_D_REFRESH_MODES = {
+    f"assurance/fuzzing/{path}": "100644"
+    for path in PACKAGE_D_REFRESH_RELATIVE_PATHS
+}
+PACKAGE_D_REFRESH_PATHS = tuple(sorted(PACKAGE_D_REFRESH_MODES))
+PACKAGE_D_INVARIANT_PATHS = tuple(
+    sorted(set(PACKAGE_C_MODES) - set(PACKAGE_D_REFRESH_MODES))
+)
 KNOWN_A_MODES = {**LEGACY_A_MODES, **PACKAGE_C_MODES}
 KNOWN_A_PATHS = tuple(sorted(KNOWN_A_MODES))
 EXPECTED_CHANGED_A_MODES = {**LEGACY_CHANGED_A_MODES, **PACKAGE_C_MODES}
@@ -186,6 +204,12 @@ if (
     or set(LEGACY_CHANGED_A_SHA256)
     != set(LEGACY_CHANGED_A_MODES) - {"assurance/subject-manifest.json"}
     or len(LEGACY_A_SHA256) != 20
+    or len(PACKAGE_D_REFRESH_PATHS) != 8
+    or len(PACKAGE_D_INVARIANT_PATHS) != 27
+    or not set(PACKAGE_D_REFRESH_PATHS).issubset(PACKAGE_C_MODES)
+    or set(PACKAGE_D_REFRESH_PATHS) & set(PACKAGE_D_INVARIANT_PATHS)
+    or set(PACKAGE_D_REFRESH_PATHS) | set(PACKAGE_D_INVARIANT_PATHS)
+    != set(PACKAGE_C_MODES)
     or sum(value == "UNSTABLE" for value in LEGACY_A_SHA256.values()) != 0
 ):
     raise RuntimeError("reviewed A inventory/change/invariant partition differs")
@@ -296,9 +320,7 @@ def _safe_path(value: str) -> None:
         raise RebindError(f"noncanonical subject path: {value!r}")
 
 
-def _strict_json(path: Path) -> tuple[Any, bytes]:
-    raw, _metadata = _read_absolute_regular_once(path, label="subject manifest")
-
+def _strict_json_bytes(raw: bytes, *, label: str) -> Any:
     def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, value in items:
@@ -310,11 +332,16 @@ def _strict_json(path: Path) -> tuple[Any, bytes]:
     try:
         value = json.loads(raw.decode("utf-8"), object_pairs_hook=pairs)
     except (UnicodeError, ValueError, json.JSONDecodeError) as error:
-        raise RebindError("subject manifest is not strict JSON") from error
+        raise RebindError(f"{label} is not strict JSON") from error
     expected = (json.dumps(value, ensure_ascii=True, indent=2, sort_keys=False) + "\n").encode("utf-8")
     if raw != expected:
-        raise RebindError("subject manifest is not canonical generator-form JSON")
-    return value, raw
+        raise RebindError(f"{label} is not canonical generator-form JSON")
+    return value
+
+
+def _strict_json(path: Path) -> tuple[Any, bytes]:
+    raw, _metadata = _read_absolute_regular_once(path, label="subject manifest")
+    return _strict_json_bytes(raw, label="subject manifest"), raw
 
 
 def _tree_entries(commit: str) -> dict[str, tuple[str, str]]:
@@ -383,8 +410,8 @@ def _blob_sha256s(object_ids: list[str]) -> dict[str, str]:
     return digests
 
 
-def verify_subject_manifest(commit: str, tree: str) -> str:
-    manifest, manifest_raw = _strict_json(MANIFEST)
+def verify_subject_manifest_bytes(manifest_raw: bytes, commit: str, tree: str) -> str:
+    manifest = _strict_json_bytes(manifest_raw, label="subject manifest")
     if not isinstance(manifest, dict) or tuple(manifest) != SUBJECT_ROOT_KEYS:
         raise RebindError("subject manifest root closure/order differs")
     if (
@@ -422,6 +449,11 @@ def verify_subject_manifest(commit: str, tree: str) -> str:
         if mode != actual_mode or digest != blobs[object_id]:
             raise RebindError(f"subject manifest row differs from immutable R blob: {path}")
     return sha256_bytes(manifest_raw)
+
+
+def verify_subject_manifest(commit: str, tree: str) -> str:
+    _manifest, manifest_raw = _strict_json(MANIFEST)
+    return verify_subject_manifest_bytes(manifest_raw, commit, tree)
 
 
 def _assignment(source: str, name: str) -> str:
@@ -776,6 +808,198 @@ def validate_exact_changed_a_paths(observed: list[str]) -> None:
             f"missing={sorted(set(EXPECTED_CHANGED_A_PATHS)-set(observed))}, "
             f"surplus={sorted(set(observed)-set(EXPECTED_CHANGED_A_PATHS))}"
         )
+
+
+def validate_exact_package_d_refresh_paths(observed: list[str]) -> None:
+    """Validate only Package C's reviewed eight-path Package D refresh slice."""
+
+    if observed != list(PACKAGE_D_REFRESH_PATHS):
+        raise RebindError(
+            "Package D subordinate Package C refresh closure differs: "
+            f"missing={sorted(set(PACKAGE_D_REFRESH_PATHS)-set(observed))}, "
+            f"surplus={sorted(set(observed)-set(PACKAGE_D_REFRESH_PATHS))}"
+        )
+
+
+def package_d_refresh_projection(
+    *,
+    expected_r_commit: str,
+    expected_r_tree: str,
+    candidate_revision: str | None = None,
+) -> dict[str, Any]:
+    """Return the exact Package C sub-projection for Package D's topology authority.
+
+    This intentionally does not make a claim about the other Package D A paths.
+    The Package D rebind owns the full R_D..A_D closure and sole-parent check.
+    """
+
+    _resolve_r_identity(expected_r_commit, expected_r_tree)
+    if candidate_revision is not None:
+        manifest_mode, manifest_raw = _git_blob(
+            candidate_revision, "assurance/subject-manifest.json"
+        )
+        if manifest_mode != "100644":
+            raise RebindError("Package D subject manifest Git mode differs")
+    else:
+        manifest_raw = _read_worktree_regular(
+            "assurance/subject-manifest.json", "100644"
+        )[0]
+    manifest_sha256 = verify_subject_manifest_bytes(
+        manifest_raw, expected_r_commit, expected_r_tree
+    )
+    changed_rows: list[dict[str, Any]] = []
+    changed_raw: dict[str, bytes] = {}
+    revision = candidate_revision
+    for path in PACKAGE_D_REFRESH_PATHS:
+        expected_mode = PACKAGE_D_REFRESH_MODES[path]
+        if revision is None:
+            raw, _filesystem_mode = _read_worktree_regular(path, expected_mode)
+            mode = expected_mode
+        else:
+            mode, raw = _git_blob(revision, path)
+        r_mode, r_raw = _git_blob(expected_r_commit, path)
+        if mode != expected_mode or r_mode != expected_mode or raw == r_raw:
+            raise RebindError(f"Package D refreshed Package C path did not change: {path}")
+        changed_rows.append(
+            {
+                "git_mode": mode,
+                "path": path,
+                "sha256": sha256_bytes(raw),
+                "size": len(raw),
+            }
+        )
+        changed_raw[path] = raw
+    model_path = "assurance/fuzzing/fuzzing_lib.py"
+    model_row = next(row for row in changed_rows if row["path"] == model_path)
+    raw_model_bytes = changed_raw[model_path]
+    if (
+        model_row["sha256"] != sha256_bytes(raw_model_bytes)
+        or model_row["size"] != len(raw_model_bytes)
+    ):
+        raise RebindError("Package D refreshed Package C model changed during projection")
+    raw_model = raw_model_bytes.decode("utf-8", errors="strict")
+    binding = {name: _assignment(raw_model, name) for name in ALLOWLISTED_ASSIGNMENTS}
+    if (
+        binding["STATUS"] != FINAL_STATUS
+        or binding["FRAMEWORK_SUBJECT_COMMIT"] != expected_r_commit
+        or binding["FRAMEWORK_SUBJECT_TREE"] != expected_r_tree
+        or binding["FRAMEWORK_SUBJECT_MANIFEST_SHA256"] != manifest_sha256
+    ):
+        raise RebindError("Package D refreshed Package C subject binding differs")
+    invariant_rows: list[dict[str, Any]] = []
+    for path in PACKAGE_D_INVARIANT_PATHS:
+        expected_mode = PACKAGE_C_MODES[path]
+        r_mode, r_raw = _git_blob(expected_r_commit, path)
+        if r_mode != expected_mode:
+            raise RebindError(f"Package C R_D invariant mode differs: {path}")
+        if revision is None:
+            a_raw, _filesystem_mode = _read_worktree_regular(path, expected_mode)
+            a_mode = expected_mode
+        else:
+            a_mode, a_raw = _git_blob(revision, path)
+        if a_mode != r_mode or a_raw != r_raw:
+            raise RebindError(f"Package C R_D invariant changed: {path}")
+        invariant_rows.append(
+            {
+                "git_mode": r_mode,
+                "path": path,
+                "sha256": sha256_bytes(r_raw),
+                "size": len(r_raw),
+            }
+        )
+    body = {
+        "binding_assignments": binding,
+        "changed_files": changed_rows,
+        "changed_paths": list(PACKAGE_D_REFRESH_PATHS),
+        "content_policy": "dcrypt-package-c-package-d-subordinate-projection-v1",
+        "invariant_files": invariant_rows,
+        "r_commit": expected_r_commit,
+        "r_tree": expected_r_tree,
+        "schema_version": 1,
+        "subject_manifest_sha256": manifest_sha256,
+    }
+    result = {**body, "projection_sha256": sha256_bytes(_canonical_json(body))}
+    if (
+        tuple(result)
+        != (
+            "binding_assignments",
+            "changed_files",
+            "changed_paths",
+            "content_policy",
+            "invariant_files",
+            "r_commit",
+            "r_tree",
+            "schema_version",
+            "subject_manifest_sha256",
+            "projection_sha256",
+        )
+        or [row["path"] for row in result["changed_files"]]
+        != list(PACKAGE_D_REFRESH_PATHS)
+        or len(result["invariant_files"]) != len(PACKAGE_D_INVARIANT_PATHS)
+        or [row["path"] for row in result["invariant_files"]]
+        != list(PACKAGE_D_INVARIANT_PATHS)
+        or any(tuple(row) != ("git_mode", "path", "sha256", "size") for row in [*result["changed_files"], *result["invariant_files"]])
+    ):
+        raise RebindError("Package D subordinate Package C projection closure differs")
+    return result
+
+
+def verify_package_d_refresh_commit(
+    *, expected_r_commit: str, expected_r_tree: str, a_commit: str
+) -> dict[str, Any]:
+    """Verify C's eight changed paths and 27 invariant paths inside A_D."""
+
+    _resolve_r_identity(expected_r_commit, expected_r_tree)
+    resolved_a = _git(["rev-parse", "--verify", f"{a_commit}^{{commit}}"])
+    if resolved_a.returncode != 0 or resolved_a.stdout.strip() != a_commit:
+        raise RebindError("Package D A commit is absent or does not resolve exactly")
+    for path, expected_mode in PACKAGE_C_MODES.items():
+        r_mode, r_raw = _git_blob(expected_r_commit, path)
+        a_mode, a_raw = _git_blob(a_commit, path)
+        if r_mode != expected_mode or a_mode != expected_mode:
+            raise RebindError(f"Package C path mode differs across Package D: {path}")
+        changed = a_raw != r_raw
+        if changed != (path in PACKAGE_D_REFRESH_MODES):
+            disposition = "changed" if changed else "invariant"
+            raise RebindError(
+                f"Package C Package D {disposition} partition differs: {path}"
+            )
+    return package_d_refresh_projection(
+        expected_r_commit=expected_r_commit,
+        expected_r_tree=expected_r_tree,
+        candidate_revision=a_commit,
+    )
+
+
+def _package_d_projection_main(arguments: list[str]) -> int:
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--expected-r-commit", required=True)
+    parser.add_argument("--expected-r-tree", required=True)
+    parser.add_argument("--candidate-commit")
+    args = parser.parse_args(arguments)
+    if (
+        HEX40.fullmatch(args.expected_r_commit) is None
+        or HEX40.fullmatch(args.expected_r_tree) is None
+        or (
+            args.candidate_commit is not None
+            and HEX40.fullmatch(args.candidate_commit) is None
+        )
+    ):
+        raise RebindError("Package D projection identities must be lowercase 40-hex")
+    projection = (
+        verify_package_d_refresh_commit(
+            expected_r_commit=args.expected_r_commit,
+            expected_r_tree=args.expected_r_tree,
+            a_commit=args.candidate_commit,
+        )
+        if args.candidate_commit is not None
+        else package_d_refresh_projection(
+            expected_r_commit=args.expected_r_commit,
+            expected_r_tree=args.expected_r_tree,
+        )
+    )
+    sys.stdout.buffer.write(_canonical_json(projection))
+    return 0
 
 
 def _verify_absent_build_sentinels() -> None:
@@ -1286,6 +1510,12 @@ def _apply_or_preview(
 
 
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "--package-d-projection":
+        try:
+            return _package_d_projection_main(sys.argv[2:])
+        except (RebindError, OSError, UnicodeError, ValueError, subprocess.SubprocessError) as error:
+            print(f"Package D subordinate projection HOLD: {error}", file=sys.stderr)
+            return 3
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--expected-commit", required=True)
     parser.add_argument("--expected-tree", required=True)

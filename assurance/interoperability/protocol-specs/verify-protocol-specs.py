@@ -43,9 +43,9 @@ MANIFESTED_FILES = EXPECTED_FILES - {"ARTIFACTS.sha256"}
 # The containing verifier is authenticated by the reviewed Git subject/evidence
 # binding; no file can safely authenticate its own bytes.
 EXPECTED_REVIEWED_ARTIFACT_DIGESTS = {
-    "CURRENT-BEHAVIOR.md": "7f99c0e7e1a5c96ff72011ac67003192e53bd9ba357bd763f34d80fcc851b0ce",
+    "CURRENT-BEHAVIOR.md": "d65abc3c798711529bf1e6a15e20af28ee9f43585f2d32cc17f2b4da8ecb34b8",
     "README.md": "8b10fc6d61614dba0b95e4bb085324ac5bbc2ed63959822441ec3a4f34f407c8",
-    "current-behavior.json": "92d5e9e55fb432e56edf431a929bce52858a336d5a1678a2b488c2ceb6876233",
+    "current-behavior.json": "e105715667992621b2ec9342146918d205252cb5cb18f5e0736c51b44a3be4d9",
     "protocol-spec.schema.json": "c444f5ba500d1feed253b7e46b6db287996924feb4ba15d419ff5206c06e471c",
     "rebind-final-subject.py": "3cd6b84b34f7f7a2152ae83aa308729661fc1a4166795f9de0c9592bf95ab5d4",
 }
@@ -123,9 +123,9 @@ EXPECTED_SOURCE_ROLES = {
     "crates/sign/src/lib.rs": "signature crate feature gates and public exports",
 }
 
-EXPECTED_SUBJECT_COMMIT = 'b3ce4b6d14a5474645cdedb2c7de2b36827bdd48'
-EXPECTED_SUBJECT_TREE = '21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92'
-EXPECTED_SUBJECT_MANIFEST_SHA256 = '3e3615c19ecd0405882a9af03e45a8a4ef8d94347c37c767f242b3287ed15101'
+EXPECTED_SUBJECT_COMMIT = 'a79f1ac6b8cd2d853482f4a32a83f239611ba13e'
+EXPECTED_SUBJECT_TREE = '28c04fffd98b76f447d55aa313fba13881604649'
+EXPECTED_SUBJECT_MANIFEST_SHA256 = '12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b'
 EXPECTED_SUBJECT_FILE_COUNT = 1510
 EXPECTED_CURATED_OPERATIONS_SHA256 = '5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4'
 EXPECTED_BINDING_STAGE = 'final-subject-candidate-review-required'

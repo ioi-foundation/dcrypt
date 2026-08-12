@@ -1,0 +1,1150 @@
+{
+  "$defs": {
+    "acceptance": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_decision": {
+          "const": "unreviewed-template",
+          "type": "string"
+        },
+        "artifact_role": {
+          "const": "acceptance",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "evidence_bundle_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "reviewer_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "trust_root_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "acceptance_decision",
+        "artifact_role",
+        "artifacts",
+        "binding",
+        "content_policy",
+        "environment_sha256",
+        "evidence_bundle_sha256",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "reviewer_identity_sha256",
+        "schema_version",
+        "session_id",
+        "status",
+        "tool_argv_sha256",
+        "trust_root_sha256"
+      ],
+      "type": "object"
+    },
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._+/-]+$",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "size": {
+          "maximum": 67108864,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "size"
+      ],
+      "type": "object"
+    },
+    "binding": {
+      "additionalProperties": false,
+      "properties": {
+        "binary_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "build_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "compiler_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "r_commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "r_tree": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "source_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "subject_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "tool_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binary_sha256",
+        "build_sha256",
+        "compiler_sha256",
+        "profile_sha256",
+        "r_commit",
+        "r_tree",
+        "source_set_sha256",
+        "subject_manifest_sha256",
+        "tool_sha256"
+      ],
+      "type": "object"
+    },
+    "compiler-inventory": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "compiler-inventory",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "call_graph_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "compiler_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "emission_count": {
+          "maximum": 1000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "emission_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "flags_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "indirect_target_count": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "target_triple": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "transitive_closure_complete": {
+          "const": false,
+          "type": "boolean"
+        },
+        "unresolved_edge_count": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "binding",
+        "call_graph_sha256",
+        "compiler_identity_sha256",
+        "content_policy",
+        "emission_count",
+        "emission_set_sha256",
+        "environment_sha256",
+        "flags_sha256",
+        "indirect_target_count",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "schema_version",
+        "session_id",
+        "status",
+        "target_triple",
+        "tool_argv_sha256",
+        "transitive_closure_complete",
+        "unresolved_edge_count"
+      ],
+      "type": "object"
+    },
+    "dedicated-timing": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "dedicated-timing",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "class_balance": {
+          "const": "1",
+          "type": "string"
+        },
+        "class_definition_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "cpu_microcode_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "host_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "negative_control_findings": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "negative_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "positive_control_detected": {
+          "type": "boolean"
+        },
+        "positive_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "raw_samples_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "sample_count": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "statistics_config_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "statistics_result_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "target_triple": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "binding",
+        "class_balance",
+        "class_definition_sha256",
+        "content_policy",
+        "cpu_microcode_sha256",
+        "environment_sha256",
+        "host_identity_sha256",
+        "negative_control_findings",
+        "negative_control_sha256",
+        "positive_control_detected",
+        "positive_control_sha256",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "raw_samples_sha256",
+        "sample_count",
+        "schema_version",
+        "session_id",
+        "statistics_config_sha256",
+        "statistics_result_sha256",
+        "status",
+        "target_triple",
+        "tool_argv_sha256"
+      ],
+      "type": "object"
+    },
+    "external-attestation": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "external-attestation",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "attestation_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "independent_signer_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "reviewer_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "signature_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "target_artifact_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "attestation_sha256",
+        "binding",
+        "content_policy",
+        "environment_sha256",
+        "independent_signer_sha256",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "reviewer_identity_sha256",
+        "schema_version",
+        "session_id",
+        "signature_sha256",
+        "status",
+        "target_artifact_sha256",
+        "tool_argv_sha256"
+      ],
+      "type": "object"
+    },
+    "local-control": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "local-control",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "control_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "execution_count": {
+          "maximum": 10000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "host_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "result_class": {
+          "enum": [
+            "finding",
+            "inconclusive",
+            "informational"
+          ],
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "stderr_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "stdout_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "binding",
+        "content_policy",
+        "control_id",
+        "environment_sha256",
+        "execution_count",
+        "host_identity_sha256",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "result_class",
+        "schema_version",
+        "session_id",
+        "status",
+        "stderr_sha256",
+        "stdout_sha256",
+        "tool_argv_sha256"
+      ],
+      "type": "object"
+    },
+    "physical": {
+      "additionalProperties": false,
+      "properties": {
+        "acquisition_config_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "analysis_config_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "artifact_role": {
+          "const": "physical",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "device_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "device_profile": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "firmware_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "fixture_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "negative_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "operator_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "positive_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "probe_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "raw_traces_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "reviewer_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "trace_count": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "trigger_config_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "acquisition_config_sha256",
+        "analysis_config_sha256",
+        "artifact_role",
+        "artifacts",
+        "binding",
+        "content_policy",
+        "device_identity_sha256",
+        "device_profile",
+        "environment_sha256",
+        "firmware_sha256",
+        "fixture_identity_sha256",
+        "negative_control_sha256",
+        "operator_identity_sha256",
+        "positive_control_sha256",
+        "probe_identity_sha256",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "raw_traces_sha256",
+        "reviewer_identity_sha256",
+        "schema_version",
+        "session_id",
+        "status",
+        "tool_argv_sha256",
+        "trace_count",
+        "trigger_config_sha256"
+      ],
+      "type": "object"
+    },
+    "platform-runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "platform-runtime",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "hardware_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "lifecycle_cases_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "lifecycle_event_count": {
+          "maximum": 1000000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "limits_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "negative_control_findings": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "negative_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "os_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "platform": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "positive_control_detected": {
+          "type": "boolean"
+        },
+        "positive_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "runtime_identity_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "runtime_trace_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "binding",
+        "content_policy",
+        "environment_sha256",
+        "hardware_identity_sha256",
+        "lifecycle_cases_sha256",
+        "lifecycle_event_count",
+        "limits_sha256",
+        "negative_control_findings",
+        "negative_control_sha256",
+        "os_identity_sha256",
+        "platform",
+        "positive_control_detected",
+        "positive_control_sha256",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "runtime_identity_sha256",
+        "runtime_trace_sha256",
+        "schema_version",
+        "session_id",
+        "status",
+        "tool_argv_sha256"
+      ],
+      "type": "object"
+    },
+    "secret-taint": {
+      "additionalProperties": false,
+      "properties": {
+        "address_event_count": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "allowlist_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "artifact_role": {
+          "const": "secret-taint",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/artifact"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "binding": {
+          "$ref": "#/$defs/binding"
+        },
+        "branch_event_count": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-d-candidate-bundle-v1",
+          "type": "string"
+        },
+        "environment_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "negative_control_findings": {
+          "maximum": 1000000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "negative_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "positive_control_detected": {
+          "type": "boolean"
+        },
+        "positive_control_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "profile_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+        },
+        "promotion_eligible": {
+          "const": false,
+          "type": "boolean"
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "session_id": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._:+/-]+$",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "collected-unreviewed",
+            "collection-failed",
+            "finding",
+            "inconclusive",
+            "leak-detected"
+          ],
+          "type": "string"
+        },
+        "taint_kind": {
+          "enum": [
+            "address",
+            "branch"
+          ],
+          "type": "string"
+        },
+        "tool_argv_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "tool_config_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "trace_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "unresolved_event_count": {
+          "maximum": 1000000000,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "address_event_count",
+        "allowlist_sha256",
+        "artifact_role",
+        "artifacts",
+        "binding",
+        "branch_event_count",
+        "content_policy",
+        "environment_sha256",
+        "negative_control_findings",
+        "negative_control_sha256",
+        "positive_control_detected",
+        "positive_control_sha256",
+        "profile_id",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "schema_version",
+        "session_id",
+        "status",
+        "taint_kind",
+        "tool_argv_sha256",
+        "tool_config_sha256",
+        "trace_sha256",
+        "unresolved_event_count"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/acceptance"
+    },
+    {
+      "$ref": "#/$defs/compiler-inventory"
+    },
+    {
+      "$ref": "#/$defs/dedicated-timing"
+    },
+    {
+      "$ref": "#/$defs/external-attestation"
+    },
+    {
+      "$ref": "#/$defs/local-control"
+    },
+    {
+      "$ref": "#/$defs/physical"
+    },
+    {
+      "$ref": "#/$defs/platform-runtime"
+    },
+    {
+      "$ref": "#/$defs/secret-taint"
+    }
+  ]
+}

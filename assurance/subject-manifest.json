@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
-  "source_tree": "21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92",
+  "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
+  "source_tree": "28c04fffd98b76f447d55aa313fba13881604649",
   "roots": [
     "."
   ],
@@ -25,7 +25,7 @@
   "files": [
     {
       "path": ".github/workflows/security-validation.yml",
-      "sha256": "a51b74a4934c14dd3d014af6121d53911a878d65da15e6efd0c01dafede7d47b",
+      "sha256": "0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52",
       "git_mode": "100644"
     },
     {
@@ -7205,7 +7205,7 @@
     },
     {
       "path": "tools/release-dcrypt.sh",
-      "sha256": "b0c254235731439aabf0ebff473bb4c75fa45e92aeea4adb22bce81a9ce0943d",
+      "sha256": "813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7",
       "git_mode": "100755"
     },
     {
@@ -7250,12 +7250,12 @@
     },
     {
       "path": "tools/verify-publish-ready.sh",
-      "sha256": "8be3f17df0081d2d7c860fd00b090d50fb02463b93f10d439278e993d7820b48",
+      "sha256": "db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5",
       "git_mode": "100755"
     },
     {
       "path": "tools/verify-remote-release-ready.py",
-      "sha256": "c08deb4060adb421006c4fe0144bfcbd2ff0f39a9d47de52fcd0b6f8417403a4",
+      "sha256": "08581d04df268a9d859a70207d91e68b0c80631be8aaf94ce7e84e19f2bd4d3d",
       "git_mode": "100755"
     },
     {
@@ -7380,12 +7380,12 @@
     },
     {
       "path": "verification/oracle-provisioning/bundle_lib.py",
-      "sha256": "9700dcad8e9d087b5e1445604925b66b36b9e77c7d2ec16625321eb224c95d8d",
+      "sha256": "6daa56c863dc5cfb9ec3db8b1d803cb2e5fc78363fdb19cfa3d1a905ec98e79b",
       "git_mode": "100644"
     },
     {
       "path": "verification/oracle-provisioning/manifest.json",
-      "sha256": "f17f70e6f37e17ad154feb9f15f88cd07bb32d1e7d0acbe243ece27fd43c7617",
+      "sha256": "a4ce57c78444a83c755bd4f61ac5dfde100d25737a3a72d6e1a878316b683e9a",
       "git_mode": "100644"
     },
     {
@@ -7415,7 +7415,7 @@
     },
     {
       "path": "verification/oracle-provisioning/subject-inputs.json",
-      "sha256": "559ea8ac4b7c37c542105c0cf4083b079b30e9a48baaf0fab5f50acee0272bdd",
+      "sha256": "90ea5b6d8366a912c453bea6f96b2556767a1b4f3ab668e90757b21b4cc700d6",
       "git_mode": "100644"
     },
     {
