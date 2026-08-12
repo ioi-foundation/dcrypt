@@ -30,28 +30,23 @@ from typing import Any, Iterable
 
 SCHEMA_VERSION = 1
 CONTENT_POLICY = "dcrypt-audit-freeze-v1"
-PRODUCTION_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-002"
-SUPERSESSION_RECORD = {
-    "supersedes_freeze_id": "dcrypt-v3.0.0-audit-candidate-001",
-    "superseded_subject_commit": "de9f8a118c227643a938251ddae3d8bc426aaa98",
-    "superseded_subject_tree": "0f2065bfac6c5c33573425f1ab7e54b11c461395",
-    "superseded_evidence_commit": "d8c7949a94c53cda00efdff99ff6b55413a5e1a6",
-    "superseded_evidence_tree": "608623469de5bfb610965764d88520679691be99",
-    "superseded_freeze_json_sha256": "9626178073ae95381542358bfc0bbfa39cb514735ab4be13239ca314320b1189",
-    "superseded_provisioning_manifest_sha256": "bd8154f202734a2af248032765b5d2405034edd65245afd41bb72f21ec44b640",
-    "status": "invalidated-after-partial-independent-replay-before-acceptance",
-    "reason": (
-        "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch "
-        "invalidated candidate-001 after partial independent replay observations but before "
-        "completion and acceptance under the full required replay contract."
-    ),
-    "partial_independent_replay_observed": True,
-    "required_complete_independent_replay_completed": False,
-    "external_review_completed": False,
-    "audit_evidence_accepted": False,
-}
+PRODUCTION_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-003"
+DIRECTLY_SUPERSEDED_FREEZE_ID = "dcrypt-v3.0.0-audit-candidate-002"
+SUPERSESSION_HISTORY_SOURCE = (
+    "assurance/audit/sow/audit-policy.toml#freeze-supersession"
+)
+SUPERSESSION_HISTORY_SHA256 = (
+    "bc4b466b701e7de61e0fa3f634b69542b08e5b9fe5a1731f744444e1ed04458a"
+)
+SUPERSEDED_FREEZE_IDS = (
+    "dcrypt-v3.0.0-audit-candidate-001",
+    "dcrypt-v3.0.0-audit-candidate-002",
+)
 EXPECTED_SUPERSESSION_POLICY = {
-    key.replace("_", "-"): value for key, value in SUPERSESSION_RECORD.items()
+    "current-freeze-id": PRODUCTION_FREEZE_ID,
+    "directly-supersedes-freeze-id": DIRECTLY_SUPERSEDED_FREEZE_ID,
+    "history-source": SUPERSESSION_HISTORY_SOURCE,
+    "history-sha256": SUPERSESSION_HISTORY_SHA256,
 }
 PROVISIONING_HANDOFF_ID = "dcrypt-audit-provisioning-v1"
 PROVISIONING_HANDOFF_FILES = frozenset(("PROVISIONING-MANIFEST.json", "SHA256SUMS"))
@@ -345,21 +340,21 @@ EXPECTED_CONTAINER_IMAGES = {
 }
 EXPECTED_BOUND_CONTROL_SHA256 = {
     ".github/workflows/security-validation.yml": "1fb51314c1800679a2b4c3b7ac07318e2959a390eda6d7a80d421f9866ae7a69",
-    "assurance/audit/README.md": "9d1f44d1f6ed8d219073e0da6ab02d84b743a861d08555f5de5108d37fa8740b",
-    "assurance/audit/audit-freeze.schema.json": "28949404fe29c0ce868e701b4535a2bc261384e1fe61ed6214ef45ee005f644c",
-    "assurance/audit/freeze-envelope.schema.json": "3c0e2eb77b2a8d744301931e5bf11742ec10e32928185f2210c3194b4bced0b0",
+    "assurance/audit/README.md": "1a6bdf27a2d5b91f2975757bfe25865201730f5c5e3a5ac7af85f2c12c23124a",
+    "assurance/audit/audit-freeze.schema.json": "1b891abe7b9fac781803ef5255310fd58acbc662d347a0ed2b5082fff6202929",
+    "assurance/audit/freeze-envelope.schema.json": "21f3c23544911fb34f1b483f3c25fc0fd3e277168873efd065c2b1f452cca39f",
     "assurance/audit/provisioning.schema.json": "ff1b6d215f4ecc9612dec231d097fff9ee13ab2de19620644c3d9a90c3a05b6e",
-    "assurance/audit/freeze-policy.toml": "6e22029504a88f9f7d563dc4f973e7bed147814cd008be94a55c36c8fa9692e5",
+    "assurance/audit/freeze-policy.toml": "37b392ea37ff9899e6cdb3bc3d650a5bcd72ad39031375c9c6ed91ed22d8d4fe",
     "assurance/audit/provisioning-lock.toml": "3733ed23be2f93e6a756162bde9a841ab4a165037ccc1c0a22d3e23bd5030177",
     "assurance/audit/historical-advisory-regressions.toml": "ce6fa84b1a8de37d938e51b82806e67b8cc6c7dcb4d3234cdcd44c76cf96acc7",
 }
 EXPECTED_SOW_CONTROL_SHA256 = {
-    "assurance/audit/sow/RFP-SOW.md": "a67531bbdb65d09bb75fc7e31890e81791bbc747d55755a5ea187ef3a88f4179",
-    "assurance/audit/sow/audit-policy.toml": "3dd2871f0e9fcfd470a280a61f898d4b14c06a4c15a77552ebd3488d98509bd0",
-    "assurance/audit/sow/audit-scope.toml": "25bc2a5bd185b49d16751ccf80097305032d74c52cc971fce0aeb7058b1142c2",
-    "assurance/audit/sow/fixtures/README.md": "bc1177c30f6cbebba6adce9115762d3a58765696f27313859ade98e18eaeb4ad",
-    "assurance/audit/sow/selftest.py": "61ecc20cc4f2adea4fad8fdcab2dfe4c53ab090da50f22ab7aec5f103c136d5f",
-    "assurance/audit/sow/verify-sow.py": "6b1fcbeb9427b3635b41f482b252375e3192d28ac2f3c420e092bee90b174575",
+    "assurance/audit/sow/RFP-SOW.md": "e7332306b6f956a1684c3f2ec7eebbc8c32f50cc7877131bdefb1d57b38bc868",
+    "assurance/audit/sow/audit-policy.toml": "eda28392c5e52b6242a7b796562afeb5c4af342ae17a31f1115b83e3463b4a99",
+    "assurance/audit/sow/audit-scope.toml": "066f83e994f0a3fa15b6c8180048290b65d68a856f3cd8cfac476db0efef2a58",
+    "assurance/audit/sow/fixtures/README.md": "1b976bee4cea7dd871ade2513edf32b198a72a77aa1690f5825df360d6c730a6",
+    "assurance/audit/sow/selftest.py": "c2a821e7a06483cbc506d4c90c1c27103b15273a979012d4e8963ff53544f227",
+    "assurance/audit/sow/verify-sow.py": "b3f149615c69cb7ce3d02f767bc4d9b1d24305732e2079c990781836466b12b6",
 }
 GIT_EXECUTABLE = Path("/usr/bin/git")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
@@ -2026,6 +2021,56 @@ def toml_json_value(value: Any) -> Any:
     if isinstance(value, list):
         return [toml_json_value(child) for child in value]
     return value
+
+
+def supersession_document(
+    files: dict[str, bytes],
+    policy: dict[str, Any],
+    freeze_schema: dict[str, Any],
+) -> dict[str, Any]:
+    """Derive the freeze history from the committed canonical SOW policy.
+
+    The audit freeze does not maintain a second freehand history.  Both SOW
+    machine-readable documents, the A2 pointer/digest, and the executable freeze
+    schema must agree byte-semantically before any freeze can be generated.
+    """
+
+    sow_policy = parse_toml(files, "assurance/audit/sow/audit-policy.toml")
+    sow_scope = parse_toml(files, "assurance/audit/sow/audit-scope.toml")
+    for label, document in (("audit policy", sow_policy), ("audit scope", sow_scope)):
+        if document.get("candidate-freeze-id") != PRODUCTION_FREEZE_ID:
+            fail(f"{label} candidate freeze ID differs from the A2 freeze")
+        if document.get("directly-supersedes-freeze-id") != DIRECTLY_SUPERSEDED_FREEZE_ID:
+            fail(f"{label} direct supersession differs from the A2 freeze")
+    policy_history = toml_json_value(sow_policy.get("freeze-supersession"))
+    scope_history = toml_json_value(sow_scope.get("freeze-supersession"))
+    if not isinstance(policy_history, list) or policy_history != scope_history:
+        fail("SOW policy/scope supersession histories are not exact and identical")
+    observed_ids = [
+        row.get("superseded-freeze-id") if isinstance(row, dict) else None
+        for row in policy_history
+    ]
+    if observed_ids != list(SUPERSEDED_FREEZE_IDS):
+        fail("SOW supersession history is not the exact ordered candidate-001/candidate-002 list")
+    history_hash = sha256(canonical_json(policy_history))
+    if history_hash != SUPERSESSION_HISTORY_SHA256:
+        fail("SOW supersession history canonical digest drift")
+    if policy["supersession"] != EXPECTED_SUPERSESSION_POLICY:
+        fail("A2 supersession pointer/digest differs from the canonical SOW history")
+    record = {
+        "current_freeze_id": PRODUCTION_FREEZE_ID,
+        "directly_supersedes_freeze_id": DIRECTLY_SUPERSEDED_FREEZE_ID,
+        "history_source": SUPERSESSION_HISTORY_SOURCE,
+        "history_sha256": history_hash,
+        "history": policy_history,
+    }
+    try:
+        schema_record = freeze_schema["properties"]["supersession"]["const"]
+    except (KeyError, TypeError):
+        fail("audit-freeze schema lacks the exact SOW-derived supersession const")
+    if schema_record != record:
+        fail("audit-freeze schema supersession history differs from the canonical SOW history")
+    return record
 
 
 def validate_policy(policy: dict[str, Any]) -> None:
@@ -3749,6 +3794,7 @@ def build_bundle_bytes(repo: Path, subject: str) -> dict[str, bytes]:
         ("provisioning schema", provisioning_schema),
     ):
         validate_schema_program(schema, label=label)
+    supersession = supersession_document(files, policy, freeze_schema)
     validate_json_schema(toml_json_value(provisioning), provisioning_schema, label="provisioning-lock.toml")
     provisioning_handoff = provisioning_handoff_bytes(
         repo, subject, tree, files, policy, provisioning, provisioning_schema
@@ -3802,7 +3848,7 @@ def build_bundle_bytes(repo: Path, subject: str) -> dict[str, bytes]:
         "classification": policy["classification"],
         "freeze_date": policy["freeze-date"],
         "valid_through": policy["valid-through"],
-        "supersession": SUPERSESSION_RECORD,
+        "supersession": supersession,
         "subject": {
             "commit": subject,
             "tree": tree,
@@ -4168,21 +4214,297 @@ def validate_generation_cli_paths(
         fail("production generation --provision must be the exact read-only mapping /provision")
 
 
+def read_local_bound_control(relative_path: str) -> bytes:
+    """Read one digest-bound in-tree control through held, no-follow descriptors."""
+
+    expected_digest = EXPECTED_BOUND_CONTROL_SHA256.get(relative_path)
+    if expected_digest is None:
+        fail(f"local control is not in the reviewed digest inventory: {relative_path}")
+    script_path = reject_symlink_components(lexical_absolute(Path(__file__)))
+    repository = script_path.parent.parent
+    target = reject_symlink_components(repository / relative_path)
+    if target.parent != repository / PurePosixPath(relative_path).parent:
+        fail(f"local control path escaped the generator repository: {relative_path}")
+    parent_fd: int | None = None
+    descriptor: int | None = None
+    identity_fields = (
+        "st_dev", "st_ino", "st_mode", "st_nlink", "st_size", "st_mtime_ns", "st_ctime_ns",
+    )
+    try:
+        parent_fd = open_directory_nofollow(target.parent)
+        inventoried = os.stat(target.name, dir_fd=parent_fd, follow_symlinks=False)
+        if (
+            not stat.S_ISREG(inventoried.st_mode)
+            or inventoried.st_nlink != 1
+            or inventoried.st_size > 16 * 1024 * 1024
+        ):
+            fail(f"local bound control must be one bounded, uniquely linked regular file: {relative_path}")
+        flags = os.O_RDONLY
+        if hasattr(os, "O_CLOEXEC"):
+            flags |= os.O_CLOEXEC
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(target.name, flags, dir_fd=parent_fd)
+        opened = os.fstat(descriptor)
+        if any(
+            getattr(opened, field) != getattr(inventoried, field)
+            for field in identity_fields
+        ):
+            fail(f"local bound control changed between inventory and open: {relative_path}")
+        remaining = opened.st_size
+        chunks: list[bytes] = []
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                fail(f"local bound control was truncated while reading: {relative_path}")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            fail(f"local bound control grew while reading: {relative_path}")
+        data = b"".join(chunks)
+        held_final = os.fstat(descriptor)
+        path_final = os.stat(target.name, dir_fd=parent_fd, follow_symlinks=False)
+        if any(
+            getattr(held_final, field) != getattr(opened, field)
+            or getattr(path_final, field) != getattr(opened, field)
+            for field in identity_fields
+        ):
+            fail(f"local bound control changed during complete read: {relative_path}")
+        comparison_fd = open_directory_nofollow(target.parent)
+        try:
+            if (
+                os.fstat(comparison_fd).st_dev,
+                os.fstat(comparison_fd).st_ino,
+            ) != (os.fstat(parent_fd).st_dev, os.fstat(parent_fd).st_ino):
+                fail(f"local bound control parent path changed while reading: {relative_path}")
+        finally:
+            os.close(comparison_fd)
+        actual_digest = sha256(data)
+        if actual_digest != expected_digest:
+            fail(
+                f"local bound control digest differs for {relative_path}: "
+                f"expected {expected_digest}, got {actual_digest}"
+            )
+        return data
+    except OSError as exc:
+        fail(f"cannot safely read local bound control {relative_path}: {exc}")
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        if parent_fd is not None:
+            os.close(parent_fd)
+
+
+def local_bound_schema(relative_path: str) -> dict[str, Any]:
+    schema = load_json_strict(
+        read_local_bound_control(relative_path), label=f"local bound {relative_path}"
+    )
+    validate_schema_program(schema, label=f"local bound {relative_path}")
+    return schema
+
+
+def validate_exact_provisioning_json(contents: dict[str, bytes]) -> dict[str, Any]:
+    manifest = canonical_json_is_exact(
+        contents["PROVISIONING-MANIFEST.json"], label="PROVISIONING-MANIFEST.json"
+    )
+    if not isinstance(manifest, dict):
+        fail("PROVISIONING-MANIFEST.json must be a JSON object")
+    provisioning_schema = local_bound_schema("assurance/audit/provisioning.schema.json")
+    try:
+        manifest_schema = provisioning_schema["$defs"]["provisioningManifest"]
+    except (KeyError, TypeError):
+        fail("local bound provisioning schema lacks provisioningManifest")
+    validate_json_schema(
+        manifest, manifest_schema, label="exact PROVISIONING-MANIFEST.json"
+    )
+    return manifest
+
+
+def validate_exact_candidate_json(contents: dict[str, bytes]) -> dict[str, dict[str, Any]]:
+    documents: dict[str, dict[str, Any]] = {}
+    for name in JSON_FILES:
+        document = canonical_json_is_exact(contents[name], label=name)
+        if not isinstance(document, dict):
+            fail(f"{name}: top-level JSON value must be an object")
+        documents[name] = document
+
+    freeze_schema = local_bound_schema("assurance/audit/audit-freeze.schema.json")
+    envelope_schema = local_bound_schema("assurance/audit/freeze-envelope.schema.json")
+    provisioning_schema = local_bound_schema("assurance/audit/provisioning.schema.json")
+    validate_json_schema(documents["freeze.json"], freeze_schema, label="exact freeze.json")
+    validate_json_schema(
+        documents["freeze-envelope.json"], envelope_schema,
+        label="exact freeze-envelope.json",
+    )
+    try:
+        manifest_schema = provisioning_schema["$defs"]["provisioningManifest"]
+    except (KeyError, TypeError):
+        fail("local bound provisioning schema lacks provisioningManifest")
+    validate_json_schema(
+        documents["PROVISIONING-MANIFEST.json"], manifest_schema,
+        label="exact PROVISIONING-MANIFEST.json",
+    )
+    validate_generated_documents(
+        {name: documents[name] for name in SUBORDINATE_FILES}
+    )
+
+    freeze = documents["freeze.json"]
+    manifest_rows = freeze["manifest_files"]
+    if (
+        not isinstance(manifest_rows, list)
+        or [row.get("path") for row in manifest_rows if isinstance(row, dict)]
+        != list(sorted(SUBORDINATE_FILES))
+    ):
+        fail("exact candidate freeze subordinate manifest inventory/order drift")
+    for row in manifest_rows:
+        if row["sha256"] != sha256(contents[row["path"]]):
+            fail(f"exact candidate freeze subordinate digest drift: {row['path']}")
+    envelope = documents["freeze-envelope.json"]
+    if (
+        envelope["freeze_json_sha256"] != sha256(contents["freeze.json"])
+        or envelope["freeze_id"] != freeze["freeze_id"]
+        or envelope["subject_commit"] != freeze["subject"]["commit"]
+        or envelope["subject_tree"] != freeze["subject"]["tree"]
+    ):
+        fail("exact candidate envelope/freeze identity or digest drift")
+    assurance = documents["assurance-inputs.json"]
+    for envelope_key, assurance_key in (
+        ("sow_sha256", "sow_sha256"),
+        ("audit_policy_sha256", "audit_policy_sha256"),
+        ("audit_scope_sha256", "audit_scope_sha256"),
+    ):
+        if envelope[envelope_key] != assurance.get(assurance_key):
+            fail(f"exact candidate envelope assurance binding drift: {envelope_key}")
+    source_subject = documents["source-manifest.json"].get("subject")
+    if (
+        not isinstance(source_subject, dict)
+        or source_subject.get("commit") != freeze["subject"]["commit"]
+        or source_subject.get("tree") != freeze["subject"]["tree"]
+    ):
+        fail("exact candidate source-manifest subject identity drift")
+    return documents
+
+
+def validate_exact_directory_kind(source: Path, *, kind: str) -> dict[str, bytes]:
+    """Read and validate one closed candidate or provisioning inventory."""
+
+    contracts = {
+        "candidate": (ALLOWED_BUNDLE_FILES, PRODUCTION_FREEZE_ID),
+        "provisioning": (PROVISIONING_HANDOFF_FILES, PROVISIONING_HANDOFF_ID),
+    }
+    if kind not in contracts:
+        fail("exact transfer kind is not reviewed")
+    expected_files, _expected_leaf = contracts[kind]
+    source = lexical_absolute(source)
+    contents = read_exact_directory_files(
+        source,
+        expected_files,
+        max_file_bytes=MAX_BUNDLE_FILE_BYTES,
+        max_total_bytes=MAX_BUNDLE_TOTAL_BYTES,
+    )
+    if kind == "provisioning":
+        validate_exact_provisioning_json(contents)
+        expected_checksum = (
+            f"{sha256(contents['PROVISIONING-MANIFEST.json'])}  "
+            "PROVISIONING-MANIFEST.json\n"
+        ).encode("ascii")
+        if contents["SHA256SUMS"] != expected_checksum:
+            fail("exact provisioning transfer checksum is noncanonical or mismatched")
+    else:
+        validate_exact_candidate_json(contents)
+        expected_checksum = "".join(
+            f"{sha256(contents[name])}  {name}\n" for name in sorted(JSON_FILES)
+        ).encode("ascii")
+        if contents["SHA256SUMS"] != expected_checksum:
+            fail("exact candidate transfer checksum is noncanonical or mismatched")
+        expected_provisioning_checksum = (
+            f"{sha256(contents['PROVISIONING-MANIFEST.json'])}  "
+            "PROVISIONING-MANIFEST.json\n"
+        ).encode("ascii")
+        if contents["PROVISIONING-SHA256SUMS"] != expected_provisioning_checksum:
+            fail("exact candidate transfer provisioning checksum is noncanonical or mismatched")
+    return contents
+
+
+def transfer_exact_directory(source: Path, output: Path, *, kind: str) -> None:
+    """Copy one reviewed closed inventory without preserving source metadata or links.
+
+    The source is held and revalidated by ``validate_exact_directory_kind``.
+    The destination is created atomically by ``write_bundle`` and therefore
+    never exposes a partially populated promoted directory.  The copy is only
+    a byte handoff; it does not promote generated bytes to independently
+    replayed evidence.
+    """
+
+    contracts = {
+        "candidate": (ALLOWED_BUNDLE_FILES, PRODUCTION_FREEZE_ID),
+        "provisioning": (PROVISIONING_HANDOFF_FILES, PROVISIONING_HANDOFF_ID),
+    }
+    if kind not in contracts:
+        fail("exact transfer kind is not reviewed")
+    expected_files, expected_leaf = contracts[kind]
+    source = lexical_absolute(source)
+    output = lexical_absolute(output)
+    if output.name != expected_leaf:
+        fail(f"exact {kind} transfer destination must end in {expected_leaf}")
+    if source == output or source in output.parents or output in source.parents:
+        fail("exact transfer source and destination must be disjoint")
+    contents = validate_exact_directory_kind(source, kind=kind)
+    write_bundle(output, contents, expected_files=expected_files)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=Path, default=Path.cwd())
-    parser.add_argument("--subject", required=True, help="exact lowercase 40-hex commit")
-    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--repo", type=Path)
+    parser.add_argument("--subject", help="exact lowercase 40-hex commit")
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--provision", type=Path)
     parser.add_argument("--materialize-provisioning", action="store_true")
+    parser.add_argument("--transfer-exact", choices=("candidate", "provisioning"))
+    parser.add_argument("--verify-exact", choices=("candidate", "provisioning"))
+    parser.add_argument("--source", type=Path)
     args = parser.parse_args(argv)
     try:
         require_isolated_python()
+        if args.verify_exact is not None:
+            if (
+                args.repo is not None or args.subject is not None or args.provision is not None
+                or args.materialize_provisioning or args.transfer_exact is not None
+                or args.output is not None
+            ):
+                fail("exact inventory verification forbids repository, generation, transfer, subject, and output options")
+            if args.source is None:
+                fail("exact inventory verification requires --source")
+            validate_exact_directory_kind(args.source, kind=args.verify_exact)
+            print(f"verified exact {args.verify_exact} byte inventory")
+            print("classification=untrusted-handoff release_status=blocked")
+            return 0
+        if args.transfer_exact is not None:
+            if (
+                args.repo is not None or args.subject is not None or args.provision is not None
+                or args.materialize_provisioning or args.verify_exact is not None
+            ):
+                fail("exact transfer forbids repository, generation, subject, and provisioning options")
+            if args.source is None:
+                fail("exact transfer requires --source")
+            if args.output is None:
+                fail("exact transfer requires --output")
+            transfer_exact_directory(args.source, args.output, kind=args.transfer_exact)
+            print(f"transferred exact {args.transfer_exact} byte inventory")
+            print("classification=untrusted-handoff release_status=blocked")
+            return 0
+        if args.source is not None:
+            fail("--source is valid only with --transfer-exact")
+        if args.subject is None:
+            fail("generation requires --subject")
+        if args.output is None:
+            fail("generation requires --output")
+        repo_argument = args.repo if args.repo is not None else Path.cwd()
         if args.materialize_provisioning:
             if args.provision is not None:
                 fail("--provision is forbidden while materializing the provisioning handoff")
             require_documented_sandbox_runtime(require_empty_output=True)
-            validate_generation_cli_paths(args.repo, args.output, PROVISIONING_HANDOFF_ID)
+            validate_generation_cli_paths(repo_argument, args.output, PROVISIONING_HANDOFF_ID)
         else:
             if args.provision is None:
                 fail("candidate generation requires --provision /provision")
@@ -4190,9 +4512,9 @@ def main(argv: list[str] | None = None) -> int:
                 require_empty_output=True, require_provision=True
             )
             validate_generation_cli_paths(
-                args.repo, args.output, PRODUCTION_FREEZE_ID, provision=args.provision
+                repo_argument, args.output, PRODUCTION_FREEZE_ID, provision=args.provision
             )
-        repo = repository_root(args.repo)
+        repo = repository_root(repo_argument)
         subject, _ = validate_exact_subject(repo, args.subject)
         policy_bytes = _git(repo, "show", f"{subject}:assurance/audit/freeze-policy.toml")
         try:

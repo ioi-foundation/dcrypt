@@ -268,8 +268,54 @@ def validate_freeze_shape(freeze: dict[str, Any]) -> None:
         fail("freeze release gate is not fail-closed")
     if freeze["generated_evidence_status"] != "first-party-unreplayed":
         fail("generated candidate evidence is incorrectly represented as independently replayed")
-    if freeze["supersession"] != gen.SUPERSESSION_RECORD:
+    supersession = freeze["supersession"]
+    if (
+        not isinstance(supersession, dict)
+        or supersession.get("current_freeze_id") != gen.PRODUCTION_FREEZE_ID
+        or supersession.get("directly_supersedes_freeze_id")
+        != gen.DIRECTLY_SUPERSEDED_FREEZE_ID
+        or supersession.get("history_source") != gen.SUPERSESSION_HISTORY_SOURCE
+        or supersession.get("history_sha256") != gen.SUPERSESSION_HISTORY_SHA256
+    ):
         fail("freeze supersession/invalidation record drift")
+    history = supersession.get("history")
+    if (
+        not isinstance(history, list)
+        or [
+            row.get("superseded-freeze-id") if isinstance(row, dict) else None
+            for row in history
+        ]
+        != list(gen.SUPERSEDED_FREEZE_IDS)
+    ):
+        fail("freeze supersession/invalidation history ordering drift")
+    first, second = history
+    if (
+        first.get("partial-independent-replay-observed") is not True
+        or first.get("required-complete-independent-replay-completed") is not False
+        or first.get("external-review-completed") is not False
+        or first.get("audit-evidence-accepted") is not False
+        or second.get("known-invalidation-defects-exhaustive") is not True
+        or len(second.get("known-invalidation-defects", [])) != 4
+        or second.get("diagnostic-artifact-classification")
+        != "typed-first-party-diagnostic-non-evidence"
+        or second.get("independent-review-scope")
+        != "source-selftest-and-fence-diagnostic-only-not-bundle-evidence"
+        or any(
+            second.get(field) is not False
+            for field in (
+                "wrapper_contract_valid",
+                "valid_materialization_completed",
+                "valid_candidate_bundle_generated",
+                "evidence_commit_created",
+                "required_complete_independent_replay_completed",
+                "external_review_completed",
+                "audit_evidence_accepted",
+                "external_audit_occurred",
+                "vendor_contact_occurred",
+            )
+        )
+    ):
+        fail("freeze supersession/invalidation disposition drift")
     commands = freeze["commands"]
     expectations = freeze["command_expectations"]
     if not isinstance(commands, list) or not all(isinstance(item, str) and item for item in commands):

@@ -8,29 +8,60 @@
   "properties": {
     "schema_version": {"const": 1},
     "content_policy": {"const": "dcrypt-audit-freeze-v1"},
-    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-002"},
+    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-003"},
     "classification": {"const": "candidate-rehearsal"},
     "freeze_date": {"const": "2026-08-11"},
     "valid_through": {"const": "2026-09-10"},
-    "supersession": {
-      "type": "object", "additionalProperties": false,
-      "required": ["supersedes_freeze_id", "superseded_subject_commit", "superseded_subject_tree", "superseded_evidence_commit", "superseded_evidence_tree", "superseded_freeze_json_sha256", "superseded_provisioning_manifest_sha256", "status", "reason", "partial_independent_replay_observed", "required_complete_independent_replay_completed", "external_review_completed", "audit_evidence_accepted"],
-      "properties": {
-        "supersedes_freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-001"},
-        "superseded_subject_commit": {"const": "de9f8a118c227643a938251ddae3d8bc426aaa98"},
-        "superseded_subject_tree": {"const": "0f2065bfac6c5c33573425f1ab7e54b11c461395"},
-        "superseded_evidence_commit": {"const": "d8c7949a94c53cda00efdff99ff6b55413a5e1a6"},
-        "superseded_evidence_tree": {"const": "608623469de5bfb610965764d88520679691be99"},
-        "superseded_freeze_json_sha256": {"const": "9626178073ae95381542358bfc0bbfa39cb514735ab4be13239ca314320b1189"},
-        "superseded_provisioning_manifest_sha256": {"const": "bd8154f202734a2af248032765b5d2405034edd65245afd41bb72f21ec44b640"},
-        "status": {"const": "invalidated-after-partial-independent-replay-before-acceptance"},
-        "reason": {"const": "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract."},
-        "partial_independent_replay_observed": {"const": true},
-        "required_complete_independent_replay_completed": {"const": false},
-        "external_review_completed": {"const": false},
-        "audit_evidence_accepted": {"const": false}
-      }
-    },
+    "supersession": {"const": {
+      "current_freeze_id": "dcrypt-v3.0.0-audit-candidate-003",
+      "directly_supersedes_freeze_id": "dcrypt-v3.0.0-audit-candidate-002",
+      "history_source": "assurance/audit/sow/audit-policy.toml#freeze-supersession",
+      "history_sha256": "bc4b466b701e7de61e0fa3f634b69542b08e5b9fe5a1731f744444e1ed04458a",
+      "history": [
+        {
+          "superseded-freeze-id": "dcrypt-v3.0.0-audit-candidate-001",
+          "status": "invalidated-after-partial-independent-replay-before-acceptance",
+          "reason": "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract.",
+          "partial-independent-replay-observed": true,
+          "required-complete-independent-replay-completed": false,
+          "external-review-completed": false,
+          "audit-evidence-accepted": false
+        },
+        {
+          "superseded-freeze-id": "dcrypt-v3.0.0-audit-candidate-002",
+          "status": "invalidated-after-first-party-diagnostic-before-valid-wrapper-compliant-generation",
+          "reason": "Candidate-003 directly supersedes candidate-002 because the provision and generation README fences could return exit status 0 after a failed gate due to a trailing assignment; candidate-002 was invalidated after first-party diagnostic temporary materialization and diagnostic bundle creation but before valid wrapper-compliant materialization, valid candidate generation, an evidence commit, complete independent replay, or acceptance.",
+          "subject-commit": "852c771c7d764752e23322ab412b419925fb5a5f",
+          "subject-tree": "ae5779e73b64b60cc4ce198468ef9fd781cda2df",
+          "parent-sow-commit": "8e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02",
+          "triggering-invalidation-defect": "provision/generation README fences could return 0 after failed gate due trailing assignment",
+          "known-invalidation-defects": [
+            "provision/generation README fences could return 0 after failed gate due trailing assignment",
+            "clone fence could continue to checkout preexisting repo after failed clone",
+            "candidate import fence could mask mkdir/middle install failures and omitted prose-required unexpected-source-entry rejection",
+            "provisioning transfer fence could mask intermediate failures"
+          ],
+          "known-invalidation-defects-exhaustive": true,
+          "diagnostic-artifact-classification": "typed-first-party-diagnostic-non-evidence",
+          "independent-review-scope": "source-selftest-and-fence-diagnostic-only-not-bundle-evidence",
+          "diagnostic-provisioning-manifest-sha256": "f48385357526d1bdb141dbb624ae355c094b3c292f4b4d191a06095f29067e69",
+          "diagnostic-provisioning-sums-sha256": "e6adb59c5ec6e687c6652dd7938b5213ac310418a85cf8384b1e348f1633f1a6",
+          "diagnostic-freeze-sha256": "ed7e7a26c9ee645350d53245a71468e82b9a77310367a71b737d8691fa418335",
+          "diagnostic-sha256sums-sha256": "8c8d4948cf3d6356028bf4dffaead4f256bb2e755a5882e4c07bb88e67335b43",
+          "diagnostic_first_party_materialization_observed": true,
+          "diagnostic_first_party_bundle_observed": true,
+          "wrapper_contract_valid": false,
+          "valid_materialization_completed": false,
+          "valid_candidate_bundle_generated": false,
+          "evidence_commit_created": false,
+          "required_complete_independent_replay_completed": false,
+          "external_review_completed": false,
+          "audit_evidence_accepted": false,
+          "external_audit_occurred": false,
+          "vendor_contact_occurred": false
+        }
+      ]
+    }},
     "subject": {
       "type": "object", "additionalProperties": false,
       "required": ["commit", "tree", "commit_payload_sha256", "tree_payload_sha256"],

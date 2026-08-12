@@ -1,5 +1,5 @@
 schema-version = 1
-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"
+freeze-id = "dcrypt-v3.0.0-audit-candidate-003"
 classification = "candidate-rehearsal"
 content-policy = "dcrypt-audit-freeze-v1"
 freeze-date = "2026-08-11"
@@ -12,19 +12,10 @@ expected-unique-actions = 2
 expected-runner-occurrences = 11
 
 [supersession]
-supersedes-freeze-id = "dcrypt-v3.0.0-audit-candidate-001"
-superseded-subject-commit = "de9f8a118c227643a938251ddae3d8bc426aaa98"
-superseded-subject-tree = "0f2065bfac6c5c33573425f1ab7e54b11c461395"
-superseded-evidence-commit = "d8c7949a94c53cda00efdff99ff6b55413a5e1a6"
-superseded-evidence-tree = "608623469de5bfb610965764d88520679691be99"
-superseded-freeze-json-sha256 = "9626178073ae95381542358bfc0bbfa39cb514735ab4be13239ca314320b1189"
-superseded-provisioning-manifest-sha256 = "bd8154f202734a2af248032765b5d2405034edd65245afd41bb72f21ec44b640"
-status = "invalidated-after-partial-independent-replay-before-acceptance"
-reason = "Candidate-002 supersedes candidate-001 because a documented PTY wrapper mismatch invalidated candidate-001 after partial independent replay observations but before completion and acceptance under the full required replay contract."
-partial-independent-replay-observed = true
-required-complete-independent-replay-completed = false
-external-review-completed = false
-audit-evidence-accepted = false
+current-freeze-id = "dcrypt-v3.0.0-audit-candidate-003"
+directly-supersedes-freeze-id = "dcrypt-v3.0.0-audit-candidate-002"
+history-source = "assurance/audit/sow/audit-policy.toml#freeze-supersession"
+history-sha256 = "bc4b466b701e7de61e0fa3f634b69542b08e5b9fe5a1731f744444e1ed04458a"
 
 [release-subject]
 tag = "v3.0.0"

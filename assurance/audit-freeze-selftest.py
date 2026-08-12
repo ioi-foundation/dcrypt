@@ -13,12 +13,14 @@ import os
 from pathlib import Path
 import pty
 import re
+import shlex
 import shutil
 import socket
 import stat
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 from typing import Callable
 
@@ -239,6 +241,79 @@ def expect_failure(label: str, action: Callable[[], object], contains: str | Non
     raise AssertionError(f"{label}: unexpectedly passed")
 
 
+def readme_shell_fences(readme: str) -> list[str]:
+    fences = re.findall(r"^```sh\n(.*?)^```$", readme, flags=re.MULTILINE | re.DOTALL)
+    if len(fences) != 8:
+        raise AssertionError(f"expected exactly eight executable README shell fences, found {len(fences)}")
+    if any(not fence.endswith("\n") for fence in fences):
+        raise AssertionError("README shell fence extraction lost its final newline")
+    return fences
+
+
+def run_shell_fence(
+    shell: str,
+    fence: str,
+    *,
+    cwd: Path,
+    variables: dict[str, str],
+    state_names: tuple[str, ...] = (),
+    timeout: int = 30,
+) -> tuple[subprocess.CompletedProcess[bytes], dict[str, str]]:
+    """Execute a complete extracted fence and preserve its terminal status."""
+
+    state_path = cwd / f"fence-state-{Path(shell).name}-{os.getpid()}-{time.monotonic_ns()}"
+    prefix = "umask 0027\n" + "".join(
+        f"{name}={shlex.quote(value)}\nexport {name}\n"
+        for name, value in variables.items()
+    )
+    state_lines = [
+        'FENCE_TERMINAL_RC=$?',
+        'FENCE_OBSERVED_UMASK=$(umask)',
+        'case $- in *C*) FENCE_OBSERVED_NOCLOBBER=on ;; *) FENCE_OBSERVED_NOCLOBBER=off ;; esac',
+        'umask 0077',
+        f': > {shlex.quote(os.fspath(state_path))}',
+        (
+            f"printf '%s=%s\\n' FENCE_OBSERVED_UMASK \"$FENCE_OBSERVED_UMASK\" > "
+            f"{shlex.quote(os.fspath(state_path))}"
+        ),
+        (
+            f"printf '%s=%s\\n' FENCE_OBSERVED_NOCLOBBER "
+            f"\"$FENCE_OBSERVED_NOCLOBBER\" >> {shlex.quote(os.fspath(state_path))}"
+        ),
+    ]
+    for name in state_names:
+        state_lines.append(
+            f"if test \"${{{name}+present}}\" = present; then "
+            f"printf '%s=%s\\n' {shlex.quote(name)} \"${{{name}}}\" >> "
+            f"{shlex.quote(os.fspath(state_path))}; else printf '%s=<unset>\\n' "
+            f"{shlex.quote(name)} >> {shlex.quote(os.fspath(state_path))}; fi"
+        )
+    state_lines.append('exit "$FENCE_TERMINAL_RC"')
+    script = prefix + fence + "\n" + "\n".join(state_lines) + "\n"
+    result = subprocess.run(
+        [shell], input=script.encode("utf-8"), cwd=cwd,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        env={"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC"},
+        timeout=timeout,
+    )
+    state: dict[str, str] = {}
+    if state_path.exists():
+        for line in state_path.read_text(encoding="utf-8").splitlines():
+            name, separator, value = line.partition("=")
+            if not separator or name in state:
+                raise AssertionError("shell-fence state output is malformed")
+            state[name] = value
+        state_path.unlink()
+    if state and (
+        state.get("FENCE_OBSERVED_UMASK") != "0027"
+        or state.get("FENCE_OBSERVED_NOCLOBBER") != "off"
+    ):
+        raise AssertionError(
+            f"shell fence leaked umask/noclobber state: {state}"
+        )
+    return result, state
+
+
 def mutate_subject(root: Path, fixture: Path, name: str, mutation: Callable[[Path], None]) -> tuple[Path, str]:
     destination = root / f"subject-{name}"
     shutil.copytree(fixture, destination)
@@ -317,13 +392,38 @@ def main() -> int:
         print("ok - rejects interactive PTY stdio and accepts exact all-descriptor redirection")
 
         wrapper_readme = (HERE / "audit" / "README.md").read_text(encoding="utf-8")
+        shell_fences = readme_shell_fences(wrapper_readme)
+        terminal_gates = (
+            'test "$AUDIT_CHECKOUT_PREPARE_RC" -eq 0',
+            'test "$PROVISION_BLOCK_RC" -eq 0',
+            'test "$GENERATION_BLOCK_RC" -eq 0',
+            'test "$EVIDENCE_TRANSFER_RC" -eq 0',
+            'test "$PROVISION_TRANSFER_RC" -eq 0',
+            'test "$STRUCTURAL_BLOCK_RC" -eq 0',
+            'test "$RELEASE_BLOCK_RC" -eq 0',
+            'test "$SELFTEST_BLOCK_RC" -eq 0',
+        )
+        for index, (fence, terminal_gate) in enumerate(zip(shell_fences, terminal_gates), start=1):
+            if fence.rstrip().splitlines()[-1] != terminal_gate:
+                raise AssertionError(f"README shell fence {index} does not end at its exact status gate")
+            for shell in ("/bin/bash", "/bin/dash"):
+                syntax = subprocess.run(
+                    [shell, "-n"], input=fence.encode("utf-8"),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10,
+                )
+                if syntax.returncode != 0:
+                    raise AssertionError(
+                        f"README shell fence {index} is invalid under {shell}: "
+                        f"{syntax.stderr.decode('utf-8', 'replace')}"
+                    )
+        print("ok - all eight complete README shell fences end at exact gates and parse in bash and dash")
         if "/usr/bin/cat" in wrapper_readme or "cat <&9" in wrapper_readme:
             raise AssertionError("documented wrapper still renders untrusted operator-log bytes")
         for prefix in ("PROVISION", "GENERATION", "STRUCTURAL", "RELEASE", "SELFTEST"):
             snapshot_marker = f"{prefix}_LOG_SNAPSHOT=$(/usr/bin/stat"
             size_marker = f"{prefix}_LOG_SIZE=$(/usr/bin/stat"
             size_recheck = (
-                'test "$(/usr/bin/stat -Lc %s /proc/$$/fd/8)" = '
+                'test "$(/usr/bin/stat -Lc %s /proc/self/fd/8)" = '
                 f'"${prefix}_LOG_SIZE"'
             )
             summary_marker = (
@@ -841,6 +941,306 @@ def main() -> int:
         finally:
             hardlink_peer.unlink()
         print("ok - provisioning handoff is exact, checksummed, immutable, and fail closed")
+
+        transfer_provision = root / "transfer-provision-parent" / gen.PROVISIONING_HANDOFF_ID
+        transfer_provision.parent.mkdir()
+        gen.transfer_exact_directory(
+            provisioning_directory, transfer_provision, kind="provisioning"
+        )
+        assert gen.validate_exact_directory_kind(
+            transfer_provision, kind="provisioning"
+        ) == handoff_bytes
+        assert stat.S_IMODE(transfer_provision.stat().st_mode) == 0o555
+        assert all(
+            stat.S_IMODE(path.stat().st_mode) == 0o644 and path.stat().st_nlink == 1
+            for path in transfer_provision.iterdir()
+        )
+
+        candidate_source = root / "transfer-candidate-source"
+        gen.write_bundle(candidate_source, first)
+        transfer_candidate = root / "transfer-candidate-parent" / gen.PRODUCTION_FREEZE_ID
+        transfer_candidate.parent.mkdir()
+        gen.transfer_exact_directory(candidate_source, transfer_candidate, kind="candidate")
+        assert gen.validate_exact_directory_kind(
+            transfer_candidate, kind="candidate"
+        ) == first
+        assert stat.S_IMODE(transfer_candidate.stat().st_mode) == 0o555
+        assert all(
+            stat.S_IMODE(path.stat().st_mode) == 0o644 and path.stat().st_nlink == 1
+            for path in transfer_candidate.iterdir()
+        )
+
+        def copy_exact_source(source: Path, name: str) -> Path:
+            destination = root / name
+            shutil.copytree(source, destination)
+            destination.chmod(0o555)
+            for child in destination.iterdir():
+                child.chmod(0o644)
+            return destination
+
+        def coherently_replace_json(
+            source: Path, *, kind: str, json_name: str, replacement: bytes
+        ) -> None:
+            source.chmod(0o755)
+            (source / json_name).write_bytes(replacement)
+            (source / json_name).chmod(0o644)
+            if kind == "provisioning":
+                (source / "SHA256SUMS").write_bytes(
+                    (
+                        f"{gen.sha256(replacement)}  PROVISIONING-MANIFEST.json\n"
+                    ).encode("ascii")
+                )
+            else:
+                if json_name == "PROVISIONING-MANIFEST.json":
+                    (source / "PROVISIONING-SHA256SUMS").write_bytes(
+                        (
+                            f"{gen.sha256(replacement)}  PROVISIONING-MANIFEST.json\n"
+                        ).encode("ascii")
+                    )
+                (source / "SHA256SUMS").write_bytes(
+                    "".join(
+                        f"{gen.sha256((source / name).read_bytes())}  {name}\n"
+                        for name in sorted(gen.JSON_FILES)
+                    ).encode("ascii")
+                )
+            for child in source.iterdir():
+                child.chmod(0o644)
+            source.chmod(0o555)
+
+        malformed_exact_sources: dict[tuple[str, str], Path] = {}
+        exact_source_by_kind = {
+            "candidate": candidate_source,
+            "provisioning": provisioning_directory,
+        }
+        json_names_by_kind = {
+            "candidate": gen.JSON_FILES,
+            "provisioning": ("PROVISIONING-MANIFEST.json",),
+        }
+        replacements = {
+            "noncanonical": b"{ }\n",
+            "malformed": b"{\n",
+            "wrong-shape": b"{}\n",
+        }
+        for kind, json_names in json_names_by_kind.items():
+            for json_index, json_name in enumerate(json_names):
+                for replacement_name, replacement in replacements.items():
+                    source = copy_exact_source(
+                        exact_source_by_kind[kind],
+                        f"exact-{kind}-{json_index}-{replacement_name}",
+                    )
+                    coherently_replace_json(
+                        source, kind=kind, json_name=json_name, replacement=replacement
+                    )
+                    expected_error = (
+                        "not in canonical byte form"
+                        if replacement_name == "noncanonical"
+                        else "invalid JSON"
+                        if replacement_name == "malformed"
+                        else "schema"
+                    )
+                    expect_failure(
+                        f"exact {kind} {json_name} coherently checksummed {replacement_name}",
+                        lambda candidate=source, candidate_kind=kind: (
+                            gen.validate_exact_directory_kind(
+                                candidate, kind=candidate_kind
+                            )
+                        ),
+                        expected_error,
+                    )
+                    if json_name == (
+                        "freeze.json" if kind == "candidate" else "PROVISIONING-MANIFEST.json"
+                    ):
+                        malformed_exact_sources[(kind, replacement_name)] = source
+
+        def expect_exact_cli_rejection(
+            source: Path, *, kind: str, variant: str, contains: str
+        ) -> None:
+            verify_stderr = io.StringIO()
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+                verify_stderr
+            ):
+                verify_rc = gen.main(
+                    ["--verify-exact", kind, "--source", os.fspath(source)]
+                )
+            if verify_rc != 1 or contains not in verify_stderr.getvalue():
+                raise AssertionError(
+                    f"public exact verify accepted {kind} {variant}: "
+                    f"rc={verify_rc} stderr={verify_stderr.getvalue()!r}"
+                )
+            destination_parent = root / f"cli-reject-{kind}-{variant}"
+            destination_parent.mkdir()
+            leaf = (
+                gen.PRODUCTION_FREEZE_ID
+                if kind == "candidate"
+                else gen.PROVISIONING_HANDOFF_ID
+            )
+            destination = destination_parent / leaf
+            transfer_stderr = io.StringIO()
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+                transfer_stderr
+            ):
+                transfer_rc = gen.main(
+                    [
+                        "--transfer-exact", kind,
+                        "--source", os.fspath(source),
+                        "--output", os.fspath(destination),
+                    ]
+                )
+            if transfer_rc != 1 or contains not in transfer_stderr.getvalue():
+                raise AssertionError(
+                    f"public exact transfer accepted {kind} {variant}: "
+                    f"rc={transfer_rc} stderr={transfer_stderr.getvalue()!r}"
+                )
+            if destination.exists() or any(destination_parent.iterdir()):
+                raise AssertionError(
+                    f"failed public exact transfer promoted {kind} {variant} output"
+                )
+
+        for kind in ("candidate", "provisioning"):
+            for variant, contains in (
+                ("noncanonical", "not in canonical byte form"),
+                ("malformed", "invalid JSON"),
+                ("wrong-shape", "schema"),
+            ):
+                expect_exact_cli_rejection(
+                    malformed_exact_sources[(kind, variant)],
+                    kind=kind,
+                    variant=variant,
+                    contains=contains,
+                )
+        print(
+            "ok - exact candidate/provisioning verify and transfer reject coherently "
+            "rechecksummed noncanonical, malformed, and wrong-shape JSON without promotion"
+        )
+
+        def failed_transfer_source(source: Path, name: str, contains: str) -> None:
+            destination_parent = root / f"failed-transfer-{name}"
+            destination_parent.mkdir()
+            destination = destination_parent / gen.PROVISIONING_HANDOFF_ID
+            expect_failure(
+                f"exact transfer {name}",
+                lambda: gen.transfer_exact_directory(
+                    source, destination, kind="provisioning"
+                ),
+                contains,
+            )
+            if destination.exists() or any(destination_parent.iterdir()):
+                raise AssertionError(f"failed exact transfer promoted partial output: {name}")
+
+        failed_transfer_source(missing_handoff, "missing source", "file set mismatch")
+        failed_transfer_source(extra_handoff, "extra source", "file set mismatch")
+        failed_transfer_source(symlink_handoff, "symlink source", "uniquely linked")
+        hardlink_transfer_peer = root / "provision-hardlink-transfer-peer"
+        os.link(hardlink_handoff / "SHA256SUMS", hardlink_transfer_peer)
+        try:
+            failed_transfer_source(hardlink_handoff, "hardlink source", "uniquely linked")
+        finally:
+            hardlink_transfer_peer.unlink()
+
+        special_handoff = copy_handoff("provision-special")
+        special_handoff.chmod(0o755)
+        (special_handoff / "SHA256SUMS").unlink()
+        os.mkfifo(special_handoff / "SHA256SUMS", 0o644)
+        special_handoff.chmod(0o555)
+        failed_transfer_source(special_handoff, "special source", "uniquely linked")
+
+        checksum_handoff = copy_handoff("provision-transfer-checksum")
+        checksum_handoff.chmod(0o755)
+        (checksum_handoff / "SHA256SUMS").write_bytes(
+            b"0" * 64 + b"  PROVISIONING-MANIFEST.json\n"
+        )
+        (checksum_handoff / "SHA256SUMS").chmod(0o644)
+        checksum_handoff.chmod(0o555)
+        failed_transfer_source(checksum_handoff, "checksum drift", "checksum")
+
+        preexisting_transfer_parent = root / "preexisting-transfer"
+        preexisting_transfer_parent.mkdir()
+        preexisting_transfer = preexisting_transfer_parent / gen.PROVISIONING_HANDOFF_ID
+        preexisting_transfer.mkdir()
+        expect_failure(
+            "exact transfer preexisting/full destination",
+            lambda: gen.transfer_exact_directory(
+                provisioning_directory, preexisting_transfer, kind="provisioning"
+            ),
+            "already exists",
+        )
+        expect_failure(
+            "exact transfer nested source and destination",
+            lambda: gen.transfer_exact_directory(
+                provisioning_directory,
+                provisioning_directory / gen.PROVISIONING_HANDOFF_ID,
+                kind="provisioning",
+            ),
+            "disjoint",
+        )
+        readonly_transfer_parent = root / "readonly-transfer"
+        readonly_transfer_parent.mkdir(mode=0o555)
+        try:
+            expect_failure(
+                "exact transfer read-only destination parent",
+                lambda: gen.transfer_exact_directory(
+                    provisioning_directory,
+                    readonly_transfer_parent / gen.PROVISIONING_HANDOFF_ID,
+                    kind="provisioning",
+                ),
+                "cannot safely write exact output directory",
+            )
+            if any(readonly_transfer_parent.iterdir()):
+                raise AssertionError("read-only transfer failure left a partial destination")
+        finally:
+            readonly_transfer_parent.chmod(0o755)
+        cli_transfer_parent = root / "cli-transfer"
+        cli_transfer_parent.mkdir()
+        cli_transfer_output = cli_transfer_parent / gen.PROVISIONING_HANDOFF_ID
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            cli_transfer_rc = gen.main(
+                [
+                    "--transfer-exact", "provisioning",
+                    "--source", os.fspath(provisioning_directory),
+                    "--output", os.fspath(cli_transfer_output),
+                ]
+            )
+            cli_verify_rc = gen.main(
+                [
+                    "--verify-exact", "provisioning",
+                    "--source", os.fspath(cli_transfer_output),
+                ]
+            )
+        if cli_transfer_rc != 0 or cli_verify_rc != 0:
+            raise AssertionError("exact transfer/verify public CLI rejected its closed valid form")
+        for label, arguments in (
+            (
+                "transfer ignored repository option",
+                [
+                    "--transfer-exact", "provisioning",
+                    "--source", os.fspath(provisioning_directory),
+                    "--output", os.fspath(cli_transfer_parent / "unused-output"),
+                    "--repo", "/dcrypt",
+                ],
+            ),
+            (
+                "verify ignored repository option",
+                [
+                    "--verify-exact", "provisioning",
+                    "--source", os.fspath(provisioning_directory),
+                    "--repo", "/dcrypt",
+                ],
+            ),
+            (
+                "verify ignored output option",
+                [
+                    "--verify-exact", "provisioning",
+                    "--source", os.fspath(provisioning_directory),
+                    "--output", os.fspath(cli_transfer_parent / "ignored"),
+                ],
+            ),
+        ):
+            cli_stderr = io.StringIO()
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(cli_stderr):
+                cli_rc = gen.main(arguments)
+            if cli_rc != 1 or "forbids" not in cli_stderr.getvalue():
+                raise AssertionError(f"exact CLI did not reject {label}")
+        print("ok - exact transfer rejects missing/extra/link/special/checksum/full/read-only inputs without partial promotion")
         evidence_repo, bundle = make_evidence_commit(root, fixture, first)
         result = verify._verify_bundle_internal(
             evidence_repo, fixture, bundle, provision=provisioning_directory,
@@ -848,6 +1248,297 @@ def main() -> int:
         )
         assert result["release_blockers"] == 9319  # 9,298 atomic rows plus 21 infrastructure limitations
         print("ok - deterministic generation and structural replay")
+
+        fence_runtime = root / "readme-fence-runtime"
+        fence_runtime.mkdir()
+        fence_tmp = fence_runtime / "tmpfs"
+        fence_tmp.mkdir()
+        fail_command = fence_runtime / "fail-command"
+        fail_command.write_text("#!/bin/sh\nexit 42\n", encoding="utf-8")
+        fail_command.chmod(0o755)
+        bwrap_stub = fence_runtime / "bwrap-stub"
+        bwrap_stub.write_text(
+            """#!/bin/sh
+host_output=
+virtual_output=
+verify_mode=
+while test "$#" -gt 0; do
+  case "$1" in
+    --bind)
+      if test "$3" = /output; then host_output=$2; fi
+      shift 3
+      ;;
+    --output)
+      virtual_output=$2
+      shift 2
+      ;;
+    --mode)
+      verify_mode=$2
+      shift 2
+      ;;
+    *) shift ;;
+  esac
+done
+case "${FENCE_STUB_MODE:-success}" in
+  child-fail) exit 41 ;;
+  success|post-fail) ;;
+  *) exit 43 ;;
+esac
+case "$virtual_output" in
+  /output/dcrypt-audit-provisioning-v1)
+    /usr/bin/cp -a "$FENCE_PROVISION_TEMPLATE" \
+      "$host_output/dcrypt-audit-provisioning-v1" || exit 44
+    ;;
+  /output/dcrypt-v3.0.0-audit-candidate-003)
+    /usr/bin/cp -a "$FENCE_CANDIDATE_TEMPLATE" \
+      "$host_output/dcrypt-v3.0.0-audit-candidate-003" || exit 45
+    ;;
+esac
+if test "${FENCE_STUB_MODE:-success}" = post-fail; then
+  /usr/bin/chmod 0644 /proc/self/fd/1 || exit 46
+fi
+if test "$verify_mode" = release; then exit 3; fi
+exit 0
+""",
+            encoding="utf-8",
+        )
+        bwrap_stub.chmod(0o755)
+        fence_epoch = os.environ["SOURCE_DATE_EPOCH"]
+        common_fence_variables = {
+            "AUDIT_EPOCH": fence_epoch,
+            "AUDIT_SUBJECT": subject,
+            "AUDIT_CHECKOUT": "/dcrypt",
+            "SUBJECT_CHECKOUT": "/dcrypt",
+            "EVIDENCE_CHECKOUT": os.fspath(evidence_repo),
+            "PROVISION_HANDOFF": os.fspath(provisioning_directory),
+            "FENCE_PROVISION_TEMPLATE": os.fspath(provisioning_directory),
+            "FENCE_CANDIDATE_TEMPLATE": os.fspath(candidate_source),
+            "FENCE_STUB_MODE": "success",
+        }
+
+        def adapted_fence(index: int, *, first_command_failure: str | None = None) -> str:
+            fence = shell_fences[index - 1].replace("/dev/shm", os.fspath(fence_tmp))
+            fence = fence.replace("/usr/bin/bwrap", os.fspath(bwrap_stub))
+            if first_command_failure is not None:
+                if first_command_failure not in fence:
+                    raise AssertionError(
+                        f"README fence {index} lacks injected command {first_command_failure}"
+                    )
+                fence = fence.replace(first_command_failure, os.fspath(fail_command), 1)
+            return fence
+
+        for shell in ("/bin/bash", "/bin/dash"):
+            checkout_parent = fence_runtime / f"checkout-success-{Path(shell).name}"
+            checkout_parent.mkdir()
+            checkout_result, checkout_state = run_shell_fence(
+                shell, shell_fences[0], cwd=fence_runtime,
+                variables={
+                    "AUDIT_SOURCE": os.fspath(fixture),
+                    "AUDIT_CHECKOUT_PARENT": os.fspath(checkout_parent),
+                    "AUDIT_SUBJECT": subject,
+                },
+                state_names=("AUDIT_CHECKOUT", "AUDIT_CHECKOUT_PREPARE_RC"),
+            )
+            if checkout_result.returncode != 0:
+                raise AssertionError(
+                    f"checkout fence failed under {shell}: "
+                    f"{checkout_result.stderr.decode('utf-8', 'replace')}"
+                )
+            promoted_checkout = Path(checkout_state["AUDIT_CHECKOUT"])
+            if (
+                not promoted_checkout.is_dir()
+                or run("git", "rev-parse", "HEAD", cwd=promoted_checkout).decode().strip() != subject
+                or checkout_state["AUDIT_CHECKOUT_PREPARE_RC"] != "0"
+            ):
+                raise AssertionError(f"checkout fence did not promote the exact subject under {shell}")
+
+            checkout_failures = (
+                (
+                    "first/mktemp",
+                    adapted_fence(1, first_command_failure="/usr/bin/mktemp"),
+                    {"AUDIT_SOURCE": os.fspath(fixture), "AUDIT_SUBJECT": subject},
+                ),
+                (
+                    "middle/clone",
+                    shell_fences[0],
+                    {"AUDIT_SOURCE": os.fspath(root / "missing-source"), "AUDIT_SUBJECT": subject},
+                ),
+                (
+                    "last/checkout",
+                    shell_fences[0],
+                    {"AUDIT_SOURCE": os.fspath(fixture), "AUDIT_SUBJECT": "0" * 40},
+                ),
+            )
+            for failure_label, failure_fence, failure_variables in checkout_failures:
+                failure_parent = fence_runtime / (
+                    f"checkout-{failure_label.replace('/', '-')}-{Path(shell).name}"
+                )
+                failure_parent.mkdir()
+                failure_variables = {
+                    **failure_variables,
+                    "AUDIT_CHECKOUT_PARENT": os.fspath(failure_parent),
+                }
+                failed, failed_state = run_shell_fence(
+                    shell, failure_fence, cwd=fence_runtime,
+                    variables=failure_variables,
+                    state_names=("AUDIT_CHECKOUT", "AUDIT_CHECKOUT_PREPARE_RC"),
+                )
+                if failed.returncode == 0 or failed_state.get("AUDIT_CHECKOUT") != "<unset>":
+                    raise AssertionError(
+                        f"checkout fence masked {failure_label} under {shell}"
+                    )
+
+            held_contracts = (
+                (2, "PROVISION_HANDOFF", "PROVISION_BLOCK_RC", 0),
+                (3, "CANDIDATE", "GENERATION_BLOCK_RC", 0),
+                (6, "", "STRUCTURAL_BLOCK_RC", 0),
+                (7, "", "RELEASE_BLOCK_RC", 3),
+                (8, "", "SELFTEST_BLOCK_RC", 0),
+            )
+            for index, promoted_name, block_name, _expected_child in held_contracts:
+                variables = dict(common_fence_variables)
+                variables["FENCE_STUB_MODE"] = "success"
+                success, success_state = run_shell_fence(
+                    shell, adapted_fence(index), cwd=fence_runtime,
+                    variables=variables,
+                    state_names=tuple(name for name in (promoted_name, block_name) if name),
+                    timeout=60,
+                )
+                if success.returncode != 0 or success_state.get(block_name) != "0":
+                    raise AssertionError(
+                        f"README held wrapper {index} failed under {shell}: "
+                        f"{success.stderr.decode('utf-8', 'replace')}"
+                    )
+                if promoted_name and success_state.get(promoted_name, "<unset>") == "<unset>":
+                    raise AssertionError(
+                        f"README held wrapper {index} did not promote output under {shell}"
+                    )
+
+                first_failure, first_state = run_shell_fence(
+                    shell,
+                    adapted_fence(index, first_command_failure="/usr/bin/mktemp"),
+                    cwd=fence_runtime, variables=variables,
+                    state_names=tuple(name for name in (promoted_name, block_name) if name),
+                )
+                if first_failure.returncode == 0 or (
+                    promoted_name and first_state.get(promoted_name) != "<unset>"
+                ):
+                    raise AssertionError(
+                        f"README held wrapper {index} masked first-command failure under {shell}"
+                    )
+
+                child_variables = dict(variables)
+                child_variables["FENCE_STUB_MODE"] = "child-fail"
+                child_failure, child_state = run_shell_fence(
+                    shell, adapted_fence(index), cwd=fence_runtime,
+                    variables=child_variables,
+                    state_names=tuple(name for name in (promoted_name, block_name) if name),
+                )
+                if child_failure.returncode == 0 or (
+                    promoted_name and child_state.get(promoted_name) != "<unset>"
+                ):
+                    raise AssertionError(
+                        f"README held wrapper {index} masked child failure under {shell}"
+                    )
+
+                post_variables = dict(variables)
+                post_variables["FENCE_STUB_MODE"] = "post-fail"
+                post_failure, post_state = run_shell_fence(
+                    shell, adapted_fence(index), cwd=fence_runtime,
+                    variables=post_variables,
+                    state_names=tuple(name for name in (promoted_name, block_name) if name),
+                )
+                if post_failure.returncode == 0 or (
+                    promoted_name and post_state.get(promoted_name) != "<unset>"
+                ):
+                    raise AssertionError(
+                        f"README held wrapper {index} masked postcheck failure under {shell}"
+                    )
+
+            evidence_checkout = fence_runtime / f"evidence-transfer-{Path(shell).name}"
+            (evidence_checkout / "assurance/audit").mkdir(parents=True)
+            transfer_success, transfer_state = run_shell_fence(
+                shell, shell_fences[3], cwd=fence_runtime,
+                variables={
+                    "EVIDENCE_CHECKOUT": os.fspath(evidence_checkout),
+                    "AUDIT_CHECKOUT": "/dcrypt",
+                    "CANDIDATE": os.fspath(candidate_source),
+                },
+                state_names=("EVIDENCE_BUNDLE", "EVIDENCE_TRANSFER_RC"),
+            )
+            if transfer_success.returncode != 0 or transfer_state.get("EVIDENCE_TRANSFER_RC") != "0":
+                raise AssertionError(f"candidate transfer fence failed under {shell}")
+            transferred_candidate = Path(transfer_state["EVIDENCE_BUNDLE"])
+            if gen.validate_exact_directory_kind(transferred_candidate, kind="candidate") != first:
+                raise AssertionError(f"candidate transfer fence changed bytes under {shell}")
+
+            for failure_label, source, precreate, replace_mkdir in (
+                ("first", candidate_source, False, True),
+                ("middle", root / "missing-candidate-source", False, False),
+                ("last", candidate_source, True, False),
+            ):
+                failed_checkout = fence_runtime / (
+                    f"evidence-transfer-{failure_label}-{Path(shell).name}"
+                )
+                (failed_checkout / "assurance/audit").mkdir(parents=True)
+                target = (
+                    failed_checkout / "assurance/audit/freezes" / gen.PRODUCTION_FREEZE_ID
+                )
+                if precreate:
+                    target.mkdir(parents=True)
+                candidate_fence = adapted_fence(
+                    4, first_command_failure="/usr/bin/mkdir" if replace_mkdir else None
+                )
+                failed, failed_state = run_shell_fence(
+                    shell, candidate_fence, cwd=fence_runtime,
+                    variables={
+                        "EVIDENCE_CHECKOUT": os.fspath(failed_checkout),
+                        "AUDIT_CHECKOUT": "/dcrypt",
+                        "CANDIDATE": os.fspath(source),
+                    },
+                    state_names=("EVIDENCE_BUNDLE", "EVIDENCE_TRANSFER_RC"),
+                )
+                if failed.returncode == 0 or failed_state.get("EVIDENCE_BUNDLE") != "<unset>":
+                    raise AssertionError(
+                        f"candidate transfer fence masked {failure_label} failure under {shell}"
+                    )
+
+            provision_success, provision_state = run_shell_fence(
+                shell, adapted_fence(5), cwd=fence_runtime,
+                variables={
+                    "PROVISION_HANDOFF": os.fspath(provisioning_directory),
+                    "SUBJECT_CHECKOUT": "/dcrypt",
+                },
+                state_names=("PROVISION_HANDOFF", "PROVISION_TRANSFER_RC"),
+            )
+            if provision_success.returncode != 0 or provision_state.get("PROVISION_TRANSFER_RC") != "0":
+                raise AssertionError(f"provision transfer fence failed under {shell}")
+            if gen.validate_exact_directory_kind(
+                Path(provision_state["PROVISION_HANDOFF"]), kind="provisioning"
+            ) != handoff_bytes:
+                raise AssertionError(f"provision transfer fence changed bytes under {shell}")
+
+            for failure_label, source, replace_mktemp in (
+                ("first", provisioning_directory, True),
+                ("middle", root / "missing-provision-source", False),
+                ("last", checksum_handoff, False),
+            ):
+                provision_fence = adapted_fence(
+                    5, first_command_failure="/usr/bin/mktemp" if replace_mktemp else None
+                )
+                failed, failed_state = run_shell_fence(
+                    shell, provision_fence, cwd=fence_runtime,
+                    variables={
+                        "PROVISION_HANDOFF": os.fspath(source),
+                        "SUBJECT_CHECKOUT": "/dcrypt",
+                    },
+                    state_names=("PROVISION_HANDOFF", "PROVISION_TRANSFER_RC"),
+                )
+                if failed.returncode == 0 or failed_state.get("PROVISION_HANDOFF") != "<unset>":
+                    raise AssertionError(
+                        f"provision transfer fence masked {failure_label} failure under {shell}"
+                    )
+        print("ok - all eight complete README fences pass and fail closed at first/middle/last steps in bash and dash")
 
         generated_output = Path("/output") / gen.PRODUCTION_FREEZE_ID
         gen.write_bundle(generated_output, first)
@@ -946,13 +1637,14 @@ def main() -> int:
             ),
             "exact read-only mapping /provision",
         )
-        expect_failure(
-            "superseded candidate identifier reuse",
-            lambda: gen.freeze_command_inventory(
-                subject, gen.SUPERSESSION_RECORD["supersedes_freeze_id"]
-            ),
-            "reviewed candidate identifier",
-        )
+        for superseded in gen.SUPERSEDED_FREEZE_IDS:
+            expect_failure(
+                f"superseded candidate identifier reuse {superseded}",
+                lambda candidate=superseded: gen.freeze_command_inventory(
+                    subject, candidate
+                ),
+                "reviewed candidate identifier",
+            )
         print("ok - production CLI paths are fixed to the documented sandbox mappings")
 
         put(fixture, "untracked-input", "must fail\n")
@@ -1741,7 +2433,7 @@ def main() -> int:
         )
 
         def add_self_reference(repo: Path) -> None:
-            put(repo, "assurance/audit/freezes/dcrypt-v3.0.0-audit-candidate-002/freeze.json", "{}\n")
+            put(repo, f"assurance/audit/freezes/{gen.PRODUCTION_FREEZE_ID}/freeze.json", "{}\n")
 
         subject_failure("subject self-reference", add_self_reference, "own freeze output")
         subject_failure(
@@ -1773,12 +2465,193 @@ def main() -> int:
             "required",
         )
         invalid_supersession = json.loads(json.dumps(freeze_instance))
-        invalid_supersession["supersession"]["status"] = "accepted"
+        invalid_supersession["supersession"]["history"][1][
+            "audit_evidence_accepted"
+        ] = True
         expect_failure(
             "semantic candidate supersession promotion",
             lambda: verify.validate_freeze_shape(invalid_supersession),
             "supersession/invalidation",
         )
+
+        _, supersession_files, _ = gen.subject_files(fixture, subject)
+        supersession_policy = gen.parse_toml(
+            supersession_files, "assurance/audit/freeze-policy.toml"
+        )
+        derived_supersession = gen.supersession_document(
+            supersession_files, supersession_policy, freeze_schema
+        )
+        if derived_supersession != freeze_instance["supersession"]:
+            raise AssertionError("generated freeze history does not equal its canonical SOW source")
+
+        def drift_value(value):
+            if isinstance(value, bool):
+                return not value
+            if isinstance(value, str):
+                return value + "-drift"
+            if isinstance(value, int):
+                return value + 1
+            if isinstance(value, list):
+                return list(reversed(value)) if len(value) > 1 else [*value, "drift"]
+            raise AssertionError(f"unhandled supersession field type: {type(value).__name__}")
+
+        def replace_exact_once(blob: bytes, old: bytes, new: bytes, *, label: str) -> bytes:
+            if blob.count(old) != 1:
+                raise AssertionError(
+                    f"{label}: expected one mutation target, found {blob.count(old)}"
+                )
+            changed = blob.replace(old, new, 1)
+            if changed == blob:
+                raise AssertionError(f"{label}: mutation did not change the fixture")
+            return changed
+
+        for row_index, row in enumerate(derived_supersession["history"]):
+            for field, value in row.items():
+                mutated = json.loads(json.dumps(freeze_instance))
+                mutated["supersession"]["history"][row_index][field] = drift_value(value)
+                expect_failure(
+                    f"schema SOW/freeze history row {row_index} field {field} drift",
+                    lambda candidate=mutated: gen.validate_json_schema(
+                        candidate, freeze_schema,
+                        label="freeze SOW-history parity fixture",
+                    ),
+                    "const",
+                )
+                drifted_schema = json.loads(json.dumps(freeze_schema))
+                drifted_schema["properties"]["supersession"]["const"]["history"][
+                    row_index
+                ][field] = drift_value(value)
+                expect_failure(
+                    f"derived SOW/schema history row {row_index} field {field} drift",
+                    lambda candidate_schema=drifted_schema: gen.supersession_document(
+                        supersession_files, supersession_policy, candidate_schema
+                    ),
+                    "schema supersession history differs",
+                )
+        for field in (
+            "current_freeze_id",
+            "directly_supersedes_freeze_id",
+            "history_source",
+            "history_sha256",
+        ):
+            mutated = json.loads(json.dumps(freeze_instance))
+            mutated["supersession"][field] = drift_value(
+                mutated["supersession"][field]
+            )
+            expect_failure(
+                f"schema SOW/freeze outer field {field} drift",
+                lambda candidate=mutated: gen.validate_json_schema(
+                    candidate, freeze_schema, label="freeze SOW-history parity fixture"
+                ),
+                "const",
+            )
+            drifted_schema = json.loads(json.dumps(freeze_schema))
+            drifted_schema["properties"]["supersession"]["const"][field] = (
+                drift_value(derived_supersession[field])
+            )
+            expect_failure(
+                f"derived SOW/schema outer field {field} drift",
+                lambda candidate_schema=drifted_schema: gen.supersession_document(
+                    supersession_files, supersession_policy, candidate_schema
+                ),
+                "schema supersession history differs",
+            )
+        reordered_history = json.loads(json.dumps(freeze_instance))
+        reordered_history["supersession"]["history"].reverse()
+        expect_failure(
+            "schema SOW/freeze history order drift",
+            lambda: gen.validate_json_schema(
+                reordered_history, freeze_schema,
+                label="freeze SOW-history parity fixture",
+            ),
+            "const",
+        )
+        reordered_schema = json.loads(json.dumps(freeze_schema))
+        reordered_schema["properties"]["supersession"]["const"]["history"].reverse()
+        expect_failure(
+            "derived SOW/schema history order drift",
+            lambda: gen.supersession_document(
+                supersession_files, supersession_policy, reordered_schema
+            ),
+            "schema supersession history differs",
+        )
+        missing_prior_candidate = json.loads(json.dumps(freeze_instance))
+        missing_prior_candidate["supersession"]["history"].pop()
+        expect_failure(
+            "schema missing candidate-002 supersession history",
+            lambda: gen.validate_json_schema(
+                missing_prior_candidate, freeze_schema,
+                label="freeze supersession history fixture",
+            ),
+            "const",
+        )
+        missing_schema_row = json.loads(json.dumps(freeze_schema))
+        missing_schema_row["properties"]["supersession"]["const"]["history"].pop()
+        expect_failure(
+            "derived SOW/schema missing candidate-002 history",
+            lambda: gen.supersession_document(
+                supersession_files, supersession_policy, missing_schema_row
+            ),
+            "schema supersession history differs",
+        )
+
+        one_sow_field_drift = dict(supersession_files)
+        one_sow_field_drift["assurance/audit/sow/audit-policy.toml"] = replace_exact_once(
+            one_sow_field_drift["assurance/audit/sow/audit-policy.toml"],
+                b"invalidated-after-first-party-diagnostic-before-valid-wrapper-compliant-generation",
+                b"invalidated-after-drift",
+            label="single SOW status field",
+        )
+        expect_failure(
+            "SOW policy/scope supersession field mismatch",
+            lambda: gen.supersession_document(
+                one_sow_field_drift, supersession_policy, freeze_schema
+            ),
+            "not exact and identical",
+        )
+        both_sow_field_drift = dict(supersession_files)
+        for path in (
+            "assurance/audit/sow/audit-policy.toml",
+            "assurance/audit/sow/audit-scope.toml",
+        ):
+            both_sow_field_drift[path] = replace_exact_once(
+                both_sow_field_drift[path],
+                b'parent-sow-commit = "8e3b8d7ee3ea9ec7d1901dadf9c85f3aa0706c02"',
+                b'parent-sow-commit = "0000000000000000000000000000000000000000"',
+                label=f"{path} parent-SOW field",
+            )
+        expect_failure(
+            "SOW/freeze parent-SOW field parity drift",
+            lambda: gen.supersession_document(
+                both_sow_field_drift, supersession_policy, freeze_schema
+            ),
+            "canonical digest drift",
+        )
+        both_sow_list_drift = dict(supersession_files)
+        first_defect = (
+            b'    "provision/generation README fences could return 0 after failed gate due trailing assignment",\n'
+        )
+        second_defect = (
+            b'    "clone fence could continue to checkout preexisting repo after failed clone",\n'
+        )
+        for path in (
+            "assurance/audit/sow/audit-policy.toml",
+            "assurance/audit/sow/audit-scope.toml",
+        ):
+            both_sow_list_drift[path] = replace_exact_once(
+                both_sow_list_drift[path],
+                first_defect + second_defect,
+                second_defect + first_defect,
+                label=f"{path} known-defect order",
+            )
+        expect_failure(
+            "SOW/freeze known-defect list ordering drift",
+            lambda: gen.supersession_document(
+                both_sow_list_drift, supersession_policy, freeze_schema
+            ),
+            "canonical digest drift",
+        )
+        print("ok - every SOW/freeze supersession field, list, and row order is parity-bound and non-promotable")
         nested_missing = json.loads(json.dumps(freeze_instance))
         del nested_missing["release_gate"]["independent_replay_required"]
         expect_failure(

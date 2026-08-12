@@ -20,7 +20,7 @@
   ],
   "properties": {
     "schema_version": {"const": 1},
-    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-002"},
+    "freeze_id": {"const": "dcrypt-v3.0.0-audit-candidate-003"},
     "freeze_json_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "audit_policy_path": {"const": "assurance/audit/sow/audit-policy.toml"},
     "audit_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
