@@ -101,7 +101,7 @@ PINNED_ARTIFACT_SHA256: dict[str, str] = {
     "request.schema.json": "b75779d046fc06cbd1cec1366d55504ff651bf5848fd524d2e178f8f4a8cfcee",
     "response.schema.json": "4d108d84bf2484d8d8705b251624ce842d2e7b37fade71dc5daf52048263028f",
     "runner.py": "9a63e400590ccccf26dbceb7c53c5af9ef0d8af5af00f98ae50653139379d213",
-    "scaffold-selftest.py": "f56fa3c0516f360e0e7f824e5ac4b53e330bb2629f1ebe5497ef6184ddc2983c",
+    "scaffold-selftest.py": "802b333dbcb56ebaa1fce020a9e6b648dee11eb9f53da070c074c80d29ef0efe",
     "status.request.json": "69bbc2c502591a1ebde6111d05ccd964319961f624f1084153b882020aea31af",
     "suite-registry.json": "ec5c76171eae490d23e57ba520c09882868ea4d76c7169da7bb6c4b0298f032a",
     "suite-registry.schema.json": "93d29fb38433b059ab636ab3eae6e66c880021c44c11870fea36a922ad835f13",

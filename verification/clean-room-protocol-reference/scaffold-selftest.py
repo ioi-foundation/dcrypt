@@ -272,7 +272,14 @@ def coherent_final_binding(
             add_paths.extend(SUBJECT_ABSENT_BUILD_INPUTS)
         added = run(["git", "add", "--force", "--", *add_paths], cwd=repo)
         committed = run(
-            ["git", "commit", "--quiet", "-m", "coherent final-binding subject"],
+            [
+                "git",
+                "commit",
+                "--quiet",
+                "--allow-empty",
+                "-m",
+                "coherent final-binding subject",
+            ],
             cwd=repo,
         )
         if added.returncode != 0 or committed.returncode != 0:
@@ -640,15 +647,51 @@ def main() -> int:
         "protocol evidence promotion rejected",
     )
 
-    def change_interim_source_digest(path: Path) -> None:
+    def change_source_digest(path: Path) -> None:
         protocol = load_json(path)
         protocol["source_bindings"][0]["sha256"] = "7" * 64
         save_protocol(path, protocol)
 
+    working_protocol = load_json(
+        SOURCE_REPO
+        / "assurance"
+        / "interoperability"
+        / "protocol-specs"
+        / "current-behavior.json"
+    )
+    binding_stage = working_protocol["subject_binding"]["binding_stage"]
+    if binding_stage == "interim-rebind-required":
+        source_digest_mutation = coherently_mutated(
+            no_scaffold_mutation,
+            protocol_mutator=change_source_digest,
+        )
+        expected_source_digest_error = (
+            "working interim protocol source bindings differ from reviewed source"
+        )
+    elif binding_stage == "final-subject-candidate-review-required":
+
+        def change_final_source_digest(repo: Path) -> None:
+            change_source_digest(
+                repo
+                / "assurance"
+                / "interoperability"
+                / "protocol-specs"
+                / "current-behavior.json"
+            )
+
+        source_digest_mutation = coherent_final_binding(
+            after_rebind=change_final_source_digest
+        )
+        expected_source_digest_error = (
+            "working final protocol source digest is not final-subject-bound at 0"
+        )
+    else:
+        raise AssertionError(f"unexpected working protocol binding stage: {binding_stage}")
+
     rejected(
-        coherently_mutated(no_scaffold_mutation, protocol_mutator=change_interim_source_digest),
-        "working interim protocol source bindings differ from reviewed source",
-        "unreviewed interim source rebind rejected",
+        source_digest_mutation,
+        expected_source_digest_error,
+        "unreviewed source rebind rejected",
     )
 
     def simulate_legitimate_final_rebind(path: Path) -> None:
