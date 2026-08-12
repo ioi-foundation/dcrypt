@@ -14,6 +14,7 @@ dcrypt-api = { version = "=3.0.0", path = "../crates/api" }
 dcrypt-algorithms = { version = "=3.0.0", path = "../crates/algorithms", features = ["ec"] }
 dcrypt-hybrid = { version = "=3.0.0", path = "../crates/hybrid" }
 dcrypt-kem = { version = "=3.0.0", path = "../crates/kem", features = ["post-quantum", "traditional"] }
+dcrypt-pke = { version = "=3.0.0", path = "../crates/pke" }
 dcrypt-sign = { version = "=3.0.0", path = "../crates/sign" }
 dcrypt-symmetric = { version = "=3.0.0", path = "../crates/symmetric" }
 dcrypt-legacy-xchacha20poly1305-migration = { version = "=0.0.0", path = "../migration/legacy-xchacha20poly1305" }
@@ -63,6 +64,76 @@ bench = false
 [[bin]]
 name = "legacy_xchacha_migration"
 path = "fuzz_targets/legacy_xchacha_migration.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ml_kem_semantic"
+path = "fuzz_targets/ml_kem_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ml_dsa_semantic"
+path = "fuzz_targets/ml_dsa_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "bls12_381_semantic"
+path = "fuzz_targets/bls12_381_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ed25519_semantic"
+path = "fuzz_targets/ed25519_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ecdsa_semantic"
+path = "fuzz_targets/ecdsa_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ecdh_semantic"
+path = "fuzz_targets/ecdh_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "aes_gcm_semantic"
+path = "fuzz_targets/aes_gcm_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "chacha_semantic"
+path = "fuzz_targets/chacha_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ecies_semantic"
+path = "fuzz_targets/ecies_semantic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "hybrid_semantic"
+path = "fuzz_targets/hybrid_semantic.rs"
 test = false
 doc = false
 bench = false

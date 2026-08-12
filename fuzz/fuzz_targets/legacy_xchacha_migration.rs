@@ -7,6 +7,8 @@ use dcrypt_algorithms::types::Nonce;
 use dcrypt_legacy_xchacha20poly1305_migration::decrypt_legacy;
 use libfuzzer_sys::fuzz_target;
 
+const INPUT_MAX: usize = 64 * 1024;
+
 fn split_aad(payload: &[u8]) -> (Option<&[u8]>, &[u8]) {
     match payload.iter().position(|byte| *byte == b'|') {
         Some(boundary) => (Some(&payload[..boundary]), &payload[boundary + 1..]),
@@ -30,15 +32,16 @@ fn historical_encrypt(
     encrypted
 }
 
-fuzz_target!(|data: &[u8]| {
-    if data.len() < 57 {
+fuzz_target!(|input: &[u8]| {
+    let input = &input[..input.len().min(INPUT_MAX)];
+    if input.len() < 57 {
         return;
     }
 
-    let synthesize_valid_ciphertext = data[0] & 1 == 1;
-    let key: &[u8; 32] = data[1..33].try_into().unwrap();
-    let nonce: &[u8; 24] = data[33..57].try_into().unwrap();
-    let (aad, payload) = split_aad(&data[57..]);
+    let synthesize_valid_ciphertext = input[0] & 1 == 1;
+    let key: &[u8; 32] = input[1..33].try_into().unwrap();
+    let nonce: &[u8; 24] = input[33..57].try_into().unwrap();
+    let (aad, payload) = split_aad(&input[57..]);
 
     if synthesize_valid_ciphertext {
         let Some(ciphertext) = historical_encrypt(key, nonce, payload, aad) else {

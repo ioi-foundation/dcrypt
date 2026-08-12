@@ -61,7 +61,7 @@ EXPECTED_CHECK_CONTEXTS = (
     "Miri (dcrypt-api)",
     "Miri (dcrypt-common)",
     "Miri cryptographic parser and key boundaries",
-    "Build and exercise externally controlled decoder fuzz targets",
+    "Deterministic semantic fuzz smoke",
 )
 
 SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[+-][0-9A-Za-z.-]+)?$")
@@ -70,6 +70,31 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 BOUNDARY_REPORT = PROJECT_ROOT / "target" / "implementation-boundary" / "report.json"
 BOUNDARY_POLICY = PROJECT_ROOT / "implementation-boundary.toml"
 LOCK_FILE = PROJECT_ROOT / "Cargo.lock"
+
+# Exact Package C execution sections. These literals intentionally make any
+# control-flow, step-policy, command, argument, or ordering change require a
+# reviewed reseal instead of relying on a check-context name alone.
+PACKAGE_C_ASSURANCE_JOB_SHA256 = (
+    "a83234be8a10f795663bfe84df88772b9872db5b78f035c45dd10d9a8d69e84f"
+)
+PACKAGE_C_FUZZ_JOB_SHA256 = (
+    "a787ae7baeea3ae6936fe1ca3ebfa029ce487556ee147ad76305eef78bf2115f"
+)
+PACKAGE_C_PUBLISH_SECTION_SHA256 = (
+    "7871388b18326730b175c8f56cd00415d5cf41a43d9e3937583dc24b00c39cc7"
+)
+PACKAGE_C_RELEASE_SECTION_SHA256 = (
+    "e771ca10fa7c1535f047f562ddb0d17a43a82902549e315d68829ce57980fc27"
+)
+PACKAGE_C_FULL_WORKFLOW_SHA256 = (
+    "a51b74a4934c14dd3d014af6121d53911a878d65da15e6efd0c01dafede7d47b"
+)
+PACKAGE_C_FULL_RELEASE_SCRIPT_SHA256 = (
+    "b0c254235731439aabf0ebff473bb4c75fa45e92aeea4adb22bce81a9ce0943d"
+)
+PACKAGE_C_FULL_PUBLISH_SCRIPT_SHA256 = (
+    "8be3f17df0081d2d7c860fd00b090d50fb02463b93f10d439278e993d7820b48"
+)
 
 
 def shell_logical_commands(source: str) -> list[str]:
@@ -100,6 +125,88 @@ def folded_yaml_run_commands(source: str) -> list[str]:
             fragments.append(continuation.strip())
         commands.append(re.sub(r"\s+", " ", " ".join(fragments)))
     return commands
+
+
+def exact_bounded_section(
+    source: str, start: str, end: str | None, *, label: str
+) -> str:
+    """Extract one unique exact source section, including its start anchor."""
+    if source.count(start) != 1:
+        raise GateError(f"{label} start anchor is absent or ambiguous")
+    prefix, remainder = source.split(start, 1)
+    del prefix
+    if end is None:
+        section = start + remainder
+    else:
+        if remainder.count(end) != 1:
+            raise GateError(f"{label} end anchor is absent or ambiguous")
+        section = start + remainder.split(end, 1)[0]
+    if not section.endswith("\n"):
+        raise GateError(f"{label} is not newline terminated")
+    return section
+
+
+def package_c_wiring_sections(
+    workflow: str, publish_ready: str, release_script: str
+) -> dict[str, str]:
+    return {
+        "assurance-job": exact_bounded_section(
+            workflow,
+            "      - name: Install the exact Package C local-control compiler\n",
+            "\n  implementation-boundary:\n",
+            label="Package C assurance workflow section",
+        ),
+        "fuzz-job": exact_bounded_section(
+            workflow,
+            "  bounded-fuzz:\n",
+            None,
+            label="Package C fuzz workflow job",
+        ),
+        "publish-section": exact_bounded_section(
+            publish_ready,
+            'printf "\\n${BLUE}Package C persistent semantic fuzz controls${NC}\\n"\n',
+            'printf "\\n${BLUE}Zero-unsafe and zero-FFI implementation boundary${NC}\\n"\n',
+            label="Package C publish verifier section",
+        ),
+        "release-section": exact_bounded_section(
+            release_script,
+            "run_check_gates() {\n",
+            "}\n\ncheck_package_contents() {\n",
+            label="Package C release runner section",
+        ),
+    }
+
+
+def verify_package_c_wiring_sources(
+    workflow: str, publish_ready: str, release_script: str
+) -> None:
+    if hashlib.sha256(workflow.encode("utf-8")).hexdigest() != PACKAGE_C_FULL_WORKFLOW_SHA256:
+        raise GateError("Package C full workflow wiring digest differs")
+    if (
+        hashlib.sha256(release_script.encode("utf-8")).hexdigest()
+        != PACKAGE_C_FULL_RELEASE_SCRIPT_SHA256
+    ):
+        raise GateError("Package C full release-script wiring digest differs")
+    if (
+        hashlib.sha256(publish_ready.encode("utf-8")).hexdigest()
+        != PACKAGE_C_FULL_PUBLISH_SCRIPT_SHA256
+    ):
+        raise GateError("Package C full publish-script wiring digest differs")
+    sections = package_c_wiring_sections(workflow, publish_ready, release_script)
+    expected = {
+        "assurance-job": PACKAGE_C_ASSURANCE_JOB_SHA256,
+        "fuzz-job": PACKAGE_C_FUZZ_JOB_SHA256,
+        "publish-section": PACKAGE_C_PUBLISH_SECTION_SHA256,
+        "release-section": PACKAGE_C_RELEASE_SECTION_SHA256,
+    }
+    for label, section in sections.items():
+        digest = hashlib.sha256(section.encode("utf-8")).hexdigest()
+        if expected[label] == "UNSTABLE" or digest != expected[label]:
+            raise GateError(f"Package C {label} wiring digest differs")
+    if EXPECTED_CHECK_CONTEXTS.count("Deterministic semantic fuzz smoke") != 1:
+        raise GateError("Package C fuzz check context is absent or ambiguous")
+    if workflow.count("    name: Deterministic semantic fuzz smoke\n") != 1:
+        raise GateError("Package C fuzz workflow name is absent or ambiguous")
 
 
 class GateError(RuntimeError):
@@ -1429,6 +1536,229 @@ class GateSelfTests(unittest.TestCase):
             self.assertIn(target, assurance_job)
         self.assertEqual(assurance_job.count(locked_fetch), 1)
         self.assertNotIn("--snapshot-only", assurance_job)
+
+    def test_package_c_workflow_and_release_wiring_is_exact_and_non_skippable(self) -> None:
+        workflow = (
+            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
+        ).read_text()
+        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
+        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        verify_package_c_wiring_sources(workflow, publish_ready, release_script)
+
+        assurance_job = workflow.split("  assurance-ledger:", 1)[1].split(
+            "\n  implementation-boundary:", 1
+        )[0]
+        fuzz_job = workflow.split("  bounded-fuzz:", 1)[1]
+        assurance_commands = shell_logical_commands(assurance_job)
+        fuzz_commands = shell_logical_commands(fuzz_job)
+
+        exact_install = (
+            "run: cargo +nightly-2026-08-08 install cargo-fuzz "
+            "--version =0.13.2 --locked --force"
+        )
+        structural_commands = (
+            "python3 -B assurance/fuzzing/generate.py --check",
+            "python3 -B assurance/fuzzing/verify.py --ci",
+            "python3 -B assurance/fuzzing/selftest.py",
+            "python3 -B assurance/fuzzing/sanitizer_positive.py --execute",
+            "python3 -B assurance/fuzzing/crash_lifecycle.py --execute",
+            "python3 -B assurance/fuzzing/verify.py --release",
+        )
+        self.assertEqual(assurance_commands.count("toolchain: nightly-2026-08-08"), 1)
+        self.assertEqual(assurance_commands.count(exact_install), 1)
+        for command in structural_commands:
+            self.assertEqual(
+                assurance_commands.count(command),
+                1,
+                f"Package C assurance job must run exactly: {command}",
+            )
+        self.assertEqual(assurance_commands.count('test "$fuzz_release_rc" -eq 3'), 1)
+
+        exact_fetch = (
+            "run: cargo +nightly-2026-08-08 fetch --locked "
+            "--manifest-path fuzz/Cargo.toml"
+        )
+        exact_runner = (
+            "python3 -B assurance/fuzzing/run-fuzz-smoke.py --mode pr --execute"
+        )
+        exact_classifier = (
+            "python3 -B tools/verify-implementation-boundary.py "
+            '--list-classified-workspaces >"$classified_workspaces"'
+        )
+        self.assertEqual(fuzz_commands.count("toolchain: nightly-2026-08-08"), 1)
+        self.assertEqual(fuzz_commands.count(exact_install), 1)
+        self.assertEqual(fuzz_commands.count(exact_fetch), 1)
+        self.assertEqual(fuzz_commands.count(exact_classifier), 1)
+        self.assertEqual(fuzz_commands.count(exact_runner), 1)
+        self.assertEqual(
+            fuzz_commands.count(
+                'test "$(awk -F \'\\t\' \'$1 == "fuzz" { print }\' '
+                '"$classified_workspaces")" = $\'fuzz\\tfuzz\''
+            ),
+            1,
+        )
+        for forbidden in (
+            "cargo fuzz run",
+            "cargo fuzz build",
+            "seeds/$fuzz_target",
+            "sort -u",
+        ):
+            self.assertNotIn(forbidden, fuzz_job)
+
+        publish_section = publish_ready.split(
+            'printf "\\n${BLUE}Package C persistent semantic fuzz controls', 1
+        )[1].split('printf "\\n${BLUE}Zero-unsafe', 1)[0]
+        publish_commands = shell_logical_commands(publish_section)
+        exact_publish_structural = (
+            'if python3 -B "$PROJECT_ROOT/assurance/fuzzing/generate.py" --check '
+            '&& python3 -B "$PROJECT_ROOT/assurance/fuzzing/verify.py" --ci '
+            '&& python3 -B "$PROJECT_ROOT/assurance/fuzzing/selftest.py" '
+            '&& python3 -B "$PROJECT_ROOT/assurance/fuzzing/sanitizer_positive.py" --execute '
+            '&& python3 -B "$PROJECT_ROOT/assurance/fuzzing/crash_lifecycle.py" --execute; then'
+        )
+        exact_publish_release = (
+            'if python3 -B "$PROJECT_ROOT/assurance/fuzzing/verify.py" --release; then'
+        )
+        self.assertEqual(publish_commands.count(exact_publish_structural), 1)
+        self.assertEqual(publish_commands.count(exact_publish_release), 1)
+
+        release_fuzz = release_script.split("    local fuzz_workspace_records", 1)[1].split(
+            "\n}", 1
+        )[0]
+        release_commands = shell_logical_commands(release_fuzz)
+        self.assertEqual(
+            release_commands.count(
+                'cargo +nightly-2026-08-08 fetch --locked --manifest-path '
+                '"$PROJECT_ROOT/fuzz/Cargo.toml" '
+                '|| die "could not provision the exact locked fuzz dependency closure"'
+            ),
+            1,
+        )
+        self.assertEqual(
+            release_commands.count(
+                'python3 -B "$PROJECT_ROOT/assurance/fuzzing/run-fuzz-smoke.py" '
+                '--mode pr --execute || die "Package C deterministic fuzz smoke failed"'
+            ),
+            1,
+        )
+        self.assertNotIn("cargo fuzz --version", release_fuzz)
+
+        for suffix in (" --ignored", " extra-target", " --runs=1"):
+            self.assertNotIn(exact_runner, shell_logical_commands(f"{exact_runner}{suffix}\n"))
+            self.assertNotIn(
+                structural_commands[3],
+                shell_logical_commands(f"{structural_commands[3]}{suffix}\n"),
+            )
+
+        mutations = (
+            (
+                workflow.replace(
+                    "          python3 -B assurance/fuzzing/generate.py --check\n",
+                    "          exit 0\n"
+                    "          python3 -B assurance/fuzzing/generate.py --check\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow.replace(
+                    "      - name: Build and run every classified fuzz target through the sealed private-corpus runner\n",
+                    "      - name: Build and run every classified fuzz target through the sealed private-corpus runner\n"
+                    "        continue-on-error: true\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    'if [[ "$release_assurance_failed" == true ]]; then\n',
+                    "release_assurance_failed=false\n"
+                    'if [[ "$release_assurance_failed" == true ]]; then\n',
+                    1,
+                ),
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "    local fuzz_workspace_records\n",
+                    "    return 0\n    local fuzz_workspace_records\n",
+                    1,
+                ),
+            ),
+            (
+                workflow.replace(
+                    "    name: Deterministic semantic fuzz smoke\n",
+                    "    name: Filtered fuzz placeholder\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow.replace(
+                    "  assurance-ledger:\n",
+                    "  assurance-ledger:\n    continue-on-error: true\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow.replace(
+                    "  push:\n  pull_request:\n  workflow_dispatch:\n",
+                    "  workflow_dispatch:\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "run_all_gates() {\n",
+                    "run_all_gates() {\n    return 0\n",
+                    1,
+                ),
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "run_publish_verifier() {\n",
+                    "run_publish_verifier() {\n    return 0\n",
+                    1,
+                ),
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    "set -Eeuo pipefail\n",
+                    "set -Eeuo pipefail\nexit 0\n",
+                    1,
+                ),
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    'PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"\n',
+                    'PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"\nexit 0\n',
+                    1,
+                ),
+                release_script,
+            ),
+        )
+        for mutated_workflow, mutated_publish, mutated_release in mutations:
+            with self.assertRaisesRegex(GateError, "Package C"):
+                verify_package_c_wiring_sources(
+                    mutated_workflow, mutated_publish, mutated_release
+                )
 
     def test_assembly_gates_remain_in_release_and_ci_boundary_scope(self) -> None:
         publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()

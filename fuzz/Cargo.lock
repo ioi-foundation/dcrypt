@@ -68,6 +68,7 @@ dependencies = [
  "dcrypt-hybrid",
  "dcrypt-kem",
  "dcrypt-legacy-xchacha20poly1305-migration",
+ "dcrypt-pke",
  "dcrypt-sign",
  "dcrypt-symmetric",
  "libfuzzer-sys",
@@ -112,6 +113,17 @@ dependencies = [
 [[package]]
 name = "dcrypt-params"
 version = "3.0.0"
+
+[[package]]
+name = "dcrypt-pke"
+version = "3.0.0"
+dependencies = [
+ "dcrypt-algorithms",
+ "dcrypt-api",
+ "dcrypt-common",
+ "dcrypt-internal",
+ "dcrypt-params",
+]
 
 [[package]]
 name = "dcrypt-sign"

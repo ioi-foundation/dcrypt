@@ -52,6 +52,26 @@ jobs:
           python3 -B assurance/interoperability/protocol-specs/protocol-specs-selftest.py
           python3 -B verification/clean-room-protocol-reference/verify-scaffold.py
           python3 -B verification/clean-room-protocol-reference/scaffold-selftest.py
+      - name: Install the exact Package C local-control compiler
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          # Distribution 2026-08-08 contains rustc commit 1a98b1e13 dated 2026-08-07.
+          toolchain: nightly-2026-08-08
+      - name: Install the exact Package C cargo-fuzz control tool
+        run: cargo +nightly-2026-08-08 install cargo-fuzz --version =0.13.2 --locked --force
+      - name: Verify Package C fuzz controls without claiming operational evidence
+        run: |
+          python3 -B assurance/fuzzing/generate.py --check
+          python3 -B assurance/fuzzing/verify.py --ci
+          python3 -B assurance/fuzzing/selftest.py
+          python3 -B assurance/fuzzing/sanitizer_positive.py --execute
+          python3 -B assurance/fuzzing/crash_lifecycle.py --execute
+          set +e
+          python3 -B assurance/fuzzing/verify.py --release
+          fuzz_release_rc=$?
+          set -e
+          test "$fuzz_release_rc" -eq 3
+          bash tools/release-dcrypt.sh --self-test
 
   implementation-boundary:
     name: Zero unsafe / zero FFI implementation boundary
@@ -294,7 +314,7 @@ jobs:
           cargo miri test -p dcrypt-algorithms --lib --all-features checked_decoders_reject_on_curve_non_subgroup_point
 
   bounded-fuzz:
-    name: Build and exercise externally controlled decoder fuzz targets
+    name: Deterministic semantic fuzz smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -303,22 +323,19 @@ jobs:
       - name: Install nightly Rust
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: nightly-2026-08-07
+          # Rust's dated channel is published the day after this rustc commit.
+          toolchain: nightly-2026-08-08
       - name: Install pinned cargo-fuzz
-        run: cargo install cargo-fuzz --version 0.13.2 --locked
-      - name: Build and run every classified fuzz target
+        run: cargo +nightly-2026-08-08 install cargo-fuzz --version =0.13.2 --locked --force
+      - name: Provision the exact locked fuzz dependency closure
+        run: cargo +nightly-2026-08-08 fetch --locked --manifest-path fuzz/Cargo.toml
+      - name: Build and run every classified fuzz target through the sealed private-corpus runner
         run: |
-          while IFS=$'\t' read -r category workspace; do
-            test -n "$category" && test -n "$workspace"
-            test "$category" = fuzz || continue
-            (
-              cd "$workspace"
-              mapfile -t fuzz_targets < <(cargo fuzz list)
-              test "${#fuzz_targets[@]}" -gt 0
-              for fuzz_target in "${fuzz_targets[@]}"; do
-                test -n "$fuzz_target"
-                cargo fuzz build "$fuzz_target"
-                cargo fuzz run "$fuzz_target" -- -runs=1000 -seed=424242
-              done
-            )
-          done < <(python3 tools/verify-implementation-boundary.py --list-classified-workspaces)
+          classified_workspaces=$(mktemp)
+          trap 'rm -f -- "$classified_workspaces"' EXIT
+          python3 -B tools/verify-implementation-boundary.py \
+            --list-classified-workspaces >"$classified_workspaces"
+          test -s "$classified_workspaces"
+          test "$(awk -F '\t' '$1 == "fuzz" { print }' "$classified_workspaces")" = \
+            $'fuzz\tfuzz'
+          python3 -B assurance/fuzzing/run-fuzz-smoke.py --mode pr --execute

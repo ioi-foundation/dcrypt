@@ -164,6 +164,23 @@ else
     fail "interoperability completeness remains release-blocking"
     release_assurance_failed=true
 fi
+printf "\n${BLUE}Package C persistent semantic fuzz controls${NC}\n"
+if python3 -B "$PROJECT_ROOT/assurance/fuzzing/generate.py" --check \
+    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/verify.py" --ci \
+    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/selftest.py" \
+    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/sanitizer_positive.py" --execute \
+    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/crash_lifecycle.py" --execute; then
+    pass "Package C structural and live local controls reproduced without promoting campaign evidence"
+else
+    fail "Package C structural or live local controls failed"
+    release_assurance_failed=true
+fi
+if python3 -B "$PROJECT_ROOT/assurance/fuzzing/verify.py" --release; then
+    pass "persistent fuzz operational evidence passed"
+else
+    fail "persistent fuzz campaigns remain release-blocking"
+    release_assurance_failed=true
+fi
 if [[ "$release_assurance_failed" == true ]]; then
     exit 1
 fi

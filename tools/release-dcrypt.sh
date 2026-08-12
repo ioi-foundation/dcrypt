@@ -70,7 +70,7 @@ Options:
   --skip-tests         Development rehearsal only: skip workspace, vector,
                        interoperability, and isolated timing tests.
   --skip-checks        Development rehearsal only: skip format/check,
-                       audit/deny, Miri, and bounded fuzz campaigns. The
+                       audit/deny, Miri, and deterministic semantic fuzz smoke. The
                        implementation-boundary, BLS assembly, and GHASH assembly
                        gates cannot be skipped.
   --resume CRATE       Resume a partial --execute at CRATE, or use "auto" to
@@ -383,31 +383,19 @@ run_check_gates() {
         die "nightly Miri is required (rustup +nightly component add miri)"
     fi
 
-    if cargo_subcommand_available fuzz; then
-        while IFS=$'\t' read -r category workspace; do
-            [[ "$category" == "fuzz" ]] || continue
-            info "Building and running every cargo-fuzz target in $workspace"
-            (
-                cd "$PROJECT_ROOT/$workspace"
-                local -a fuzz_targets=()
-                local fuzz_listing
-                fuzz_listing=$(cargo fuzz list)
-                mapfile -t fuzz_targets <<<"$fuzz_listing"
-                ((${#fuzz_targets[@]} > 0)) \
-                    || die "classified fuzz workspace has no cargo-fuzz targets: $workspace"
-                local fuzz_target
-                for fuzz_target in "${fuzz_targets[@]}"; do
-                    [[ -n "$fuzz_target" ]] \
-                        || die "cargo fuzz list returned an empty target in $workspace"
-                    cargo fuzz build "$fuzz_target"
-                    cargo fuzz run "$fuzz_target" -- -runs=1000 -seed=424242
-                done
-                info "Completed 1000 deterministic runs for each of ${#fuzz_targets[@]} fuzz targets in $workspace"
-            )
-        done < <(classified_workspace_records)
-    else
-        die "cargo-fuzz is required (cargo install cargo-fuzz --locked)"
-    fi
+    local fuzz_workspace_records
+    fuzz_workspace_records=$(classified_workspace_records | awk -F '\t' \
+        '$1 == "fuzz" { print }') \
+        || die "could not classify the fuzz workspace"
+    [[ "$fuzz_workspace_records" == $'fuzz\tfuzz' ]] \
+        || die "expected exactly one classified fuzz workspace at fuzz"
+    cargo +nightly-2026-08-08 fetch --locked \
+        --manifest-path "$PROJECT_ROOT/fuzz/Cargo.toml" \
+        || die "could not provision the exact locked fuzz dependency closure"
+    info "Building and running every cargo-fuzz target through the sealed private-corpus runner"
+    python3 -B "$PROJECT_ROOT/assurance/fuzzing/run-fuzz-smoke.py" \
+        --mode pr --execute \
+        || die "Package C deterministic fuzz smoke failed"
 }
 
 check_package_contents() {
@@ -613,6 +601,31 @@ release_self_test() {
         || die "self-test: release test gate omitted the exact candidate comparator runner"
     grep -Fq 'not independent assurance evidence' "$0" \
         || die "self-test: candidate comparator status is not explicit"
+    grep -Fq 'assurance/fuzzing/run-fuzz-smoke.py"' "$0" \
+        || die "self-test: sealed private-corpus fuzz runner is missing"
+    grep -Fq 'cargo +nightly-2026-08-08 fetch --locked' "$0" \
+        || die "self-test: exact fuzz toolchain provisioning drifted"
+    grep -Fq -- '--manifest-path "$PROJECT_ROOT/fuzz/Cargo.toml"' "$0" \
+        || die "self-test: exact fuzz dependency provisioning drifted"
+    grep -Fq -- '--mode pr --execute' "$0" \
+        || die "self-test: complete deterministic fuzz smoke contract drifted"
+    local reviewed_seed_bypass='seeds/$'
+    reviewed_seed_bypass+='fuzz_target'
+    if grep -Fq "$reviewed_seed_bypass" "$0"; then
+        die "self-test: release tooling writes directly to reviewed fuzz seeds"
+    fi
+    grep -Fq 'assurance/fuzzing/verify.py' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package C fuzz controls"
+    grep -Fq 'assurance/fuzzing/verify.py" --release' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package C release mode"
+    grep -Fq 'assurance/fuzzing/sanitizer_positive.py" --execute' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted the live sanitizer controls"
+    grep -Fq 'assurance/fuzzing/crash_lifecycle.py" --execute' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted the live private crash lifecycle"
     local forbidden_oracle_claim='excluded independent interoperability'
     forbidden_oracle_claim+=' oracles'
     if grep -Fq "$forbidden_oracle_claim" "$0"; then
