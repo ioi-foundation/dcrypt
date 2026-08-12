@@ -350,37 +350,37 @@ run_check_gates() {
             --all-features check
     done < <(classified_workspace_records)
 
-    if cargo +nightly miri --version >/dev/null 2>&1; then
+    if cargo +nightly-2026-08-07 miri --version >/dev/null 2>&1; then
         info "Running Miri on public error and secret-memory APIs"
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-api --lib --all-features
+            cargo +nightly-2026-08-07 miri test -p dcrypt-api --lib --all-features
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-common --lib --all-features
+            cargo +nightly-2026-08-07 miri test -p dcrypt-common --lib --all-features
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-kem --lib --all-features miri_
+            cargo +nightly-2026-08-07 miri test -p dcrypt-kem --lib --all-features miri_
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-sign --lib --all-features \
+            cargo +nightly-2026-08-07 miri test -p dcrypt-sign --lib --all-features \
                 expanded_key_decoder_rejects_malformed_or_incoherent_components
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-sign --lib --all-features \
+            cargo +nightly-2026-08-07 miri test -p dcrypt-sign --lib --all-features \
                 rejects_identity_public_key_and_universal_forgery
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-sign --lib --all-features \
+            cargo +nightly-2026-08-07 miri test -p dcrypt-sign --lib --all-features \
                 secret_key_is_canonical_nonzero_and_debug_redacted
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+            cargo +nightly-2026-08-07 miri test -p dcrypt-algorithms --lib --all-features \
                 secret_big_endian_bridge_matches_g1_and_g2_scalar_multiplication
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+            cargo +nightly-2026-08-07 miri test -p dcrypt-algorithms --lib --all-features \
                 rfc9380_g1_random_oracle_vectors
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+            cargo +nightly-2026-08-07 miri test -p dcrypt-algorithms --lib --all-features \
                 rfc9380_g2_random_oracle_vectors
         CARGO_TARGET_DIR="$PROJECT_ROOT/target/miri-release" \
-            cargo +nightly miri test -p dcrypt-algorithms --lib --all-features \
+            cargo +nightly-2026-08-07 miri test -p dcrypt-algorithms --lib --all-features \
                 checked_decoders_reject_on_curve_non_subgroup_point
     else
-        die "nightly Miri is required (rustup +nightly component add miri)"
+        die "pinned nightly-2026-08-07 Miri is required (rustup component add miri --toolchain nightly-2026-08-07)"
     fi
 
     local fuzz_workspace_records
@@ -626,6 +626,25 @@ release_self_test() {
     grep -Fq 'assurance/fuzzing/crash_lifecycle.py" --execute' \
         "$SCRIPT_DIR/verify-publish-ready.sh" \
         || die "self-test: publish verifier omitted the live private crash lifecycle"
+    # Package D release wiring assertions begin.
+    grep -Fq 'assurance/side-channel/generate.py" --check' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package D generation check"
+    grep -Fq 'assurance/side-channel/verify.py" --ci' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package D structural verification"
+    grep -Fq 'assurance/side-channel/selftest.py' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package D adversarial controls"
+    grep -Fq 'assurance/side-channel/verify.py" --release' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package D release mode"
+    grep -Fq 'cargo +nightly-2026-08-07 miri --version' "$0" \
+        || die "self-test: exact Miri toolchain selector drifted"
+    if grep -Eq 'cargo[[:space:]]+\+nightly[[:space:]]+miri' "$0"; then
+        die "self-test: moving nightly Miri selector is forbidden"
+    fi
+    # Package D release wiring assertions end.
     local forbidden_oracle_claim='excluded independent interoperability'
     forbidden_oracle_claim+=' oracles'
     if grep -Fq "$forbidden_oracle_claim" "$0"; then

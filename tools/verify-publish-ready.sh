@@ -164,6 +164,21 @@ else
     fail "interoperability completeness remains release-blocking"
     release_assurance_failed=true
 fi
+printf "\n${BLUE}Package D side-channel and secret-lifecycle foundations${NC}\n"
+if python3 -B "$PROJECT_ROOT/assurance/side-channel/generate.py" --check \
+    && python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --ci \
+    && python3 -B "$PROJECT_ROOT/assurance/side-channel/selftest.py"; then
+    pass "Package D structural controls reproduced without promoting operational evidence"
+else
+    fail "Package D structural side-channel controls failed"
+    release_assurance_failed=true
+fi
+if python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --release; then
+    pass "dedicated side-channel, lifecycle, and physical evidence passed"
+else
+    fail "dedicated side-channel, lifecycle, and physical evidence remain release-blocking"
+    release_assurance_failed=true
+fi
 printf "\n${BLUE}Package C persistent semantic fuzz controls${NC}\n"
 if python3 -B "$PROJECT_ROOT/assurance/fuzzing/generate.py" --check \
     && python3 -B "$PROJECT_ROOT/assurance/fuzzing/verify.py" --ci \

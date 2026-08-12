@@ -52,6 +52,16 @@ jobs:
           python3 -B assurance/interoperability/protocol-specs/protocol-specs-selftest.py
           python3 -B verification/clean-room-protocol-reference/verify-scaffold.py
           python3 -B verification/clean-room-protocol-reference/scaffold-selftest.py
+      - name: Verify Package D side-channel foundations without claiming operational evidence
+        run: |
+          python3 -B assurance/side-channel/generate.py --check
+          python3 -B assurance/side-channel/verify.py --ci
+          python3 -B assurance/side-channel/selftest.py
+          set +e
+          python3 -B assurance/side-channel/verify.py --release
+          side_channel_release_rc=$?
+          set -e
+          test "$side_channel_release_rc" -eq 3
       - name: Install the exact Package C local-control compiler
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:

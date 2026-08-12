@@ -84,16 +84,31 @@ PACKAGE_C_PUBLISH_SECTION_SHA256 = (
     "7871388b18326730b175c8f56cd00415d5cf41a43d9e3937583dc24b00c39cc7"
 )
 PACKAGE_C_RELEASE_SECTION_SHA256 = (
-    "e771ca10fa7c1535f047f562ddb0d17a43a82902549e315d68829ce57980fc27"
+    "d15f9d10ac6426cec1d5eec2738c5050fcfbffe5dac66290524e2195e29e1df3"
 )
 PACKAGE_C_FULL_WORKFLOW_SHA256 = (
-    "a51b74a4934c14dd3d014af6121d53911a878d65da15e6efd0c01dafede7d47b"
+    "0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52"
 )
 PACKAGE_C_FULL_RELEASE_SCRIPT_SHA256 = (
-    "b0c254235731439aabf0ebff473bb4c75fa45e92aeea4adb22bce81a9ce0943d"
+    "813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7"
 )
 PACKAGE_C_FULL_PUBLISH_SCRIPT_SHA256 = (
-    "8be3f17df0081d2d7c860fd00b090d50fb02463b93f10d439278e993d7820b48"
+    "db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5"
+)
+
+# Exact Package D structural/HOLD and dated-selector lifecycle-control wiring.
+# The package intentionally has no operational promotion path in v1.
+PACKAGE_D_WORKFLOW_SECTION_SHA256 = (
+    "583813a1c432d28de7c958108af78758ae41ec29468e185a21673cadb55e7dbd"
+)
+PACKAGE_D_PUBLISH_SECTION_SHA256 = (
+    "df904d96b6534c6c832b4802112afc77ab3c489c02921f549cf8dd24a3c29c8c"
+)
+PACKAGE_D_RELEASE_ASSERTIONS_SHA256 = (
+    "c3750e4d1e811b16cc8b9eecc041767907110f6a17492c09ee9157a1c5dde92b"
+)
+PACKAGE_D_MIRI_SECTION_SHA256 = (
+    "07983a798ffee7f1a1ed9f6b43f1f079186b2d51301ce0882528c0f01f103bf5"
 )
 
 
@@ -207,6 +222,87 @@ def verify_package_c_wiring_sources(
         raise GateError("Package C fuzz check context is absent or ambiguous")
     if workflow.count("    name: Deterministic semantic fuzz smoke\n") != 1:
         raise GateError("Package C fuzz workflow name is absent or ambiguous")
+
+
+def package_d_wiring_sections(
+    workflow: str, publish_ready: str, release_script: str
+) -> dict[str, str]:
+    return {
+        "workflow": exact_bounded_section(
+            workflow,
+            "      - name: Verify Package D side-channel foundations without claiming operational evidence\n",
+            "      - name: Install the exact Package C local-control compiler\n",
+            label="Package D assurance workflow section",
+        ),
+        "publish": exact_bounded_section(
+            publish_ready,
+            'printf "\\n${BLUE}Package D side-channel and secret-lifecycle foundations${NC}\\n"\n',
+            'printf "\\n${BLUE}Package C persistent semantic fuzz controls${NC}\\n"\n',
+            label="Package D publish verifier section",
+        ),
+        "release-assertions": exact_bounded_section(
+            release_script,
+            "    # Package D release wiring assertions begin.\n",
+            "    # Package D release wiring assertions end.\n",
+            label="Package D release self-test assertions",
+        ),
+        "miri": exact_bounded_section(
+            release_script,
+            "    if cargo +nightly-2026-08-07 miri --version >/dev/null 2>&1; then\n",
+            "    local fuzz_workspace_records\n",
+            label="Package D dated-selector Miri section",
+        ),
+    }
+
+
+def verify_package_d_wiring_sources(
+    workflow: str, publish_ready: str, release_script: str
+) -> None:
+    sections = package_d_wiring_sections(workflow, publish_ready, release_script)
+    expected = {
+        "workflow": PACKAGE_D_WORKFLOW_SECTION_SHA256,
+        "publish": PACKAGE_D_PUBLISH_SECTION_SHA256,
+        "release-assertions": PACKAGE_D_RELEASE_ASSERTIONS_SHA256,
+        "miri": PACKAGE_D_MIRI_SECTION_SHA256,
+    }
+    for label, section in sections.items():
+        digest = hashlib.sha256(section.encode("utf-8")).hexdigest()
+        if expected[label] == "UNSTABLE" or digest != expected[label]:
+            raise GateError(f"Package D {label} wiring digest differs")
+
+    workflow_commands = shell_logical_commands(sections["workflow"])
+    for command in (
+        "python3 -B assurance/side-channel/generate.py --check",
+        "python3 -B assurance/side-channel/verify.py --ci",
+        "python3 -B assurance/side-channel/selftest.py",
+        "python3 -B assurance/side-channel/verify.py --release",
+        'test "$side_channel_release_rc" -eq 3',
+    ):
+        if workflow_commands.count(command) != 1:
+            raise GateError(f"Package D workflow command is absent or ambiguous: {command}")
+    if "continue-on-error:" in sections["workflow"]:
+        raise GateError("Package D workflow permits continue-on-error")
+
+    publish_commands = shell_logical_commands(sections["publish"])
+    expected_structural = (
+        'if python3 -B "$PROJECT_ROOT/assurance/side-channel/generate.py" --check '
+        '&& python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --ci '
+        '&& python3 -B "$PROJECT_ROOT/assurance/side-channel/selftest.py"; then'
+    )
+    expected_release = (
+        'if python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --release; then'
+    )
+    if publish_commands.count(expected_structural) != 1:
+        raise GateError("Package D publish structural command differs")
+    if publish_commands.count(expected_release) != 1:
+        raise GateError("Package D publish release command differs")
+    if sections["publish"].count("release_assurance_failed=true") != 2:
+        raise GateError("Package D publish HOLD propagation differs")
+
+    if release_script.count("cargo +nightly-2026-08-07 miri") != 12:
+        raise GateError("Package D dated Miri selector count differs")
+    if re.search(r"cargo\s+\+nightly\s+miri", release_script):
+        raise GateError("Package D release runner uses a moving nightly Miri selector")
 
 
 class GateError(RuntimeError):
@@ -1757,6 +1853,79 @@ class GateSelfTests(unittest.TestCase):
         for mutated_workflow, mutated_publish, mutated_release in mutations:
             with self.assertRaisesRegex(GateError, "Package C"):
                 verify_package_c_wiring_sources(
+                    mutated_workflow, mutated_publish, mutated_release
+                )
+
+    def test_package_d_workflow_and_release_wiring_is_exact_and_non_skippable(self) -> None:
+        workflow = (
+            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
+        ).read_text()
+        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
+        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        verify_package_d_wiring_sources(workflow, publish_ready, release_script)
+
+        mutations = (
+            (
+                workflow.replace(
+                    "          python3 -B assurance/side-channel/generate.py --check\n",
+                    "          exit 0\n"
+                    "          python3 -B assurance/side-channel/generate.py --check\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow.replace(
+                    "      - name: Verify Package D side-channel foundations without claiming operational evidence\n",
+                    "      - name: Verify Package D side-channel foundations without claiming operational evidence\n"
+                    "        continue-on-error: true\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow.replace(
+                    '          test "$side_channel_release_rc" -eq 3\n',
+                    '          test "$side_channel_release_rc" -eq 0\n',
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    'if python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --release; then\n',
+                    "release_assurance_failed=false\n"
+                    'if python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --release; then\n',
+                    1,
+                ),
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "cargo +nightly-2026-08-07 miri --version",
+                    "cargo +nightly miri --version",
+                    1,
+                ),
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "    # Package D release wiring assertions begin.\n",
+                    "    # Package D release wiring assertions begin.\n    return 0\n",
+                    1,
+                ),
+            ),
+        )
+        for mutated_workflow, mutated_publish, mutated_release in mutations:
+            with self.assertRaisesRegex(GateError, "Package D"):
+                verify_package_d_wiring_sources(
                     mutated_workflow, mutated_publish, mutated_release
                 )
 
