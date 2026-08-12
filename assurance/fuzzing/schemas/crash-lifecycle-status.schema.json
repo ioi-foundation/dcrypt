@@ -1,0 +1,925 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:crash-lifecycle-status:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actual_lifecycle_observed": {
+      "type": "boolean"
+    },
+    "controlled_failure_class": {
+      "maxLength": 16384,
+      "type": "string"
+    },
+    "crash_bundle_template": {
+      "additionalProperties": false,
+      "properties": {
+        "affected_atomic_rows": {
+          "items": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "argv_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "binary_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "cluster_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "confidentiality": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "content_policy": {
+          "const": "dcrypt-fuzzing-private-crash-bundle-v1"
+        },
+        "corpus_manifest_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "discovery_subject": {
+          "additionalProperties": false,
+          "properties": {
+            "binding_status": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "commit": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "manifest_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "tree": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "binding_status",
+            "commit",
+            "manifest_sha256",
+            "tree"
+          ],
+          "type": "object"
+        },
+        "environment_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "failure_class": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 16384,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "first_seen": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "handoff": {
+          "additionalProperties": false,
+          "properties": {
+            "acknowledge_deadline": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "affected_atomic_rows": {
+              "items": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "type": "array",
+              "uniqueItems": true
+            },
+            "assessment_deadline": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "cluster_id": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "confidentiality": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "created_at": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "disposition": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "external_receipt": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "minimization_duration_seconds": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "minimization_started_at": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "minimization_status": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "minimized_input_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "owner": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "reproduced_at": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "reproduction_duration_seconds": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "reproduction_status": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "resolution_deadline": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "resolution_kind": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "severity": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "blocked-unfiled"
+              ],
+              "type": "string"
+            },
+            "target_id": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "acknowledge_deadline",
+            "affected_atomic_rows",
+            "assessment_deadline",
+            "cluster_id",
+            "confidentiality",
+            "created_at",
+            "disposition",
+            "external_receipt",
+            "minimization_duration_seconds",
+            "minimization_started_at",
+            "minimization_status",
+            "minimized_input_sha256",
+            "owner",
+            "reproduced_at",
+            "reproduction_duration_seconds",
+            "reproduction_status",
+            "resolution_deadline",
+            "resolution_kind",
+            "severity",
+            "status",
+            "target_id"
+          ],
+          "type": "object"
+        },
+        "limits": {
+          "additionalProperties": false,
+          "properties": {
+            "input_max_bytes": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "rss_limit_mb": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "stack_limit_kib": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "timeout_seconds": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "input_max_bytes",
+            "rss_limit_mb",
+            "stack_limit_kib",
+            "timeout_seconds"
+          ],
+          "type": "object"
+        },
+        "minimization": {
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "executions": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ]
+            },
+            "minimized_bytes": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "original_bytes": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "replay_reproduced": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "algorithm",
+            "executions",
+            "minimized_bytes",
+            "original_bytes",
+            "replay_reproduced"
+          ],
+          "type": "object"
+        },
+        "minimized_input_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "normalization_version": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "normalized_diagnostic_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "occurrence_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "private_storage": {
+          "additionalProperties": false,
+          "properties": {
+            "object_locator": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "retention_status": {
+              "maxLength": 16384,
+              "type": "string"
+            }
+          },
+          "required": [
+            "object_locator",
+            "retention_status"
+          ],
+          "type": "object"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 16384,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "raw_diagnostic_log_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 16384,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "raw_input_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "regression": {
+          "additionalProperties": false,
+          "properties": {
+            "finding_id": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "fix_reference": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "fixed_binary_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "fixed_source_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "fixed_subject": {
+              "additionalProperties": false,
+              "properties": {
+                "commit": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "pattern": "^[0-9a-f]{40}$",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "tree": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "pattern": "^[0-9a-f]{40}$",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "commit",
+                "tree"
+              ],
+              "type": "object"
+            },
+            "independent_retest_passed": {
+              "type": "boolean"
+            },
+            "local_fixed_child_evidence_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "private_replay_passed": {
+              "type": "boolean"
+            },
+            "retest_evidence_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "blocked-not-promoted"
+              ],
+              "type": "string"
+            },
+            "test_id": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "finding_id",
+            "fix_reference",
+            "fixed_binary_sha256",
+            "fixed_source_sha256",
+            "fixed_subject",
+            "independent_retest_passed",
+            "local_fixed_child_evidence_sha256",
+            "private_replay_passed",
+            "retest_evidence_sha256",
+            "status",
+            "test_id"
+          ],
+          "type": "object"
+        },
+        "retention": {
+          "additionalProperties": false,
+          "properties": {
+            "current_corpus": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "daily_corpus_days": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "logs_days": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "regression_corpus": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "weekly_corpus_weeks": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "current_corpus",
+            "daily_corpus_days",
+            "logs_days",
+            "regression_corpus",
+            "weekly_corpus_weeks"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "blocked-template-no-evidence"
+          ],
+          "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 16384,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "toolchain_identity_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "affected_atomic_rows",
+        "argv_sha256",
+        "binary_sha256",
+        "cluster_id",
+        "confidentiality",
+        "content_policy",
+        "corpus_manifest_sha256",
+        "discovery_subject",
+        "environment_sha256",
+        "failure_class",
+        "first_seen",
+        "handoff",
+        "limits",
+        "minimization",
+        "minimized_input_sha256",
+        "normalization_version",
+        "normalized_diagnostic_sha256",
+        "occurrence_id",
+        "private_storage",
+        "provenance",
+        "raw_diagnostic_log_sha256",
+        "raw_input_sha256",
+        "regression",
+        "retention",
+        "schema_version",
+        "status",
+        "target_id",
+        "toolchain_identity_sha256"
+      ],
+      "type": "object"
+    },
+    "distinct_occurrences_required": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "fixed_child_required": {
+      "type": "boolean"
+    },
+    "fixed_source_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "host_dependent_fields": {
+      "items": {
+        "maxLength": 16384,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "minimized_trigger_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "normalization_version": {
+      "maxLength": 16384,
+      "type": "string"
+    },
+    "operational_campaign_evidence": {
+      "type": "boolean"
+    },
+    "pinned_rustc_executable_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "private_temporary_cleanup_required": {
+      "type": "boolean"
+    },
+    "promotion_authorized": {
+      "type": "boolean"
+    },
+    "source_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "live-execution-required-not-sealed"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "actual_lifecycle_observed",
+    "controlled_failure_class",
+    "crash_bundle_template",
+    "distinct_occurrences_required",
+    "fixed_child_required",
+    "fixed_source_sha256",
+    "host_dependent_fields",
+    "minimized_trigger_sha256",
+    "normalization_version",
+    "operational_campaign_evidence",
+    "pinned_rustc_executable_sha256",
+    "private_temporary_cleanup_required",
+    "promotion_authorized",
+    "source_sha256",
+    "status"
+  ],
+  "title": "Package C crash lifecycle",
+  "type": "object"
+}

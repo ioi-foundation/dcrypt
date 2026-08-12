@@ -24,23 +24,27 @@ CURATED_RELATIVE = PurePosixPath("assurance/curated-operations.toml")
 TRANSACTION_NAME = "dcrypt-protocol-spec-rebind-v1"
 JOURNAL_NAME = "journal.json"
 
-EXPECTED_ARTIFACT_MODES = {
-    "ARTIFACTS.sha256": 0o664,
-    "CURRENT-BEHAVIOR.md": 0o664,
-    "README.md": 0o664,
-    "current-behavior.json": 0o664,
-    "protocol-spec.schema.json": 0o664,
-    "protocol-specs-selftest.py": 0o775,
-    "rebind-final-subject.py": 0o775,
-    "verify-protocol-specs.py": 0o775,
+EXPECTED_ARTIFACT_GIT_MODES = {
+    "ARTIFACTS.sha256": "100644",
+    "CURRENT-BEHAVIOR.md": "100644",
+    "README.md": "100644",
+    "current-behavior.json": "100644",
+    "protocol-spec.schema.json": "100644",
+    "protocol-specs-selftest.py": "100755",
+    "rebind-final-subject.py": "100755",
+    "verify-protocol-specs.py": "100755",
 }
-MANIFESTED_FILES = set(EXPECTED_ARTIFACT_MODES) - {"ARTIFACTS.sha256"}
+MANIFESTED_FILES = set(EXPECTED_ARTIFACT_GIT_MODES) - {"ARTIFACTS.sha256"}
 DESTINATION_NAMES = (
     "ARTIFACTS.sha256",
     "CURRENT-BEHAVIOR.md",
     "current-behavior.json",
     "verify-protocol-specs.py",
 )
+TRANSACTION_INPUT_GIT_MODES = {
+    CURATED_RELATIVE.as_posix(): "100644",
+    SUBJECT_MANIFEST_RELATIVE.as_posix(): "100644",
+}
 
 # These normalized pins are intentionally invariant across a legitimate subject
 # rebind.  Only subject_binding, critical source SHA fields, and the one rendered
@@ -181,12 +185,31 @@ def ensure_contained(path: Path, allowed_root: Path, label: str) -> None:
         fail(f"{label} escapes its allowed root")
 
 
+def canonical_git_mode(filesystem_mode: int, expected_git_mode: str, label: str) -> str:
+    """Normalize safe umask materializations to reviewed Git executable intent."""
+
+    mode = stat.S_IMODE(filesystem_mode)
+    if expected_git_mode == "100644":
+        allowed = {0o600, 0o640, 0o644, 0o660, 0o664}
+    elif expected_git_mode == "100755":
+        allowed = {0o700, 0o750, 0o755, 0o770, 0o775}
+    else:
+        fail(f"invalid reviewed Git mode for {label}: {expected_git_mode}")
+    if mode not in allowed:
+        fail(
+            f"{label} mode mismatch: filesystem mode {mode:04o} does not preserve "
+            f"reviewed Git mode {expected_git_mode}"
+        )
+    return expected_git_mode
+
+
 def ensure_regular(
     path: Path,
     allowed_root: Path,
     label: str,
     *,
     expected_mode: int | None = None,
+    expected_git_mode: str | None = None,
 ) -> os.stat_result:
     try:
         metadata = path.lstat()
@@ -201,8 +224,125 @@ def ensure_regular(
             f"exact mode {expected_mode:04o} required for {label}; "
             f"got {stat.S_IMODE(metadata.st_mode):04o}"
         )
+    if expected_git_mode is not None:
+        canonical_git_mode(metadata.st_mode, expected_git_mode, label)
     ensure_contained(path, allowed_root, label)
     return metadata
+
+
+def capture_input_identity(
+    path: Path,
+    repo_root: Path,
+    label: str,
+    expected_git_mode: str,
+) -> tuple[bytes, dict[str, int | str]]:
+    """Read a transaction input once and bind its stable descriptor metadata."""
+
+    ensure_contained(path, repo_root, label)
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = -1
+    try:
+        descriptor = os.open(path, flags)
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            fail(f"regular nonsymlink file required for {label}")
+        if before.st_nlink != 1:
+            fail(f"hardlink forbidden for {label}: nlink={before.st_nlink}")
+        canonical_git_mode(before.st_mode, expected_git_mode, label)
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        after = os.fstat(descriptor)
+    except OSError as error:
+        fail(f"cannot read stable transaction input {label}: {error}")
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    fields = (
+        "st_dev",
+        "st_ino",
+        "st_uid",
+        "st_gid",
+        "st_mode",
+        "st_nlink",
+        "st_size",
+        "st_mtime_ns",
+        "st_ctime_ns",
+    )
+    if any(getattr(before, field) != getattr(after, field) for field in fields):
+        fail(f"transaction input metadata changed while read: {label}")
+    raw = b"".join(chunks)
+    if len(raw) != before.st_size:
+        fail(f"transaction input size changed while read: {label}")
+    return raw, {
+        "ctime_ns": before.st_ctime_ns,
+        "device": before.st_dev,
+        "gid": before.st_gid,
+        "inode": before.st_ino,
+        "mode": stat.S_IMODE(before.st_mode),
+        "mtime_ns": before.st_mtime_ns,
+        "nlink": before.st_nlink,
+        "sha256": sha256_bytes(raw),
+        "size": before.st_size,
+        "uid": before.st_uid,
+    }
+
+
+def validate_input_identities(value: Any) -> None:
+    if not isinstance(value, dict) or set(value) != set(TRANSACTION_INPUT_GIT_MODES):
+        fail("rebind transaction input identity closure is invalid")
+    expected_fields = {
+        "ctime_ns",
+        "device",
+        "gid",
+        "inode",
+        "mode",
+        "mtime_ns",
+        "nlink",
+        "sha256",
+        "size",
+        "uid",
+    }
+    for path, expected_git_mode in TRANSACTION_INPUT_GIT_MODES.items():
+        record = value[path]
+        if not isinstance(record, dict) or set(record) != expected_fields:
+            fail(f"rebind transaction input identity fields are invalid: {path}")
+        integer_fields = expected_fields - {"sha256"}
+        if any(
+            not isinstance(record[field], int) or isinstance(record[field], bool)
+            for field in integer_fields
+        ) or any(record[field] < 0 for field in integer_fields):
+            fail(f"rebind transaction input identity metadata is invalid: {path}")
+        if record["nlink"] != 1 or HEX_SHA256.fullmatch(record["sha256"] or "") is None:
+            fail(f"rebind transaction input identity digest/link count is invalid: {path}")
+        canonical_git_mode(record["mode"], expected_git_mode, f"transaction input {path}")
+
+
+def capture_transaction_inputs(repo_root: Path) -> tuple[dict[str, bytes], dict[str, Any]]:
+    raw_inputs: dict[str, bytes] = {}
+    identities: dict[str, Any] = {}
+    for relative, expected_git_mode in TRANSACTION_INPUT_GIT_MODES.items():
+        raw, identity = capture_input_identity(
+            repo_root / PurePosixPath(relative),
+            repo_root,
+            f"transaction input {relative}",
+            expected_git_mode,
+        )
+        raw_inputs[relative] = raw
+        identities[relative] = identity
+    validate_input_identities(identities)
+    return raw_inputs, identities
+
+
+def verify_transaction_inputs(repo_root: Path, expected: dict[str, Any]) -> None:
+    _raw, actual = capture_transaction_inputs(repo_root)
+    if actual != expected:
+        fail("transaction input bytes or metadata changed after preflight")
 
 
 def ensure_real_directory_chain(repo_root: Path, relative: PurePosixPath) -> Path:
@@ -255,7 +395,7 @@ def git_blob_at_head(
 def preflight_committed_package(
     repo_root: Path,
     script_path: Path,
-) -> tuple[Path, dict[str, bytes]]:
+) -> tuple[Path, dict[str, bytes], dict[str, int]]:
     spec_dir = ensure_real_directory_chain(repo_root, SPEC_RELATIVE_DIR)
     expected_script = spec_dir / "rebind-final-subject.py"
     if script_path != expected_script:
@@ -264,14 +404,14 @@ def preflight_committed_package(
         expected_script,
         repo_root,
         "rebind tool",
-        expected_mode=EXPECTED_ARTIFACT_MODES["rebind-final-subject.py"],
+        expected_git_mode=EXPECTED_ARTIFACT_GIT_MODES["rebind-final-subject.py"],
     )
     try:
         entries = list(os.scandir(spec_dir))
     except OSError as error:
         fail(f"cannot enumerate protocol-spec directory: {error}")
     actual_names = {entry.name for entry in entries}
-    expected_names = set(EXPECTED_ARTIFACT_MODES)
+    expected_names = set(EXPECTED_ARTIFACT_GIT_MODES)
     if actual_names != expected_names:
         fail(
             "protocol-spec artifact set mismatch before rebind; "
@@ -280,30 +420,36 @@ def preflight_committed_package(
         )
 
     originals: dict[str, bytes] = {}
-    for name, expected_mode in sorted(EXPECTED_ARTIFACT_MODES.items()):
+    filesystem_modes: dict[str, int] = {}
+    for name, expected_git_mode in sorted(EXPECTED_ARTIFACT_GIT_MODES.items()):
         path = spec_dir / name
-        ensure_regular(
+        metadata = ensure_regular(
             path,
             repo_root,
             f"protocol artifact {name}",
-            expected_mode=expected_mode,
+            expected_git_mode=expected_git_mode,
         )
         git_mode, committed_bytes = git_blob_at_head(
             repo_root, SPEC_RELATIVE_DIR / name
         )
-        expected_git_mode = "100755" if expected_mode & 0o111 else "100644"
         if git_mode != expected_git_mode:
             fail(f"committed HEAD mode differs from reviewed mode: {name}")
         current_bytes = path.read_bytes()
         if current_bytes != committed_bytes:
             fail(f"protocol artifact differs from exact committed HEAD bytes: {name}")
         originals[name] = current_bytes
-    return spec_dir, originals
+        filesystem_modes[name] = stat.S_IMODE(metadata.st_mode)
+    return spec_dir, originals, filesystem_modes
 
 
 def preflight_curated(repo_root: Path) -> tuple[Path, bytes]:
     path = repo_root / CURATED_RELATIVE
-    ensure_regular(path, repo_root, "curated operations", expected_mode=0o664)
+    ensure_regular(
+        path,
+        repo_root,
+        "curated operations",
+        expected_git_mode="100644",
+    )
     git_mode, committed_bytes = git_blob_at_head(repo_root, CURATED_RELATIVE)
     if git_mode != "100644" or path.read_bytes() != committed_bytes:
         fail("curated operations must equal exact committed HEAD reviewed bytes")
@@ -430,7 +576,7 @@ def verify_manifest(
         manifest_path,
         repo_root,
         "subject manifest",
-        expected_mode=0o664,
+        expected_git_mode="100644",
     )
     manifest = load_json(manifest_path)
     if not isinstance(manifest, dict) or list(manifest) != SUBJECT_ROOT_KEYS:
@@ -489,8 +635,11 @@ def verify_manifest(
             repo_root,
             f"current subject {path_value}",
         )
-        if bool(metadata.st_mode & 0o111) != (mode == "100755"):
-            fail(f"current subject executable mode differs from expected commit: {path_value}")
+        canonical_git_mode(
+            metadata.st_mode,
+            mode,
+            f"current subject {path_value}",
+        )
         if sha256(current_path) != digest:
             fail(f"current subject differs from expected commit: {path_value}")
     return (
@@ -662,15 +811,31 @@ def read_journal(transaction: Path) -> dict[str, Any]:
     value = load_json(path)
     if not isinstance(value, dict):
         fail("rebind transaction journal root is invalid")
-    if value.get("format_version") != 1 or value.get("destinations") != list(
-        DESTINATION_NAMES
-    ):
+    if set(value) != {
+        "artifact_modes",
+        "destinations",
+        "format_version",
+        "inputs",
+        "records",
+        "state",
+    } or value.get("format_version") != 1 or value.get("destinations") != list(DESTINATION_NAMES):
         fail("rebind transaction journal shape is invalid")
     if value.get("state") not in {"prepared", "applying", "complete"}:
         fail("rebind transaction journal state is invalid")
+    validate_input_identities(value.get("inputs"))
     records = value.get("records")
     if not isinstance(records, dict) or set(records) != set(DESTINATION_NAMES):
         fail("rebind transaction journal records are invalid")
+    artifact_modes = value.get("artifact_modes")
+    if not isinstance(artifact_modes, dict) or set(artifact_modes) != set(
+        EXPECTED_ARTIFACT_GIT_MODES
+    ):
+        fail("rebind transaction artifact-mode closure is invalid")
+    for name, expected_git_mode in EXPECTED_ARTIFACT_GIT_MODES.items():
+        mode = artifact_modes[name]
+        if not isinstance(mode, int) or isinstance(mode, bool):
+            fail(f"rebind transaction artifact mode is invalid: {name}")
+        canonical_git_mode(mode, expected_git_mode, f"rebind transaction artifact {name}")
     for name in DESTINATION_NAMES:
         record = records[name]
         if (
@@ -681,13 +846,19 @@ def read_journal(transaction: Path) -> dict[str, Any]:
                 "original_sha256",
             }
             or not isinstance(record["mode"], int)
-            or record["mode"] != EXPECTED_ARTIFACT_MODES[name]
+            or isinstance(record["mode"], bool)
+            or record["mode"] != artifact_modes[name]
             or not isinstance(record["candidate_sha256"], str)
             or HEX_SHA256.fullmatch(record["candidate_sha256"]) is None
             or not isinstance(record["original_sha256"], str)
             or HEX_SHA256.fullmatch(record["original_sha256"]) is None
         ):
             fail(f"rebind transaction record is invalid: {name}")
+        canonical_git_mode(
+            record["mode"],
+            EXPECTED_ARTIFACT_GIT_MODES[name],
+            f"rebind transaction record {name}",
+        )
     return value
 
 
@@ -695,7 +866,17 @@ def stage_transaction(
     transaction: Path,
     originals: dict[str, bytes],
     candidates: dict[str, bytes],
+    filesystem_modes: dict[str, int],
+    input_identities: dict[str, Any],
 ) -> dict[str, Any]:
+    if set(filesystem_modes) != set(EXPECTED_ARTIFACT_GIT_MODES):
+        fail("staged transaction artifact-mode closure differs")
+    for name, expected_git_mode in EXPECTED_ARTIFACT_GIT_MODES.items():
+        mode = filesystem_modes[name]
+        if not isinstance(mode, int) or isinstance(mode, bool):
+            fail(f"staged transaction artifact mode is invalid: {name}")
+        canonical_git_mode(mode, expected_git_mode, f"staged transaction artifact {name}")
+    validate_input_identities(input_identities)
     if os.path.lexists(transaction):
         fail("a rebind transaction already exists")
     transaction.mkdir(mode=0o700)
@@ -705,16 +886,24 @@ def stage_transaction(
         for name in DESTINATION_NAMES:
             original = originals[name]
             candidate = candidates[name]
+            mode = filesystem_modes[name]
+            canonical_git_mode(
+                mode,
+                EXPECTED_ARTIFACT_GIT_MODES[name],
+                f"staged transaction mode {name}",
+            )
             write_new_file(transaction / f"{name}.original", original, 0o600)
             write_new_file(transaction / f"{name}.candidate", candidate, 0o600)
             records[name] = {
                 "candidate_sha256": sha256_bytes(candidate),
-                "mode": EXPECTED_ARTIFACT_MODES[name],
+                "mode": mode,
                 "original_sha256": sha256_bytes(original),
             }
         journal = {
+            "artifact_modes": dict(sorted(filesystem_modes.items())),
             "destinations": list(DESTINATION_NAMES),
             "format_version": 1,
+            "inputs": input_identities,
             "records": records,
             "state": "prepared",
         }
@@ -729,6 +918,7 @@ def stage_transaction(
 def verify_destination_bytes(
     spec_dir: Path,
     expected: dict[str, bytes],
+    filesystem_modes: dict[str, int],
     label: str,
 ) -> None:
     for name, value in expected.items():
@@ -737,7 +927,7 @@ def verify_destination_bytes(
             path,
             spec_dir,
             f"{label} {name}",
-            expected_mode=EXPECTED_ARTIFACT_MODES[name],
+            expected_mode=filesystem_modes[name],
         )
         if path.read_bytes() != value:
             fail(f"{label} byte mismatch after transaction operation: {name}")
@@ -747,6 +937,7 @@ def rollback_transaction(
     transaction: Path,
     spec_dir: Path,
     journal: dict[str, Any],
+    repo_root: Path,
 ) -> None:
     originals: dict[str, bytes] = {}
     for name in DESTINATION_NAMES:
@@ -757,6 +948,7 @@ def rollback_transaction(
             fail(f"transaction backup digest mismatch: {name}")
         originals[name] = value
     for name in DESTINATION_NAMES:
+        original_mode = journal["records"][name]["mode"]
         path = spec_dir / name
         temporary = spec_dir / f".rebind-tmp-{name}"
         if os.path.lexists(temporary):
@@ -771,7 +963,7 @@ def rollback_transaction(
                 stat.S_ISREG(metadata.st_mode)
                 and not stat.S_ISLNK(metadata.st_mode)
                 and metadata.st_nlink == 1
-                and stat.S_IMODE(metadata.st_mode) == EXPECTED_ARTIFACT_MODES[name]
+                and stat.S_IMODE(metadata.st_mode) == original_mode
                 and path.read_bytes() == originals[name]
             )
         except OSError:
@@ -780,10 +972,18 @@ def rollback_transaction(
             replace_file_atomically(
                 path,
                 originals[name],
-                EXPECTED_ARTIFACT_MODES[name],
+                original_mode,
             )
     fsync_directory(spec_dir)
-    verify_destination_bytes(spec_dir, originals, "rolled-back original")
+    verify_destination_bytes(
+        spec_dir,
+        originals,
+        {name: journal["records"][name]["mode"] for name in DESTINATION_NAMES},
+        "rolled-back original",
+    )
+    if not artifact_modes_match_journal(spec_dir, journal):
+        fail("artifact mode changed during transaction rollback")
+    verify_transaction_inputs(repo_root, journal["inputs"])
     cleanup_transaction_directory(transaction)
 
 
@@ -800,8 +1000,25 @@ def destinations_match_journal(
                 stat.S_ISLNK(metadata.st_mode)
                 or not stat.S_ISREG(metadata.st_mode)
                 or metadata.st_nlink != 1
-                or stat.S_IMODE(metadata.st_mode) != EXPECTED_ARTIFACT_MODES[name]
+                or stat.S_IMODE(metadata.st_mode) != journal["records"][name]["mode"]
                 or sha256(path) != journal["records"][name][digest_field]
+            ):
+                return False
+        except OSError:
+            return False
+    return True
+
+
+def artifact_modes_match_journal(spec_dir: Path, journal: dict[str, Any]) -> bool:
+    for name in EXPECTED_ARTIFACT_GIT_MODES:
+        path = spec_dir / name
+        try:
+            metadata = path.lstat()
+            if (
+                stat.S_ISLNK(metadata.st_mode)
+                or not stat.S_ISREG(metadata.st_mode)
+                or metadata.st_nlink != 1
+                or stat.S_IMODE(metadata.st_mode) != journal["artifact_modes"][name]
             ):
                 return False
         except OSError:
@@ -813,18 +1030,22 @@ def verify_completed_transaction_for_finalization(
     repo_root: Path,
     spec_dir: Path,
     candidates: dict[str, bytes],
+    journal: dict[str, Any],
 ) -> None:
+    verify_transaction_inputs(repo_root, journal["inputs"])
     actual_names = {entry.name for entry in os.scandir(spec_dir)}
-    if actual_names != set(EXPECTED_ARTIFACT_MODES):
+    if actual_names != set(EXPECTED_ARTIFACT_GIT_MODES):
         fail("completed transaction artifact set changed before finalization")
-    for name, mode in EXPECTED_ARTIFACT_MODES.items():
+    for name, expected_git_mode in EXPECTED_ARTIFACT_GIT_MODES.items():
         path = spec_dir / name
-        ensure_regular(
+        metadata = ensure_regular(
             path,
             repo_root,
             f"finalization artifact {name}",
-            expected_mode=mode,
+            expected_git_mode=expected_git_mode,
         )
+        if stat.S_IMODE(metadata.st_mode) != journal["artifact_modes"][name]:
+            fail(f"artifact mode changed during retained transaction: {name}")
         if name in candidates:
             expected_bytes = candidates[name]
         else:
@@ -832,7 +1053,6 @@ def verify_completed_transaction_for_finalization(
                 repo_root,
                 SPEC_RELATIVE_DIR / name,
             )
-            expected_git_mode = "100755" if mode & 0o111 else "100644"
             if git_mode != expected_git_mode:
                 fail(f"committed mode changed before finalization: {name}")
         if path.read_bytes() != expected_bytes:
@@ -856,6 +1076,7 @@ def verify_completed_transaction_for_finalization(
     )
     if verification.returncode != 0:
         fail("finalization verifier failed:\n" + verification.stdout + verification.stderr)
+    verify_transaction_inputs(repo_root, journal["inputs"])
 
 
 def recover_or_refuse_existing_transaction(
@@ -888,18 +1109,23 @@ def recover_or_refuse_existing_transaction(
         cleanup_transaction_directory(transaction)
         fail("discarded an interrupted pre-mutation staging marker; rerun required")
     journal = read_journal(transaction)
+    inputs_unchanged = True
+    try:
+        verify_transaction_inputs(repo_root, journal["inputs"])
+    except RebindError:
+        inputs_unchanged = False
     if journal["state"] != "complete" and destinations_match_journal(
         spec_dir,
         journal,
         "original_sha256",
-    ):
+    ) and artifact_modes_match_journal(spec_dir, journal) and inputs_unchanged:
         cleanup_transaction_directory(transaction)
         if rollback_requested:
             print("final-subject rebind rollback: PASS (originals were already byte-exact)")
             return True
         fail("recovered an interrupted transaction with byte-exact originals; rerun required")
     if rollback_requested:
-        rollback_transaction(transaction, spec_dir, journal)
+        rollback_transaction(transaction, spec_dir, journal, repo_root)
         print("final-subject rebind rollback: PASS (byte-exact originals restored)")
         return True
     if finalize_requested:
@@ -924,12 +1150,17 @@ def recover_or_refuse_existing_transaction(
             if sha256_bytes(value) != journal["records"][name]["candidate_sha256"]:
                 fail(f"transaction candidate digest mismatch: {name}")
             candidates[name] = value
-        verify_completed_transaction_for_finalization(repo_root, spec_dir, candidates)
+        verify_completed_transaction_for_finalization(
+            repo_root,
+            spec_dir,
+            candidates,
+            journal,
+        )
         cleanup_transaction_directory(transaction)
         print("final-subject rebind transaction finalization: PASS")
         return True
     if journal["state"] != "complete":
-        rollback_transaction(transaction, spec_dir, journal)
+        rollback_transaction(transaction, spec_dir, journal, repo_root)
         fail("recovered an interrupted transaction and restored originals; rerun required")
     fail(
         "a complete verified rebind transaction awaits explicit "
@@ -1107,11 +1338,16 @@ def run() -> None:
 
     # No artifact mutation is possible before this complete committed-byte,
     # containment, set, mode, symlink, and hardlink preflight succeeds.
-    spec_dir, all_originals = preflight_committed_package(
+    spec_dir, all_originals, artifact_modes = preflight_committed_package(
         repo_root,
         script_path,
     )
+    transaction_input_raw, transaction_input_identities = capture_transaction_inputs(
+        repo_root
+    )
     _curated_path, curated_bytes = preflight_curated(repo_root)
+    if curated_bytes != transaction_input_raw[CURATED_RELATIVE.as_posix()]:
+        fail("curated operations changed across preflight reads")
     curated_digest = sha256_bytes(curated_bytes)
 
     head = run_git(repo_root, ["rev-parse", "HEAD"])
@@ -1157,6 +1393,10 @@ def run() -> None:
         args.expected_commit,
         args.expected_tree,
     )
+    if manifest_digest != sha256_bytes(
+        transaction_input_raw[SUBJECT_MANIFEST_RELATIVE.as_posix()]
+    ):
+        fail("subject manifest changed across preflight reads")
     candidates = build_candidates(
         spec_dir,
         all_originals,
@@ -1168,6 +1408,7 @@ def run() -> None:
         args.expected_tree,
     )
     destination_originals = {name: all_originals[name] for name in DESTINATION_NAMES}
+    verify_transaction_inputs(repo_root, transaction_input_identities)
 
     print(
         "final-subject rebind candidate: "
@@ -1175,13 +1416,24 @@ def run() -> None:
         f"manifest_sha256={manifest_digest} curated_sha256={curated_digest}"
     )
     if args.dry_run:
-        verify_destination_bytes(spec_dir, destination_originals, "dry-run original")
+        verify_destination_bytes(
+            spec_dir,
+            destination_originals,
+            artifact_modes,
+            "dry-run original",
+        )
         print("dry-run: no files changed")
         return
 
     journal: dict[str, Any] | None = None
     try:
-        journal = stage_transaction(transaction, destination_originals, candidates)
+        journal = stage_transaction(
+            transaction,
+            destination_originals,
+            candidates,
+            artifact_modes,
+            transaction_input_identities,
+        )
         replacements = 0
         journal["state"] = "applying"
         write_journal(transaction, journal)
@@ -1189,7 +1441,7 @@ def run() -> None:
             replace_file_atomically(
                 spec_dir / name,
                 candidates[name],
-                EXPECTED_ARTIFACT_MODES[name],
+                artifact_modes[name],
             )
             replacements += 1
             if args.abrupt_after_replacements == replacements:
@@ -1200,7 +1452,12 @@ def run() -> None:
                 raise InjectedRebindFault(
                     f"injected after {replacements} destination replacement(s)"
                 )
-        verify_destination_bytes(spec_dir, candidates, "staged candidate")
+        verify_destination_bytes(
+            spec_dir,
+            candidates,
+            artifact_modes,
+            "staged candidate",
+        )
         verification = subprocess.run(
             [
                 sys.executable,
@@ -1219,7 +1476,15 @@ def run() -> None:
         )
         if verification.returncode != 0:
             fail("post-rebind verifier failed:\n" + verification.stdout + verification.stderr)
-        verify_destination_bytes(spec_dir, candidates, "verified candidate")
+        verify_transaction_inputs(repo_root, transaction_input_identities)
+        verify_destination_bytes(
+            spec_dir,
+            candidates,
+            artifact_modes,
+            "verified candidate",
+        )
+        if not artifact_modes_match_journal(spec_dir, journal):
+            fail("artifact mode changed before transaction completion")
         journal["state"] = "complete"
         write_journal(transaction, journal)
         print(verification.stdout.strip())
@@ -1231,8 +1496,13 @@ def run() -> None:
         if journal is None:
             raise
         try:
-            rollback_transaction(transaction, spec_dir, journal)
-            verify_destination_bytes(spec_dir, destination_originals, "post-failure original")
+            rollback_transaction(transaction, spec_dir, journal, repo_root)
+            verify_destination_bytes(
+                spec_dir,
+                destination_originals,
+                artifact_modes,
+                "post-failure original",
+            )
         except BaseException as rollback_error:
             raise RebindError(
                 "rebind failed and byte-exact rollback could not be verified: "

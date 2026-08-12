@@ -1,0 +1,160 @@
+{
+  "content_policy": "dcrypt-fuzzing-source-bindings-v1",
+  "counts": {
+    "cargo_control_files": 2,
+    "ci_release_control_files": 4,
+    "shared_support_files": 1,
+    "target_source_files": 17,
+    "total_files": 24
+  },
+  "files": [
+    {
+      "git_mode": "100644",
+      "path": ".github/workflows/security-validation.yml",
+      "sha256": "a51b74a4934c14dd3d014af6121d53911a878d65da15e6efd0c01dafede7d47b",
+      "size": 15376
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/Cargo.lock",
+      "sha256": "0e9d1f305014ad49d91dc9796246b5559fc002d67b5ec728275abd256c75511d",
+      "size": 4323
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/Cargo.toml",
+      "sha256": "801fdc93a650c0426efefc8f373cce3d0c8819c41bf4836fc60c3d9099e5d3ed",
+      "size": 2812
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/aes_gcm_semantic.rs",
+      "sha256": "e573701809d926dcebb27c84168d94baea1a82fb8f5f9d09c17f4f27345b290b",
+      "size": 3730
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/bls12_381_decoders.rs",
+      "sha256": "1002fe75dc820593d556bf1ac71d947657dc2f0ab6be012155734fc321c86832",
+      "size": 2214
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/bls12_381_semantic.rs",
+      "sha256": "d40bb026b1ceb0baa9f6ff1989115a6d9f5d076d66e2f20c83f065e45eee7c89",
+      "size": 7074
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/chacha_semantic.rs",
+      "sha256": "fa6accf3adffa4e6e75421c4af6f5b14cbdbba8f1ecee304e6945eb79b99e1fd",
+      "size": 3344
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/ecdh_semantic.rs",
+      "sha256": "c8eaac26710cdd9b8624f2e0119d648165a02ad94540220e46959e9b0797b140",
+      "size": 2943
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/ecdsa_semantic.rs",
+      "sha256": "c4920309ee17828337848967621250043b46bf77b4fac8794a122ad8d40c4ba3",
+      "size": 6623
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/ecies_semantic.rs",
+      "sha256": "c041423b4248441793eb1eaf5dba1d2d15cf6254a55a344795eb40d23da2dc6f",
+      "size": 2118
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/ed25519_semantic.rs",
+      "sha256": "c7bd719aabc7922edabc8dde20d6746260ff6e95b6e0d7cfde5361b0eb5c4b0d",
+      "size": 2496
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/hybrid_decoders.rs",
+      "sha256": "abc8f570182e6c0cda0bcbdea64186a4dab1b1acd5c330e16afc3488cb76fa84",
+      "size": 1686
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/hybrid_semantic.rs",
+      "sha256": "fbb1a98376960176ded7c7ffafa7e8ac43332f997be416cc6db2df64f11c5a52",
+      "size": 4662
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/kem_decoders.rs",
+      "sha256": "a79cdbac86ea38f57790ccd60506c15fdf22dba87aea96cbfeec59b059d58d74",
+      "size": 3442
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/legacy_xchacha_migration.rs",
+      "sha256": "138476ed42dcb8e3a0a2b2988cf5fb05656bb16a1f7f12252f1546db39ab08f5",
+      "size": 1759
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/ml_dsa_semantic.rs",
+      "sha256": "a215fd4ba33021e93ee169f0edf0239b07f07b2d49a98d101f3ef00714ffc759",
+      "size": 3123
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/ml_kem_semantic.rs",
+      "sha256": "a212a07a492657690da70dd27413002db888e76e6d8874483579186e32c5654c",
+      "size": 3167
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/signature_decoders.rs",
+      "sha256": "cfde2f46a7bb3bb050e5c6050dabad484b0135590bee871d8bf1cf3d5d4d1d18",
+      "size": 2483
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/stream_frames.rs",
+      "sha256": "d4a11ccc20a3cdb630626c8c7cbd485c9a511c08edb6cb3edd0f2737ce3383c3",
+      "size": 6941
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/support.rs",
+      "sha256": "90e0a4631f122105d6004ba89b9899a2a02d11e613b601370ce9c118dd84378e",
+      "size": 2098
+    },
+    {
+      "git_mode": "100644",
+      "path": "fuzz/fuzz_targets/symmetric_decoders.rs",
+      "sha256": "c09bcf9f328efc4738e2a29dc36b2be1421926545dc11300f4bbd0519cbe6ec4",
+      "size": 2326
+    },
+    {
+      "git_mode": "100755",
+      "path": "tools/release-dcrypt.sh",
+      "sha256": "b0c254235731439aabf0ebff473bb4c75fa45e92aeea4adb22bce81a9ce0943d",
+      "size": 39104
+    },
+    {
+      "git_mode": "100755",
+      "path": "tools/verify-publish-ready.sh",
+      "sha256": "8be3f17df0081d2d7c860fd00b090d50fb02463b93f10d439278e993d7820b48",
+      "size": 11901
+    },
+    {
+      "git_mode": "100755",
+      "path": "tools/verify-remote-release-ready.py",
+      "sha256": "c08deb4060adb421006c4fe0144bfcbd2ff0f39a9d47de52fcd0b6f8417403a4",
+      "size": 87821
+    }
+  ],
+  "files_sha256": "159e6314efcc0590eaa7b4826f18d413b60a3faf935c5eb0ce62f56d171777c0",
+  "registry_semantic_sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
+  "schema_version": 1,
+  "status": "STABLE-final-subject-bound"
+}

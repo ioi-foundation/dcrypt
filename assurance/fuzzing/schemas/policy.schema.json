@@ -1,0 +1,530 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:policy:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "budgets_core_seconds": {
+      "additionalProperties": false,
+      "properties": {
+        "rc_critical": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rc_secondary": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "weekly_critical": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "weekly_secondary": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rc_critical",
+        "rc_secondary",
+        "weekly_critical",
+        "weekly_secondary"
+      ],
+      "type": "object"
+    },
+    "canonicalization": {
+      "additionalProperties": false,
+      "properties": {
+        "duplicate_keys": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "encoding": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "final_newline": {
+          "type": "boolean"
+        },
+        "floats": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "key_order": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "normalization": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "whitespace": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "duplicate_keys",
+        "encoding",
+        "final_newline",
+        "floats",
+        "key_order",
+        "normalization",
+        "whitespace"
+      ],
+      "type": "object"
+    },
+    "content_policy": {
+      "const": "dcrypt-fuzzing-policy-v1"
+    },
+    "counts": {
+      "additionalProperties": false,
+      "properties": {
+        "critical_family_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "existing_smoke_targets": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "explicit_blocker_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "planned_semantic_targets": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total_atomic_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "critical_family_rows",
+        "existing_smoke_targets",
+        "explicit_blocker_rows",
+        "planned_semantic_targets",
+        "total_atomic_rows"
+      ],
+      "type": "object"
+    },
+    "coverage_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_must_be_nonzero": {
+          "type": "boolean"
+        },
+        "comparison_binding": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "edge_and_function_required": {
+          "type": "boolean"
+        },
+        "integer_denominator": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "regression_numerator": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rule": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "semantic_state_required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "baseline_must_be_nonzero",
+        "comparison_binding",
+        "edge_and_function_required",
+        "integer_denominator",
+        "regression_numerator",
+        "rule",
+        "semantic_state_required"
+      ],
+      "type": "object"
+    },
+    "differential_evidence_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_differential_evidence": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_shared_or_unknown_lineage": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "required_family_blocker": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "accepted_differential_evidence",
+        "package_b_shared_or_unknown_lineage",
+        "required_family_blocker"
+      ],
+      "type": "object"
+    },
+    "freshness_seconds": {
+      "additionalProperties": false,
+      "properties": {
+        "critical_nightly": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "weekly": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "critical_nightly",
+        "weekly"
+      ],
+      "type": "object"
+    },
+    "release_gate": {
+      "additionalProperties": false,
+      "properties": {
+        "blocked_status": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "ci_may_pass_structural_controls": {
+          "type": "boolean"
+        },
+        "operational_evidence_promotion_enabled": {
+          "type": "boolean"
+        },
+        "release_exit_code_with_blockers": {
+          "maximum": 9223372036854775807,
+          "minimum": -255,
+          "type": "integer"
+        },
+        "release_must_fail_with_any_blocker": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "blocked_status",
+        "ci_may_pass_structural_controls",
+        "operational_evidence_promotion_enabled",
+        "release_exit_code_with_blockers",
+        "release_must_fail_with_any_blocker"
+      ],
+      "type": "object"
+    },
+    "resource_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "archive_max_bytes": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "crash_bundle_max_bytes": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "expensive_crypto_timeout_seconds": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ignore_crashes": {
+          "type": "boolean"
+        },
+        "ignore_ooms": {
+          "type": "boolean"
+        },
+        "ignore_timeouts": {
+          "type": "boolean"
+        },
+        "input_cap_must_match_registry_runner_and_harness": {
+          "type": "boolean"
+        },
+        "parser_timeout_seconds": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "rss_limit_mb": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "timeout_floor_seconds": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "timeout_formula_multiplier": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "archive_max_bytes",
+        "crash_bundle_max_bytes",
+        "expensive_crypto_timeout_seconds",
+        "ignore_crashes",
+        "ignore_ooms",
+        "ignore_timeouts",
+        "input_cap_must_match_registry_runner_and_harness",
+        "parser_timeout_seconds",
+        "rss_limit_mb",
+        "timeout_floor_seconds",
+        "timeout_formula_multiplier"
+      ],
+      "type": "object"
+    },
+    "retention_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "attestations_minimum_days": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "coverage_minimum_days": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "current_corpus": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "daily_corpus_days": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "logs_days": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "regression_corpus": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "weekly_corpus_weeks": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "attestations_minimum_days",
+        "coverage_minimum_days",
+        "current_corpus",
+        "daily_corpus_days",
+        "logs_days",
+        "regression_corpus",
+        "weekly_corpus_weeks"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "smoke_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "counts_as_persistent_campaign": {
+          "type": "boolean"
+        },
+        "integrated_address_sanitizer": {
+          "additionalProperties": false,
+          "properties": {
+            "asan_options": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "defined_function_symbols": {
+              "items": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "runtime_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "asan_options",
+            "defined_function_symbols",
+            "runtime_sha256"
+          ],
+          "type": "object"
+        },
+        "runs": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "seed": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "counts_as_persistent_campaign",
+        "integrated_address_sanitizer",
+        "runs",
+        "seed"
+      ],
+      "type": "object"
+    },
+    "source_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "framework_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "framework_subject_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "framework_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "framework_subject_commit",
+        "framework_subject_manifest_sha256",
+        "framework_subject_tree",
+        "package_b_assurance_commit",
+        "package_b_assurance_tree",
+        "package_b_subject_commit",
+        "package_b_subject_tree"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    },
+    "trust_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "authoritative_store": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "authoritative_writes_from_forks": {
+          "type": "boolean"
+        },
+        "content_addressed_objects_are_append_only": {
+          "type": "boolean"
+        },
+        "crash_store_is_private_and_separate": {
+          "type": "boolean"
+        },
+        "external_mutation_authorized": {
+          "type": "boolean"
+        },
+        "local_tools_network_policy": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "promotion_requires_authenticated_writer_and_review": {
+          "type": "boolean"
+        },
+        "signing_identity": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "untrusted_corpus_access": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "untrusted_crash_access": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative_store",
+        "authoritative_writes_from_forks",
+        "content_addressed_objects_are_append_only",
+        "crash_store_is_private_and_separate",
+        "external_mutation_authorized",
+        "local_tools_network_policy",
+        "promotion_requires_authenticated_writer_and_review",
+        "signing_identity",
+        "untrusted_corpus_access",
+        "untrusted_crash_access"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "budgets_core_seconds",
+    "canonicalization",
+    "content_policy",
+    "counts",
+    "coverage_policy",
+    "differential_evidence_policy",
+    "freshness_seconds",
+    "release_gate",
+    "resource_policy",
+    "retention_policy",
+    "schema_version",
+    "smoke_policy",
+    "source_binding",
+    "status",
+    "trust_policy"
+  ],
+  "title": "Package C fuzz policy",
+  "type": "object"
+}

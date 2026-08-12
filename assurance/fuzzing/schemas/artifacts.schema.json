@@ -1,0 +1,67 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:artifacts:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content_policy": {
+      "const": "dcrypt-fuzzing-artifact-closure-v1"
+    },
+    "files": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "path": {
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "path",
+          "sha256",
+          "size"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "release_gate": {
+      "maxLength": 16384,
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "content_policy",
+    "files",
+    "release_gate",
+    "schema_version",
+    "status"
+  ],
+  "title": "Package C sealed artifact closure",
+  "type": "object"
+}

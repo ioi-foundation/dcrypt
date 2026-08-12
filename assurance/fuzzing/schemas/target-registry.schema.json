@@ -1,0 +1,1461 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:target-registry:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content_policy": {
+      "const": "dcrypt-fuzzing-target-registry-v1"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "smoke_groups": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "group_id": {
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:+/-]+$",
+            "type": "string"
+          },
+          "target_ids": {
+            "items": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "group_id",
+          "target_ids"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    },
+    "targets": {
+      "items": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cargo_bin": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "dictionary_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "family_algorithms": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "harness_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "harness_input_cap_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "mapped_atomic_row_count": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "operational_status": {
+                "enum": [
+                  "candidate-unaccepted-unprovisioned"
+                ],
+                "type": "string"
+              },
+              "required_freshness_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_rc_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_weekly_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "resource_limits": {
+                "additionalProperties": false,
+                "properties": {
+                  "explicit_harness_loop_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "explicit_harness_loop_max_iterations": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "input_max_bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "malloc_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "rejection_control": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "caller_rng_max_bytes": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "fixed_signing_attempt_window_per_call": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "internal_attempt_cap": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "release_blocker": {
+                        "maxLength": 16384,
+                        "type": "string"
+                      },
+                      "timeout_bounded": {
+                        "type": "boolean"
+                      },
+                      "unbounded_internal_primitives": {
+                        "items": {
+                          "maxLength": 16384,
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "caller_rng_max_bytes",
+                      "fixed_signing_attempt_window_per_call",
+                      "internal_attempt_cap",
+                      "release_blocker",
+                      "timeout_bounded",
+                      "unbounded_internal_primitives"
+                    ],
+                    "type": "object"
+                  },
+                  "rss_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "stack_limit_kib": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_iterations_per_call": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "support_seed_max_dynamic_calls_per_input": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_syntactic_calls": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "timeout_seconds": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "explicit_harness_loop_count",
+                  "explicit_harness_loop_max_iterations",
+                  "input_max_bytes",
+                  "malloc_limit_mb",
+                  "rejection_control",
+                  "rss_limit_mb",
+                  "stack_limit_kib",
+                  "support_seed_iterations_per_call",
+                  "support_seed_max_dynamic_calls_per_input",
+                  "support_seed_syntactic_calls",
+                  "timeout_seconds"
+                ],
+                "type": "object"
+              },
+              "reviewed_semantic_states": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "reviewed_semantic_states_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "runner_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "seed_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "semantic_state_control": {
+                "additionalProperties": false,
+                "properties": {
+                  "curve_states": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "max_ec_keygen_calls_per_input": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "max_rfc6979_sign_calls_per_input": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "operation_states_per_curve": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "state_names": {
+                    "items": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "type": "array",
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "curve_states",
+                  "max_ec_keygen_calls_per_input",
+                  "max_rfc6979_sign_calls_per_input",
+                  "operation_states_per_curve",
+                  "state_names"
+                ],
+                "type": "object"
+              },
+              "source": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "tier": {
+                "maxLength": 16384,
+                "type": "string"
+              }
+            },
+            "required": [
+              "cargo_bin",
+              "dictionary_selector_path",
+              "family_algorithms",
+              "harness_input_cap_bytes",
+              "harness_input_cap_status",
+              "id",
+              "kind",
+              "mapped_atomic_row_count",
+              "operational_status",
+              "required_freshness_seconds",
+              "required_rc_core_seconds",
+              "required_weekly_core_seconds",
+              "resource_limits",
+              "reviewed_semantic_states",
+              "reviewed_semantic_states_sha256",
+              "runner_input_cap_bytes",
+              "seed_selector_path",
+              "semantic_state_control",
+              "source",
+              "source_sha256",
+              "tier"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cargo_bin": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "dictionary_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "family_algorithms": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "harness_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "harness_input_cap_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "mapped_atomic_row_count": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "operational_status": {
+                "enum": [
+                  "candidate-unaccepted-unprovisioned"
+                ],
+                "type": "string"
+              },
+              "required_freshness_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_rc_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_weekly_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "resource_limits": {
+                "additionalProperties": false,
+                "properties": {
+                  "explicit_harness_loop_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "explicit_harness_loop_max_iterations": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "input_max_bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "malloc_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "rejection_control": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "caller_rng_max_bytes": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "fixed_signing_attempt_window_per_call": {
+                        "maximum": 9223372036854775807,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "internal_attempt_cap": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "release_blocker": {
+                        "maxLength": 16384,
+                        "type": "string"
+                      },
+                      "timeout_bounded": {
+                        "type": "boolean"
+                      },
+                      "unbounded_internal_primitives": {
+                        "items": {
+                          "maxLength": 16384,
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "caller_rng_max_bytes",
+                      "fixed_signing_attempt_window_per_call",
+                      "internal_attempt_cap",
+                      "release_blocker",
+                      "timeout_bounded",
+                      "unbounded_internal_primitives"
+                    ],
+                    "type": "object"
+                  },
+                  "rss_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "stack_limit_kib": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_iterations_per_call": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "support_seed_max_dynamic_calls_per_input": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_syntactic_calls": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "timeout_seconds": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "explicit_harness_loop_count",
+                  "explicit_harness_loop_max_iterations",
+                  "input_max_bytes",
+                  "malloc_limit_mb",
+                  "rejection_control",
+                  "rss_limit_mb",
+                  "stack_limit_kib",
+                  "support_seed_iterations_per_call",
+                  "support_seed_max_dynamic_calls_per_input",
+                  "support_seed_syntactic_calls",
+                  "timeout_seconds"
+                ],
+                "type": "object"
+              },
+              "reviewed_semantic_states": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "reviewed_semantic_states_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "runner_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "seed_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "semantic_state_control": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "source": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "tier": {
+                "maxLength": 16384,
+                "type": "string"
+              }
+            },
+            "required": [
+              "cargo_bin",
+              "dictionary_selector_path",
+              "family_algorithms",
+              "harness_input_cap_bytes",
+              "harness_input_cap_status",
+              "id",
+              "kind",
+              "mapped_atomic_row_count",
+              "operational_status",
+              "required_freshness_seconds",
+              "required_rc_core_seconds",
+              "required_weekly_core_seconds",
+              "resource_limits",
+              "reviewed_semantic_states",
+              "reviewed_semantic_states_sha256",
+              "runner_input_cap_bytes",
+              "seed_selector_path",
+              "semantic_state_control",
+              "source",
+              "source_sha256",
+              "tier"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cargo_bin": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "dictionary_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "family_algorithms": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "harness_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "harness_input_cap_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "mapped_atomic_row_count": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "operational_status": {
+                "enum": [
+                  "candidate-unaccepted-unprovisioned"
+                ],
+                "type": "string"
+              },
+              "required_freshness_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_rc_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_weekly_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "resource_limits": {
+                "additionalProperties": false,
+                "properties": {
+                  "explicit_harness_loop_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "explicit_harness_loop_max_iterations": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "input_max_bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "malloc_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "rejection_control": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "caller_rng_max_bytes": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "fixed_signing_attempt_window_per_call": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "internal_attempt_cap": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "release_blocker": {
+                        "maxLength": 16384,
+                        "type": "string"
+                      },
+                      "timeout_bounded": {
+                        "type": "boolean"
+                      },
+                      "unbounded_internal_primitives": {
+                        "items": {
+                          "maxLength": 16384,
+                          "type": "string"
+                        },
+                        "minItems": 1,
+                        "type": "array",
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "caller_rng_max_bytes",
+                      "fixed_signing_attempt_window_per_call",
+                      "internal_attempt_cap",
+                      "release_blocker",
+                      "timeout_bounded",
+                      "unbounded_internal_primitives"
+                    ],
+                    "type": "object"
+                  },
+                  "rss_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "stack_limit_kib": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_iterations_per_call": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "support_seed_max_dynamic_calls_per_input": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_syntactic_calls": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "timeout_seconds": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "explicit_harness_loop_count",
+                  "explicit_harness_loop_max_iterations",
+                  "input_max_bytes",
+                  "malloc_limit_mb",
+                  "rejection_control",
+                  "rss_limit_mb",
+                  "stack_limit_kib",
+                  "support_seed_iterations_per_call",
+                  "support_seed_max_dynamic_calls_per_input",
+                  "support_seed_syntactic_calls",
+                  "timeout_seconds"
+                ],
+                "type": "object"
+              },
+              "reviewed_semantic_states": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "reviewed_semantic_states_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "runner_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "seed_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "semantic_state_control": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "source": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "tier": {
+                "maxLength": 16384,
+                "type": "string"
+              }
+            },
+            "required": [
+              "cargo_bin",
+              "dictionary_selector_path",
+              "family_algorithms",
+              "harness_input_cap_bytes",
+              "harness_input_cap_status",
+              "id",
+              "kind",
+              "mapped_atomic_row_count",
+              "operational_status",
+              "required_freshness_seconds",
+              "required_rc_core_seconds",
+              "required_weekly_core_seconds",
+              "resource_limits",
+              "reviewed_semantic_states",
+              "reviewed_semantic_states_sha256",
+              "runner_input_cap_bytes",
+              "seed_selector_path",
+              "semantic_state_control",
+              "source",
+              "source_sha256",
+              "tier"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cargo_bin": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "dictionary_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "family_algorithms": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              },
+              "harness_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "harness_input_cap_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "mapped_atomic_row_count": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "operational_status": {
+                "enum": [
+                  "deterministic-smoke-only-not-campaign-evidence"
+                ],
+                "type": "string"
+              },
+              "required_freshness_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_rc_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_weekly_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "resource_limits": {
+                "additionalProperties": false,
+                "properties": {
+                  "explicit_harness_loop_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "explicit_harness_loop_max_iterations": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "input_max_bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "malloc_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "rejection_control": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "caller_rng_max_bytes": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "fixed_signing_attempt_window_per_call": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "internal_attempt_cap": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "release_blocker": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "timeout_bounded": {
+                        "type": "boolean"
+                      },
+                      "unbounded_internal_primitives": {
+                        "items": {
+                          "maxLength": 16384,
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "caller_rng_max_bytes",
+                      "fixed_signing_attempt_window_per_call",
+                      "internal_attempt_cap",
+                      "release_blocker",
+                      "timeout_bounded",
+                      "unbounded_internal_primitives"
+                    ],
+                    "type": "object"
+                  },
+                  "rss_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "stack_limit_kib": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_iterations_per_call": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "maxLength": 16384,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "support_seed_max_dynamic_calls_per_input": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_syntactic_calls": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "timeout_seconds": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "explicit_harness_loop_count",
+                  "explicit_harness_loop_max_iterations",
+                  "input_max_bytes",
+                  "malloc_limit_mb",
+                  "rejection_control",
+                  "rss_limit_mb",
+                  "stack_limit_kib",
+                  "support_seed_iterations_per_call",
+                  "support_seed_max_dynamic_calls_per_input",
+                  "support_seed_syntactic_calls",
+                  "timeout_seconds"
+                ],
+                "type": "object"
+              },
+              "reviewed_semantic_states": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "reviewed_semantic_states_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "runner_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "seed_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "semantic_state_control": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "source": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "tier": {
+                "maxLength": 16384,
+                "type": "string"
+              }
+            },
+            "required": [
+              "cargo_bin",
+              "dictionary_selector_path",
+              "family_algorithms",
+              "harness_input_cap_bytes",
+              "harness_input_cap_status",
+              "id",
+              "kind",
+              "mapped_atomic_row_count",
+              "operational_status",
+              "required_freshness_seconds",
+              "required_rc_core_seconds",
+              "required_weekly_core_seconds",
+              "resource_limits",
+              "reviewed_semantic_states",
+              "reviewed_semantic_states_sha256",
+              "runner_input_cap_bytes",
+              "seed_selector_path",
+              "semantic_state_control",
+              "source",
+              "source_sha256",
+              "tier"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cargo_bin": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "dictionary_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "family_algorithms": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "harness_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "harness_input_cap_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "mapped_atomic_row_count": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "operational_status": {
+                "enum": [
+                  "candidate-unaccepted-unprovisioned"
+                ],
+                "type": "string"
+              },
+              "required_freshness_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_rc_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "required_weekly_core_seconds": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "resource_limits": {
+                "additionalProperties": false,
+                "properties": {
+                  "explicit_harness_loop_count": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "explicit_harness_loop_max_iterations": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "input_max_bytes": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "malloc_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "rejection_control": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "caller_rng_max_bytes": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "fixed_signing_attempt_window_per_call": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "internal_attempt_cap": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "release_blocker": {
+                        "anyOf": [
+                          {
+                            "type": "null"
+                          },
+                          {
+                            "maxLength": 16384,
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        ]
+                      },
+                      "timeout_bounded": {
+                        "type": "boolean"
+                      },
+                      "unbounded_internal_primitives": {
+                        "items": {
+                          "maxLength": 16384,
+                          "type": "string"
+                        },
+                        "type": "array",
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "caller_rng_max_bytes",
+                      "fixed_signing_attempt_window_per_call",
+                      "internal_attempt_cap",
+                      "release_blocker",
+                      "timeout_bounded",
+                      "unbounded_internal_primitives"
+                    ],
+                    "type": "object"
+                  },
+                  "rss_limit_mb": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "stack_limit_kib": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_iterations_per_call": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "support_seed_max_dynamic_calls_per_input": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "support_seed_syntactic_calls": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "timeout_seconds": {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "explicit_harness_loop_count",
+                  "explicit_harness_loop_max_iterations",
+                  "input_max_bytes",
+                  "malloc_limit_mb",
+                  "rejection_control",
+                  "rss_limit_mb",
+                  "stack_limit_kib",
+                  "support_seed_iterations_per_call",
+                  "support_seed_max_dynamic_calls_per_input",
+                  "support_seed_syntactic_calls",
+                  "timeout_seconds"
+                ],
+                "type": "object"
+              },
+              "reviewed_semantic_states": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "reviewed_semantic_states_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "runner_input_cap_bytes": {
+                "maximum": 9223372036854775807,
+                "minimum": 0,
+                "type": "integer"
+              },
+              "seed_selector_path": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "semantic_state_control": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "source": {
+                "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                "type": "string"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "tier": {
+                "maxLength": 16384,
+                "type": "string"
+              }
+            },
+            "required": [
+              "cargo_bin",
+              "dictionary_selector_path",
+              "family_algorithms",
+              "harness_input_cap_bytes",
+              "harness_input_cap_status",
+              "id",
+              "kind",
+              "mapped_atomic_row_count",
+              "operational_status",
+              "required_freshness_seconds",
+              "required_rc_core_seconds",
+              "required_weekly_core_seconds",
+              "resource_limits",
+              "reviewed_semantic_states",
+              "reviewed_semantic_states_sha256",
+              "runner_input_cap_bytes",
+              "seed_selector_path",
+              "semantic_state_control",
+              "source",
+              "source_sha256",
+              "tier"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "content_policy",
+    "schema_version",
+    "smoke_groups",
+    "status",
+    "targets"
+  ],
+  "title": "Package C target registry",
+  "type": "object"
+}

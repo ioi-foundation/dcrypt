@@ -1,0 +1,1066 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:campaign-status:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "as_of": {
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "type": "string"
+    },
+    "content_policy": {
+      "const": "dcrypt-fuzzing-campaign-status-v1"
+    },
+    "counts": {
+      "additionalProperties": false,
+      "properties": {
+        "blocked_targets": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "operationally_passing_targets": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "targets": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "blocked_targets",
+        "operationally_passing_targets",
+        "targets"
+      ],
+      "type": "object"
+    },
+    "release_gate": {
+      "additionalProperties": false,
+      "properties": {
+        "exit_code": {
+          "maximum": 9223372036854775807,
+          "minimum": -255,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "HOLD"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "exit_code",
+        "status"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "source_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "framework_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "framework_subject_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "framework_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "framework_subject_commit",
+        "framework_subject_manifest_sha256",
+        "framework_subject_tree",
+        "package_b_assurance_commit",
+        "package_b_assurance_tree",
+        "package_b_subject_commit",
+        "package_b_subject_tree"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    },
+    "targets": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "attestation_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "blocker_codes": {
+            "items": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "campaign_attestation_sha256": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "maxLength": 16384,
+                "minLength": 1,
+                "type": "string"
+              }
+            ]
+          },
+          "campaign_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "corpus_files_sha256": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            ]
+          },
+          "corpus_manifest_sha256": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            ]
+          },
+          "coverage": {
+            "additionalProperties": false,
+            "properties": {
+              "comparison_config_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "current_artifact_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "edge_baseline": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "edge_current": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "function_baseline": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "function_current": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "prior_artifact_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "regression_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "semantic_state_baseline": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "semantic_state_baseline_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "semantic_state_current": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "semantic_state_current_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "comparison_config_sha256",
+              "current_artifact_sha256",
+              "edge_baseline",
+              "edge_current",
+              "function_baseline",
+              "function_current",
+              "prior_artifact_sha256",
+              "regression_status",
+              "semantic_state_baseline",
+              "semantic_state_baseline_sha256",
+              "semantic_state_current",
+              "semantic_state_current_sha256"
+            ],
+            "type": "object"
+          },
+          "coverage_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "crash_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "delivered_rc_core_seconds": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "delivered_weekly_core_seconds": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "evidence_classification": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "freeze": {
+            "additionalProperties": false,
+            "properties": {
+              "commit": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{40}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "time": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "format": "date-time",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "tree": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{40}$",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "commit",
+              "time",
+              "tree"
+            ],
+            "type": "object"
+          },
+          "freshness_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "instrumentation": {
+            "additionalProperties": false,
+            "properties": {
+              "lanes": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "binary_markers": {
+                      "items": {
+                        "pattern": "^(?:__[A-Za-z0-9_]+|LLVMFuzzerTestOneInput)$",
+                        "type": "string"
+                      },
+                      "type": "array",
+                      "uniqueItems": true
+                    },
+                    "lane_id": {
+                      "enum": [
+                        "asan",
+                        "careful-ub",
+                        "lsan",
+                        "msan",
+                        "tsan"
+                      ],
+                      "type": "string"
+                    },
+                    "positive_control_artifact_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "const": "passing-target-binary-and-live-control-attested",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "binary_markers",
+                    "lane_id",
+                    "positive_control_artifact_sha256",
+                    "status"
+                  ],
+                  "type": "object"
+                },
+                "type": "array",
+                "uniqueItems": true
+              },
+              "sanitizer_assignment_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "status": {
+                "enum": [
+                  "blocked-no-per-target-campaign-instrumentation-attestation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "lanes",
+              "sanitizer_assignment_sha256",
+              "status"
+            ],
+            "type": "object"
+          },
+          "observed_outcomes": {
+            "additionalProperties": false,
+            "properties": {
+              "crashes": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "ooms": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "rejection_exhaustions": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "timeouts": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              },
+              "unbounded_allocations": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maximum": 9223372036854775807,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "crashes",
+              "ooms",
+              "rejection_exhaustions",
+              "timeouts",
+              "unbounded_allocations"
+            ],
+            "type": "object"
+          },
+          "rc_shards": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "allocated_cores": {
+                  "maximum": 4096,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "attestation_sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "cpu_seconds": {
+                  "maximum": 31536000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "end": {
+                  "format": "date-time",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                  "type": "string"
+                },
+                "shard_id": {
+                  "pattern": "^[A-Za-z0-9._:+/-]+$",
+                  "type": "string"
+                },
+                "start": {
+                  "format": "date-time",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                  "type": "string"
+                },
+                "target_id": {
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "type": "string"
+                },
+                "writer_identity": {
+                  "maxLength": 4096,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "allocated_cores",
+                "attestation_sha256",
+                "cpu_seconds",
+                "end",
+                "shard_id",
+                "start",
+                "target_id",
+                "writer_identity"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "rc_window": {
+            "additionalProperties": false,
+            "properties": {
+              "end": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "format": "date-time",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "start": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "format": "date-time",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "end",
+              "start"
+            ],
+            "type": "object"
+          },
+          "required_freshness_seconds": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "required_rc_core_seconds": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "required_weekly_core_seconds": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "resource_limits_sha256": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            ]
+          },
+          "resource_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "sanitizer_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "properties": {
+              "commit": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{40}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "tree": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{40}$",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "commit",
+              "tree"
+            ],
+            "type": "object"
+          },
+          "target_binary_sha256": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            ]
+          },
+          "target_id": {
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:+/-]+$",
+            "type": "string"
+          },
+          "target_source_sha256": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              }
+            ]
+          },
+          "toolchain": {
+            "additionalProperties": false,
+            "properties": {
+              "cargo_fuzz_executable_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "cargo_fuzz_provenance_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "cargo_fuzz_source_tree_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "cargo_fuzz_version_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "cargo_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "cargo_version_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "linker_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "linker_version_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "profiler_config_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "runtime_objects_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "rustc_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "rustc_version_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "symbol_inspector_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              },
+              "symbol_inspector_version_sha256": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "cargo_fuzz_executable_sha256",
+              "cargo_fuzz_provenance_sha256",
+              "cargo_fuzz_source_tree_sha256",
+              "cargo_fuzz_version_sha256",
+              "cargo_sha256",
+              "cargo_version_sha256",
+              "linker_sha256",
+              "linker_version_sha256",
+              "profiler_config_sha256",
+              "runtime_objects_sha256",
+              "rustc_sha256",
+              "rustc_version_sha256",
+              "symbol_inspector_sha256",
+              "symbol_inspector_version_sha256"
+            ],
+            "type": "object"
+          },
+          "weekly_shards": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "allocated_cores": {
+                  "maximum": 4096,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "attestation_sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "cpu_seconds": {
+                  "maximum": 31536000,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "end": {
+                  "format": "date-time",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                  "type": "string"
+                },
+                "shard_id": {
+                  "pattern": "^[A-Za-z0-9._:+/-]+$",
+                  "type": "string"
+                },
+                "start": {
+                  "format": "date-time",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                  "type": "string"
+                },
+                "target_id": {
+                  "pattern": "^[a-z][a-z0-9_]*$",
+                  "type": "string"
+                },
+                "writer_identity": {
+                  "maxLength": 4096,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "allocated_cores",
+                "attestation_sha256",
+                "cpu_seconds",
+                "end",
+                "shard_id",
+                "start",
+                "target_id",
+                "writer_identity"
+              ],
+              "type": "object"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "weekly_window": {
+            "additionalProperties": false,
+            "properties": {
+              "end": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "format": "date-time",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "type": "string"
+                  }
+                ]
+              },
+              "start": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "format": "date-time",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "end",
+              "start"
+            ],
+            "type": "object"
+          },
+          "writer_identity": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "maxLength": 16384,
+                "minLength": 1,
+                "type": "string"
+              }
+            ]
+          },
+          "writer_identity_status": {
+            "maxLength": 16384,
+            "type": "string"
+          }
+        },
+        "required": [
+          "attestation_status",
+          "blocker_codes",
+          "campaign_attestation_sha256",
+          "campaign_status",
+          "corpus_files_sha256",
+          "corpus_manifest_sha256",
+          "coverage",
+          "coverage_status",
+          "crash_status",
+          "delivered_rc_core_seconds",
+          "delivered_weekly_core_seconds",
+          "evidence_classification",
+          "freeze",
+          "freshness_status",
+          "instrumentation",
+          "observed_outcomes",
+          "rc_shards",
+          "rc_window",
+          "required_freshness_seconds",
+          "required_rc_core_seconds",
+          "required_weekly_core_seconds",
+          "resource_limits_sha256",
+          "resource_status",
+          "sanitizer_status",
+          "subject",
+          "target_binary_sha256",
+          "target_id",
+          "target_source_sha256",
+          "toolchain",
+          "weekly_shards",
+          "weekly_window",
+          "writer_identity",
+          "writer_identity_status"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "as_of",
+    "content_policy",
+    "counts",
+    "release_gate",
+    "schema_version",
+    "source_binding",
+    "status",
+    "targets"
+  ],
+  "title": "Package C campaign status",
+  "type": "object"
+}

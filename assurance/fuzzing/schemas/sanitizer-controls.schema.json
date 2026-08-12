@@ -1,0 +1,364 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:sanitizer-controls:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actual_positive_controls_observed": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "content_policy": {
+      "const": "dcrypt-fuzzing-sanitizer-controls-v1"
+    },
+    "controls": {
+      "items": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "assigned_target_ids": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "local_control_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "operational_status": {
+                "enum": [
+                  "blocked-complete-instrumented-closure-unprovisioned"
+                ],
+                "type": "string"
+              },
+              "positive_control_requirement": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "report_patterns": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "target_binary_markers": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "assigned_target_ids",
+              "id",
+              "local_control_status",
+              "operational_status",
+              "positive_control_requirement",
+              "report_patterns",
+              "target_binary_markers"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "assigned_target_ids": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "local_control_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "operational_status": {
+                "enum": [
+                  "blocked-no-separate-integer-ub-campaign-lane"
+                ],
+                "type": "string"
+              },
+              "positive_control_requirement": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "report_patterns": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              },
+              "target_binary_markers": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "assigned_target_ids",
+              "id",
+              "local_control_status",
+              "operational_status",
+              "positive_control_requirement",
+              "report_patterns",
+              "target_binary_markers"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "assigned_target_ids": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "type": "array",
+                "uniqueItems": true
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "local_control_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "operational_status": {
+                "enum": [
+                  "blocked-no-authorized-concurrent-positive-control"
+                ],
+                "type": "string"
+              },
+              "positive_control_requirement": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "report_patterns": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "target_binary_markers": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "assigned_target_ids",
+              "id",
+              "local_control_status",
+              "operational_status",
+              "positive_control_requirement",
+              "report_patterns",
+              "target_binary_markers"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "assigned_target_ids": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "local_control_status": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "operational_status": {
+                "enum": [
+                  "blocked-no-per-target-campaign-instrumentation-attestation"
+                ],
+                "type": "string"
+              },
+              "positive_control_requirement": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "report_patterns": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "target_binary_markers": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "assigned_target_ids",
+              "id",
+              "local_control_status",
+              "operational_status",
+              "positive_control_requirement",
+              "report_patterns",
+              "target_binary_markers"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "forbidden_environment_fragments": {
+      "items": {
+        "maxLength": 16384,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "integrated_address_runtime": {
+      "additionalProperties": false,
+      "properties": {
+        "asan_options": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "defined_function_symbols": {
+          "items": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "runtime_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asan_options",
+        "defined_function_symbols",
+        "runtime_sha256"
+      ],
+      "type": "object"
+    },
+    "lane_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "asan": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "careful-ub": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "lsan": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "msan": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "tsan": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "asan",
+        "careful-ub",
+        "lsan",
+        "msan",
+        "tsan"
+      ],
+      "type": "object"
+    },
+    "panic_is_sanitizer_proof": {
+      "type": "boolean"
+    },
+    "parser_fixtures_are_operational_evidence": {
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "actual_positive_controls_observed",
+    "content_policy",
+    "controls",
+    "forbidden_environment_fragments",
+    "integrated_address_runtime",
+    "lane_policy",
+    "panic_is_sanitizer_proof",
+    "parser_fixtures_are_operational_evidence",
+    "schema_version",
+    "status"
+  ],
+  "title": "Package C sanitizer assignment",
+  "type": "object"
+}

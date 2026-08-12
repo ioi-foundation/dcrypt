@@ -1,0 +1,879 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:crash-bundle-template:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "affected_atomic_rows": {
+      "items": {
+        "maxLength": 4096,
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "argv_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "binary_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "cluster_id": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "confidentiality": {
+      "const": "private",
+      "type": "string"
+    },
+    "content_policy": {
+      "const": "dcrypt-fuzzing-private-crash-bundle-v1"
+    },
+    "corpus_manifest_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "discovery_subject": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_status": {
+          "enum": [
+            "bound-final-subject",
+            "unbound-structural"
+          ],
+          "type": "string"
+        },
+        "commit": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            }
+          ]
+        },
+        "manifest_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "tree": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "binding_status",
+        "commit",
+        "manifest_sha256",
+        "tree"
+      ],
+      "type": "object"
+    },
+    "environment_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "failure_class": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "enum": [
+            "controlled-panic-simulation-only",
+            "harness-defect",
+            "oom",
+            "oracle-disagreement",
+            "production-defect",
+            "rejection-exhaustion",
+            "sanitizer-configuration-failure",
+            "timeout",
+            "unbounded-allocation"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "first_seen": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+          "type": "string"
+        }
+      ]
+    },
+    "handoff": {
+      "additionalProperties": false,
+      "properties": {
+        "acknowledge_deadline": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "affected_atomic_rows": {
+          "items": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "assessment_deadline": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "cluster_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "confidentiality": {
+          "const": "private",
+          "type": "string"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "blocked-unfiled",
+            "filed-external",
+            "private-ready-for-authorized-handoff",
+            "private-triage-open-unfiled",
+            "simulated-unfiled"
+          ],
+          "type": "string"
+        },
+        "external_receipt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "minimization_duration_seconds": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 900,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ]
+        },
+        "minimization_started_at": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "minimization_status": {
+          "enum": [
+            "blocked-not-run",
+            "completed-minimized-replayed"
+          ],
+          "type": "string"
+        },
+        "minimized_input_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "reproduced_at": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "reproduction_duration_seconds": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 900,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ]
+        },
+        "reproduction_status": {
+          "enum": [
+            "blocked-not-run",
+            "completed-reproduced"
+          ],
+          "type": "string"
+        },
+        "resolution_deadline": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "resolution_kind": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "disposition",
+                "fix",
+                "mitigate"
+              ],
+              "type": "string"
+            }
+          ]
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "critical",
+                "high",
+                "other"
+              ],
+              "type": "string"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "authorized-private-handoff",
+            "blocked-unfiled",
+            "filed",
+            "private-triage-open-unfiled",
+            "simulated-unfiled"
+          ],
+          "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "acknowledge_deadline",
+        "affected_atomic_rows",
+        "assessment_deadline",
+        "cluster_id",
+        "confidentiality",
+        "created_at",
+        "disposition",
+        "external_receipt",
+        "minimization_duration_seconds",
+        "minimization_started_at",
+        "minimization_status",
+        "minimized_input_sha256",
+        "owner",
+        "reproduced_at",
+        "reproduction_duration_seconds",
+        "reproduction_status",
+        "resolution_deadline",
+        "resolution_kind",
+        "severity",
+        "status",
+        "target_id"
+      ],
+      "type": "object"
+    },
+    "limits": {
+      "additionalProperties": false,
+      "properties": {
+        "input_max_bytes": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 67108864,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ]
+        },
+        "rss_limit_mb": {
+          "const": 2048,
+          "type": "integer"
+        },
+        "stack_limit_kib": {
+          "const": 8192,
+          "type": "integer"
+        },
+        "timeout_seconds": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 1200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          ]
+        }
+      },
+      "required": [
+        "input_max_bytes",
+        "rss_limit_mb",
+        "stack_limit_kib",
+        "timeout_seconds"
+      ],
+      "type": "object"
+    },
+    "minimization": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "executions": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ]
+        },
+        "minimized_bytes": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ]
+        },
+        "original_bytes": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ]
+        },
+        "replay_reproduced": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "algorithm",
+        "executions",
+        "minimized_bytes",
+        "original_bytes",
+        "replay_reproduced"
+      ],
+      "type": "object"
+    },
+    "minimized_input_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "normalization_version": {
+      "const": "dcrypt-crash-normalization-v1"
+    },
+    "normalized_diagnostic_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "occurrence_id": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "private_storage": {
+      "additionalProperties": false,
+      "properties": {
+        "object_locator": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^private://[A-Za-z0-9._/+:-]+$",
+              "type": "string"
+            }
+          ]
+        },
+        "retention_status": {
+          "enum": [
+            "blocked-storage-unprovisioned",
+            "ephemeral-private-deleted",
+            "retained-private-current"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "object_locator",
+        "retention_status"
+      ],
+      "type": "object"
+    },
+    "provenance": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "maxLength": 1024,
+          "minLength": 1,
+          "type": "string"
+        }
+      ]
+    },
+    "raw_diagnostic_log_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "raw_input_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    },
+    "regression": {
+      "additionalProperties": false,
+      "properties": {
+        "finding_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "fix_reference": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "fixed_binary_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "fixed_source_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "fixed_subject": {
+          "additionalProperties": false,
+          "properties": {
+            "commit": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "tree": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "commit",
+            "tree"
+          ],
+          "type": "object"
+        },
+        "independent_retest_passed": {
+          "type": "boolean"
+        },
+        "local_fixed_child_evidence_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "private_replay_passed": {
+          "type": "boolean"
+        },
+        "retest_evidence_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "blocked-not-promoted",
+            "fixed-replay-passed",
+            "promoted-private",
+            "reproduces-unfixed",
+            "simulation-fixed-child-passed-not-promoted"
+          ],
+          "type": "string"
+        },
+        "test_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "required": [
+        "finding_id",
+        "fixed_binary_sha256",
+        "fixed_source_sha256",
+        "fix_reference",
+        "fixed_subject",
+        "independent_retest_passed",
+        "local_fixed_child_evidence_sha256",
+        "private_replay_passed",
+        "retest_evidence_sha256",
+        "status",
+        "test_id"
+      ],
+      "type": "object"
+    },
+    "retention": {
+      "additionalProperties": false,
+      "properties": {
+        "current_corpus": {
+          "const": "indefinite",
+          "type": "string"
+        },
+        "daily_corpus_days": {
+          "const": 30,
+          "type": "integer"
+        },
+        "logs_days": {
+          "const": 90,
+          "type": "integer"
+        },
+        "regression_corpus": {
+          "const": "indefinite",
+          "type": "string"
+        },
+        "weekly_corpus_weeks": {
+          "const": 52,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "current_corpus",
+        "daily_corpus_days",
+        "logs_days",
+        "regression_corpus",
+        "weekly_corpus_weeks"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "blocked-template-no-evidence",
+        "handed-off-with-receipt",
+        "private-captured-unresolved",
+        "private-fixed-retested",
+        "private-ready-for-authorized-handoff",
+        "private-validated-local",
+        "triage-open"
+      ],
+      "type": "string"
+    },
+    "target_id": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "type": "string"
+        }
+      ]
+    },
+    "toolchain_identity_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "required": [
+    "affected_atomic_rows",
+    "argv_sha256",
+    "binary_sha256",
+    "cluster_id",
+    "confidentiality",
+    "content_policy",
+    "corpus_manifest_sha256",
+    "discovery_subject",
+    "environment_sha256",
+    "failure_class",
+    "first_seen",
+    "handoff",
+    "limits",
+    "minimization",
+    "minimized_input_sha256",
+    "normalization_version",
+    "normalized_diagnostic_sha256",
+    "occurrence_id",
+    "private_storage",
+    "provenance",
+    "raw_diagnostic_log_sha256",
+    "raw_input_sha256",
+    "regression",
+    "retention",
+    "schema_version",
+    "status",
+    "target_id",
+    "toolchain_identity_sha256"
+  ],
+  "title": "Package C private crash bundle template",
+  "type": "object"
+}

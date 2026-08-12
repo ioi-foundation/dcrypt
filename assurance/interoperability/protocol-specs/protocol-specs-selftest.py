@@ -26,15 +26,15 @@ MANIFESTED_FILES = {
     "verify-protocol-specs.py",
 }
 ALL_ARTIFACTS = MANIFESTED_FILES | {"ARTIFACTS.sha256"}
-ARTIFACT_MODES = {
-    "ARTIFACTS.sha256": 0o664,
-    "CURRENT-BEHAVIOR.md": 0o664,
-    "README.md": 0o664,
-    "current-behavior.json": 0o664,
-    "protocol-spec.schema.json": 0o664,
-    "protocol-specs-selftest.py": 0o775,
-    "rebind-final-subject.py": 0o775,
-    "verify-protocol-specs.py": 0o775,
+ARTIFACT_GIT_MODES = {
+    "ARTIFACTS.sha256": "100644",
+    "CURRENT-BEHAVIOR.md": "100644",
+    "README.md": "100644",
+    "current-behavior.json": "100644",
+    "protocol-spec.schema.json": "100644",
+    "protocol-specs-selftest.py": "100755",
+    "rebind-final-subject.py": "100755",
+    "verify-protocol-specs.py": "100755",
 }
 
 
@@ -65,6 +65,11 @@ def refresh_manifest(spec_dir: Path) -> None:
     """Simulate an attacker coherently rebinding the mutable package manifest."""
     lines = [f"{sha256(spec_dir / name)}  {name}" for name in sorted(MANIFESTED_FILES)]
     (spec_dir / "ARTIFACTS.sha256").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def set_checkout_modes(spec_dir: Path, nonexec_mode: int, exec_mode: int) -> None:
+    for name, git_mode in ARTIFACT_GIT_MODES.items():
+        (spec_dir / name).chmod(exec_mode if git_mode == "100755" else nonexec_mode)
 
 
 def replace_verifier_assignment(path: Path, name: str, replacement: str) -> None:
@@ -176,6 +181,50 @@ def require_rejection(
             f"adversarial case failed for the wrong reason: {name}; "
             f"expected {expected_fragment!r}:\n{result.stderr}"
         )
+
+
+def exercise_verifier_mode_controls(
+    verifier: Path,
+    spec_dir: Path,
+    repo_root: Path,
+    temp_root: Path,
+) -> int:
+    for name, nonexec_mode, exec_mode in (
+        ("owner-only", 0o600, 0o700),
+        ("owner-group-readable", 0o640, 0o750),
+        ("clean-umask", 0o644, 0o755),
+        ("owner-group-writable", 0o660, 0o770),
+        ("group-writable-umask", 0o664, 0o775),
+    ):
+        case_dir = temp_root / f"mode-positive-{name}"
+        shutil.copytree(spec_dir, case_dir, symlinks=True)
+        set_checkout_modes(case_dir, nonexec_mode, exec_mode)
+        require_command_success(
+            run_verifier(verifier, case_dir, repo_root),
+            f"{name} protocol artifact materialization",
+        )
+        print(f"artifact mode positive: PASS ({nonexec_mode:04o}/{exec_mode:04o})")
+
+    cases = (
+        ("nonexec-made-executable", "README.md", 0o755),
+        ("exec-made-nonexecutable", "protocol-specs-selftest.py", 0o644),
+        ("partial-executable-intent", "protocol-specs-selftest.py", 0o744),
+        ("world-writable-nonexec", "current-behavior.json", 0o666),
+        ("world-writable-exec", "verify-protocol-specs.py", 0o777),
+        ("special-mode-bit", "protocol-spec.schema.json", 0o4644),
+    )
+    for name, filename, mode in cases:
+        case_dir = temp_root / f"mode-negative-{name}"
+        shutil.copytree(spec_dir, case_dir, symlinks=True)
+        set_checkout_modes(case_dir, 0o644, 0o755)
+        (case_dir / filename).chmod(mode)
+        require_rejection(
+            run_verifier(verifier, case_dir, repo_root),
+            name,
+            "mode mismatch",
+        )
+        print(f"artifact mode negative: PASS ({name} rejected)")
+    return len(cases)
 
 
 def mutate_extra_property(spec_dir: Path) -> None:
@@ -563,7 +612,6 @@ def update_fixture_manifest_binding(
         json.dumps(document, ensure_ascii=True, indent=2, sort_keys=False) + "\n",
         encoding="utf-8",
     )
-    path.chmod(0o664)
 
 
 def current_fixture_binding(fixture: Path) -> tuple[str, str]:
@@ -577,9 +625,13 @@ def prepare_rebind_fixture(
     repo_root: Path,
     spec_dir: Path,
     temp_root: Path,
+    *,
+    fixture_name: str = "transactional-rebind-repository",
+    nonexec_mode: int = 0o644,
+    exec_mode: int = 0o755,
 ) -> tuple[Path, str, str]:
     registry = load(spec_dir / "current-behavior.json")
-    fixture = temp_root / "transactional-rebind-repository"
+    fixture = temp_root / fixture_name
     clone = subprocess.run(
         [
             "git",
@@ -619,8 +671,7 @@ def prepare_rebind_fixture(
     fixture_spec = fixture / "assurance/interoperability/protocol-specs"
     fixture_spec.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(spec_dir, fixture_spec, dirs_exist_ok=True)
-    for name, mode in ARTIFACT_MODES.items():
-        (fixture_spec / name).chmod(mode)
+    set_checkout_modes(fixture_spec, nonexec_mode, exec_mode)
     for relative in [
         "assurance/curated-operations.toml",
         "assurance/subject-manifest.json",
@@ -628,7 +679,7 @@ def prepare_rebind_fixture(
         destination = fixture / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(repo_root / relative, destination)
-        destination.chmod(0o664)
+        destination.chmod(nonexec_mode)
 
     run_git_checked(
         fixture,
@@ -725,6 +776,246 @@ def require_artifact_snapshot(
             or path.read_bytes() != value
         ):
             raise SelfTestError(f"{label}: artifact was not restored byte-exactly: {name}")
+
+
+def require_artifact_modes(
+    fixture: Path,
+    expected: dict[str, tuple[bytes, int]],
+    label: str,
+) -> None:
+    spec = fixture / "assurance/interoperability/protocol-specs"
+    for name, (_value, mode) in expected.items():
+        if stat.S_IMODE((spec / name).lstat().st_mode) != mode:
+            raise SelfTestError(f"{label}: artifact mode changed: {name}")
+
+
+def require_journal_modes(
+    fixture: Path,
+    expected: dict[str, tuple[bytes, int]],
+    label: str,
+) -> Path:
+    transaction = Path(
+        run_git_checked(
+            fixture,
+            ["rev-parse", "--path-format=absolute", "--git-path", "dcrypt-protocol-spec-rebind-v1"],
+            f"{label} transaction path",
+        )
+    )
+    journal = load(transaction / "journal.json")
+    expected_modes = {name: mode for name, (_raw, mode) in expected.items()}
+    if journal.get("artifact_modes") != expected_modes:
+        raise SelfTestError(f"{label}: journal did not capture all exact artifact modes")
+    for name in (
+        "ARTIFACTS.sha256",
+        "CURRENT-BEHAVIOR.md",
+        "current-behavior.json",
+        "verify-protocol-specs.py",
+    ):
+        if journal.get("records", {}).get(name, {}).get("mode") != expected_modes[name]:
+            raise SelfTestError(f"{label}: destination record mode differs: {name}")
+    return transaction
+
+
+def exercise_rebind_mode_negatives(
+    fixture: Path,
+    commit: str,
+    tree: str,
+) -> int:
+    cases = (
+        ("artifact-nonexec-made-exec", "assurance/interoperability/protocol-specs/README.md", 0o755),
+        ("artifact-exec-made-nonexec", "assurance/interoperability/protocol-specs/protocol-specs-selftest.py", 0o644),
+        ("artifact-partial-exec", "assurance/interoperability/protocol-specs/rebind-final-subject.py", 0o744),
+        ("artifact-world-write", "assurance/interoperability/protocol-specs/current-behavior.json", 0o666),
+        ("artifact-special-bit", "assurance/interoperability/protocol-specs/protocol-spec.schema.json", 0o4644),
+        ("curated-world-write", "assurance/curated-operations.toml", 0o666),
+        ("subject-manifest-world-write", "assurance/subject-manifest.json", 0o666),
+    )
+    for name, relative, mode in cases:
+        path = fixture / relative
+        original_mode = stat.S_IMODE(path.lstat().st_mode)
+        path.chmod(mode)
+        try:
+            require_rebind_rejection(
+                run_rebind(fixture, commit, tree, "--dry-run"),
+                name,
+                "mode mismatch",
+            )
+        finally:
+            path.chmod(original_mode)
+        print(f"rebind mode negative: PASS ({name} rejected)")
+    return len(cases)
+
+
+def exercise_all_mode_transactions(
+    repo_root: Path,
+    spec_dir: Path,
+    temp_root: Path,
+) -> int:
+    pairs = (
+        (0o600, 0o700),
+        (0o640, 0o750),
+        (0o644, 0o755),
+        (0o660, 0o770),
+        (0o664, 0o775),
+    )
+    for nonexec_mode, exec_mode in pairs:
+        label = f"{nonexec_mode:04o}-{exec_mode:04o}"
+        fixture, commit, tree = prepare_rebind_fixture(
+            repo_root,
+            spec_dir,
+            temp_root,
+            fixture_name=f"transactional-rebind-mode-{label}",
+            nonexec_mode=nonexec_mode,
+            exec_mode=exec_mode,
+        )
+        baseline = snapshot_artifacts(fixture)
+        applied = run_rebind(fixture, commit, tree)
+        require_command_success(applied, f"{label} transaction apply for rollback")
+        require_artifact_modes(fixture, baseline, f"{label} applied rollback candidate")
+        require_journal_modes(fixture, baseline, f"{label} rollback candidate")
+        rollback = run_rebind(fixture, None, None, "--rollback-transaction")
+        require_command_success(rollback, f"{label} explicit rollback")
+        require_artifact_snapshot(fixture, baseline, f"{label} explicit rollback")
+
+        applied = run_rebind(fixture, commit, tree)
+        require_command_success(applied, f"{label} transaction apply for finalization")
+        require_artifact_modes(fixture, baseline, f"{label} applied final candidate")
+        require_journal_modes(fixture, baseline, f"{label} final candidate")
+        finalize = run_rebind(fixture, None, None, "--finalize-transaction")
+        require_command_success(finalize, f"{label} transaction finalization")
+        require_artifact_modes(fixture, baseline, f"{label} finalized candidate")
+        print(
+            "transaction mode matrix: PASS "
+            f"({nonexec_mode:04o}/{exec_mode:04o} captured, applied, rolled back, and finalized)"
+        )
+    return len(pairs) * 2
+
+
+def exercise_journal_mode_tampering(
+    repo_root: Path,
+    spec_dir: Path,
+    temp_root: Path,
+) -> int:
+    fixture, commit, tree = prepare_rebind_fixture(
+        repo_root,
+        spec_dir,
+        temp_root,
+        fixture_name="transactional-rebind-journal-tamper",
+        nonexec_mode=0o644,
+        exec_mode=0o755,
+    )
+    original_snapshot = snapshot_artifacts(fixture)
+    require_command_success(
+        run_rebind(fixture, commit, tree),
+        "journal-tamper transaction apply",
+    )
+    candidate_snapshot = snapshot_artifacts(fixture)
+    transaction = Path(
+        run_git_checked(
+            fixture,
+            ["rev-parse", "--path-format=absolute", "--git-path", "dcrypt-protocol-spec-rebind-v1"],
+            "journal-tamper transaction path",
+        )
+    )
+    journal_path = transaction / "journal.json"
+    original_journal = journal_path.read_bytes()
+    if stat.S_IMODE(journal_path.stat().st_mode) != 0o600:
+        raise SelfTestError("journal-tamper fixture journal mode differs")
+
+    def safe_artifact_rebind(value: dict[str, Any]) -> None:
+        value["artifact_modes"]["README.md"] = 0o664
+
+    def record_artifact_mismatch(value: dict[str, Any]) -> None:
+        value["records"]["ARTIFACTS.sha256"]["mode"] = 0o664
+
+    def wrong_intent(value: dict[str, Any]) -> None:
+        value["artifact_modes"]["README.md"] = 0o755
+
+    def world_write(value: dict[str, Any]) -> None:
+        value["artifact_modes"]["README.md"] = 0o666
+
+    def special_mode(value: dict[str, Any]) -> None:
+        value["artifact_modes"]["README.md"] = 0o4644
+
+    def input_mode_rebind(value: dict[str, Any]) -> None:
+        value["inputs"]["assurance/subject-manifest.json"]["mode"] = 0o664
+
+    cases: tuple[tuple[str, Callable[[dict[str, Any]], None], str], ...] = (
+        (
+            "safe-rebound-artifact-mode",
+            safe_artifact_rebind,
+            "artifact mode changed during retained transaction",
+        ),
+        (
+            "record-artifact-mode-mismatch",
+            record_artifact_mismatch,
+            "rebind transaction record is invalid",
+        ),
+        ("wrong-intent-journal-mode", wrong_intent, "mode mismatch"),
+        ("world-writable-journal-mode", world_write, "mode mismatch"),
+        ("special-bit-journal-mode", special_mode, "mode mismatch"),
+        (
+            "input-identity-mode-rebind",
+            input_mode_rebind,
+            "transaction input bytes or metadata changed after preflight",
+        ),
+    )
+    for name, mutate, expected_fragment in cases:
+        value = json.loads(original_journal.decode("utf-8"))
+        mutate(value)
+        canonical_write(journal_path, value)
+        journal_path.chmod(0o600)
+        require_rebind_rejection(
+            run_rebind(fixture, None, None, "--finalize-transaction"),
+            name,
+            expected_fragment,
+        )
+        require_artifact_snapshot(
+            fixture,
+            candidate_snapshot,
+            f"journal tamper {name}",
+        )
+        journal_path.write_bytes(original_journal)
+        journal_path.chmod(0o600)
+        print(f"journal tamper negative: PASS ({name} rejected without mutation)")
+
+    require_command_success(
+        run_rebind(fixture, None, None, "--rollback-transaction"),
+        "journal-tamper final exact rollback",
+    )
+    require_artifact_snapshot(fixture, original_snapshot, "journal-tamper exact rollback")
+    if transaction.exists():
+        raise SelfTestError("journal-tamper rollback left transaction state")
+    return len(cases)
+
+
+def exercise_transaction_input_metadata_drift(
+    repo_root: Path,
+    spec_dir: Path,
+    temp_root: Path,
+) -> int:
+    fixture, commit, tree = prepare_rebind_fixture(
+        repo_root,
+        spec_dir,
+        temp_root,
+        fixture_name="transactional-rebind-input-drift",
+        nonexec_mode=0o644,
+        exec_mode=0o755,
+    )
+    require_command_success(
+        run_rebind(fixture, commit, tree),
+        "input-metadata-drift transaction apply",
+    )
+    manifest = fixture / "assurance/subject-manifest.json"
+    metadata = manifest.stat()
+    os.utime(manifest, ns=(metadata.st_atime_ns, metadata.st_mtime_ns + 1))
+    require_rebind_rejection(
+        run_rebind(fixture, None, None, "--finalize-transaction"),
+        "transaction-input-metadata-drift",
+        "transaction input bytes or metadata changed after preflight",
+    )
+    print("transaction input metadata negative: PASS (post-preflight drift rejected)")
+    return 1
 
 
 def exercise_rebind_hardlinks(
@@ -976,6 +1267,38 @@ def exercise_complete_subject_mutations(
     return len(cases)
 
 
+def exercise_current_subject_mode_negatives(
+    checkout: Path,
+    pristine_dir: Path,
+    verifier: Path,
+) -> int:
+    cases = (
+        ("current-nonexec-made-exec", "Cargo.toml", 0o755),
+        ("current-exec-made-nonexec", "tools/release-dcrypt.sh", 0o644),
+        ("current-world-writable", "Cargo.toml", 0o666),
+        ("current-special-mode-bit", "Cargo.toml", 0o4644),
+    )
+    for name, relative, mode in cases:
+        path = checkout / relative
+        original_mode = stat.S_IMODE(path.lstat().st_mode)
+        path.chmod(mode)
+        try:
+            require_rejection(
+                run_verifier(
+                    verifier,
+                    pristine_dir,
+                    checkout,
+                    "--check-current-subject",
+                ),
+                name,
+                "mode mismatch",
+            )
+        finally:
+            path.chmod(original_mode)
+        print(f"current-subject mode negative: PASS ({name} rejected)")
+    return len(cases)
+
+
 def exercise_binding_stage_gate(
     verifier: Path,
     spec_dir: Path,
@@ -1056,6 +1379,12 @@ def run() -> None:
 
     with tempfile.TemporaryDirectory(prefix="dcrypt-protocol-spec-selftest-") as temp_text:
         temp_root = Path(temp_text)
+        verifier_mode_negative_count = exercise_verifier_mode_controls(
+            verifier,
+            spec_dir,
+            repo_root,
+            temp_root,
+        )
 
         for name, mutate, artifact_name in REBIND_CASES:
             case_dir = temp_root / name
@@ -1111,6 +1440,11 @@ def run() -> None:
         complete_subject_count = exercise_complete_subject_mutations(
             bound_checkout, spec_dir, verifier
         )
+        current_subject_mode_negative_count = exercise_current_subject_mode_negatives(
+            bound_checkout,
+            spec_dir,
+            verifier,
+        )
 
         for name, relative, expected_fragment in [
             (
@@ -1149,6 +1483,11 @@ def run() -> None:
             rebind_commit,
             rebind_tree,
             temp_root,
+        )
+        rebind_mode_negative_count = exercise_rebind_mode_negatives(
+            rebind_fixture,
+            rebind_commit,
+            rebind_tree,
         )
         semantic_rebind_count, rebind_commit, rebind_tree = (
             exercise_rebind_semantic_attacks(rebind_fixture)
@@ -1257,6 +1596,22 @@ def run() -> None:
             raise SelfTestError("finalized transaction marker still exists")
         print("transactional final-subject rebind, final gate, and finalization: PASS")
 
+        all_mode_transaction_count = exercise_all_mode_transactions(
+            repo_root,
+            spec_dir,
+            temp_root,
+        )
+        journal_tamper_count = exercise_journal_mode_tampering(
+            repo_root,
+            spec_dir,
+            temp_root,
+        )
+        input_metadata_negative_count = exercise_transaction_input_metadata_drift(
+            repo_root,
+            spec_dir,
+            temp_root,
+        )
+
         for name, mutate, expected_fragment in STRUCTURAL_CASES:
             case_dir = temp_root / name
             shutil.copytree(spec_dir, case_dir, symlinks=True)
@@ -1274,9 +1629,15 @@ def run() -> None:
         + 1
         + 1
         + complete_subject_count
+        + current_subject_mode_negative_count
         + 2
         + hardlink_count
+        + verifier_mode_negative_count
+        + rebind_mode_negative_count
         + semantic_rebind_count
+        + all_mode_transaction_count
+        + journal_tamper_count
+        + input_metadata_negative_count
         + 2
     )
     print(f"protocol-spec self-test: PASS ({total} adversarial cases rejected)")

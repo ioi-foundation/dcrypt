@@ -1,0 +1,110 @@
+{
+  "budgets_core_seconds": {
+    "rc_critical": 86400,
+    "rc_secondary": 28800,
+    "weekly_critical": 259200,
+    "weekly_secondary": 86400
+  },
+  "canonicalization": {
+    "duplicate_keys": "forbidden",
+    "encoding": "UTF-8",
+    "final_newline": true,
+    "floats": "forbidden",
+    "key_order": "Unicode code-point ascending",
+    "normalization": "NFC",
+    "whitespace": "two-space-indent"
+  },
+  "content_policy": "dcrypt-fuzzing-policy-v1",
+  "counts": {
+    "critical_family_rows": 372,
+    "existing_smoke_targets": 7,
+    "explicit_blocker_rows": 8926,
+    "planned_semantic_targets": 10,
+    "total_atomic_rows": 9298
+  },
+  "coverage_policy": {
+    "baseline_must_be_nonzero": true,
+    "comparison_binding": "same-target-toolchain-corpus-profiler-config",
+    "edge_and_function_required": true,
+    "integer_denominator": 100,
+    "regression_numerator": 2,
+    "rule": "fail when 100*(baseline-current) > 2*baseline",
+    "semantic_state_required": true
+  },
+  "differential_evidence_policy": {
+    "accepted_differential_evidence": "none",
+    "package_b_shared_or_unknown_lineage": "corroborative-only",
+    "required_family_blocker": "no-independent-implementation-closure"
+  },
+  "freshness_seconds": {
+    "critical_nightly": 86400,
+    "weekly": 691200
+  },
+  "release_gate": {
+    "blocked_status": "HOLD",
+    "ci_may_pass_structural_controls": true,
+    "operational_evidence_promotion_enabled": false,
+    "release_exit_code_with_blockers": 3,
+    "release_must_fail_with_any_blocker": true
+  },
+  "resource_policy": {
+    "archive_max_bytes": 67108864,
+    "crash_bundle_max_bytes": 16777216,
+    "expensive_crypto_timeout_seconds": 10,
+    "ignore_crashes": false,
+    "ignore_ooms": false,
+    "ignore_timeouts": false,
+    "input_cap_must_match_registry_runner_and_harness": true,
+    "parser_timeout_seconds": 2,
+    "rss_limit_mb": 2048,
+    "timeout_floor_seconds": 1,
+    "timeout_formula_multiplier": 10
+  },
+  "retention_policy": {
+    "attestations_minimum_days": 365,
+    "coverage_minimum_days": 365,
+    "current_corpus": "indefinite",
+    "daily_corpus_days": 30,
+    "logs_days": 90,
+    "regression_corpus": "indefinite",
+    "weekly_corpus_weeks": 52
+  },
+  "schema_version": 1,
+  "smoke_policy": {
+    "counts_as_persistent_campaign": false,
+    "integrated_address_sanitizer": {
+      "asan_options": "abort_on_error=1:detect_leaks=1:exitcode=86:halt_on_error=1",
+      "defined_function_symbols": [
+        "__asan_init",
+        "__lsan_enable",
+        "__lsan_disable",
+        "__lsan_do_recoverable_leak_check"
+      ],
+      "runtime_sha256": "963a6c2f6e6925dc483ef93ba3f0d75676f8f1c5ada533e8e0e55eff91d0e41c"
+    },
+    "runs": 1000,
+    "seed": 424242
+  },
+  "source_binding": {
+    "framework_subject_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+    "framework_subject_manifest_sha256": "3e3615c19ecd0405882a9af03e45a8a4ef8d94347c37c767f242b3287ed15101",
+    "framework_subject_tree": "21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92",
+    "package_b_assurance_commit": "682947afafdce5bf19339c90bc1a3e768fa15772",
+    "package_b_assurance_tree": "7112eb96c4dc92ce24c277d512c286f183b04cf5",
+    "package_b_subject_commit": "ba2685293bf326cef611f33445269071e9fddef1",
+    "package_b_subject_tree": "869608f3379bf91ebed67308f22117312ddd0e5b"
+  },
+  "status": "STABLE-final-subject-bound",
+  "trust_policy": {
+    "authoritative_store": "unprovisioned",
+    "authoritative_writes_from_forks": false,
+    "content_addressed_objects_are_append_only": true,
+    "crash_store_is_private_and_separate": true,
+    "external_mutation_authorized": false,
+    "local_tools_network_policy": "forbidden",
+    "promotion_requires_authenticated_writer_and_review": true,
+    "signing_identity": "unprovisioned",
+    "untrusted_corpus_access": "read-only",
+    "untrusted_crash_access": "none"
+  }
+}

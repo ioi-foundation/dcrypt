@@ -1,0 +1,358 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:row-mapping:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content_policy": {
+      "const": "dcrypt-fuzzing-row-mapping-v1"
+    },
+    "counts": {
+      "additionalProperties": false,
+      "properties": {
+        "critical_family_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "curated_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "explicit_blocker_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "release_blocked_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total_atomic_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "unreviewed_gap_rows": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "critical_family_rows",
+        "curated_rows",
+        "explicit_blocker_rows",
+        "release_blocked_rows",
+        "total_atomic_rows",
+        "unreviewed_gap_rows"
+      ],
+      "type": "object"
+    },
+    "generated_inputs": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "sha256",
+          "size"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "per_target_counts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "row_count": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "target_id": {
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:+/-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "row_count",
+          "target_id"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "policy_semantic_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "registry_semantic_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "rows": {
+      "items": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "accepted_differential_evidence": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "algorithm": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "blocker_codes": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "disposition": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "prior_fuzz_disposition": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "reason": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "release_status": {
+                "enum": [
+                  "blocked"
+                ],
+                "type": "string"
+              },
+              "row_id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "row_kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "source_kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "source_record_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "target_id": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "maxLength": 16384,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "accepted_differential_evidence",
+              "algorithm",
+              "blocker_codes",
+              "disposition",
+              "prior_fuzz_disposition",
+              "reason",
+              "release_status",
+              "row_id",
+              "row_kind",
+              "source_kind",
+              "source_record_sha256",
+              "target_id"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "accepted_differential_evidence": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "algorithm": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "blocker_codes": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "disposition": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "prior_fuzz_disposition": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "reason": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "release_status": {
+                "enum": [
+                  "blocked"
+                ],
+                "type": "string"
+              },
+              "row_id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "row_kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "source_kind": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "source_record_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "target_id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "accepted_differential_evidence",
+              "algorithm",
+              "blocker_codes",
+              "disposition",
+              "prior_fuzz_disposition",
+              "reason",
+              "release_status",
+              "row_id",
+              "row_kind",
+              "source_kind",
+              "source_record_sha256",
+              "target_id"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "rows_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "source_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "framework_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "framework_subject_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "framework_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "framework_subject_commit",
+        "framework_subject_manifest_sha256",
+        "framework_subject_tree",
+        "package_b_assurance_commit",
+        "package_b_assurance_tree",
+        "package_b_subject_commit",
+        "package_b_subject_tree"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "content_policy",
+    "counts",
+    "generated_inputs",
+    "per_target_counts",
+    "policy_semantic_sha256",
+    "registry_semantic_sha256",
+    "rows",
+    "rows_sha256",
+    "schema_version",
+    "source_binding",
+    "status"
+  ],
+  "title": "Package C atomic-row mapping",
+  "type": "object"
+}

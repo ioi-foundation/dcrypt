@@ -767,11 +767,11 @@
     "curated_operations_path": "assurance/curated-operations.toml",
     "curated_operations_sha256": "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4",
     "final_rebind_required": false,
-    "manifest_file_count": 1426,
+    "manifest_file_count": 1510,
     "manifest_include_policy": "production-and-evidence-v1",
-    "source_commit": "ba2685293bf326cef611f33445269071e9fddef1",
-    "source_tree": "869608f3379bf91ebed67308f22117312ddd0e5b",
+    "source_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+    "source_tree": "21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92",
     "subject_manifest_path": "assurance/subject-manifest.json",
-    "subject_manifest_sha256": "7e830f2c496d46e632aec3aa0d45010a19e80eed8fc2f30db98e56a1f52fb9ad"
+    "subject_manifest_sha256": "3e3615c19ecd0405882a9af03e45a8a4ef8d94347c37c767f242b3287ed15101"
   }
 }

@@ -1,0 +1,1590 @@
+{
+  "as_of": "2026-08-12T00:00:00Z",
+  "content_policy": "dcrypt-fuzzing-campaign-status-v1",
+  "counts": {
+    "blocked_targets": 17,
+    "operationally_passing_targets": 0,
+    "targets": 17
+  },
+  "release_gate": {
+    "exit_code": 3,
+    "status": "HOLD"
+  },
+  "schema_version": 1,
+  "source_binding": {
+    "framework_subject_commit": "b3ce4b6d14a5474645cdedb2c7de2b36827bdd48",
+    "framework_subject_manifest_sha256": "3e3615c19ecd0405882a9af03e45a8a4ef8d94347c37c767f242b3287ed15101",
+    "framework_subject_tree": "21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92",
+    "package_b_assurance_commit": "682947afafdce5bf19339c90bc1a3e768fa15772",
+    "package_b_assurance_tree": "7112eb96c4dc92ce24c277d512c286f183b04cf5",
+    "package_b_subject_commit": "ba2685293bf326cef611f33445269071e9fddef1",
+    "package_b_subject_tree": "869608f3379bf91ebed67308f22117312ddd0e5b"
+  },
+  "status": "STABLE-final-subject-bound",
+  "targets": [
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "aes_gcm_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "bls12_381_decoders",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "bls12_381_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "chacha_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "ecdh_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "ecdsa_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "ecies_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "ed25519_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "hybrid_decoders",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "hybrid_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "kem_decoders",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "legacy_xchacha_migration",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "ml_dsa_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "ml_kem_semantic",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "signature_decoders",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "stream_frames",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    },
+    {
+      "attestation_status": "unsigned-unprovisioned",
+      "blocker_codes": [
+        "authenticated-writer-unprovisioned",
+        "comparable-coverage-baseline-absent",
+        "persistent-campaign-not-executed",
+        "per-target-instrumentation-attestation-absent",
+        "signed-attestation-unprovisioned"
+      ],
+      "campaign_attestation_sha256": null,
+      "campaign_status": "not-executed-unprovisioned",
+      "corpus_files_sha256": null,
+      "corpus_manifest_sha256": null,
+      "coverage": {
+        "comparison_config_sha256": null,
+        "current_artifact_sha256": null,
+        "edge_baseline": null,
+        "edge_current": null,
+        "function_baseline": null,
+        "function_current": null,
+        "prior_artifact_sha256": null,
+        "regression_status": "blocked-no-comparable-baseline",
+        "semantic_state_baseline": null,
+        "semantic_state_baseline_sha256": null,
+        "semantic_state_current": null,
+        "semantic_state_current_sha256": null
+      },
+      "coverage_status": "blocked-no-comparable-baseline",
+      "crash_status": "no-observation-not-evidence",
+      "delivered_rc_core_seconds": 0,
+      "delivered_weekly_core_seconds": 0,
+      "evidence_classification": "first-party-structural-non-evidence",
+      "freeze": {
+        "commit": null,
+        "time": null,
+        "tree": null
+      },
+      "freshness_status": "blocked-no-campaign-end-time",
+      "instrumentation": {
+        "lanes": [],
+        "sanitizer_assignment_sha256": null,
+        "status": "blocked-no-per-target-campaign-instrumentation-attestation"
+      },
+      "observed_outcomes": {
+        "crashes": null,
+        "ooms": null,
+        "rejection_exhaustions": null,
+        "timeouts": null,
+        "unbounded_allocations": null
+      },
+      "rc_shards": [],
+      "rc_window": {
+        "end": null,
+        "start": null
+      },
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits_sha256": null,
+      "resource_status": "configured-not-observed",
+      "sanitizer_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "subject": {
+        "commit": null,
+        "tree": null
+      },
+      "target_binary_sha256": null,
+      "target_id": "symmetric_decoders",
+      "target_source_sha256": null,
+      "toolchain": {
+        "cargo_fuzz_executable_sha256": null,
+        "cargo_fuzz_provenance_sha256": null,
+        "cargo_fuzz_source_tree_sha256": null,
+        "cargo_fuzz_version_sha256": null,
+        "cargo_sha256": null,
+        "cargo_version_sha256": null,
+        "linker_sha256": null,
+        "linker_version_sha256": null,
+        "profiler_config_sha256": null,
+        "runtime_objects_sha256": null,
+        "rustc_sha256": null,
+        "rustc_version_sha256": null,
+        "symbol_inspector_sha256": null,
+        "symbol_inspector_version_sha256": null
+      },
+      "weekly_shards": [],
+      "weekly_window": {
+        "end": null,
+        "start": null
+      },
+      "writer_identity": null,
+      "writer_identity_status": "unprovisioned"
+    }
+  ]
+}

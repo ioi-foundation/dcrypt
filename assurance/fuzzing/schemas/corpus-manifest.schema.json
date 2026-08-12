@@ -1,0 +1,1120 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:corpus-manifest:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content_policy": {
+      "const": "dcrypt-fuzzing-corpus-manifest-v1"
+    },
+    "counts": {
+      "additionalProperties": false,
+      "properties": {
+        "dictionary_files": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "reviewed_seed_files": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "targets": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "dictionary_files",
+        "reviewed_seed_files",
+        "targets"
+      ],
+      "type": "object"
+    },
+    "files_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "operational_object_template": {
+      "additionalProperties": false,
+      "properties": {
+        "confidentiality": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "first_seen": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            }
+          ]
+        },
+        "git_mode": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "kind": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "minimization": {
+          "additionalProperties": false,
+          "properties": {
+            "algorithm": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "executions": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ]
+            },
+            "minimized_size": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ]
+            },
+            "original_size": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              ]
+            },
+            "semantic_preserved": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "source_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "blocked-unprovisioned"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "algorithm",
+            "executions",
+            "minimized_size",
+            "original_size",
+            "semantic_preserved",
+            "source_sha256",
+            "status"
+          ],
+          "type": "object"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+              "type": "string"
+            }
+          ]
+        },
+        "promotion": {
+          "additionalProperties": false,
+          "properties": {
+            "attestation_sha256": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "authenticated_writer": {
+              "type": "boolean"
+            },
+            "from_fork": {
+              "type": "boolean"
+            },
+            "reviewer": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "status": {
+              "enum": [
+                "blocked-authoritative-writer-unprovisioned"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "attestation_sha256",
+            "authenticated_writer",
+            "from_fork",
+            "reviewer",
+            "status"
+          ],
+          "type": "object"
+        },
+        "provenance": {
+          "additionalProperties": false,
+          "properties": {
+            "in_repo_author": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "lineage": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "review_id": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "source_commit": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "pattern": "^[0-9a-f]{40}$",
+                  "type": "string"
+                }
+              ]
+            },
+            "source_kind": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "source_uri": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            },
+            "writer_identity": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "maxLength": 16384,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "in_repo_author",
+            "lineage",
+            "review_id",
+            "source_commit",
+            "source_kind",
+            "source_uri",
+            "writer_identity"
+          ],
+          "type": "object"
+        },
+        "retention": {
+          "additionalProperties": false,
+          "properties": {
+            "class": {
+              "maxLength": 16384,
+              "type": "string"
+            },
+            "expires_at": {
+              "anyOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "format": "date-time",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                  "type": "string"
+                }
+              ]
+            },
+            "indefinite": {
+              "type": "boolean"
+            },
+            "minimum_days": {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "class",
+            "expires_at",
+            "indefinite",
+            "minimum_days"
+          ],
+          "type": "object"
+        },
+        "semantic_states": {
+          "items": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "size": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maximum": 9223372036854775807,
+              "minimum": 0,
+              "type": "integer"
+            }
+          ]
+        },
+        "target_ids": {
+          "items": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "confidentiality",
+        "first_seen",
+        "git_mode",
+        "kind",
+        "minimization",
+        "path",
+        "promotion",
+        "provenance",
+        "retention",
+        "semantic_states",
+        "sha256",
+        "size",
+        "target_ids"
+      ],
+      "type": "object"
+    },
+    "operational_promotion_record": {
+      "additionalProperties": false,
+      "properties": {
+        "attestation_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "authenticated_writer": {
+          "type": "boolean"
+        },
+        "from_fork": {
+          "type": "boolean"
+        },
+        "manifest_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          ]
+        },
+        "reviewer": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "maxLength": 16384,
+              "minLength": 1,
+              "type": "string"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "blocked-unprovisioned"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "attestation_sha256",
+        "authenticated_writer",
+        "from_fork",
+        "manifest_sha256",
+        "reviewer",
+        "status"
+      ],
+      "type": "object"
+    },
+    "registry_semantic_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "source_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "framework_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "framework_subject_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "framework_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_assurance_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_commit": {
+          "maxLength": 16384,
+          "type": "string"
+        },
+        "package_b_subject_tree": {
+          "maxLength": 16384,
+          "type": "string"
+        }
+      },
+      "required": [
+        "framework_subject_commit",
+        "framework_subject_manifest_sha256",
+        "framework_subject_tree",
+        "package_b_assurance_commit",
+        "package_b_assurance_tree",
+        "package_b_subject_commit",
+        "package_b_subject_tree"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    },
+    "targets": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "authoritative_write_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "corpus_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "dictionaries": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "confidentiality": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "first_seen": {
+                  "format": "date-time",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                  "type": "string"
+                },
+                "git_mode": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "kind": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minimization": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "algorithm": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "executions": {
+                      "maximum": 9223372036854775807,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "minimized_size": {
+                      "maximum": 9223372036854775807,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "original_size": {
+                      "maximum": 9223372036854775807,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "semantic_preserved": {
+                      "type": "boolean"
+                    },
+                    "source_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "authored-bootstrap-not-minimized"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "algorithm",
+                    "executions",
+                    "minimized_size",
+                    "original_size",
+                    "semantic_preserved",
+                    "source_sha256",
+                    "status"
+                  ],
+                  "type": "object"
+                },
+                "path": {
+                  "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                  "type": "string"
+                },
+                "promotion": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attestation_sha256": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "authenticated_writer": {
+                      "type": "boolean"
+                    },
+                    "from_fork": {
+                      "type": "boolean"
+                    },
+                    "reviewer": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "blocked-authoritative-writer-unprovisioned"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attestation_sha256",
+                    "authenticated_writer",
+                    "from_fork",
+                    "reviewer",
+                    "status"
+                  ],
+                  "type": "object"
+                },
+                "provenance": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "in_repo_author": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "lineage": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "review_id": {
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9._:+/-]+$",
+                      "type": "string"
+                    },
+                    "source_commit": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "source_kind": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "source_uri": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "writer_identity": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "in_repo_author",
+                    "lineage",
+                    "review_id",
+                    "source_commit",
+                    "source_kind",
+                    "source_uri",
+                    "writer_identity"
+                  ],
+                  "type": "object"
+                },
+                "retention": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "class": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "expires_at": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "format": "date-time",
+                          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "indefinite": {
+                      "type": "boolean"
+                    },
+                    "minimum_days": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "class",
+                    "expires_at",
+                    "indefinite",
+                    "minimum_days"
+                  ],
+                  "type": "object"
+                },
+                "semantic_states": {
+                  "items": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "size": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "target_ids": {
+                  "items": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "confidentiality",
+                "first_seen",
+                "git_mode",
+                "kind",
+                "minimization",
+                "path",
+                "promotion",
+                "provenance",
+                "retention",
+                "semantic_states",
+                "sha256",
+                "size",
+                "target_ids"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "dictionary_selector_path": {
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+            "type": "string"
+          },
+          "promotion_status": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "seed_selector_path": {
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+            "type": "string"
+          },
+          "seeds": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "confidentiality": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "first_seen": {
+                  "format": "date-time",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                  "type": "string"
+                },
+                "git_mode": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "kind": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minimization": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "algorithm": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "executions": {
+                      "maximum": 9223372036854775807,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "minimized_size": {
+                      "maximum": 9223372036854775807,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "original_size": {
+                      "maximum": 9223372036854775807,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "semantic_preserved": {
+                      "type": "boolean"
+                    },
+                    "source_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "authored-bootstrap-not-minimized"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "algorithm",
+                    "executions",
+                    "minimized_size",
+                    "original_size",
+                    "semantic_preserved",
+                    "source_sha256",
+                    "status"
+                  ],
+                  "type": "object"
+                },
+                "path": {
+                  "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+                  "type": "string"
+                },
+                "promotion": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "attestation_sha256": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "pattern": "^[0-9a-f]{64}$",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "authenticated_writer": {
+                      "type": "boolean"
+                    },
+                    "from_fork": {
+                      "type": "boolean"
+                    },
+                    "reviewer": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "blocked-authoritative-writer-unprovisioned"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "attestation_sha256",
+                    "authenticated_writer",
+                    "from_fork",
+                    "reviewer",
+                    "status"
+                  ],
+                  "type": "object"
+                },
+                "provenance": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "in_repo_author": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "lineage": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "review_id": {
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9._:+/-]+$",
+                      "type": "string"
+                    },
+                    "source_commit": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "source_kind": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "source_uri": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "writer_identity": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "in_repo_author",
+                    "lineage",
+                    "review_id",
+                    "source_commit",
+                    "source_kind",
+                    "source_uri",
+                    "writer_identity"
+                  ],
+                  "type": "object"
+                },
+                "retention": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "class": {
+                      "maxLength": 16384,
+                      "type": "string"
+                    },
+                    "expires_at": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "format": "date-time",
+                          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "indefinite": {
+                      "type": "boolean"
+                    },
+                    "minimum_days": {
+                      "anyOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "maxLength": 16384,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "class",
+                    "expires_at",
+                    "indefinite",
+                    "minimum_days"
+                  ],
+                  "type": "object"
+                },
+                "semantic_states": {
+                  "items": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "size": {
+                  "maximum": 9223372036854775807,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "target_ids": {
+                  "items": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "confidentiality",
+                "first_seen",
+                "git_mode",
+                "kind",
+                "minimization",
+                "path",
+                "promotion",
+                "provenance",
+                "retention",
+                "semantic_states",
+                "sha256",
+                "size",
+                "target_ids"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "target_id": {
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._:+/-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authoritative_write_status",
+          "corpus_status",
+          "dictionaries",
+          "dictionary_selector_path",
+          "promotion_status",
+          "seed_selector_path",
+          "seeds",
+          "target_id"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "content_policy",
+    "counts",
+    "files_sha256",
+    "operational_object_template",
+    "operational_promotion_record",
+    "registry_semantic_sha256",
+    "schema_version",
+    "source_binding",
+    "status",
+    "targets"
+  ],
+  "title": "Package C reviewed corpus manifest",
+  "type": "object"
+}

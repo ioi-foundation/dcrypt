@@ -1,0 +1,153 @@
+{
+  "actual_positive_controls_observed": 0,
+  "content_policy": "dcrypt-fuzzing-sanitizer-controls-v1",
+  "controls": [
+    {
+      "assigned_target_ids": [
+        "aes_gcm_semantic",
+        "bls12_381_decoders",
+        "bls12_381_semantic",
+        "chacha_semantic",
+        "ecdh_semantic",
+        "ecdsa_semantic",
+        "ecies_semantic",
+        "ed25519_semantic",
+        "hybrid_decoders",
+        "hybrid_semantic",
+        "kem_decoders",
+        "legacy_xchacha_migration",
+        "ml_dsa_semantic",
+        "ml_kem_semantic",
+        "signature_decoders",
+        "stream_frames",
+        "symmetric_decoders"
+      ],
+      "id": "asan",
+      "local_control_status": "required-live-execution-not-sealed",
+      "operational_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "positive_control_requirement": "real memory-safety violation detected by AddressSanitizer",
+      "report_patterns": [
+        "ERROR: AddressSanitizer:",
+        "SUMMARY: AddressSanitizer:"
+      ],
+      "target_binary_markers": [
+        "__asan_init"
+      ]
+    },
+    {
+      "assigned_target_ids": [
+        "aes_gcm_semantic",
+        "bls12_381_decoders",
+        "bls12_381_semantic",
+        "chacha_semantic",
+        "ecdh_semantic",
+        "ecdsa_semantic",
+        "ecies_semantic",
+        "ed25519_semantic",
+        "hybrid_decoders",
+        "hybrid_semantic",
+        "kem_decoders",
+        "legacy_xchacha_migration",
+        "ml_dsa_semantic",
+        "ml_kem_semantic",
+        "signature_decoders",
+        "stream_frames",
+        "symmetric_decoders"
+      ],
+      "id": "careful-ub",
+      "local_control_status": "blocked-separate-safe-rust-overflow-control-not-implemented",
+      "operational_status": "blocked-no-separate-integer-ub-campaign-lane",
+      "positive_control_requirement": "separate reviewed safe-Rust checked-overflow diagnostic; not a UBSan claim",
+      "report_patterns": [],
+      "target_binary_markers": []
+    },
+    {
+      "assigned_target_ids": [
+        "aes_gcm_semantic",
+        "bls12_381_decoders",
+        "bls12_381_semantic",
+        "chacha_semantic",
+        "ecdh_semantic",
+        "ecdsa_semantic",
+        "ecies_semantic",
+        "ed25519_semantic",
+        "hybrid_decoders",
+        "hybrid_semantic",
+        "kem_decoders",
+        "legacy_xchacha_migration",
+        "ml_dsa_semantic",
+        "ml_kem_semantic",
+        "signature_decoders",
+        "stream_frames",
+        "symmetric_decoders"
+      ],
+      "id": "lsan",
+      "local_control_status": "required-live-execution-not-sealed",
+      "operational_status": "blocked-no-per-target-campaign-instrumentation-attestation",
+      "positive_control_requirement": "real intentional leak detected by integrated LeakSanitizer in address mode; standalone leak mode is supplemental",
+      "report_patterns": [
+        "ERROR: LeakSanitizer: detected memory leaks",
+        "SUMMARY: AddressSanitizer:"
+      ],
+      "target_binary_markers": [
+        "__lsan_enable",
+        "__lsan_disable",
+        "__lsan_do_recoverable_leak_check"
+      ]
+    },
+    {
+      "assigned_target_ids": [],
+      "id": "msan",
+      "local_control_status": "blocked-complete-instrumented-closure-unprovisioned",
+      "operational_status": "blocked-complete-instrumented-closure-unprovisioned",
+      "positive_control_requirement": "real uninitialized read with complete instrumented closure",
+      "report_patterns": [
+        "WARNING: MemorySanitizer:",
+        "SUMMARY: MemorySanitizer:"
+      ],
+      "target_binary_markers": [
+        "__msan_init"
+      ]
+    },
+    {
+      "assigned_target_ids": [],
+      "id": "tsan",
+      "local_control_status": "blocked-no-deliberately-concurrent-positive-control",
+      "operational_status": "blocked-no-authorized-concurrent-positive-control",
+      "positive_control_requirement": "real data race in deliberately concurrent fixture",
+      "report_patterns": [
+        "WARNING: ThreadSanitizer:",
+        "SUMMARY: ThreadSanitizer:"
+      ],
+      "target_binary_markers": [
+        "__tsan_init"
+      ]
+    }
+  ],
+  "forbidden_environment_fragments": [
+    "detect_leaks=0",
+    "exitcode=0",
+    "halt_on_error=0"
+  ],
+  "integrated_address_runtime": {
+    "asan_options": "abort_on_error=1:detect_leaks=1:exitcode=86:halt_on_error=1",
+    "defined_function_symbols": [
+      "__asan_init",
+      "__lsan_enable",
+      "__lsan_disable",
+      "__lsan_do_recoverable_leak_check"
+    ],
+    "runtime_sha256": "963a6c2f6e6925dc483ef93ba3f0d75676f8f1c5ada533e8e0e55eff91d0e41c"
+  },
+  "lane_policy": {
+    "asan": "continuous-all-17-targets-required",
+    "careful-ub": "separate-integer-and-undefined-behavior-all-17-targets-required",
+    "lsan": "all-allocation-bearing-targets-required",
+    "msan": "blocked-until-complete-instrumented-closure",
+    "tsan": "blocked-no-deliberately-concurrent-target"
+  },
+  "panic_is_sanitizer_proof": false,
+  "parser_fixtures_are_operational_evidence": false,
+  "schema_version": 1,
+  "status": "STABLE-final-subject-bound"
+}

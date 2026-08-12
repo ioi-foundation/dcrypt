@@ -1,0 +1,906 @@
+{
+  "content_policy": "dcrypt-fuzzing-target-registry-v1",
+  "schema_version": 1,
+  "smoke_groups": [
+    {
+      "group_id": "hybrid",
+      "target_ids": [
+        "hybrid_decoders",
+        "hybrid_semantic"
+      ]
+    },
+    {
+      "group_id": "kem",
+      "target_ids": [
+        "ecdh_semantic",
+        "ecies_semantic",
+        "kem_decoders",
+        "ml_kem_semantic"
+      ]
+    },
+    {
+      "group_id": "signatures",
+      "target_ids": [
+        "bls12_381_decoders",
+        "bls12_381_semantic",
+        "ecdsa_semantic",
+        "ed25519_semantic",
+        "ml_dsa_semantic",
+        "signature_decoders"
+      ]
+    },
+    {
+      "group_id": "symmetric",
+      "target_ids": [
+        "aes_gcm_semantic",
+        "chacha_semantic",
+        "legacy_xchacha_migration",
+        "stream_frames",
+        "symmetric_decoders"
+      ]
+    }
+  ],
+  "status": "STABLE-final-subject-bound",
+  "targets": [
+    {
+      "cargo_bin": "aes_gcm_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "AES",
+        "AES-128-GCM",
+        "AES-256-GCM",
+        "AES-GCM",
+        "GCM<B: BlockCipher>"
+      ],
+      "harness_input_cap_bytes": 65536,
+      "harness_input_cap_status": "required-present",
+      "id": "aes_gcm_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 70,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 1,
+        "explicit_harness_loop_max_iterations": 5,
+        "input_max_bytes": 65536,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+65536",
+        "support_seed_max_dynamic_calls_per_input": 4,
+        "support_seed_syntactic_calls": 4,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "aes-128-gcm",
+        "aes-256-gcm"
+      ],
+      "reviewed_semantic_states_sha256": "c58fb616a7dad6576ca1169ec8cdeb3650482baef410a65809849c7f042b6add",
+      "runner_input_cap_bytes": 65536,
+      "seed_selector_path": "seeds/aes_gcm_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/aes_gcm_semantic.rs",
+      "source_sha256": "e573701809d926dcebb27c84168d94baea1a82fb8f5f9d09c17f4f27345b290b",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "bls12_381_decoders",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [],
+      "harness_input_cap_bytes": 4096,
+      "harness_input_cap_status": "required-present",
+      "id": "bls12_381_decoders",
+      "kind": "existing-smoke",
+      "mapped_atomic_row_count": 0,
+      "operational_status": "deterministic-smoke-only-not-campaign-evidence",
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits": {
+        "explicit_harness_loop_count": 1,
+        "explicit_harness_loop_max_iterations": 192,
+        "input_max_bytes": 4096,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": null,
+        "support_seed_max_dynamic_calls_per_input": 0,
+        "support_seed_syntactic_calls": 0,
+        "timeout_seconds": 2
+      },
+      "reviewed_semantic_states": [
+        "malformed-zero"
+      ],
+      "reviewed_semantic_states_sha256": "f7fabd4489159d896078a334f710bd47ec7d5777166b5119622a56e6174cd8c7",
+      "runner_input_cap_bytes": 4096,
+      "seed_selector_path": "seeds/bls12_381_decoders",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/bls12_381_decoders.rs",
+      "source_sha256": "1002fe75dc820593d556bf1ac71d947657dc2f0ab6be012155734fc321c86832",
+      "tier": "secondary"
+    },
+    {
+      "cargo_bin": "bls12_381_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "BLS12-381",
+        "BLS12-381 Ethereum consensus signatures",
+        "BLS12-381 signatures"
+      ],
+      "harness_input_cap_bytes": 2048,
+      "harness_input_cap_status": "required-present",
+      "id": "bls12_381_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 74,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 2048,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": "internal-rejection-loop-timeout-bounded-not-attempt-bounded",
+          "timeout_bounded": true,
+          "unbounded_internal_primitives": [
+            "internal scalar/key rejection sampling"
+          ]
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+2048",
+        "support_seed_max_dynamic_calls_per_input": 4,
+        "support_seed_syntactic_calls": 2,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "augmentation",
+        "basic",
+        "basic-aggregate",
+        "eth2-pop-v4",
+        "proof-of-possession"
+      ],
+      "reviewed_semantic_states_sha256": "3463c3468de28ad27db0f75185ffbc85785cc2baf060f612fc9c1c55aed02eb1",
+      "runner_input_cap_bytes": 2048,
+      "seed_selector_path": "seeds/bls12_381_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/bls12_381_semantic.rs",
+      "source_sha256": "d40bb026b1ceb0baa9f6ff1989115a6d9f5d076d66e2f20c83f065e45eee7c89",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "chacha_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "ChaCha20",
+        "ChaCha20-Poly1305",
+        "Poly1305",
+        "XChaCha20-Poly1305"
+      ],
+      "harness_input_cap_bytes": 65536,
+      "harness_input_cap_status": "required-present",
+      "id": "chacha_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 40,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 65536,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+65536",
+        "support_seed_max_dynamic_calls_per_input": 5,
+        "support_seed_syntactic_calls": 5,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "chacha-xchacha-poly1305"
+      ],
+      "reviewed_semantic_states_sha256": "ede081b132c47a98612154ca0e370970c52385fcce9306bc16dfa91d6c24fb7e",
+      "runner_input_cap_bytes": 65536,
+      "seed_selector_path": "seeds/chacha_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/chacha_semantic.rs",
+      "source_sha256": "fa6accf3adffa4e6e75421c4af6f5b14cbdbba8f1ecee304e6945eb79b99e1fd",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "ecdh_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "ECDH KEM"
+      ],
+      "harness_input_cap_bytes": 4096,
+      "harness_input_cap_status": "required-present",
+      "id": "ecdh_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 30,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 4096,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": "internal-rejection-loop-timeout-bounded-not-attempt-bounded",
+          "timeout_bounded": true,
+          "unbounded_internal_primitives": [
+            "EC key generation rejection loop"
+          ]
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+4096",
+        "support_seed_max_dynamic_calls_per_input": 2,
+        "support_seed_syntactic_calls": 2,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "k-256",
+        "p-224",
+        "p-256",
+        "p-384",
+        "p-521"
+      ],
+      "reviewed_semantic_states_sha256": "40de4e3a3cdf1b27cac7d0a4cf5026901b64c0be04457ba2a1da2280e8e209a3",
+      "runner_input_cap_bytes": 4096,
+      "seed_selector_path": "seeds/ecdh_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/ecdh_semantic.rs",
+      "source_sha256": "c8eaac26710cdd9b8624f2e0119d648165a02ad94540220e46959e9b0797b140",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "ecdsa_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "ECDSA"
+      ],
+      "harness_input_cap_bytes": 4096,
+      "harness_input_cap_status": "required-present",
+      "id": "ecdsa_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 24,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 4096,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": "internal-rejection-loop-timeout-bounded-not-attempt-bounded",
+          "timeout_bounded": true,
+          "unbounded_internal_primitives": [
+            "EC key generation rejection loop",
+            "RFC6979 signing rejection loop"
+          ]
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+4096",
+        "support_seed_max_dynamic_calls_per_input": 1,
+        "support_seed_syntactic_calls": 4,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "p-224-deterministic",
+        "p-224-key-roundtrip",
+        "p-224-sign-verify",
+        "p-224-signature-roundtrip",
+        "p-224-wrong-message",
+        "p-224-wrong-signature",
+        "p-256-deterministic",
+        "p-256-key-roundtrip",
+        "p-256-sign-verify",
+        "p-256-signature-roundtrip",
+        "p-256-wrong-message",
+        "p-256-wrong-signature",
+        "p-384-deterministic",
+        "p-384-key-roundtrip",
+        "p-384-sign-verify",
+        "p-384-signature-roundtrip",
+        "p-384-wrong-message",
+        "p-384-wrong-signature",
+        "p-521-deterministic",
+        "p-521-key-roundtrip",
+        "p-521-sign-verify",
+        "p-521-signature-roundtrip",
+        "p-521-wrong-message",
+        "p-521-wrong-signature"
+      ],
+      "reviewed_semantic_states_sha256": "96c6ebb258632a011c1d2f9b58e7a24512ddb78820574a54aa3d09449f48b7be",
+      "runner_input_cap_bytes": 4096,
+      "seed_selector_path": "seeds/ecdsa_semantic",
+      "semantic_state_control": {
+        "curve_states": 4,
+        "max_ec_keygen_calls_per_input": 1,
+        "max_rfc6979_sign_calls_per_input": 2,
+        "operation_states_per_curve": 6,
+        "state_names": [
+          "deterministic",
+          "key-roundtrip",
+          "sign-verify",
+          "signature-roundtrip",
+          "wrong-message",
+          "wrong-signature"
+        ]
+      },
+      "source": "fuzz/fuzz_targets/ecdsa_semantic.rs",
+      "source_sha256": "c4920309ee17828337848967621250043b46bf77b4fac8794a122ad8d40c4ba3",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "ecies_semantic",
+      "dictionary_selector_path": "dictionaries/framing.dict",
+      "family_algorithms": [
+        "dcrypt ECIES"
+      ],
+      "harness_input_cap_bytes": 32768,
+      "harness_input_cap_status": "required-present",
+      "id": "ecies_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 24,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 32768,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": "internal-rejection-loop-timeout-bounded-not-attempt-bounded",
+          "timeout_bounded": true,
+          "unbounded_internal_primitives": [
+            "EC key generation rejection loop"
+          ]
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+32768",
+        "support_seed_max_dynamic_calls_per_input": 3,
+        "support_seed_syntactic_calls": 3,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "p-224",
+        "p-256",
+        "p-384",
+        "p-521"
+      ],
+      "reviewed_semantic_states_sha256": "ac9a4c1566bd223de076b0a03a8e602891f5c7c0d7043bf9f061a4032639796f",
+      "runner_input_cap_bytes": 32768,
+      "seed_selector_path": "seeds/ecies_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/ecies_semantic.rs",
+      "source_sha256": "c041423b4248441793eb1eaf5dba1d2d15cf6254a55a344795eb40d23da2dc6f",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "ed25519_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "Ed25519"
+      ],
+      "harness_input_cap_bytes": 4096,
+      "harness_input_cap_status": "required-present",
+      "id": "ed25519_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 8,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 4096,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+4096",
+        "support_seed_max_dynamic_calls_per_input": 1,
+        "support_seed_syntactic_calls": 1,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "deterministic-strict"
+      ],
+      "reviewed_semantic_states_sha256": "f9817bce5c924885f4eb56f44aa3dd8c0f9252edd88656e050cf12fd0838b371",
+      "runner_input_cap_bytes": 4096,
+      "seed_selector_path": "seeds/ed25519_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/ed25519_semantic.rs",
+      "source_sha256": "c7bd719aabc7922edabc8dde20d6746260ff6e95b6e0d7cfde5361b0eb5c4b0d",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "hybrid_decoders",
+      "dictionary_selector_path": "dictionaries/framing.dict",
+      "family_algorithms": [],
+      "harness_input_cap_bytes": 16384,
+      "harness_input_cap_status": "required-present",
+      "id": "hybrid_decoders",
+      "kind": "existing-smoke",
+      "mapped_atomic_row_count": 0,
+      "operational_status": "deterministic-smoke-only-not-campaign-evidence",
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 16384,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": null,
+        "support_seed_max_dynamic_calls_per_input": 0,
+        "support_seed_syntactic_calls": 0,
+        "timeout_seconds": 2
+      },
+      "reviewed_semantic_states": [
+        "framing-lengths"
+      ],
+      "reviewed_semantic_states_sha256": "7cb731aacf17221d0c867063576e7a05bbc5e2fa1f6fe13df578144561bfedd8",
+      "runner_input_cap_bytes": 16384,
+      "seed_selector_path": "seeds/hybrid_decoders",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/hybrid_decoders.rs",
+      "source_sha256": "abc8f570182e6c0cda0bcbdea64186a4dab1b1acd5c330e16afc3488cb76fa84",
+      "tier": "secondary"
+    },
+    {
+      "cargo_bin": "hybrid_semantic",
+      "dictionary_selector_path": "dictionaries/framing.dict",
+      "family_algorithms": [
+        "ECDH+ML-KEM hybrid KEM",
+        "ECDSA+ML-DSA hybrid signature"
+      ],
+      "harness_input_cap_bytes": 4096,
+      "harness_input_cap_status": "required-present",
+      "id": "hybrid_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 36,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 4096,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": 814,
+          "internal_attempt_cap": null,
+          "release_blocker": "internal-rejection-loop-timeout-bounded-not-attempt-bounded",
+          "timeout_bounded": true,
+          "unbounded_internal_primitives": [
+            "ECDSA RFC6979 and EC key generation rejection loops",
+            "ML-DSA RejBoundedPoly, SampleInBall, and matrix/NTT rejection",
+            "ML-KEM sample_ntt"
+          ]
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+4096",
+        "support_seed_max_dynamic_calls_per_input": 2,
+        "support_seed_syntactic_calls": 3,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "ecdsa-ml-dsa-65-signature",
+        "k256-ml-kem-512",
+        "p256-ml-kem-512",
+        "p256-ml-kem-768",
+        "p384-ml-kem-1024",
+        "p521-ml-kem-1024"
+      ],
+      "reviewed_semantic_states_sha256": "639de7e39e45c495b50b7f70421a29f7c78db4cc7e522cf0911ff8e1080ae66c",
+      "runner_input_cap_bytes": 4096,
+      "seed_selector_path": "seeds/hybrid_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/hybrid_semantic.rs",
+      "source_sha256": "fbb1a98376960176ded7c7ffafa7e8ac43332f997be416cc6db2df64f11c5a52",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "kem_decoders",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [],
+      "harness_input_cap_bytes": 16384,
+      "harness_input_cap_status": "required-present",
+      "id": "kem_decoders",
+      "kind": "existing-smoke",
+      "mapped_atomic_row_count": 0,
+      "operational_status": "deterministic-smoke-only-not-campaign-evidence",
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits": {
+        "explicit_harness_loop_count": 1,
+        "explicit_harness_loop_max_iterations": 4896,
+        "input_max_bytes": 16384,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": null,
+        "support_seed_max_dynamic_calls_per_input": 0,
+        "support_seed_syntactic_calls": 0,
+        "timeout_seconds": 2
+      },
+      "reviewed_semantic_states": [
+        "canonical-length-expansion"
+      ],
+      "reviewed_semantic_states_sha256": "9a10f9a37dae5dd370230c8e2e18912f6f824931071800a442dc849b2dd4749d",
+      "runner_input_cap_bytes": 16384,
+      "seed_selector_path": "seeds/kem_decoders",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/kem_decoders.rs",
+      "source_sha256": "a79cdbac86ea38f57790ccd60506c15fdf22dba87aea96cbfeec59b059d58d74",
+      "tier": "secondary"
+    },
+    {
+      "cargo_bin": "legacy_xchacha_migration",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [],
+      "harness_input_cap_bytes": 65536,
+      "harness_input_cap_status": "required-present",
+      "id": "legacy_xchacha_migration",
+      "kind": "existing-smoke",
+      "mapped_atomic_row_count": 0,
+      "operational_status": "deterministic-smoke-only-not-campaign-evidence",
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 65536,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": null,
+        "support_seed_max_dynamic_calls_per_input": 0,
+        "support_seed_syntactic_calls": 0,
+        "timeout_seconds": 2
+      },
+      "reviewed_semantic_states": [
+        "raw-ciphertext",
+        "valid-no-aad",
+        "valid-with-aad"
+      ],
+      "reviewed_semantic_states_sha256": "c6d9767e4a27243f90c8ccf190e666c4065a665f96709eadc785ce8933049fe4",
+      "runner_input_cap_bytes": 65536,
+      "seed_selector_path": "seeds/legacy_xchacha_migration",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/legacy_xchacha_migration.rs",
+      "source_sha256": "138476ed42dcb8e3a0a2b2988cf5fb05656bb16a1f7f12252f1546db39ab08f5",
+      "tier": "secondary"
+    },
+    {
+      "cargo_bin": "ml_dsa_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "ML-DSA"
+      ],
+      "harness_input_cap_bytes": 2048,
+      "harness_input_cap_status": "required-present",
+      "id": "ml_dsa_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 42,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 2048,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": 814,
+          "internal_attempt_cap": null,
+          "release_blocker": "internal-rejection-loop-timeout-bounded-not-attempt-bounded",
+          "timeout_bounded": true,
+          "unbounded_internal_primitives": [
+            "ML-DSA RejBoundedPoly, SampleInBall, and matrix/NTT rejection"
+          ]
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+2048",
+        "support_seed_max_dynamic_calls_per_input": 3,
+        "support_seed_syntactic_calls": 3,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "ml-dsa-44-deterministic",
+        "ml-dsa-44-hedged",
+        "ml-dsa-65-deterministic",
+        "ml-dsa-65-hedged",
+        "ml-dsa-87-deterministic",
+        "ml-dsa-87-hedged"
+      ],
+      "reviewed_semantic_states_sha256": "7e94467695cc229820e2d3d9fb61dac4d4ad4aa5f827e054662f20c2055f5e42",
+      "runner_input_cap_bytes": 2048,
+      "seed_selector_path": "seeds/ml_dsa_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/ml_dsa_semantic.rs",
+      "source_sha256": "a215fd4ba33021e93ee169f0edf0239b07f07b2d49a98d101f3ef00714ffc759",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "ml_kem_semantic",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [
+        "ML-KEM"
+      ],
+      "harness_input_cap_bytes": 4096,
+      "harness_input_cap_status": "required-present",
+      "id": "ml_kem_semantic",
+      "kind": "semantic-candidate",
+      "mapped_atomic_row_count": 24,
+      "operational_status": "candidate-unaccepted-unprovisioned",
+      "required_freshness_seconds": 86400,
+      "required_rc_core_seconds": 86400,
+      "required_weekly_core_seconds": 259200,
+      "resource_limits": {
+        "explicit_harness_loop_count": 0,
+        "explicit_harness_loop_max_iterations": 0,
+        "input_max_bytes": 4096,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": "internal-rejection-loop-timeout-bounded-not-attempt-bounded",
+          "timeout_bounded": true,
+          "unbounded_internal_primitives": [
+            "ML-KEM sample_ntt"
+          ]
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": "32+input_len<=32+4096",
+        "support_seed_max_dynamic_calls_per_input": 2,
+        "support_seed_syntactic_calls": 2,
+        "timeout_seconds": 10
+      },
+      "reviewed_semantic_states": [
+        "ml-kem-1024",
+        "ml-kem-512",
+        "ml-kem-768"
+      ],
+      "reviewed_semantic_states_sha256": "bdf062c9d5d0c75c7319b00148adfc1fd0928e94b62b4508b13d424153b84dcc",
+      "runner_input_cap_bytes": 4096,
+      "seed_selector_path": "seeds/ml_kem_semantic",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/ml_kem_semantic.rs",
+      "source_sha256": "a212a07a492657690da70dd27413002db888e76e6d8874483579186e32c5654c",
+      "tier": "critical"
+    },
+    {
+      "cargo_bin": "signature_decoders",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [],
+      "harness_input_cap_bytes": 16384,
+      "harness_input_cap_status": "required-present",
+      "id": "signature_decoders",
+      "kind": "existing-smoke",
+      "mapped_atomic_row_count": 0,
+      "operational_status": "deterministic-smoke-only-not-campaign-evidence",
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits": {
+        "explicit_harness_loop_count": 1,
+        "explicit_harness_loop_max_iterations": 4896,
+        "input_max_bytes": 16384,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": null,
+        "support_seed_max_dynamic_calls_per_input": 0,
+        "support_seed_syntactic_calls": 0,
+        "timeout_seconds": 2
+      },
+      "reviewed_semantic_states": [
+        "ml-dsa-44-selector",
+        "ml-dsa-65-selector",
+        "ml-dsa-87-selector"
+      ],
+      "reviewed_semantic_states_sha256": "9cd7dbc096cd174ef9d12e8bad0260f92f0ade6a16c44b6f430e25db9e1cdbbe",
+      "runner_input_cap_bytes": 16384,
+      "seed_selector_path": "seeds/signature_decoders",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/signature_decoders.rs",
+      "source_sha256": "cfde2f46a7bb3bb050e5c6050dabad484b0135590bee871d8bf1cf3d5d4d1d18",
+      "tier": "secondary"
+    },
+    {
+      "cargo_bin": "stream_frames",
+      "dictionary_selector_path": "dictionaries/framing.dict",
+      "family_algorithms": [],
+      "harness_input_cap_bytes": 65536,
+      "harness_input_cap_status": "required-present",
+      "id": "stream_frames",
+      "kind": "existing-smoke",
+      "mapped_atomic_row_count": 0,
+      "operational_status": "deterministic-smoke-only-not-campaign-evidence",
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits": {
+        "explicit_harness_loop_count": 7,
+        "explicit_harness_loop_max_iterations": 4098,
+        "input_max_bytes": 65536,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": null,
+        "support_seed_max_dynamic_calls_per_input": 0,
+        "support_seed_syntactic_calls": 0,
+        "timeout_seconds": 2
+      },
+      "reviewed_semantic_states": [
+        "aes-gcm-stream",
+        "chacha20-poly1305-stream"
+      ],
+      "reviewed_semantic_states_sha256": "464e2ada4fdd8154d4cd24b3e292a547e7ff4b54a70bd20ff2b5daef00bc66f8",
+      "runner_input_cap_bytes": 65536,
+      "seed_selector_path": "seeds/stream_frames",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/stream_frames.rs",
+      "source_sha256": "d4a11ccc20a3cdb630626c8c7cbd485c9a511c08edb6cb3edd0f2737ce3383c3",
+      "tier": "secondary"
+    },
+    {
+      "cargo_bin": "symmetric_decoders",
+      "dictionary_selector_path": "dictionaries/crypto_tokens.dict",
+      "family_algorithms": [],
+      "harness_input_cap_bytes": 65536,
+      "harness_input_cap_status": "required-present",
+      "id": "symmetric_decoders",
+      "kind": "existing-smoke",
+      "mapped_atomic_row_count": 0,
+      "operational_status": "deterministic-smoke-only-not-campaign-evidence",
+      "required_freshness_seconds": 691200,
+      "required_rc_core_seconds": 28800,
+      "required_weekly_core_seconds": 86400,
+      "resource_limits": {
+        "explicit_harness_loop_count": 1,
+        "explicit_harness_loop_max_iterations": 32,
+        "input_max_bytes": 65536,
+        "malloc_limit_mb": 2048,
+        "rejection_control": {
+          "caller_rng_max_bytes": null,
+          "fixed_signing_attempt_window_per_call": null,
+          "internal_attempt_cap": null,
+          "release_blocker": null,
+          "timeout_bounded": false,
+          "unbounded_internal_primitives": []
+        },
+        "rss_limit_mb": 2048,
+        "stack_limit_kib": 8192,
+        "support_seed_iterations_per_call": null,
+        "support_seed_max_dynamic_calls_per_input": 0,
+        "support_seed_syntactic_calls": 0,
+        "timeout_seconds": 2
+      },
+      "reviewed_semantic_states": [
+        "malformed-packages"
+      ],
+      "reviewed_semantic_states_sha256": "408836b577386100ddc0dc03fc1d2b534b3aa87abbacb9cf1fccbb146a1156f3",
+      "runner_input_cap_bytes": 65536,
+      "seed_selector_path": "seeds/symmetric_decoders",
+      "semantic_state_control": null,
+      "source": "fuzz/fuzz_targets/symmetric_decoders.rs",
+      "source_sha256": "c09bcf9f328efc4738e2a29dc36b2be1421926545dc11300f4bbd0519cbe6ec4",
+      "tier": "secondary"
+    }
+  ]
+}

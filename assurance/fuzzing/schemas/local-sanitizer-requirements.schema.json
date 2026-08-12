@@ -1,0 +1,248 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:local-sanitizer-requirements:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actual_positive_controls_observed": {
+      "maximum": 9223372036854775807,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "controls": {
+      "items": {
+        "anyOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "control_id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "evidence_role": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "host_dependent_fields": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "live_execution_observed": {
+                "type": "boolean"
+              },
+              "required_report_patterns": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "required_runtime_options": {
+                "additionalProperties": false,
+                "properties": {
+                  "LSAN_OPTIONS": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "LSAN_OPTIONS"
+                ],
+                "type": "object"
+              },
+              "required_runtime_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "required_sanitizer": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "required_symbol": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "live-execution-required-not-sealed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "control_id",
+              "evidence_role",
+              "host_dependent_fields",
+              "live_execution_observed",
+              "required_report_patterns",
+              "required_runtime_options",
+              "required_runtime_sha256",
+              "required_sanitizer",
+              "required_symbol",
+              "source_sha256",
+              "status"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "control_id": {
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._:+/-]+$",
+                "type": "string"
+              },
+              "evidence_role": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "host_dependent_fields": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "live_execution_observed": {
+                "type": "boolean"
+              },
+              "required_report_patterns": {
+                "items": {
+                  "maxLength": 16384,
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array",
+                "uniqueItems": true
+              },
+              "required_runtime_options": {
+                "additionalProperties": false,
+                "properties": {
+                  "ASAN_OPTIONS": {
+                    "maxLength": 16384,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "ASAN_OPTIONS"
+                ],
+                "type": "object"
+              },
+              "required_runtime_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "required_sanitizer": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "required_symbol": {
+                "maxLength": 16384,
+                "type": "string"
+              },
+              "source_sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "live-execution-required-not-sealed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "control_id",
+              "evidence_role",
+              "host_dependent_fields",
+              "live_execution_observed",
+              "required_report_patterns",
+              "required_runtime_options",
+              "required_runtime_sha256",
+              "required_sanitizer",
+              "required_symbol",
+              "source_sha256",
+              "status"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "operational_campaign_evidence": {
+      "type": "boolean"
+    },
+    "pinned_rustc_executable_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "promotion_authorized": {
+      "type": "boolean"
+    },
+    "required_child_resource_limits": {
+      "additionalProperties": false,
+      "properties": {
+        "core_bytes": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cpu_seconds": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file_bytes": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "stack_kib": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "core_bytes",
+        "cpu_seconds",
+        "file_bytes",
+        "stack_kib"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "live-execution-required-not-sealed"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "actual_positive_controls_observed",
+    "controls",
+    "operational_campaign_evidence",
+    "pinned_rustc_executable_sha256",
+    "promotion_authorized",
+    "required_child_resource_limits",
+    "status"
+  ],
+  "title": "Package C live sanitizer-control requirements",
+  "type": "object"
+}

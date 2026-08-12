@@ -1,0 +1,111 @@
+{
+  "$id": "urn:dcrypt:assurance:fuzzing:source-bindings:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "content_policy": {
+      "const": "dcrypt-fuzzing-source-bindings-v1"
+    },
+    "counts": {
+      "additionalProperties": false,
+      "properties": {
+        "cargo_control_files": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "ci_release_control_files": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "shared_support_files": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "target_source_files": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "total_files": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "cargo_control_files",
+        "ci_release_control_files",
+        "shared_support_files",
+        "target_source_files",
+        "total_files"
+      ],
+      "type": "object"
+    },
+    "files": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "git_mode": {
+            "maxLength": 16384,
+            "type": "string"
+          },
+          "path": {
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/+:-]+$",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "size": {
+            "maximum": 9223372036854775807,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "git_mode",
+          "path",
+          "sha256",
+          "size"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "files_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "registry_semantic_sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "STABLE-final-subject-bound"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "content_policy",
+    "counts",
+    "files",
+    "files_sha256",
+    "registry_semantic_sha256",
+    "schema_version",
+    "status"
+  ],
+  "title": "Package C exact fuzz source bindings",
+  "type": "object"
+}

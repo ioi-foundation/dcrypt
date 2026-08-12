@@ -1,0 +1,93 @@
+{
+  "actual_positive_controls_observed": 0,
+  "controls": [
+    {
+      "control_id": "asan-stack-overflow",
+      "evidence_role": "address-mode-memory-safety-positive",
+      "host_dependent_fields": [
+        "binary_sha256",
+        "compiler_argv_sha256",
+        "host_linker_identity",
+        "host_symbol_inspector_identity",
+        "linker_argv_sha256",
+        "normalized_report_sha256",
+        "symbol_table_sha256"
+      ],
+      "live_execution_observed": false,
+      "required_report_patterns": [
+        "ERROR: AddressSanitizer: stack-overflow",
+        "SUMMARY: AddressSanitizer: stack-overflow"
+      ],
+      "required_runtime_options": {
+        "ASAN_OPTIONS": "abort_on_error=1:detect_leaks=1:exitcode=86:halt_on_error=1"
+      },
+      "required_runtime_sha256": "963a6c2f6e6925dc483ef93ba3f0d75676f8f1c5ada533e8e0e55eff91d0e41c",
+      "required_sanitizer": "address",
+      "required_symbol": "__asan_init",
+      "source_sha256": "14835afa9b19560e979376c11c22592a0058dda5a08a3d634ff3fade5938f040",
+      "status": "live-execution-required-not-sealed"
+    },
+    {
+      "control_id": "asan-integrated-box-leak",
+      "evidence_role": "integrated-address-mode-leak-detection-positive",
+      "host_dependent_fields": [
+        "binary_sha256",
+        "compiler_argv_sha256",
+        "host_linker_identity",
+        "host_symbol_inspector_identity",
+        "linker_argv_sha256",
+        "normalized_report_sha256",
+        "symbol_table_sha256"
+      ],
+      "live_execution_observed": false,
+      "required_report_patterns": [
+        "ERROR: LeakSanitizer: detected memory leaks",
+        "SUMMARY: AddressSanitizer:"
+      ],
+      "required_runtime_options": {
+        "ASAN_OPTIONS": "abort_on_error=1:detect_leaks=1:exitcode=86:halt_on_error=1"
+      },
+      "required_runtime_sha256": "963a6c2f6e6925dc483ef93ba3f0d75676f8f1c5ada533e8e0e55eff91d0e41c",
+      "required_sanitizer": "address",
+      "required_symbol": "__asan_init",
+      "source_sha256": "aa488f29d3d4ed9f0ec4490e42ce949fcaebd64b8e1f1173f82e25a7eb520ce9",
+      "status": "live-execution-required-not-sealed"
+    },
+    {
+      "control_id": "lsan-box-leak",
+      "evidence_role": "supplemental-standalone-leak-sanitizer-positive",
+      "host_dependent_fields": [
+        "binary_sha256",
+        "compiler_argv_sha256",
+        "host_linker_identity",
+        "host_symbol_inspector_identity",
+        "linker_argv_sha256",
+        "normalized_report_sha256",
+        "symbol_table_sha256"
+      ],
+      "live_execution_observed": false,
+      "required_report_patterns": [
+        "ERROR: LeakSanitizer: detected memory leaks",
+        "SUMMARY: LeakSanitizer:"
+      ],
+      "required_runtime_options": {
+        "LSAN_OPTIONS": "exitcode=87:max_leaks=1:report_objects=1"
+      },
+      "required_runtime_sha256": "5d2197d6aa53633c9736d1d06e3ddc5c15b79ef15fee5c805399dcdeac39968b",
+      "required_sanitizer": "leak",
+      "required_symbol": "__lsan_init",
+      "source_sha256": "aa488f29d3d4ed9f0ec4490e42ce949fcaebd64b8e1f1173f82e25a7eb520ce9",
+      "status": "live-execution-required-not-sealed"
+    }
+  ],
+  "operational_campaign_evidence": false,
+  "pinned_rustc_executable_sha256": "64059bd9ea1d1e4ac3e272a0beb63108d527d1e3eb7d53609b067cb79050169b",
+  "promotion_authorized": false,
+  "required_child_resource_limits": {
+    "core_bytes": 0,
+    "cpu_seconds": 20,
+    "file_bytes": 8388608,
+    "stack_kib": 8192
+  },
+  "status": "live-execution-required-not-sealed"
+}

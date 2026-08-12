@@ -1,0 +1,116 @@
+{
+  "actual_lifecycle_observed": false,
+  "controlled_failure_class": "safe-rust-controlled-panic-v1-not-sanitizer-evidence",
+  "crash_bundle_template": {
+    "affected_atomic_rows": [],
+    "argv_sha256": null,
+    "binary_sha256": null,
+    "cluster_id": null,
+    "confidentiality": "private",
+    "content_policy": "dcrypt-fuzzing-private-crash-bundle-v1",
+    "corpus_manifest_sha256": null,
+    "discovery_subject": {
+      "binding_status": "unbound-structural",
+      "commit": null,
+      "manifest_sha256": null,
+      "tree": null
+    },
+    "environment_sha256": null,
+    "failure_class": null,
+    "first_seen": null,
+    "handoff": {
+      "acknowledge_deadline": null,
+      "affected_atomic_rows": [],
+      "assessment_deadline": null,
+      "cluster_id": null,
+      "confidentiality": "private",
+      "created_at": null,
+      "disposition": "blocked-unfiled",
+      "external_receipt": null,
+      "minimization_duration_seconds": null,
+      "minimization_started_at": null,
+      "minimization_status": "blocked-not-run",
+      "minimized_input_sha256": null,
+      "owner": null,
+      "reproduced_at": null,
+      "reproduction_duration_seconds": null,
+      "reproduction_status": "blocked-not-run",
+      "resolution_deadline": null,
+      "resolution_kind": null,
+      "severity": null,
+      "status": "blocked-unfiled",
+      "target_id": null
+    },
+    "limits": {
+      "input_max_bytes": null,
+      "rss_limit_mb": 2048,
+      "stack_limit_kib": 8192,
+      "timeout_seconds": null
+    },
+    "minimization": {
+      "algorithm": null,
+      "executions": null,
+      "minimized_bytes": null,
+      "original_bytes": null,
+      "replay_reproduced": false
+    },
+    "minimized_input_sha256": null,
+    "normalization_version": "dcrypt-crash-normalization-v1",
+    "normalized_diagnostic_sha256": null,
+    "occurrence_id": null,
+    "private_storage": {
+      "object_locator": null,
+      "retention_status": "blocked-storage-unprovisioned"
+    },
+    "provenance": null,
+    "raw_diagnostic_log_sha256": null,
+    "raw_input_sha256": null,
+    "regression": {
+      "finding_id": null,
+      "fix_reference": null,
+      "fixed_binary_sha256": null,
+      "fixed_source_sha256": null,
+      "fixed_subject": {
+        "commit": null,
+        "tree": null
+      },
+      "independent_retest_passed": false,
+      "local_fixed_child_evidence_sha256": null,
+      "private_replay_passed": false,
+      "retest_evidence_sha256": null,
+      "status": "blocked-not-promoted",
+      "test_id": null
+    },
+    "retention": {
+      "current_corpus": "indefinite",
+      "daily_corpus_days": 30,
+      "logs_days": 90,
+      "regression_corpus": "indefinite",
+      "weekly_corpus_weeks": 52
+    },
+    "schema_version": 1,
+    "status": "blocked-template-no-evidence",
+    "target_id": null,
+    "toolchain_identity_sha256": null
+  },
+  "distinct_occurrences_required": 2,
+  "fixed_child_required": true,
+  "fixed_source_sha256": "b0d21fa477cb2a87a33368827dd8a28ada84511f09422e588e90ab867e3172a0",
+  "host_dependent_fields": [
+    "binary_sha256",
+    "compiler_argv_sha256",
+    "fixed_binary_sha256",
+    "host_linker_identity",
+    "host_symbol_inspector_identity",
+    "linker_argv_sha256",
+    "reproduction_log_sha256"
+  ],
+  "minimized_trigger_sha256": "6f93481fe2c111b1c44176bfa27e6461bf26668e0c6c31fab4a32fa8a4f663e5",
+  "normalization_version": "dcrypt-crash-normalization-v1",
+  "operational_campaign_evidence": false,
+  "pinned_rustc_executable_sha256": "64059bd9ea1d1e4ac3e272a0beb63108d527d1e3eb7d53609b067cb79050169b",
+  "private_temporary_cleanup_required": true,
+  "promotion_authorized": false,
+  "source_sha256": "310c018ffb93b07ea637c8c450bf372d326e1f03b67f8b904ccd9cf05213977f",
+  "status": "live-execution-required-not-sealed"
+}

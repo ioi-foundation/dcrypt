@@ -25,15 +25,15 @@ EXPECTED_FILES = {
     "rebind-final-subject.py",
     "verify-protocol-specs.py",
 }
-EXPECTED_FILE_MODES = {
-    "ARTIFACTS.sha256": 0o664,
-    "CURRENT-BEHAVIOR.md": 0o664,
-    "README.md": 0o664,
-    "current-behavior.json": 0o664,
-    "protocol-spec.schema.json": 0o664,
-    "protocol-specs-selftest.py": 0o775,
-    "rebind-final-subject.py": 0o775,
-    "verify-protocol-specs.py": 0o775,
+EXPECTED_FILE_GIT_MODES = {
+    "ARTIFACTS.sha256": "100644",
+    "CURRENT-BEHAVIOR.md": "100644",
+    "README.md": "100644",
+    "current-behavior.json": "100644",
+    "protocol-spec.schema.json": "100644",
+    "protocol-specs-selftest.py": "100755",
+    "rebind-final-subject.py": "100755",
+    "verify-protocol-specs.py": "100755",
 }
 MANIFESTED_FILES = EXPECTED_FILES - {"ARTIFACTS.sha256"}
 
@@ -43,11 +43,11 @@ MANIFESTED_FILES = EXPECTED_FILES - {"ARTIFACTS.sha256"}
 # The containing verifier is authenticated by the reviewed Git subject/evidence
 # binding; no file can safely authenticate its own bytes.
 EXPECTED_REVIEWED_ARTIFACT_DIGESTS = {
-    "CURRENT-BEHAVIOR.md": "4d6a256854b2e6043553deba9fd1ac5a2fbebc8e770493110cb87953dbf2fe30",
+    "CURRENT-BEHAVIOR.md": "7f99c0e7e1a5c96ff72011ac67003192e53bd9ba357bd763f34d80fcc851b0ce",
     "README.md": "8b10fc6d61614dba0b95e4bb085324ac5bbc2ed63959822441ec3a4f34f407c8",
-    "current-behavior.json": "97cd14f12d0ecb0ce1faa4f91e3f42f94dea3c173887c44e05b62c2b7dcab1e3",
+    "current-behavior.json": "92d5e9e55fb432e56edf431a929bce52858a336d5a1678a2b488c2ceb6876233",
     "protocol-spec.schema.json": "c444f5ba500d1feed253b7e46b6db287996924feb4ba15d419ff5206c06e471c",
-    "rebind-final-subject.py": "4e9e49e06a97bb2e393e555b22a033e931b5e1dc7142f282ecdf2678de751717",
+    "rebind-final-subject.py": "3cd6b84b34f7f7a2152ae83aa308729661fc1a4166795f9de0c9592bf95ab5d4",
 }
 
 EXPECTED_SOURCE_ROLES = {
@@ -123,10 +123,10 @@ EXPECTED_SOURCE_ROLES = {
     "crates/sign/src/lib.rs": "signature crate feature gates and public exports",
 }
 
-EXPECTED_SUBJECT_COMMIT = 'ba2685293bf326cef611f33445269071e9fddef1'
-EXPECTED_SUBJECT_TREE = '869608f3379bf91ebed67308f22117312ddd0e5b'
-EXPECTED_SUBJECT_MANIFEST_SHA256 = '7e830f2c496d46e632aec3aa0d45010a19e80eed8fc2f30db98e56a1f52fb9ad'
-EXPECTED_SUBJECT_FILE_COUNT = 1426
+EXPECTED_SUBJECT_COMMIT = 'b3ce4b6d14a5474645cdedb2c7de2b36827bdd48'
+EXPECTED_SUBJECT_TREE = '21ff85c3d12ffc8ff08f8e379d61d19d3ce16f92'
+EXPECTED_SUBJECT_MANIFEST_SHA256 = '3e3615c19ecd0405882a9af03e45a8a4ef8d94347c37c767f242b3287ed15101'
+EXPECTED_SUBJECT_FILE_COUNT = 1510
 EXPECTED_CURATED_OPERATIONS_SHA256 = '5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4'
 EXPECTED_BINDING_STAGE = 'final-subject-candidate-review-required'
 EXPECTED_FINAL_REBIND_REQUIRED = False
@@ -323,6 +323,24 @@ def ensure_regular_file(path: Path, allowed_root: Path, label: str) -> None:
         fail(f"{label} escapes its allowed root")
 
 
+def canonical_git_mode(filesystem_mode: int, expected_git_mode: str, label: str) -> str:
+    """Normalize safe umask materializations to reviewed Git executable intent."""
+
+    mode = stat.S_IMODE(filesystem_mode)
+    if expected_git_mode == "100644":
+        allowed = {0o600, 0o640, 0o644, 0o660, 0o664}
+    elif expected_git_mode == "100755":
+        allowed = {0o700, 0o750, 0o755, 0o770, 0o775}
+    else:
+        fail(f"invalid reviewed Git mode for {label}: {expected_git_mode}")
+    if mode not in allowed:
+        fail(
+            f"{label} mode mismatch: filesystem mode {mode:04o} does not preserve "
+            f"reviewed Git mode {expected_git_mode}"
+        )
+    return expected_git_mode
+
+
 def reject_symlinks_and_unexpected_files(spec_dir: Path) -> None:
     ensure_regular_file(spec_dir / "verify-protocol-specs.py", spec_dir, "verifier")
     actual: set[str] = set()
@@ -336,9 +354,9 @@ def reject_symlinks_and_unexpected_files(spec_dir: Path) -> None:
         for name in files:
             child = root_path / name
             ensure_regular_file(child, spec_dir, f"artifact {name}")
-            expected_mode = EXPECTED_FILE_MODES.get(name)
-            if expected_mode is not None and stat.S_IMODE(child.lstat().st_mode) != expected_mode:
-                fail(f"artifact mode mismatch: {name}")
+            expected_mode = EXPECTED_FILE_GIT_MODES.get(name)
+            if expected_mode is not None:
+                canonical_git_mode(child.lstat().st_mode, expected_mode, f"artifact {name}")
             actual.add(child.relative_to(spec_dir).as_posix())
     if actual != EXPECTED_FILES:
         missing = sorted(EXPECTED_FILES - actual)
@@ -588,9 +606,11 @@ def verify_current_subject(
         ensure_regular_file(path, repo_root, f"current subject {path_value}")
         if sha256(path) != expected_digest:
             fail(f"subject manifest current digest mismatch: {path_value}")
-        executable = bool(path.lstat().st_mode & 0o111)
-        if executable != (expected_mode == "100755"):
-            fail(f"subject manifest current mode mismatch: {path_value}")
+        canonical_git_mode(
+            path.lstat().st_mode,
+            expected_mode,
+            f"subject manifest current path {path_value}",
+        )
 
 
 def verify_subject_binding(

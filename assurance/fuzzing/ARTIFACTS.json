@@ -1,0 +1,212 @@
+{
+  "content_policy": "dcrypt-fuzzing-artifact-closure-v1",
+  "files": [
+    {
+      "kind": "reviewed-source",
+      "path": "README.md",
+      "sha256": "43495bf3694fea0675742872c8ddb54bded8fe87cd2e5a60aa594fed6d6aae51",
+      "size": 7425
+    },
+    {
+      "kind": "generated",
+      "path": "ROW-COVERAGE.md",
+      "sha256": "dc8b1391018f1ee73379ebb7786807fbf11553d03cf7665c518d2942d671c1c6",
+      "size": 1303
+    },
+    {
+      "kind": "generated",
+      "path": "campaign-status.json",
+      "sha256": "a1540feae97fd273407858d0a2d4d5977c3a91155c1c1d652608ec1d4eb1a5a4",
+      "size": 54842
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "compiler_probe.py",
+      "sha256": "191e00c205b11ebaed71464b46628786f5122e1de9d51d37a5e8bf44f463cefd",
+      "size": 49700
+    },
+    {
+      "kind": "generated",
+      "path": "corpus-manifest.json",
+      "sha256": "cf6ecdf25e012b64f3ad8aff0dcd13f7d3291ae518987eb88b77de328dd89d81",
+      "size": 172485
+    },
+    {
+      "kind": "generated",
+      "path": "crash-bundle-template.json",
+      "sha256": "fa7afa0dec1ee458f3502ab949a0e77301ed3e9d8b4fdecc3029402d4d63d2ab",
+      "size": 2532
+    },
+    {
+      "kind": "generated",
+      "path": "crash-lifecycle-status.json",
+      "sha256": "a158cee3b9f807f29d05b26f040233ce5b958aa066b62c5e2eb34ef25859bc52",
+      "size": 3784
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "crash_lifecycle.py",
+      "sha256": "b90bbb5d61ba93d63c3d38c908a8e8c304bd1f883f042328d1f5027e4b858d04",
+      "size": 42818
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "fuzzing_lib.py",
+      "sha256": "7ccc88ce3c3efb9c5d77752fc1559286f277070f93fe97b4a56954e9f8d26ba3",
+      "size": 118247
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "generate.py",
+      "sha256": "be4f470e7a96dafa39610be016185cc86ab6f609a598a71837a88daface8a54f",
+      "size": 7107
+    },
+    {
+      "kind": "generated",
+      "path": "local-sanitizer-requirements.json",
+      "sha256": "966bba269f0d5bfaa37009aac94be05460fe03ad30b3d7ed3530857a15c66edd",
+      "size": 3496
+    },
+    {
+      "kind": "generated",
+      "path": "policy.json",
+      "sha256": "9fc633823ef7cb80ca559ded936707c4fd0065223c51e37ad231d064df7e8d5a",
+      "size": 3844
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "rebind-final-subject.py",
+      "sha256": "a7cd2d2cbbae37ce335566349e6a5b6d6cf8080e8af6997750126a051b0a4717",
+      "size": 59594
+    },
+    {
+      "kind": "generated",
+      "path": "row-mapping.json",
+      "sha256": "78b136ae1bd08735fe33a6a2db3a92fb1f5137df180d2a68beafd5af687b7534",
+      "size": 7495274
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "run-fuzz-smoke.py",
+      "sha256": "976addcbdbad97110c511892b7228ec84ef51db3886cb0446c0c622bf93422b1",
+      "size": 31596
+    },
+    {
+      "kind": "generated",
+      "path": "sanitizer-controls.json",
+      "sha256": "69b50f4eedf8f143c36c3cd7ea6e3a19a011b40a8d2fa13d8ce01fb7121b0ea1",
+      "size": 5070
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "sanitizer_positive.py",
+      "sha256": "eec0bf45eade2a71aecda803f3b1207deb75704645c6734b76af048a952f5322",
+      "size": 10459
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "schemas.py",
+      "sha256": "bc06dced410b1c5a89adb1baecdd325fedf5e76b88e1839f413720b09630d0aa",
+      "size": 22037
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/artifacts.schema.json",
+      "sha256": "79b98727a76bc513ee404651977295a982cd518adcafc8d0f512cfd71ba3f656",
+      "size": 1488
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/campaign-status.schema.json",
+      "sha256": "f18bf15d702491ae5681db539b7536f143f7a42364f4d68a6617deea56367b80",
+      "size": 29988
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/corpus-manifest.schema.json",
+      "sha256": "84ef16ecada4e9dcda084d64786cbe3c72de11ce50b7e0d9c5b55e6380334d40",
+      "size": 32288
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/crash-bundle-template.schema.json",
+      "sha256": "db78a4e6bde65f12134fc64cdf818f31c8eef42657bd8230e49202805556bd81",
+      "size": 19358
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/crash-lifecycle-status.schema.json",
+      "sha256": "9759a69d702f50fc607d3fad54c7bbd0e3b5a7674ea8c387a2a85a5a20105bd9",
+      "size": 23117
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/local-sanitizer-requirements.schema.json",
+      "sha256": "8f49f5675948f4a2832f4e3431af372b5273ef7104095110d883c05ecbf156d9",
+      "size": 7094
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/policy.schema.json",
+      "sha256": "7cb6d07031d58ec0f4c8e10a9eba894b5db2f784d3d88e33e0ba3e6797ee51c6",
+      "size": 13671
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/row-mapping.schema.json",
+      "sha256": "efd183bc85c26b722b2855d062eadfcb0d5588fdea382e1415076f91f3faa6c4",
+      "size": 9478
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/sanitizer-controls.schema.json",
+      "sha256": "4e9a68daea52d8b882fa10ec12f433884bffdf75b7fc077e027025eff590e73d",
+      "size": 10142
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/source-bindings.schema.json",
+      "sha256": "9e6965af84fde84baeed382f1b682e8f2ebcc1bf657a6ded663b777c7878df44",
+      "size": 2640
+    },
+    {
+      "kind": "generated",
+      "path": "schemas/target-registry.schema.json",
+      "sha256": "38a8693227a257281528555802487ee84e99bfaa6745965223e7e949ca90799a",
+      "size": 50707
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "select-fuzz-targets.py",
+      "sha256": "f0cd877aab32883de7c0026cce1b6d1d3c240e77a01f758a63e9b8704049726c",
+      "size": 4600
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "selftest.py",
+      "sha256": "8e6185f38321040ae1c01db6bb362d6365047abcb736b7dd13e1e5d40294b0f3",
+      "size": 78689
+    },
+    {
+      "kind": "generated",
+      "path": "source-bindings.json",
+      "sha256": "3856d8c96dc8db0c1569d4b40a26a3a8cc7a8ed9ad94ee1f9d2e5bc7bcb1383f",
+      "size": 5199
+    },
+    {
+      "kind": "generated",
+      "path": "target-registry.json",
+      "sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
+      "size": 34504
+    },
+    {
+      "kind": "reviewed-source",
+      "path": "verify.py",
+      "sha256": "ce49da8a1e8c4010b162ab884cb41ec92161bc4bf7f7bcca23f1556c3c8d6342",
+      "size": 8430
+    }
+  ],
+  "release_gate": "HOLD",
+  "schema_version": 1,
+  "status": "STABLE-final-subject-bound"
+}
