@@ -1,0 +1,6 @@
+schema-version = 1
+override = []
+
+# Intentionally and structurally empty. Schema v1 disables promotion; adding
+# any record fails verification. A future reviewed schema must first define
+# separately typed, exact-bound external review and replay evidence records.

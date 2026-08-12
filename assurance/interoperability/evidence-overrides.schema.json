@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcrypt.example/schemas/interoperability-evidence-overrides-v1.json",
+  "title": "dcrypt interoperability evidence overrides disabled in schema v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema-version", "override"],
+  "properties": {
+    "schema-version": {"const": 1},
+    "override": {
+      "type": "array",
+      "maxItems": 0
+    }
+  }
+}

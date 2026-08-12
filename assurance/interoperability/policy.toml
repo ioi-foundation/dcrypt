@@ -1,0 +1,296 @@
+schema-version = 1
+matrix-version = 1
+content-policy = "dcrypt-interoperability-matrix-v1"
+as-of = "2026-08-11"
+evidence-promotion-enabled = false
+
+[expected]
+curated-operation-rows = 652
+curated-operation-atoms = 7070
+curated-data-surface-rows = 14
+curated-data-surface-atoms = 56
+unreviewed-gap-rows = 8632
+ledger-atomic-rows = 9298
+ledger-release-blockers = 9298
+public-api-units = 19021
+snapshot-profiles = 4
+
+[review]
+default-owner = "dcrypt interoperability assurance"
+default-reviewer = "independent interoperability reviewer (assignment pending)"
+default-deadline = "2026-11-09"
+default-expiry = "2026-11-09"
+maximum-validity-days = 90
+
+[inputs]
+atomic-operations = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
+public-api-snapshot = "dcfe5911f06c1cef3ab3d32d8b1124fb81542bbbeb7ff7f84b9bbc36c1c31386"
+assurance-ledger = "96adbbbb2076cc15c6d3cf49359e90b6e8fb7ef1596520a3a808b21d4d67589c"
+implementation-boundary = "685516a55c33b5c03faef22a2ddb4e53224ac6cdbe857d6b41718c1f6b342f83"
+root-manifest = "0dcf0e8826cd4f9e5aee6e120df981ead7a01923e3eb33aa36f4054da426baaf"
+root-lockfile = "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd"
+verification-manifest = "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8"
+verification-lockfile = "2f05e057dc06ea3e5634afc880fd01b401abdeab22627f05bb97b58acb2ba0d5"
+
+[disposition]
+operation-status = "blocked"
+operation-blocker = "evidence-promotion-disabled-in-schema-v1; separately-typed-external-review-and-replay-records-required"
+data-surface-status = "not-applicable"
+data-surface-rationale = "public metadata has no executable cross-implementation direction; its exact bytes and alias binding remain assurance-ledger concerns"
+gap-status = "blocked"
+gap-blocker = "semantic-classification-and-independent-interoperability-evidence-required"
+placeholder-direction = "bidirectional-required"
+placeholder-oracle = "unassigned"
+placeholder-case-id = "required-coverage"
+
+[published]
+packages = [
+  "dcrypt-internal",
+  "dcrypt-params",
+  "dcrypt-api",
+  "dcrypt-common",
+  "dcrypt-algorithms",
+  "dcrypt-symmetric",
+  "dcrypt-kem",
+  "dcrypt-sign",
+  "dcrypt-pke",
+  "dcrypt-utils",
+  "dcrypt-hybrid",
+  "dcrypt",
+]
+manifests = [
+  "crates/internal/Cargo.toml",
+  "crates/params/Cargo.toml",
+  "crates/api/Cargo.toml",
+  "crates/common/Cargo.toml",
+  "crates/algorithms/Cargo.toml",
+  "crates/symmetric/Cargo.toml",
+  "crates/kem/Cargo.toml",
+  "crates/sign/Cargo.toml",
+  "crates/pke/Cargo.toml",
+  "crates/utils/Cargo.toml",
+  "crates/hybrid/Cargo.toml",
+  "Cargo.toml",
+]
+
+[published.manifest-record-sha256]
+"crates/internal/Cargo.toml" = "5828bd1d90c93fe4843b525f8563d6a2d93d25d3b516530f4e75cb9fb7309c19"
+"crates/params/Cargo.toml" = "bf1f1b65502e6d1fb473f90c8cb01fb087df80009086c730542b61f10acc6c6a"
+"crates/api/Cargo.toml" = "56289b425eb06673eda02ab1c3d1df56a810ba56ebf9187709d2d6af810d0224"
+"crates/common/Cargo.toml" = "a86ba48b2605fade26e6d800a9d55d12dd90bc8a864194e5f7bd27697a01cd5b"
+"crates/algorithms/Cargo.toml" = "e808403b09b3815fcb62aed5dff254be8a0a3f1c31257cd15b97a53bb58b492e"
+"crates/symmetric/Cargo.toml" = "0bda4f80550e099b683ce8acb24720e30d75858414437e0845ad339ddd692d6a"
+"crates/kem/Cargo.toml" = "b639a81a049a2bf81c24cf83a2cc8551ed8064d4bfee334eb6fd89bf8834860d"
+"crates/sign/Cargo.toml" = "9eb13c393fd26eadf1a7d9963dc46ee5157604feef9ab14619b8d665636a3281"
+"crates/pke/Cargo.toml" = "32b027250f560d9ac39a14f3aaa6f72ea482bb50610fc80fc70ff9364d22d03e"
+"crates/utils/Cargo.toml" = "af031384c04c58fa40a73b7a303084760c45d79efb468e68986f36f9dee429aa"
+"crates/hybrid/Cargo.toml" = "729d12e76d84795c26b2c6f821da046c2faa5065d9e3bef20024fab2e4c0171f"
+"Cargo.toml" = "73b5662e222774b3370f6c19385a94aa048f3470bd122045ebb84218eb26043e"
+
+[[required-family]]
+id = "ml-kem-512"
+scope = "ML-KEM-512; key generation, encapsulation, decapsulation, implicit rejection, parsing, canonical encoding"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ML-KEM|ML-KEM-512"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ml-kem-768"
+scope = "ML-KEM-768; key generation, encapsulation, decapsulation, implicit rejection, parsing, canonical encoding"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ML-KEM|ML-KEM-768"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ml-kem-1024"
+scope = "ML-KEM-1024; key generation, encapsulation, decapsulation, implicit rejection, parsing, canonical encoding"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ML-KEM|ML-KEM-1024"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ed25519-strict"
+scope = "strict RFC 8032 Ed25519; both directions, canonical encodings, small-order and malleability rejection"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["Ed25519|Ed25519"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdsa-p224"
+scope = "ECDSA P-224; RFC6979, DER, low-S, malformed signatures"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDSA|P-224"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdsa-p256"
+scope = "ECDSA P-256; RFC6979, DER, low-S, malformed signatures"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDSA|P-256"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdsa-p384"
+scope = "ECDSA P-384; RFC6979, DER, low-S, malformed signatures"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDSA|P-384"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdsa-p521"
+scope = "ECDSA P-521; RFC6979, DER, low-S, malformed signatures"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDSA|P-521"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdh-p224"
+scope = "P-224 ECDH; arbitrary peers and invalid-point cases"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDH KEM|P-224"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdh-p256"
+scope = "P-256 ECDH; arbitrary peers and invalid-point cases"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDH KEM|P-256"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdh-p384"
+scope = "P-384 ECDH; arbitrary peers and invalid-point cases"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDH KEM|P-384"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdh-p521"
+scope = "P-521 ECDH; arbitrary peers and invalid-point cases"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDH KEM|P-521"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ecdh-secp256k1"
+scope = "secp256k1 ECDH; arbitrary peers and invalid-point cases"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ECDH KEM|secp256k1"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "aes-128-gcm"
+scope = "AES-128-GCM; both directions, AAD, nonce, tag, tampering, wrong-key behavior"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["AES-GCM|AES-128-GCM"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "aes-256-gcm"
+scope = "AES-256-GCM; both directions, AAD, nonce, tag, tampering, wrong-key behavior"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["AES-GCM|AES-256-GCM"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "ghash-private-disposition"
+scope = "standalone GHASH is currently a private implementation detail; define isolated non-public differential evidence without inventing a public API"
+mapping-kind = "private-disposition"
+atomic-selectors = []
+preservation = false
+disposition = "blocked-private-api-evidence-design-required"
+
+[[required-family]]
+id = "chacha20-poly1305"
+scope = "high-level ChaCha20-Poly1305; both directions, AAD, nonce, tag, tampering, wrong-key behavior"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ChaCha20-Poly1305|ChaCha20-Poly1305"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "xchacha20-poly1305-high-level"
+scope = "high-level XChaCha20-Poly1305; both directions, AAD, nonce, tag, tampering, wrong-key behavior"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["XChaCha20-Poly1305|XChaCha20-Poly1305"]
+preservation = false
+disposition = "blocked-pending-accepted-independent-oracle"
+
+[[required-family]]
+id = "bls12-381-second-lineage"
+scope = "second genuinely independent BLS12-381 field, group, pairing, hash-to-curve, and signature lineage"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["BLS12-381|BLS12-381", "BLS12-381 signatures|BLS12-381-G2"]
+preservation = false
+disposition = "blocked-pending-second-independent-lineage"
+
+[[required-family]]
+id = "preserve-ml-dsa-44"
+scope = "preserve and expand existing ML-DSA-44 interoperability"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ML-DSA|ML-DSA-44"]
+preservation = true
+disposition = "blocked-pending-existing-oracle-lineage-acceptance"
+
+[[required-family]]
+id = "preserve-ml-dsa-65"
+scope = "preserve and expand existing ML-DSA-65 interoperability"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ML-DSA|ML-DSA-65"]
+preservation = true
+disposition = "blocked-pending-existing-oracle-lineage-acceptance"
+
+[[required-family]]
+id = "preserve-ml-dsa-87"
+scope = "preserve and expand existing ML-DSA-87 interoperability"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["ML-DSA|ML-DSA-87"]
+preservation = true
+disposition = "blocked-pending-existing-oracle-lineage-acceptance"
+
+[[required-family]]
+id = "preserve-bls12-381-current"
+scope = "preserve and expand current BLS12-381 arithmetic and signature interoperability while its lineage remains under review"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["BLS12-381|BLS12-381", "BLS12-381 signatures|BLS12-381-G2"]
+preservation = true
+disposition = "blocked-pending-existing-oracle-lineage-acceptance"
+
+[[required-family]]
+id = "preserve-ethereum-bls"
+scope = "preserve and expand Ethereum consensus BLS profile interoperability and vector provenance"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["BLS12-381 Ethereum consensus signatures|BLS12-381-G2"]
+preservation = true
+disposition = "blocked-pending-existing-corpus-and-lineage-acceptance"
+
+[[required-family]]
+id = "preserve-traditional-ec"
+scope = "preserve and expand current P-224/P-256/P-384/P-521/secp256k1 arithmetic and ECDH interoperability"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["prime-field elliptic curve|P-224", "prime-field elliptic curve|P-256", "prime-field elliptic curve|P-384", "prime-field elliptic curve|P-521", "prime-field elliptic curve|secp256k1"]
+preservation = true
+disposition = "blocked-pending-existing-oracle-lineage-acceptance"
+
+[[required-family]]
+id = "preserve-xchacha20-poly1305"
+scope = "preserve and expand current XChaCha20-Poly1305 interoperability"
+mapping-kind = "public-atomic-selector"
+atomic-selectors = ["XChaCha20-Poly1305|XChaCha20-Poly1305"]
+preservation = true
+disposition = "blocked-pending-existing-oracle-lineage-acceptance"

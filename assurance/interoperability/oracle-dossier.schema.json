@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcrypt.example/schemas/oracle-dossier-v1.json",
+  "title": "dcrypt interoperability oracle dossiers",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema-version", "oracle"],
+  "properties": {
+    "schema-version": {"const": 1},
+    "oracle": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/oracle"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "date": {"type": "string", "format": "date"},
+    "stringList": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "status", "display-name", "package", "version", "source-url",
+        "source-commit", "source-commit-provenance", "archive-sha256", "license", "license-file-sha256", "provenance-status",
+        "acquisition-method", "acquisition-record", "lockfile", "lockfile-sha256", "dependency-role",
+        "offline-artifact-path", "offline-artifact-sha256", "offline-replay-command",
+        "network-policy", "implementation-lineage", "independence-review-status",
+        "lineage-review", "source-ancestry", "arithmetic-libraries", "ffi-backends",
+        "generated-tables", "shared-primitives", "vector-generators",
+        "specifications-reference-code", "intended-families", "tests", "owner",
+        "reviewer", "review-date", "deadline", "expiry"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+        "status": {"enum": ["candidate", "rejected-as-independent", "retired"]},
+        "display-name": {"type": "string", "minLength": 1},
+        "package": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"},
+        "source-url": {"type": "string", "minLength": 1},
+        "source-commit": {"oneOf": [{"pattern": "^[0-9a-f]{40}$"}, {"const": "not-recorded"}]},
+        "source-commit-provenance": {"enum": ["not-recorded", "publisher-claimed-not-independently-verified", "independently-verified"]},
+        "archive-sha256": {"$ref": "#/$defs/sha256"},
+        "license": {"type": "string", "minLength": 1},
+        "license-file-sha256": {"$ref": "#/$defs/stringList"},
+        "provenance-status": {"enum": ["incomplete", "complete"]},
+        "acquisition-method": {"type": "string", "minLength": 1},
+        "acquisition-record": {"type": "string", "minLength": 1},
+        "lockfile": {"const": "verification/Cargo.lock"},
+        "lockfile-sha256": {"$ref": "#/$defs/sha256"},
+        "dependency-role": {"enum": ["direct", "transitive"]},
+        "offline-artifact-path": {"type": "string", "minLength": 1},
+        "offline-artifact-sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"const": "not-provisioned"}]},
+        "offline-replay-command": {"type": "string", "minLength": 1},
+        "network-policy": {"const": "forbidden"},
+        "implementation-lineage": {"enum": ["unknown", "independent", "shared-source-lineage", "shared-development-lineage", "shared-production-backend", "shared-reference-lineage"]},
+        "independence-review-status": {"enum": ["required", "complete"]},
+        "lineage-review": {"type": "string", "minLength": 1},
+        "source-ancestry": {"$ref": "#/$defs/stringList"},
+        "arithmetic-libraries": {"$ref": "#/$defs/stringList"},
+        "ffi-backends": {"$ref": "#/$defs/stringList"},
+        "generated-tables": {"$ref": "#/$defs/stringList"},
+        "shared-primitives": {"$ref": "#/$defs/stringList"},
+        "vector-generators": {"$ref": "#/$defs/stringList"},
+        "specifications-reference-code": {"$ref": "#/$defs/stringList"},
+        "intended-families": {"$ref": "#/$defs/stringList"},
+        "tests": {"$ref": "#/$defs/stringList"},
+        "owner": {"type": "string", "minLength": 1},
+        "reviewer": {"type": "string", "minLength": 1},
+        "review-date": {"oneOf": [{"$ref": "#/$defs/date"}, {"const": "not-reviewed"}]},
+        "deadline": {"$ref": "#/$defs/date"},
+        "expiry": {"$ref": "#/$defs/date"}
+      }
+    }
+  }
+}

@@ -1,0 +1,276 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dcrypt.example/schemas/interoperability-matrix-v1.json",
+  "title": "dcrypt interoperability completeness matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "content_policy",
+    "canonicalization",
+    "source_binding",
+    "generated_inputs",
+    "required_families",
+    "oracle_dossiers",
+    "verification_external_closure",
+    "counts",
+    "release_gate",
+    "rows",
+    "unreviewed_gaps"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "content_policy": {"const": "dcrypt-interoperability-matrix-v1"},
+    "canonicalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["encoding", "key_order", "separators", "final_newline", "floats", "duplicate_keys"],
+      "properties": {
+        "encoding": {"const": "UTF-8"},
+        "key_order": {"const": "Unicode-code-point-ascending"},
+        "separators": {"const": "comma-colon-no-whitespace"},
+        "final_newline": {"const": true},
+        "floats": {"const": "forbidden"},
+        "duplicate_keys": {"const": "forbidden"}
+      }
+    },
+    "source_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot_source_commit", "snapshot_source_tree", "ledger_source_commit", "ledger_source_tree", "atomic_operations_sha256", "public_api_snapshot_sha256", "assurance_ledger_sha256"],
+      "properties": {
+        "snapshot_source_commit": {"$ref": "#/$defs/sha1"},
+        "snapshot_source_tree": {"$ref": "#/$defs/sha1"},
+        "ledger_source_commit": {"$ref": "#/$defs/sha1"},
+        "ledger_source_tree": {"$ref": "#/$defs/sha1"},
+        "atomic_operations_sha256": {"$ref": "#/$defs/sha256"},
+        "public_api_snapshot_sha256": {"$ref": "#/$defs/sha256"},
+        "assurance_ledger_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "generated_inputs": {
+      "type": "array",
+      "minItems": 17,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "required_families": {
+      "type": "array",
+      "minItems": 26,
+      "maxItems": 26,
+      "items": {"$ref": "#/$defs/family"}
+    },
+    "oracle_dossiers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/dossierSummary"}
+    },
+    "verification_external_closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_package", "packages", "package_count", "set_sha256", "published_baseline_exceptions", "promotion_enabled"],
+      "properties": {
+        "root_package": {"const": "dcrypt-verification@0.0.0"},
+        "packages": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/closurePackage"}},
+        "package_count": {"type": "integer", "minimum": 1},
+        "set_sha256": {"$ref": "#/$defs/sha256"},
+        "published_baseline_exceptions": {"const": ["base64@0.22.1", "hex@0.4.3"]},
+        "promotion_enabled": {"const": false}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["curated_operation_rows", "curated_operation_atoms", "curated_data_surface_rows", "curated_data_surface_atoms", "unreviewed_gap_rows", "generated_matrix_rows", "passing_operation_atoms", "blocked_operation_atoms", "not_applicable_data_surface_atoms", "blocked_unreviewed_gaps", "interoperability_blockers", "ledger_atomic_release_blockers", "accepted_oracle_dossiers", "candidate_oracle_dossiers", "rejected_as_independent_oracle_dossiers"],
+      "properties": {
+        "curated_operation_rows": {"const": 652},
+        "curated_operation_atoms": {"const": 7070},
+        "curated_data_surface_rows": {"const": 14},
+        "curated_data_surface_atoms": {"const": 56},
+        "unreviewed_gap_rows": {"const": 8632},
+        "generated_matrix_rows": {"const": 7126},
+        "passing_operation_atoms": {"const": 0},
+        "blocked_operation_atoms": {"const": 7070},
+        "not_applicable_data_surface_atoms": {"const": 56},
+        "blocked_unreviewed_gaps": {"const": 8632},
+        "interoperability_blockers": {"const": 15702},
+        "ledger_atomic_release_blockers": {"const": 9298},
+        "accepted_oracle_dossiers": {"const": 0},
+        "candidate_oracle_dossiers": {"type": "integer", "minimum": 0},
+        "rejected_as_independent_oracle_dossiers": {"type": "integer", "minimum": 0}
+      }
+    },
+    "release_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_promotion_enabled", "structural_ci_may_pass_with_blockers", "release_mode_must_fail_with_blockers", "no_scaffold_or_candidate_counts_as_evidence", "counting_semantics"],
+      "properties": {
+        "status": {"const": "blocked"},
+        "evidence_promotion_enabled": {"const": false},
+        "structural_ci_may_pass_with_blockers": {"const": true},
+        "release_mode_must_fail_with_blockers": {"const": true},
+        "no_scaffold_or_candidate_counts_as_evidence": {"const": true},
+        "counting_semantics": {"type": "string", "minLength": 1}
+      }
+    },
+    "rows": {
+      "type": "array",
+      "minItems": 7126,
+      "maxItems": 7126,
+      "items": {"$ref": "#/$defs/row"}
+    },
+    "unreviewed_gaps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaults_sha256", "set_sha256", "items"],
+      "properties": {
+        "defaults_sha256": {"$ref": "#/$defs/sha256"},
+        "set_sha256": {"$ref": "#/$defs/sha256"},
+        "items": {
+          "type": "array",
+          "minItems": 8632,
+          "maxItems": 8632,
+          "items": {"$ref": "#/$defs/gap"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha1": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "date": {"type": "string", "format": "date"},
+    "stringList": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "scope", "mapping_kind", "atomic_selectors", "matched_atomic_row_count", "matched_atomic_row_ids_sha256", "preservation", "disposition", "owner", "reviewer", "deadline", "expiry"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "scope": {"type": "string", "minLength": 1},
+        "mapping_kind": {"enum": ["public-atomic-selector", "private-disposition"]},
+        "atomic_selectors": {"$ref": "#/$defs/stringList"},
+        "matched_atomic_row_count": {"type": "integer", "minimum": 0},
+        "matched_atomic_row_ids_sha256": {"$ref": "#/$defs/sha256"},
+        "preservation": {"type": "boolean"},
+        "disposition": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "reviewer": {"type": "string", "minLength": 1},
+        "deadline": {"$ref": "#/$defs/date"},
+        "expiry": {"$ref": "#/$defs/date"}
+      }
+    },
+    "dossierSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "record_sha256", "status", "provenance_status", "implementation_lineage", "independence_review_status", "owner", "reviewer", "deadline", "expiry"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "record_sha256": {"$ref": "#/$defs/sha256"},
+        "status": {"enum": ["candidate", "rejected-as-independent", "retired"]},
+        "provenance_status": {"enum": ["incomplete", "complete"]},
+        "implementation_lineage": {"enum": ["unknown", "independent", "shared-source-lineage", "shared-development-lineage", "shared-production-backend", "shared-reference-lineage"]},
+        "independence_review_status": {"enum": ["required", "complete"]},
+        "owner": {"type": "string", "minLength": 1},
+        "reviewer": {"type": "string", "minLength": 1},
+        "deadline": {"$ref": "#/$defs/date"},
+        "expiry": {"$ref": "#/$defs/date"}
+      }
+    },
+    "closurePackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "source", "checksum"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "checksum": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "rowKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atomic_row_id", "crate", "public_path", "public_unit", "public_kind", "algorithm", "standard", "standards_scope", "parameter_set", "operation", "encoding_wire_format", "mode_profile", "dst_context_prehash", "feature_profile", "platform", "direction", "oracle_id", "oracle_version", "oracle_source_commit", "oracle_checksum", "oracle_license", "oracle_acquisition_provenance", "implementation_lineage", "shared_dependencies", "case_id"],
+      "properties": {
+        "atomic_row_id": {"type": "string", "minLength": 1},
+        "crate": {"type": "string", "minLength": 1},
+        "public_path": {"type": "string", "minLength": 1},
+        "public_unit": {"type": "string", "minLength": 1},
+        "public_kind": {"type": "string", "minLength": 1},
+        "algorithm": {"type": "string", "minLength": 1},
+        "standard": {"type": "string", "minLength": 1},
+        "standards_scope": {"enum": ["standardized", "project-specified", "transitional", "compatibility"]},
+        "parameter_set": {"type": "string", "minLength": 1},
+        "operation": {"type": "string", "minLength": 1},
+        "encoding_wire_format": {"type": "string", "minLength": 1},
+        "mode_profile": {"type": "string", "minLength": 1},
+        "dst_context_prehash": {"type": "string", "minLength": 1},
+        "feature_profile": {"type": "string", "minLength": 1},
+        "platform": {"type": "string", "minLength": 1},
+        "direction": {"type": "string", "minLength": 1},
+        "oracle_id": {"type": "string", "minLength": 1},
+        "oracle_version": {"type": "string", "minLength": 1},
+        "oracle_source_commit": {"type": "string", "minLength": 1},
+        "oracle_checksum": {"type": "string", "minLength": 1},
+        "oracle_license": {"type": "string", "minLength": 1},
+        "oracle_acquisition_provenance": {"type": "string", "minLength": 1},
+        "implementation_lineage": {"type": "string", "minLength": 1},
+        "shared_dependencies": {"$ref": "#/$defs/stringList"},
+        "case_id": {"type": "string", "minLength": 1}
+      }
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row_id", "row_kind", "atomic_record_sha256", "key", "corpus_test_identifiers", "evidence_sha256", "evidence_generated_at", "evidence_valid_through", "execution_status", "independent_replay_status", "freshness_status", "status", "blocker", "not_applicable_rationale", "owner", "reviewer", "deadline", "expiry"],
+      "properties": {
+        "row_id": {"type": "string", "pattern": "^interop\\.[0-9a-f]{64}$"},
+        "row_kind": {"enum": ["operation", "data-surface"]},
+        "atomic_record_sha256": {"$ref": "#/$defs/sha256"},
+        "key": {"$ref": "#/$defs/rowKey"},
+        "corpus_test_identifiers": {"$ref": "#/$defs/stringList"},
+        "evidence_sha256": {"type": "string", "minLength": 1},
+        "evidence_generated_at": {"type": "string", "minLength": 1},
+        "evidence_valid_through": {"type": "string", "minLength": 1},
+        "execution_status": {"type": "string", "minLength": 1},
+        "independent_replay_status": {"type": "string", "minLength": 1},
+        "freshness_status": {"type": "string", "minLength": 1},
+        "status": {"enum": ["blocked", "not-applicable"]},
+        "blocker": {"type": "string"},
+        "not_applicable_rationale": {"type": "string"},
+        "owner": {"type": "string", "minLength": 1},
+        "reviewer": {"type": "string", "minLength": 1},
+        "deadline": {"$ref": "#/$defs/date"},
+        "expiry": {"$ref": "#/$defs/date"}
+      }
+    },
+    "gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["atomic_row_id", "row_kind", "raw_record_sha256", "effective_record_sha256", "public_bindings_sha256", "public_entry_count", "profile_atom_count", "status", "blocker", "owner", "reviewer", "deadline", "expiry"],
+      "properties": {
+        "atomic_row_id": {"type": "string", "minLength": 1},
+        "row_kind": {"type": "string", "minLength": 1},
+        "raw_record_sha256": {"$ref": "#/$defs/sha256"},
+        "effective_record_sha256": {"$ref": "#/$defs/sha256"},
+        "public_bindings_sha256": {"$ref": "#/$defs/sha256"},
+        "public_entry_count": {"type": "integer", "minimum": 1},
+        "profile_atom_count": {"type": "integer", "minimum": 1},
+        "status": {"const": "blocked"},
+        "blocker": {"type": "string", "minLength": 1},
+        "owner": {"type": "string", "minLength": 1},
+        "reviewer": {"type": "string", "minLength": 1},
+        "deadline": {"$ref": "#/$defs/date"},
+        "expiry": {"$ref": "#/$defs/date"}
+      }
+    }
+  }
+}
