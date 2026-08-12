@@ -2,9 +2,10 @@
 
 #![forbid(unsafe_code)]
 //!
-//! The RustCrypto crates imported here are independent test oracles. This
-//! workspace is excluded from dcrypt's published workspace and dependency
-//! closure.
+//! The RustCrypto crates imported here are isolated candidate comparators. A
+//! Package B lineage review found distinct arithmetic but unresolved ancestry
+//! and a shared `subtle` design dependency, so these checks are corroborative
+//! regressions rather than independent assurance evidence.
 
 use dcrypt_algorithms::ec::{k256 as owned_k256, p224 as owned_p224, p256 as owned_p256};
 use dcrypt_algorithms::ec::{p384 as owned_p384, p521 as owned_p521};
@@ -31,7 +32,7 @@ fn minus_one<const N: usize>(mut value: [u8; N]) -> [u8; N] {
 }
 
 #[test]
-fn canonical_scalar_boundaries_match_independent_oracles() {
+fn canonical_scalar_boundaries_match_candidate_comparators() {
     let p224_order = decode_hex::<28>("ffffffffffffffffffffffffffff16a2e0b8f03e13dd29455c5c2a3d");
     assert!(owned_p224::Scalar::new(p224_order).is_err());
     assert!(p224::SecretKey::from_slice(&p224_order).is_err());
@@ -110,13 +111,24 @@ fn p224_base_multiplication_and_ecdh_match_oracle() {
         let scalar = owned_p224::Scalar::new(bytes).unwrap();
         let public = owned_p224::scalar_mult_base_g(&scalar).unwrap();
         let oracle_secret = p224::SecretKey::from_slice(&bytes).unwrap();
+        let oracle_public = oracle_secret.public_key();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret
-                .public_key()
-                .to_encoded_point(false)
-                .as_bytes(),
+            oracle_public.to_encoded_point(false).as_bytes(),
         );
+        assert_eq!(
+            public.serialize_compressed().as_slice(),
+            oracle_public.to_encoded_point(true).as_bytes(),
+        );
+        assert_eq!(
+            owned_p224::Point::deserialize_compressed(
+                oracle_public.to_encoded_point(true).as_bytes()
+            )
+            .unwrap()
+            .serialize_uncompressed(),
+            public.serialize_uncompressed(),
+        );
+        assert!(p224::PublicKey::from_sec1_bytes(&public.serialize_compressed()).is_ok());
 
         let shared = owned_p224::scalar_mult(&scalar, &peer_point).unwrap();
         let oracle_shared =
@@ -145,13 +157,24 @@ fn p256_base_multiplication_and_ecdh_match_oracle() {
         let scalar = owned_p256::Scalar::new(bytes).unwrap();
         let public = owned_p256::scalar_mult_base_g(&scalar).unwrap();
         let oracle_secret = p256::SecretKey::from_slice(&bytes).unwrap();
+        let oracle_public = oracle_secret.public_key();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret
-                .public_key()
-                .to_encoded_point(false)
-                .as_bytes(),
+            oracle_public.to_encoded_point(false).as_bytes(),
         );
+        assert_eq!(
+            public.serialize_compressed().as_slice(),
+            oracle_public.to_encoded_point(true).as_bytes(),
+        );
+        assert_eq!(
+            owned_p256::Point::deserialize_compressed(
+                oracle_public.to_encoded_point(true).as_bytes()
+            )
+            .unwrap()
+            .serialize_uncompressed(),
+            public.serialize_uncompressed(),
+        );
+        assert!(p256::PublicKey::from_sec1_bytes(&public.serialize_compressed()).is_ok());
 
         let shared = owned_p256::scalar_mult(&scalar, &peer_point).unwrap();
         let oracle_shared =
@@ -180,13 +203,24 @@ fn p384_base_multiplication_and_ecdh_match_oracle() {
         let scalar = owned_p384::Scalar::new(bytes).unwrap();
         let public = owned_p384::scalar_mult_base_g(&scalar).unwrap();
         let oracle_secret = p384::SecretKey::from_slice(&bytes).unwrap();
+        let oracle_public = oracle_secret.public_key();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret
-                .public_key()
-                .to_encoded_point(false)
-                .as_bytes(),
+            oracle_public.to_encoded_point(false).as_bytes(),
         );
+        assert_eq!(
+            public.serialize_compressed().as_slice(),
+            oracle_public.to_encoded_point(true).as_bytes(),
+        );
+        assert_eq!(
+            owned_p384::Point::deserialize_compressed(
+                oracle_public.to_encoded_point(true).as_bytes()
+            )
+            .unwrap()
+            .serialize_uncompressed(),
+            public.serialize_uncompressed(),
+        );
+        assert!(p384::PublicKey::from_sec1_bytes(&public.serialize_compressed()).is_ok());
 
         let shared = owned_p384::scalar_mult(&scalar, &peer_point).unwrap();
         let oracle_shared =
@@ -211,19 +245,32 @@ fn p521_base_multiplication_and_ecdh_match_oracle() {
         .unwrap()
         .public_key();
 
+    let mut checked = 0;
     for bytes in candidates::<66>(0x01) {
         let Ok(scalar) = owned_p521::Scalar::new(bytes) else {
             continue;
         };
+        checked += 1;
         let public = owned_p521::scalar_mult_base_g(&scalar).unwrap();
         let oracle_secret = p521::SecretKey::from_slice(&bytes).unwrap();
+        let oracle_public = oracle_secret.public_key();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret
-                .public_key()
-                .to_encoded_point(false)
-                .as_bytes(),
+            oracle_public.to_encoded_point(false).as_bytes(),
         );
+        assert_eq!(
+            public.serialize_compressed().as_slice(),
+            oracle_public.to_encoded_point(true).as_bytes(),
+        );
+        assert_eq!(
+            owned_p521::Point::deserialize_compressed(
+                oracle_public.to_encoded_point(true).as_bytes()
+            )
+            .unwrap()
+            .serialize_uncompressed(),
+            public.serialize_uncompressed(),
+        );
+        assert!(p521::PublicKey::from_sec1_bytes(&public.serialize_compressed()).is_ok());
 
         let shared = owned_p521::scalar_mult(&scalar, &peer_point).unwrap();
         let oracle_shared =
@@ -233,6 +280,10 @@ fn p521_base_multiplication_and_ecdh_match_oracle() {
             oracle_shared.raw_secret_bytes().as_slice(),
         );
     }
+    assert_eq!(
+        checked, 24,
+        "every deterministic P-521 candidate must execute"
+    );
 }
 
 #[test]
@@ -252,13 +303,24 @@ fn secp256k1_base_multiplication_and_ecdh_match_oracle() {
         let scalar = owned_k256::Scalar::new(bytes).unwrap();
         let public = owned_k256::scalar_mult_base_g(&scalar).unwrap();
         let oracle_secret = k256::SecretKey::from_slice(&bytes).unwrap();
+        let oracle_public = oracle_secret.public_key();
         assert_eq!(
             public.serialize_uncompressed().as_slice(),
-            oracle_secret
-                .public_key()
-                .to_encoded_point(false)
-                .as_bytes(),
+            oracle_public.to_encoded_point(false).as_bytes(),
         );
+        assert_eq!(
+            public.serialize_compressed().as_slice(),
+            oracle_public.to_encoded_point(true).as_bytes(),
+        );
+        assert_eq!(
+            owned_k256::Point::deserialize_compressed(
+                oracle_public.to_encoded_point(true).as_bytes()
+            )
+            .unwrap()
+            .serialize_uncompressed(),
+            public.serialize_uncompressed(),
+        );
+        assert!(k256::PublicKey::from_sec1_bytes(&public.serialize_compressed()).is_ok());
 
         let shared = owned_k256::scalar_mult(&scalar, &peer_point).unwrap();
         let oracle_shared =
@@ -267,5 +329,32 @@ fn secp256k1_base_multiplication_and_ecdh_match_oracle() {
             shared.x_coordinate_bytes().as_slice(),
             oracle_shared.raw_secret_bytes().as_slice(),
         );
+    }
+}
+
+#[test]
+fn malformed_sec1_points_are_rejected_by_all_candidate_comparators() {
+    for encoded in [&[0u8; 29][..], &[4u8; 57][..], &[0xff; 57][..]] {
+        assert!(owned_p224::Point::deserialize_compressed(encoded).is_err());
+        assert!(owned_p224::Point::deserialize_uncompressed(encoded).is_err());
+        assert!(p224::PublicKey::from_sec1_bytes(encoded).is_err());
+    }
+    for encoded in [&[0u8; 33][..], &[4u8; 65][..], &[0xff; 65][..]] {
+        assert!(owned_p256::Point::deserialize_compressed(encoded).is_err());
+        assert!(owned_p256::Point::deserialize_uncompressed(encoded).is_err());
+        assert!(p256::PublicKey::from_sec1_bytes(encoded).is_err());
+        assert!(owned_k256::Point::deserialize_compressed(encoded).is_err());
+        assert!(owned_k256::Point::deserialize_uncompressed(encoded).is_err());
+        assert!(k256::PublicKey::from_sec1_bytes(encoded).is_err());
+    }
+    for encoded in [&[0u8; 49][..], &[4u8; 97][..], &[0xff; 97][..]] {
+        assert!(owned_p384::Point::deserialize_compressed(encoded).is_err());
+        assert!(owned_p384::Point::deserialize_uncompressed(encoded).is_err());
+        assert!(p384::PublicKey::from_sec1_bytes(encoded).is_err());
+    }
+    for encoded in [&[0u8; 67][..], &[4u8; 133][..], &[0xff; 133][..]] {
+        assert!(owned_p521::Point::deserialize_compressed(encoded).is_err());
+        assert!(owned_p521::Point::deserialize_uncompressed(encoded).is_err());
+        assert!(p521::PublicKey::from_sec1_bytes(encoded).is_err());
     }
 }

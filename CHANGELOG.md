@@ -27,9 +27,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `XChaCha20Poly1305`. The tool requires an explicit format acknowledgement,
   validates historical key encodings, never overwrites output, and publishes
   completed plaintext only through same-filesystem atomic hard linking.
-- Added an excluded verification workspace for independent standards and
-  interoperability oracles. Oracle implementations are not reachable from any
-  published crate's normal or build dependency graph.
+- Added an excluded verification workspace for standards and interoperability
+  comparators. Comparator implementations are not reachable from any published
+  crate's normal or build dependency graph. Later Package B lineage review
+  determines whether a comparator can count as independent assurance evidence.
 
 ### Security
 
@@ -156,14 +157,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   verification cases) across every standardized parameter set. The local
   fixture bytes are content-bound; their upstream acquisition provenance is
   unverified.
-- RFC 9380 vectors, independent G1/G2 hash-to-curve and encoding oracles,
+- RFC 9380 vectors, corroborative G1/G2 hash-to-curve and encoding comparisons,
   four published EIP-2333 master-key vectors, draft-07 BLS domain separation,
   and Ethereum aggregate behavior cover the standard BLS surface.
 - The release workflow packages and scans all twelve crates, compiles supported
   Linux x86-64, Linux AArch64, WASM, and bare-metal `no_std` profiles, and runs
   workspace tests/doctests, Miri, Loom, deterministic 1,000-run campaigns for
   every fuzz target, statistical timing
-  regressions, cargo-audit, cargo-deny, independent oracles, and clean-room
+  regressions, cargo-audit, cargo-deny, isolated comparator checks, and clean-room
   package verification. The exact release source is also compiled for the four
   declared GHASH targets and checked for one fixed-counter backedge, no loop
   calls or indirect/table/Thumb-IT control, the reviewed in-loop mask/shift/
@@ -220,7 +221,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The version, algorithm, stream identifier, sequence, lengths, final flag, and
   caller AAD are authenticated; readers enforce sequence and size bounds and
   retain pending plaintext across partial reads. Version-1 streams are rejected.
-- Replaced dcrypt's custom Dilithium implementation with libcrux's portable ML-DSA backend for key generation, signing, verification, and paired expanded-key validation, and added the canonical `MlDsa44`, `MlDsa65`, and `MlDsa87` type names. The historical `Dilithium2/3/5` spellings remain source-compatible aliases to the standards-compliant implementation. The independent `fips204` implementation is now a differential-test dependency only.
+- Replaced dcrypt's custom Dilithium implementation with libcrux's portable ML-DSA backend for key generation, signing, verification, and paired expanded-key validation, and added the canonical `MlDsa44`, `MlDsa65`, and `MlDsa87` type names. The historical `Dilithium2/3/5` spellings remain source-compatible aliases to the standards-compliant implementation. The `fips204` candidate comparator is now a differential-test dependency only; its implementation independence remains unresolved.
 - Versioned the ECDSA-P384 + ML-DSA-65 hybrid framing as v2. Version-1 hybrid objects containing the nonstandard dcrypt Dilithium format are rejected rather than being relabeled as FIPS 204 objects.
 - ECDSA signatures now use strict DER INTEGER parsing, reject negative and
   non-minimal encodings, reject noncanonical scalar values, emit low-`s`
@@ -266,7 +267,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ML-DSA expanded private keys now emit the full 64-byte `tr = SHAKE256(pk, 64)` field required by FIPS 204. Paired import rejects the former 32-byte field plus synthetic padding through `tr` and sign/verify coherence checks. Bare expanded bytes have no version tag, so provenance or versioned framing is required to distinguish overlapping syntactic encodings reliably.
 - Bare expanded-key imports are syntactically decoded but do not attempt public-key derivation. `from_bytes_with_public_key` verifies `tr` and performs a libcrux sign/verify coherence check, caches the paired public key, and is required when callers need `secret_key.public_key()` after import.
 - ML-DSA signature decoding now rejects duplicate or unsorted hint indices, non-monotonic hint boundaries, and nonzero unused hint bytes.
-- Added repository ACVP-format key-generation known-answer gates and bidirectional interoperability tests between libcrux-backed dcrypt operations and the independent `fips204` API for all three parameter sets. Upstream acquisition provenance for the local ACVP-format fixtures is unverified.
+- Added repository ACVP-format key-generation known-answer gates and bidirectional interoperability tests between libcrux-backed dcrypt operations and the `fips204` candidate comparator for all three parameter sets. Package B review does not accept this as independent assurance evidence, and upstream acquisition provenance for the local ACVP-format fixtures is unverified.
 
 ### Migration
 - The remediation release is SemVer-major. It must not be published as `1.2.x`:

@@ -36,7 +36,9 @@ This makes XChaCha20 an excellent choice for systems where managing a sequential
 *   **Nonce Safety:** The primary security advantage of this algorithm is its large nonce size, which makes random nonce generation a safe practice. **However, it is still a critical violation to ever reuse a (key, nonce) pair.**
 *   **Owned Implementation:** HChaCha20 and the composed ChaCha20-Poly1305
     implementation are dcrypt-owned safe Rust and are checked against published
-    vectors and an independent oracle outside the published dependency graph.
+    vectors and an isolated shared-lineage comparator outside the published
+    dependency graph. The comparison is corroborative and does not count as
+    independent assurance evidence.
 *   **Memory Hygiene:** The adapter explicitly clears its initialized owned key
     bytes on drop. This does not erase caller, compiler, register, or allocator
     copies.

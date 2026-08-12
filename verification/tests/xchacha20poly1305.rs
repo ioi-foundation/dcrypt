@@ -12,7 +12,7 @@ fn bytes(len: usize, domain: u8) -> Vec<u8> {
 }
 
 #[test]
-fn owned_xchacha20poly1305_matches_independent_implementation() {
+fn owned_xchacha20poly1305_matches_shared_lineage_comparator() {
     let lengths = [0, 1, 15, 16, 17, 63, 64, 65, 255, 1024];
 
     for (case, plaintext_len) in lengths.into_iter().enumerate() {
@@ -79,4 +79,103 @@ fn owned_xchacha20poly1305_rejects_modified_tag() {
     assert!(cipher
         .decrypt(&nonce, &ciphertext, Some(b"context"))
         .is_err());
+}
+
+#[test]
+fn shared_lineage_comparator_negative_matrix_agrees() {
+    let key = [0x53; 32];
+    let wrong_key = [0x54; 32];
+    let nonce_bytes = [0xa7; 24];
+    let mut wrong_nonce_bytes = nonce_bytes;
+    wrong_nonce_bytes[23] ^= 1;
+    let nonce = Nonce::<24>::new(nonce_bytes);
+    let wrong_nonce = Nonce::<24>::new(wrong_nonce_bytes);
+    let owned = XChaCha20Poly1305::new(&key);
+    let owned_wrong_key = XChaCha20Poly1305::new(&wrong_key);
+    let oracle = OracleXChaCha20Poly1305::new_from_slice(&key).unwrap();
+    let oracle_wrong_key = OracleXChaCha20Poly1305::new_from_slice(&wrong_key).unwrap();
+    let oracle_nonce = XNonce::from_slice(&nonce_bytes);
+    let oracle_wrong_nonce = XNonce::from_slice(&wrong_nonce_bytes);
+    let plaintext = b"authenticated plaintext";
+    let aad = b"context";
+
+    let ciphertext = owned.encrypt(&nonce, plaintext, Some(aad)).unwrap();
+    assert_eq!(
+        ciphertext,
+        oracle
+            .encrypt(
+                oracle_nonce,
+                Payload {
+                    msg: plaintext,
+                    aad,
+                },
+            )
+            .unwrap()
+    );
+
+    assert!(owned_wrong_key
+        .decrypt(&nonce, &ciphertext, Some(aad))
+        .is_err());
+    assert!(oracle_wrong_key
+        .decrypt(
+            oracle_nonce,
+            Payload {
+                msg: &ciphertext,
+                aad,
+            },
+        )
+        .is_err());
+
+    assert!(owned.decrypt(&wrong_nonce, &ciphertext, Some(aad)).is_err());
+    assert!(oracle
+        .decrypt(
+            oracle_wrong_nonce,
+            Payload {
+                msg: &ciphertext,
+                aad,
+            },
+        )
+        .is_err());
+
+    assert!(owned
+        .decrypt(&nonce, &ciphertext, Some(b"wrong context"))
+        .is_err());
+    assert!(oracle
+        .decrypt(
+            oracle_nonce,
+            Payload {
+                msg: &ciphertext,
+                aad: b"wrong context",
+            },
+        )
+        .is_err());
+
+    for index in [0, ciphertext.len() / 2, ciphertext.len() - 1] {
+        let mut corrupted = ciphertext.clone();
+        corrupted[index] ^= 0x80;
+        assert!(owned.decrypt(&nonce, &corrupted, Some(aad)).is_err());
+        assert!(oracle
+            .decrypt(
+                oracle_nonce,
+                Payload {
+                    msg: &corrupted,
+                    aad,
+                },
+            )
+            .is_err());
+    }
+
+    for length in [0, 1, 15] {
+        let truncated = &ciphertext[..length];
+        assert!(owned.decrypt(&nonce, truncated, Some(aad)).is_err());
+        assert!(oracle
+            .decrypt(
+                oracle_nonce,
+                Payload {
+                    msg: truncated,
+                    aad,
+                },
+            )
+            .is_err());
+    }
 }

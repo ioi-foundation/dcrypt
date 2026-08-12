@@ -40,8 +40,10 @@ Bls12381G2Basic::verify(&public, b"message", &signature)?;
   draft-07 PoP API in protocols without that precondition.
 
 The implementation uses dcrypt-owned RFC 9380 hash-to-curve and pairing code at
-runtime. Published EIP-2333 KeyGen vectors and an independent implementation in
-the excluded verification workspace check keys, all four domain separation
-tags, signatures, proofs, aggregation, and encodings byte-for-byte. Draft-07
-Appendix B still lists G2/minimum-public-key vectors as TBA; no official vector
-claim is inferred from their absence.
+runtime. Four recorded EIP-2333 KeyGen vectors and a shared-lineage comparator
+in the excluded verification workspace check keys, all four domain separation
+tags, signatures, proofs, aggregation, and encodings byte-for-byte. The
+repository Ethereum corpus lacks an independently verified acquisition archive,
+and source-overlap review rejects the comparator as an independent assurance
+oracle. Draft-07 Appendix B still lists G2/minimum-public-key vectors as TBA; no
+official vector claim is inferred from their absence.

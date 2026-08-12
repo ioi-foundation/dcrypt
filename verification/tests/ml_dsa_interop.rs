@@ -41,8 +41,9 @@ macro_rules! interoperability_test {
             let formatted = formatted_pure_message();
 
             // The public deterministic API must be repeatable. Its zero-rnd
-            // result is pinned byte-for-byte against three independent FIPS
-            // 204 implementations below.
+            // result is pinned byte-for-byte against three isolated candidate
+            // FIPS 204 comparators below. Package B lineage review does not
+            // accept any of them as independent assurance evidence.
             let deterministic =
                 <$dcrypt>::sign_deterministic_with_context(MESSAGE, CONTEXT, &dcrypt_secret)
                     .unwrap();
@@ -148,7 +149,7 @@ macro_rules! interoperability_test {
             }
 
             // RustCrypto: its internal API accepts the same M' and exact rnd,
-            // which provides an independent byte-for-byte check of both paths.
+            // which provides a corroborative byte-for-byte check of both paths.
             let rustcrypto_public_bytes =
                 ml_dsa::EncodedVerifyingKey::<$rustcrypto>::try_from(dcrypt_public.as_ref())
                     .unwrap();
@@ -194,6 +195,70 @@ macro_rules! interoperability_test {
                 )
                 .is_ok());
             }
+
+            // Boundary contexts are part of the public FIPS 204 mode. Check
+            // exact deterministic bytes for both the empty and maximum-length
+            // contexts on every parameter set.
+            for boundary_context in [&[][..], &[0x42; 255][..]] {
+                let ours = <$dcrypt>::sign_deterministic_with_context(
+                    &[],
+                    boundary_context,
+                    &dcrypt_secret,
+                )
+                .unwrap();
+                let theirs = fips_secret
+                    .try_sign_with_seed(&[0u8; 32], &[], boundary_context)
+                    .unwrap();
+                assert_eq!(ours.as_ref(), theirs.as_slice());
+                assert!(fips_public.verify(&[], &theirs, boundary_context));
+                assert!(<$dcrypt>::verify_with_context(
+                    &[],
+                    boundary_context,
+                    &ours,
+                    &dcrypt_public,
+                )
+                .is_ok());
+            }
+
+            // Both implementations must reject semantic substitution and
+            // signature corruption. A second dcrypt key supplies the
+            // wrong-key case without treating any comparator as evidence.
+            assert!(!fips_public.verify(b"wrong message", &deterministic_array, CONTEXT));
+            assert!(!fips_public.verify(MESSAGE, &deterministic_array, b"wrong context"));
+            assert!(<$dcrypt>::verify_with_context(
+                b"wrong message",
+                CONTEXT,
+                &deterministic,
+                &dcrypt_public,
+            )
+            .is_err());
+            assert!(<$dcrypt>::verify_with_context(
+                MESSAGE,
+                b"wrong context",
+                &deterministic,
+                &dcrypt_public,
+            )
+            .is_err());
+
+            let mut wrong_key_rng = ChaCha20Rng::from_seed([0x74; 32]);
+            let (wrong_public, _) = <$dcrypt>::keypair(&mut wrong_key_rng).unwrap();
+            assert!(<$dcrypt>::verify_with_context(
+                MESSAGE,
+                CONTEXT,
+                &deterministic,
+                &wrong_public,
+            )
+            .is_err());
+
+            let mut corrupted_array = deterministic_array;
+            corrupted_array[$sig_len / 2] ^= 0x80;
+            assert!(!fips_public.verify(MESSAGE, &corrupted_array, CONTEXT));
+            let corrupted = MlDsaSignature::from_bytes(&corrupted_array).unwrap();
+            assert!(
+                <$dcrypt>::verify_with_context(MESSAGE, CONTEXT, &corrupted, &dcrypt_public,)
+                    .is_err()
+            );
+            assert!(MlDsaSignature::from_bytes(&deterministic.as_ref()[..$sig_len - 1]).is_err());
         }
     };
 }

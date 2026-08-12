@@ -40,7 +40,7 @@ fn rustcrypto_historical_reference(
 }
 
 #[test]
-fn historical_construction_matches_independent_primitives() {
+fn historical_construction_matches_shared_lineage_primitives() {
     let ciphertext = rustcrypto_historical_reference(&KEY, &NONCE_24, PLAINTEXT, &[]);
     assert_eq!(ciphertext, HISTORICAL_CIPHERTEXT);
 
@@ -76,7 +76,7 @@ fn historical_zero_nonce_helpers_expose_plaintext_xor() {
 }
 
 #[test]
-fn independent_boundary_matrix_covers_2_880_authenticated_cases() {
+fn corroborative_boundary_matrix_covers_2_880_authenticated_cases() {
     const LENGTHS: [usize; 30] = [
         0, 1, 2, 7, 15, 16, 17, 31, 32, 33, 47, 48, 49, 63, 64, 65, 79, 80, 81, 95, 96, 97, 127,
         128, 129, 255, 256, 257, 1024, 1025,

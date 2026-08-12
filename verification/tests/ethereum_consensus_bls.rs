@@ -1,8 +1,9 @@
-//! Ethereum consensus BLS adapter checks against the frozen official corpus.
+//! Ethereum consensus BLS adapter checks against the repository corpus.
 //!
-//! These fixtures are excluded from the published workspace. Their exact
-//! upstream commit, paths, and Git blob identifiers are recorded beside the
-//! corpus in `vectors/ethereum_consensus_spec_tests/PROVENANCE.md`.
+//! These fixtures are excluded from the published workspace. A claimed upstream
+//! commit, paths, and Git blob identifiers are recorded beside the corpus in
+//! `vectors/ethereum_consensus_spec_tests/PROVENANCE.md`, but no independently
+//! verified acquisition archive or download digest is available.
 
 #![forbid(unsafe_code)]
 
@@ -175,12 +176,12 @@ fn parse_fast_aggregate_verify(yaml: &str) -> Result<FastAggregateVerifyVector, 
 }
 
 #[test]
-fn official_eth_aggregate_pubkeys_vectors() {
+fn repository_eth_aggregate_pubkeys_vectors() {
     let files = fixture_files("eth_aggregate_pubkeys");
     assert_eq!(
         files.len(),
         8,
-        "official aggregate-public-key corpus changed"
+        "repository aggregate-public-key corpus changed"
     );
 
     for path in files {
@@ -207,9 +208,9 @@ fn official_eth_aggregate_pubkeys_vectors() {
 }
 
 #[test]
-fn official_eth_fast_aggregate_verify_vectors() {
+fn repository_eth_fast_aggregate_verify_vectors() {
     let files = fixture_files("eth_fast_aggregate_verify");
-    assert_eq!(files.len(), 12, "official fast-aggregate corpus changed");
+    assert_eq!(files.len(), 12, "repository fast-aggregate corpus changed");
 
     for path in files {
         let yaml = fs::read_to_string(&path)

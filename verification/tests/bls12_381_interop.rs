@@ -1,9 +1,11 @@
-//! Differential BLS12-381 checks against the excluded zkcrypto oracle.
+//! Differential BLS12-381 checks against the excluded zkcrypto comparator.
 
 #![forbid(unsafe_code)]
 //!
-//! `verification` is excluded from the published workspace, so the oracle and
-//! its dependency graph never become normal or build dependencies of dcrypt.
+//! `verification` is excluded from the published workspace, so the comparator
+//! and its dependency graph never become dependencies of published dcrypt
+//! packages. Source-overlap review classifies it as shared-lineage, so these
+//! checks are corroborative regressions rather than independent evidence.
 
 use bls12_381::{
     hash_to_curve::{ExpandMsgXmd, HashToCurve, HashToField},
@@ -89,6 +91,45 @@ fn standard_group_encodings_and_checked_decoders_interoperate() {
             ours_g2.to_compressed()
         );
     }
+}
+
+#[test]
+fn shared_lineage_comparator_rejects_noncanonical_group_encodings() {
+    let mut g1_cases = vec![[0xff; 48]];
+    let mut invalid_g1_flags = G1Affine::generator().to_compressed();
+    invalid_g1_flags[0] |= 0b1110_0000;
+    g1_cases.push(invalid_g1_flags);
+    let mut missing_g1_compression = G1Affine::generator().to_compressed();
+    missing_g1_compression[0] &= 0b0111_1111;
+    g1_cases.push(missing_g1_compression);
+    for encoded in g1_cases {
+        assert!(G1Affine::from_compressed(&encoded).is_err());
+        assert!(bool::from(
+            OracleG1Affine::from_compressed(&encoded).is_none()
+        ));
+    }
+
+    let mut g2_cases = vec![[0xff; 96]];
+    let mut invalid_g2_flags = G2Affine::generator().to_compressed();
+    invalid_g2_flags[0] |= 0b1110_0000;
+    g2_cases.push(invalid_g2_flags);
+    let mut missing_g2_compression = G2Affine::generator().to_compressed();
+    missing_g2_compression[0] &= 0b0111_1111;
+    g2_cases.push(missing_g2_compression);
+    for encoded in g2_cases {
+        assert!(bool::from(G2Affine::from_compressed(&encoded).is_none()));
+        assert!(bool::from(
+            OracleG2Affine::from_compressed(&encoded).is_none()
+        ));
+    }
+
+    // The low-level group identity is a valid curve encoding, while the
+    // high-level standard public-key contract rejects it.
+    let identity = G1Projective::identity().to_bytes();
+    assert!(bool::from(
+        OracleG1Affine::from_compressed(&identity).is_some()
+    ));
+    assert!(Bls12381PublicKey::from_bytes(&identity).is_err());
 }
 
 fn messages() -> [&'static [u8]; 5] {
@@ -240,7 +281,7 @@ fn oracle_signature(secret_key: &Bls12381SecretKey, message: &[u8], dst: &[u8]) 
 }
 
 #[test]
-fn draft07_and_eth2_keygen_match_independent_hkdf_and_scalar_oracles() {
+fn draft07_and_eth2_keygen_match_shared_lineage_comparator() {
     let ikm: [u8; 32] = core::array::from_fn(|index| index as u8);
     let salt = b"draft-07 caller salt";
     let key_info = b"independent-key-info";
@@ -259,7 +300,7 @@ fn draft07_and_eth2_keygen_match_independent_hkdf_and_scalar_oracles() {
 }
 
 #[test]
-fn high_level_min_pk_profiles_match_independent_group_oracle() {
+fn high_level_min_pk_profiles_match_shared_lineage_comparator() {
     let secret_key = Bls12381SecretKey::from_bytes(&{
         let mut bytes = [0u8; 32];
         bytes[31] = 42;
@@ -319,7 +360,7 @@ fn high_level_min_pk_profiles_match_independent_group_oracle() {
 }
 
 #[test]
-fn high_level_aggregate_matches_independent_group_oracle() {
+fn high_level_aggregate_matches_shared_lineage_comparator() {
     let mut secret_a = [0u8; 32];
     secret_a[31] = 17;
     let secret_a = Bls12381SecretKey::from_bytes(&secret_a).unwrap();
