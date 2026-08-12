@@ -1,0 +1,777 @@
+{
+  "$schema": "protocol-spec.schema.json",
+  "artifact_id": "dcrypt-package-b-current-wire-behavior-1",
+  "assurance_effect": {
+    "accepted_oracle_count": 0,
+    "counts_as_interoperability_evidence": false,
+    "counts_as_release_unblocking_evidence": false,
+    "purpose": "candidate current-behavior freeze for independent review before clean-room reference work"
+  },
+  "byte_order": "big-endian for every explicit integer length",
+  "clean_room_acceptance": {
+    "required_reviews": [
+      "independent confirmation that this artifact matches the bound implementation sources",
+      "resolution or explicit acceptance of every ambiguity and limitation",
+      "provenance and implementation-independence review for every proposed reference backend",
+      "two-direction fixture review without reuse of dcrypt source or generated code"
+    ],
+    "status": "blocked",
+    "stop_reasons": [
+      "ECIES carries neither suite nor version in its ciphertext frame",
+      "hybrid KEM objects carry neither suite nor version and two public suites have identical object lengths",
+      "hybrid signature framing labels are not included in either component's signed message",
+      "current error behavior is not uniform enough to define a new cross-language error code without changing semantics"
+    ]
+  },
+  "ecies": {
+    "aad": {
+      "binding": "passed directly to the selected AEAD and not copied into the outer frame or KDF transcript",
+      "none_semantics": "None and Some(empty) both authenticate the empty byte string"
+    },
+    "ambiguities": [
+      "The outer frame is not self-describing: no version, suite, curve, KDF, or AEAD identifier is present.",
+      "The literals containing dcrypt-v3 occur only in HKDF salt/info and cannot drive ciphertext dispatch.",
+      "R length differs across current curves but is not a safe version or suite negotiation mechanism.",
+      "The public API documents a versioned frame even though version selection is out of band.",
+      "Malformed frames, invalid points, invalid nonce lengths, short payloads, and AEAD failures are not collapsed to one public error class."
+    ],
+    "error_behavior": [
+      {
+        "condition": "outer frame is empty, truncated, length-inconsistent, or has trailing bytes",
+        "outcome": "InvalidCiphertext with context ECIES"
+      },
+      {
+        "condition": "recipient public key passed to encrypt is noncanonical, invalid, or identity",
+        "outcome": "InvalidKey with context ECIES recipient public key"
+      },
+      {
+        "condition": "decoded nonce length is not 12",
+        "outcome": "underlying nonce/primitive error converted to the API error type; not normalized as an ECIES decryption failure"
+      },
+      {
+        "condition": "decoded AEAD payload is shorter than the 16-byte tag",
+        "outcome": "InvalidCiphertext with context ECIES AEAD payload"
+      },
+      {
+        "condition": "decoded ephemeral public key is wrong-length, noncanonical, invalid, or identity",
+        "outcome": "InvalidCiphertext with context ECIES ephemeral public key"
+      },
+      {
+        "condition": "ECDH produces the identity during decrypt",
+        "outcome": "DecryptionFailed with context ECIES Decryption"
+      },
+      {
+        "condition": "wrong recipient secret key, wrong AAD, modified ciphertext, or modified tag reaches AEAD authentication",
+        "outcome": "DecryptionFailed with context ECIES Decryption: AEAD authentication failed"
+      }
+    ],
+    "frame": {
+      "accepts_trailing_bytes": false,
+      "fields": [
+        {
+          "encoding": "u8",
+          "length": "1",
+          "name": "R_len"
+        },
+        {
+          "encoding": "SEC1 uncompressed point selected by the out-of-band suite",
+          "length": "R_len",
+          "name": "R"
+        },
+        {
+          "encoding": "u8",
+          "length": "1",
+          "name": "N_len"
+        },
+        {
+          "encoding": "raw AEAD nonce",
+          "length": "N_len",
+          "name": "N"
+        },
+        {
+          "encoding": "u32 big-endian",
+          "length": "4",
+          "name": "CT_len"
+        },
+        {
+          "encoding": "AEAD ciphertext followed by a 16-byte authentication tag",
+          "length": "CT_len",
+          "name": "C_and_T"
+        }
+      ],
+      "grammar": "u8(R_len) || R || u8(N_len) || N || u32be(CT_len) || C || T",
+      "minimum_payload_length": 16,
+      "nonce_length": 12,
+      "parser_allocation_order": "all declared lengths and the exact final boundary are checked before component vectors are allocated",
+      "tag_length": 16
+    },
+    "kdf": {
+      "ikm": "fixed-width ECDH shared-point x-coordinate || exact uncompressed ephemeral public key R || exact uncompressed recipient public key",
+      "okm_length": 32,
+      "operation": "HKDF-Extract then HKDF-Expand",
+      "salt_ascii": "dcrypt-v3/ECIES/extract",
+      "suite_info_source": "exact per-suite info_ascii value"
+    },
+    "key_confirmation": {
+      "behavior": "successful AEAD authentication provides receiver-side confirmation of the derived AEAD key and AAD",
+      "limitations": "there is no separate outer confirmation field, sender confirmation, acknowledgement, or transcript-wide version/suite confirmation"
+    },
+    "migration": {
+      "current_behavior": "no in-band negotiation, compatibility decoder, or migration record exists",
+      "required_external_state": "callers must select the exact Rust ECIES type and compatible implementation version before parsing bytes"
+    },
+    "suites": [
+      {
+        "aead": "ChaCha20-Poly1305",
+        "ciphertext_overhead": 91,
+        "curve": "P-224",
+        "hash": "SHA-256",
+        "info_ascii": "dcrypt-v3/ECIES-P224/HKDF-SHA256/ChaCha20Poly1305",
+        "name": "ECIES-P224-HKDF-SHA256-ChaCha20Poly1305",
+        "point_length": 57,
+        "status": "transitional"
+      },
+      {
+        "aead": "ChaCha20-Poly1305",
+        "ciphertext_overhead": 99,
+        "curve": "P-256",
+        "hash": "SHA-256",
+        "info_ascii": "dcrypt-v3/ECIES-P256/HKDF-SHA256/ChaCha20Poly1305",
+        "name": "ECIES-P256-HKDF-SHA256-ChaCha20Poly1305",
+        "point_length": 65,
+        "status": "supported"
+      },
+      {
+        "aead": "AES-256-GCM",
+        "ciphertext_overhead": 131,
+        "curve": "P-384",
+        "hash": "SHA-384",
+        "info_ascii": "dcrypt-v3/ECIES-P384/HKDF-SHA384/AES-256-GCM",
+        "name": "ECIES-P384-HKDF-SHA384-AES256GCM",
+        "point_length": 97,
+        "status": "supported"
+      },
+      {
+        "aead": "AES-256-GCM",
+        "ciphertext_overhead": 167,
+        "curve": "P-521",
+        "hash": "SHA-512",
+        "info_ascii": "dcrypt-v3/ECIES-P521/HKDF-SHA512/AES-256-GCM",
+        "name": "ECIES-P521-HKDF-SHA512-AES256GCM",
+        "point_length": 133,
+        "status": "supported"
+      }
+    ],
+    "versioning": {
+      "dispatch": "out-of-band only",
+      "in_band_suite_identifier": false,
+      "in_band_version_identifier": false,
+      "label_version": "v3 appears in KDF salt/info literals only"
+    }
+  },
+  "format_version": 1,
+  "hybrid_kem": {
+    "ambiguities": [
+      "Public keys, secret keys, and ciphertexts are raw fixed-width concatenations with no framing magic, suite identifier, or version.",
+      "ECDH-K256+ML-KEM-512 and ECDH-P256+ML-KEM-512 have identical public-key, secret-key, and ciphertext lengths.",
+      "The v2 literal is present only in combiner HKDF info and cannot select a decoder.",
+      "Wrong-key decapsulation normally succeeds with a different 32-byte secret; an application cannot treat Ok as peer key confirmation.",
+      "Component failure behavior differs: ML-KEM performs implicit rejection for valid-width modified ciphertexts while invalid ECDH points produce errors."
+    ],
+    "combiner": {
+      "hash": "SHA-256",
+      "ikm": "u32be(len(classical_ss)) || classical_ss || u32be(len(post_quantum_ss)) || post_quantum_ss",
+      "info": "ASCII(dcrypt-hybrid-kem/v2) || u32be(len(classical_suite_id)) || classical_suite_id || u32be(len(post_quantum_suite_id)) || post_quantum_suite_id || u32be(len(hybrid_ciphertext)) || hybrid_ciphertext",
+      "okm_length": 32,
+      "operation": "HKDF-Extract then HKDF-Expand",
+      "salt": "empty byte string (implementation passes None)"
+    },
+    "error_behavior": [
+      {
+        "condition": "composite object byte length is not exactly the selected suite length",
+        "outcome": "InvalidLength before component decoding"
+      },
+      {
+        "condition": "classical component object decoding fails",
+        "outcome": "classical decoder error; post-quantum component is not decoded"
+      },
+      {
+        "condition": "classical decapsulation fails after object decoding",
+        "outcome": "post-quantum decapsulation still runs, an all-zero classical placeholder of the specified shared-secret length is combined, the derived value is discarded, and the classical error is returned"
+      },
+      {
+        "condition": "only post-quantum decapsulation fails after object decoding",
+        "outcome": "an all-zero post-quantum placeholder is combined, the derived value is discarded, and the post-quantum error is returned"
+      },
+      {
+        "condition": "both component decapsulations fail",
+        "outcome": "both placeholders are combined and discarded; the classical error has precedence"
+      },
+      {
+        "condition": "valid-width ML-KEM ciphertext is modified",
+        "outcome": "ML-KEM implicit rejection produces a pseudorandom component secret; hybrid decapsulation can return Ok with a different final secret"
+      },
+      {
+        "condition": "wrong but valid hybrid secret key is used",
+        "outcome": "decapsulation normally returns Ok with a different final secret"
+      }
+    ],
+    "key_confirmation": {
+      "behavior": "none at the outer hybrid layer",
+      "limitations": "none of the five exported suites uses the separately implemented authenticated P-224 ECDH component; applications need an external confirmation protocol"
+    },
+    "migration": {
+      "current_behavior": "no in-band negotiation, compatibility decoder, or migration record exists",
+      "required_external_state": "the concrete hybrid KEM type and compatible implementation version must be agreed before parsing"
+    },
+    "object_encodings": [
+      {
+        "first_component": "classical compressed-point public key",
+        "formula": "classical_public_key || post_quantum_public_key",
+        "name": "public_key",
+        "second_component": "FIPS 203 ML-KEM encapsulation key"
+      },
+      {
+        "first_component": "classical fixed-width secret scalar",
+        "formula": "classical_secret_key || post_quantum_secret_key",
+        "name": "secret_key",
+        "second_component": "FIPS 203 ML-KEM decapsulation key"
+      },
+      {
+        "first_component": "classical ECDH KEM ciphertext",
+        "formula": "classical_ciphertext || post_quantum_ciphertext",
+        "name": "ciphertext",
+        "second_component": "FIPS 203 ML-KEM ciphertext"
+      }
+    ],
+    "suites": [
+      {
+        "ciphertext_length": 801,
+        "classical_ciphertext_length": 33,
+        "classical_kdf_hash": "SHA-256",
+        "classical_kdf_info_ascii": "dcrypt-v3/ECDH-K256-KEM/shared-secret",
+        "classical_shared_secret_length": 32,
+        "classical_suite_id": "ECDH-K256",
+        "name": "ECDH-K256-ML-KEM-512",
+        "post_quantum_suite_id": "ML-KEM-512",
+        "public_key_length": 833,
+        "secret_key_length": 1664
+      },
+      {
+        "ciphertext_length": 801,
+        "classical_ciphertext_length": 33,
+        "classical_kdf_hash": "SHA-256",
+        "classical_kdf_info_ascii": "dcrypt-v3/ECDH-P256-KEM/shared-secret",
+        "classical_shared_secret_length": 32,
+        "classical_suite_id": "ECDH-P256",
+        "name": "ECDH-P256-ML-KEM-512",
+        "post_quantum_suite_id": "ML-KEM-512",
+        "public_key_length": 833,
+        "secret_key_length": 1664
+      },
+      {
+        "ciphertext_length": 1121,
+        "classical_ciphertext_length": 33,
+        "classical_kdf_hash": "SHA-256",
+        "classical_kdf_info_ascii": "dcrypt-v3/ECDH-P256-KEM/shared-secret",
+        "classical_shared_secret_length": 32,
+        "classical_suite_id": "ECDH-P256",
+        "name": "ECDH-P256-ML-KEM-768",
+        "post_quantum_suite_id": "ML-KEM-768",
+        "public_key_length": 1217,
+        "secret_key_length": 2432
+      },
+      {
+        "ciphertext_length": 1617,
+        "classical_ciphertext_length": 49,
+        "classical_kdf_hash": "SHA-384",
+        "classical_kdf_info_ascii": "dcrypt-v3/ECDH-P384-KEM/shared-secret",
+        "classical_shared_secret_length": 48,
+        "classical_suite_id": "ECDH-P384",
+        "name": "ECDH-P384-ML-KEM-1024",
+        "post_quantum_suite_id": "ML-KEM-1024",
+        "public_key_length": 1617,
+        "secret_key_length": 3216
+      },
+      {
+        "ciphertext_length": 1635,
+        "classical_ciphertext_length": 67,
+        "classical_kdf_hash": "SHA-512",
+        "classical_kdf_info_ascii": "dcrypt-v3/ECDH-P521-KEM/shared-secret",
+        "classical_shared_secret_length": 64,
+        "classical_suite_id": "ECDH-P521",
+        "name": "ECDH-P521-ML-KEM-1024",
+        "post_quantum_suite_id": "ML-KEM-1024",
+        "public_key_length": 1635,
+        "secret_key_length": 3234
+      }
+    ],
+    "tampering": {
+      "classical_component": "a mutation that remains a valid compressed point can return Ok with a different secret; an invalid point returns an error",
+      "post_quantum_component": "a valid-width mutation invokes FIPS 203 implicit rejection and normally returns Ok with a different secret",
+      "serialized_length": "any insertion or deletion changing the exact suite length is rejected before component decoding"
+    },
+    "versioning": {
+      "dispatch": "out-of-band only",
+      "in_band_suite_identifier": false,
+      "in_band_version_identifier": false,
+      "label_version": "v2 appears in combiner HKDF info only"
+    }
+  },
+  "hybrid_signature": {
+    "ambiguities": [
+      "The v2 framing labels distinguish serialized object kinds but are not included in the message signed by either component.",
+      "The serialized signature has variable total length because ECDSA uses canonical ASN.1 DER.",
+      "A framed secret key and a separately framed public key are not cross-checked as a pair during decoding.",
+      "There is no hybrid context, prehash mode, suite negotiation, or version negotiation API."
+    ],
+    "components": {
+      "ecdsa": "ECDSA P-384 over SHA-384, RFC 6979 deterministic nonce, canonical DER output, low-S output and verification enforcement",
+      "ml_dsa": "FIPS 204 ML-DSA-65 pure mode, empty context, deterministic 32-byte all-zero randomizer, final FIPS 204 encodings"
+    },
+    "error_behavior": [
+      {
+        "condition": "label is absent, truncated, or not the exact expected object label",
+        "outcome": "SerializationError with context Hybrid signature decoding"
+      },
+      {
+        "condition": "component length is missing, overflows, exceeds the input, or trailing bytes remain",
+        "outcome": "SerializationError or InvalidLength with context Hybrid signature decoding"
+      },
+      {
+        "condition": "component object encoding is invalid or noncanonical",
+        "outcome": "the relevant ECDSA or ML-DSA decoder error"
+      },
+      {
+        "condition": "verification is requested",
+        "outcome": "ECDSA verification runs first; ML-DSA verification runs only if ECDSA succeeds; success requires both"
+      },
+      {
+        "condition": "wrong message, wrong key, or tampered signature",
+        "outcome": "the first failing component returns its verification error; failures are not collapsed to one hybrid error"
+      }
+    ],
+    "framing": {
+      "accepts_trailing_bytes": false,
+      "formula": "u8(label_len) || label || u32be(first_len) || first || u32be(second_len) || second",
+      "length_fields": "label length is u8; both component lengths are u32 big-endian",
+      "maximum_label_length": 255
+    },
+    "key_confirmation": {
+      "behavior": "not applicable as a KEM confirmation mechanism; authenticity requires successful verification of both signatures",
+      "limitations": "component keys are bundled by framing but no proof-of-possession or cross-component key binding is added"
+    },
+    "migration": {
+      "current_behavior": "historical v1 labels containing ecdsa-p384+dilithium3 are explicitly rejected",
+      "required_external_state": "legacy objects must be identified and migrated outside this decoder; no compatibility conversion or negotiation is provided"
+    },
+    "object_encodings": [
+      {
+        "first_component": "97-byte SEC1 uncompressed ECDSA P-384 public key",
+        "label_ascii": "dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/public/v2",
+        "label_length": 48,
+        "name": "public_key",
+        "second_component": "1952-byte FIPS 204 ML-DSA-65 public key",
+        "total_length": "2106"
+      },
+      {
+        "first_component": "48-byte ECDSA P-384 secret scalar",
+        "label_ascii": "dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/secret/v2",
+        "label_length": 48,
+        "name": "secret_key",
+        "second_component": "4032-byte FIPS 204 ML-DSA-65 expanded private key",
+        "total_length": "4137"
+      },
+      {
+        "first_component": "canonical ASN.1 DER ECDSA P-384 signature (generation emits low-S)",
+        "label_ascii": "dcrypt-hybrid-sig/ecdsa-p384+ml-dsa-65/signature/v2",
+        "label_length": 51,
+        "name": "signature",
+        "second_component": "3309-byte FIPS 204 ML-DSA-65 signature",
+        "total_length": "3369 + DER_length; generated low-S mathematical range 3377..3472 bytes"
+      }
+    ],
+    "signing": {
+      "component_order": "ECDSA signs first, then ML-DSA",
+      "message_to_ecdsa": "the caller's raw message bytes",
+      "message_to_ml_dsa": "pure-mode formatted bytes 0x00 || 0x00 || caller raw message",
+      "not_signed": "the hybrid framing label, component public keys, component lengths, suite name, and v2 marker are not included in either signed message"
+    },
+    "tampering": {
+      "framing_or_label": "rejected during decoding",
+      "message": "rejected unless both component verifications succeed on the modified message",
+      "signature_component": "rejected by its component decoder or verifier; high-S ECDSA can decode but is rejected by verification"
+    },
+    "versioning": {
+      "dispatch": "exact object-kind label during decoding; no negotiation",
+      "in_band_suite_identifier": true,
+      "in_band_version_identifier": true,
+      "label_version": "v2 is part of each public-key, secret-key, and signature framing label"
+    }
+  },
+  "source_bindings": [
+    {
+      "path": "Cargo.lock",
+      "role": "exact dependency resolution for the bound workspace",
+      "sha256": "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd"
+    },
+    {
+      "path": "Cargo.toml",
+      "role": "workspace membership and dependency topology",
+      "sha256": "0dcf0e8826cd4f9e5aee6e120df981ead7a01923e3eb33aa36f4054da426baaf"
+    },
+    {
+      "path": "crates/algorithms/Cargo.toml",
+      "role": "primitive feature and dependency manifest",
+      "sha256": "1e87753eea388596316835b760f9c00ba0c83f47f4bd504cce7a0498990252d5"
+    },
+    {
+      "path": "crates/algorithms/src/aead/chacha20poly1305/mod.rs",
+      "role": "ECIES ChaCha20-Poly1305 primitive semantics",
+      "sha256": "56edbcdf502564bdc6fd4cb9ad7d4319f004255dbb4a251d5b60c1d59624ecc1"
+    },
+    {
+      "path": "crates/algorithms/src/aead/gcm/mod.rs",
+      "role": "ECIES AES-256-GCM primitive semantics",
+      "sha256": "f6277b561ec6cea72f77e9f7440b21581a016e36f19c7ed7e2be5b0be5879d9f"
+    },
+    {
+      "path": "crates/algorithms/src/aead/mod.rs",
+      "role": "AEAD module and export topology",
+      "sha256": "8bb5124eadbe214d91acc3aaf4e183de2e0d21fe10345245cf0d84f0a081eaee"
+    },
+    {
+      "path": "crates/algorithms/src/ec/k256/mod.rs",
+      "role": "K-256 curve implementation boundary",
+      "sha256": "648559eb76cf34813db019d6262d0f424a18424ab92bbb139fad5275e67eead3"
+    },
+    {
+      "path": "crates/algorithms/src/ec/mod.rs",
+      "role": "elliptic-curve module and export topology",
+      "sha256": "77632ce5078222238ad0f72f24ee93a870c38588388516492cb2da2f5119d3d9"
+    },
+    {
+      "path": "crates/algorithms/src/ec/p224/mod.rs",
+      "role": "P-224 curve implementation boundary",
+      "sha256": "218514d554ca19b9b540a0024598efa02062d1b0d0f80eedcf63db5e2781a490"
+    },
+    {
+      "path": "crates/algorithms/src/ec/p256/mod.rs",
+      "role": "P-256 curve implementation boundary",
+      "sha256": "cea82a205d531e9a86a8e4e955d394782c74d728830546e113128d82ab0a7492"
+    },
+    {
+      "path": "crates/algorithms/src/ec/p384/mod.rs",
+      "role": "P-384 curve implementation boundary",
+      "sha256": "8f6a3b8ca18ae73eeb6aee6789e577ba7ee6b1c08a9a701aad03f5a7442c563d"
+    },
+    {
+      "path": "crates/algorithms/src/ec/p521/mod.rs",
+      "role": "P-521 curve implementation boundary",
+      "sha256": "cfd574b1ee49f7cbe72f43a897d622dce3bff5724e4bbb47bbe98940348da755"
+    },
+    {
+      "path": "crates/algorithms/src/hash/sha2/mod.rs",
+      "role": "SHA-2 primitive semantics used by bound transcripts",
+      "sha256": "8fbbd66e9df88d27fbb0cc1ddbfe22fb2c13bcbc2b599cdd8d665efd98f14e99"
+    },
+    {
+      "path": "crates/algorithms/src/kdf/hkdf/mod.rs",
+      "role": "HKDF primitive semantics used by bound transcripts",
+      "sha256": "682182ade79903139fa46bfbde088d7aa7e8ed62127e2b8ed6471b29854e4275"
+    },
+    {
+      "path": "crates/algorithms/src/kdf/mod.rs",
+      "role": "KDF module and export topology",
+      "sha256": "48929f41390d2412a792fd315b7fc8a1a0cbb9d90edd9d17ab7778739a0ffcc5"
+    },
+    {
+      "path": "crates/algorithms/src/lib.rs",
+      "role": "primitive crate export and feature boundary",
+      "sha256": "0d4ed7176e29585e359c7a799a6cefd6fc5837fc45997b54d4c283bf4b1994c4"
+    },
+    {
+      "path": "crates/api/Cargo.toml",
+      "role": "public API feature and dependency manifest",
+      "sha256": "7109f0ef85c0bc2b2e9b7832adb4feb78ec4e0e0740909a6b1f2325f0681071a"
+    },
+    {
+      "path": "crates/api/src/error/mod.rs",
+      "role": "public API error taxonomy and exports",
+      "sha256": "bffdd5c58c318da7f4e874e3c5a8c8519328d567fc3515525ef533885a1d7945"
+    },
+    {
+      "path": "crates/api/src/lib.rs",
+      "role": "public API crate export boundary",
+      "sha256": "bf3f50535371fb04110d87be2df42f52a9bffce755b88b53a11305ef7b53ba02"
+    },
+    {
+      "path": "crates/api/src/traits/kem.rs",
+      "role": "public KEM operation contract",
+      "sha256": "5889de509f05a96dd00530fb571ff670d51727ac2fef995305252872cc47c7ea"
+    },
+    {
+      "path": "crates/api/src/traits/mod.rs",
+      "role": "public trait export topology",
+      "sha256": "9311f0dddf4f80ab006942982fbbf05a86b68496a6bb6360d3547c945074cd27"
+    },
+    {
+      "path": "crates/api/src/traits/pke.rs",
+      "role": "public PKE operation contract",
+      "sha256": "d816b1273f7c7a056d79edb9065ddea02b412f11ebee710722d4c441fe9ca813"
+    },
+    {
+      "path": "crates/api/src/traits/serialize.rs",
+      "role": "public serialization contract",
+      "sha256": "e64bf20197ef84f8bc925ccea7120317f95394ba7cbb4485f149211c43c5a1e3"
+    },
+    {
+      "path": "crates/api/src/traits/signature.rs",
+      "role": "public signature operation contract",
+      "sha256": "d563f3e0acc69ffa9c0adc951f96a2961646b2106560c48006fc8b9931a401be"
+    },
+    {
+      "path": "crates/hybrid/Cargo.toml",
+      "role": "hybrid feature and dependency manifest",
+      "sha256": "110faa0dc8b789b31a341ef21e4130420d54234984d11c26bef2e9c5358ff557"
+    },
+    {
+      "path": "crates/hybrid/src/kem/ecdh_k256_ml_kem_512.rs",
+      "role": "exported hybrid KEM suite",
+      "sha256": "e8fe78d29d878ec814dbdd5edd6eb81637f60943c9c1bcd2800cacdd7bdc7ec8"
+    },
+    {
+      "path": "crates/hybrid/src/kem/ecdh_p256_ml_kem_512.rs",
+      "role": "exported hybrid KEM suite",
+      "sha256": "d49f7e59ee45fe68ad31a511c198f2e20ed0485f0e32c4952b6e5c26edc6173a"
+    },
+    {
+      "path": "crates/hybrid/src/kem/ecdh_p256_ml_kem_768.rs",
+      "role": "exported hybrid KEM suite",
+      "sha256": "505a6e1d077d00507d96e4d51ee0cbda6e3b78bc3871d2fb0eabcf7c4405ddbc"
+    },
+    {
+      "path": "crates/hybrid/src/kem/ecdh_p384_ml_kem_1024.rs",
+      "role": "exported hybrid KEM suite",
+      "sha256": "10cae977f4ec3a0acbc7cbe24b477e48282fc5387132eed5a1db02b783f63eb4"
+    },
+    {
+      "path": "crates/hybrid/src/kem/ecdh_p521_ml_kem_1024.rs",
+      "role": "exported hybrid KEM suite",
+      "sha256": "08700e2b1099eea46d0a7b6d6b4c11f193a7016a6d565b6a401e940e4944ab00"
+    },
+    {
+      "path": "crates/hybrid/src/kem/engine.rs",
+      "role": "hybrid KEM object encoding, combiner, and failure sequencing",
+      "sha256": "a7e96604db88cac351e9999aa49c0d6a3b6f4d7aa8e997d679216a696316f266"
+    },
+    {
+      "path": "crates/hybrid/src/kem/mod.rs",
+      "role": "hybrid KEM module declarations and public exports",
+      "sha256": "76d72e95cd32b41bb5e1c4e5d5e3d4e64985ab3c02997f3568ddb54aa723ed98"
+    },
+    {
+      "path": "crates/hybrid/src/kem/traits.rs",
+      "role": "hybrid KEM suite identifiers and dimensions",
+      "sha256": "4a0c745d44d37691af17533e69c2d124f308d623d1bee8cc500659d3d91418c1"
+    },
+    {
+      "path": "crates/hybrid/src/lib.rs",
+      "role": "hybrid crate module export boundary",
+      "sha256": "d7abf9929dab2a43b4d50c263c90722cb2b7d9298c8de9eccd25bfb1f31fa4a4"
+    },
+    {
+      "path": "crates/hybrid/src/sign/ecdsa_ml_dsa.rs",
+      "role": "hybrid signature framing, component order, and message use",
+      "sha256": "f228cbf5999fbabbf17dae249b1cda46ae6948ff9f0982b7d3936188436121cf"
+    },
+    {
+      "path": "crates/hybrid/src/sign/mod.rs",
+      "role": "hybrid signature module declaration and public export",
+      "sha256": "da2f34a9594b1481c5774ae73e2f23e630665b1279a09d6592a8b3255b6489f4"
+    },
+    {
+      "path": "crates/kem/Cargo.toml",
+      "role": "KEM feature and dependency manifest",
+      "sha256": "3ac85cb9b4919910b8986c1387151a36cc969ff3e78ec6288cb17e01e6ffb3ab"
+    },
+    {
+      "path": "crates/kem/src/ecdh/k256/mod.rs",
+      "role": "ECDH-K256 component semantics",
+      "sha256": "1037d3d6270685bb9d2d96c2591569f51c461ff2ffae3140fcf1118e34dacc48"
+    },
+    {
+      "path": "crates/kem/src/ecdh/mod.rs",
+      "role": "classical KEM component transcript concatenation",
+      "sha256": "1f878e9c6df0682988d63682bda14b459383bedd36ffb4e98ded28c7f0380d70"
+    },
+    {
+      "path": "crates/kem/src/ecdh/p256/mod.rs",
+      "role": "ECDH-P256 component semantics",
+      "sha256": "b643d228f2bef8fb6de5d154cbae36b0d89902f0e6111b06c212b6a79752b023"
+    },
+    {
+      "path": "crates/kem/src/ecdh/p384/mod.rs",
+      "role": "ECDH-P384 component semantics",
+      "sha256": "99e1bb06f3f1d2e3f923fe7c79503b6b42d6cf29c68efd9345e1f75e10c2377d"
+    },
+    {
+      "path": "crates/kem/src/ecdh/p521/mod.rs",
+      "role": "ECDH-P521 component semantics",
+      "sha256": "a9a3530e55dc49e2e33e2a0ef049c24f532e686a75e3fbda9e9427e563637f7e"
+    },
+    {
+      "path": "crates/kem/src/error/mod.rs",
+      "role": "KEM component error conversion",
+      "sha256": "7d74efaf2c2fe24db9d02a34892cacf4ab6889f8e776d769307857f06ccc3b55"
+    },
+    {
+      "path": "crates/kem/src/lib.rs",
+      "role": "KEM crate feature gates, modules, aliases, and exports",
+      "sha256": "3d5a990da5b60a7f8cc79993878a70b923c200c9e9678b5a92ebca5b6fbe4772"
+    },
+    {
+      "path": "crates/kem/src/ml_kem/kem.rs",
+      "role": "ML-KEM component encodings and implicit rejection",
+      "sha256": "b1ba9bac128ba686282e64be0b07ec908bb2bb5cf4e3cb54d61be09710d0747d"
+    },
+    {
+      "path": "crates/kem/src/ml_kem/mod.rs",
+      "role": "ML-KEM parameter aliases and public exports",
+      "sha256": "ce77fb19da798fa14b2485868d3475600bb4be94d5dd3155806d95048bb7dd5c"
+    },
+    {
+      "path": "crates/kem/src/ml_kem/params.rs",
+      "role": "ML-KEM implementation parameter values and encoded lengths",
+      "sha256": "cfa1ef0e441b6e83a131e3601aa1431afc50aff5ba82b693c2e9b6bf97944caa"
+    },
+    {
+      "path": "crates/kem/src/ml_kem/pke.rs",
+      "role": "ML-KEM underlying encryption and decoding behavior",
+      "sha256": "5e5c12a4fec81c192173c546056b5ae7d47da33f3993bbf9e2d93bc2325fcf0c"
+    },
+    {
+      "path": "crates/params/Cargo.toml",
+      "role": "parameter crate feature and dependency manifest",
+      "sha256": "39b80900976328d4eaf6f26f80081834994f7ef891b45a68a2db5042ba8ffdf8"
+    },
+    {
+      "path": "crates/params/src/lib.rs",
+      "role": "parameter crate export boundary",
+      "sha256": "72f751bd687d028389b72f548d97cfd570f650482a57627c5e8f5105191d7520"
+    },
+    {
+      "path": "crates/params/src/pqc/ml_dsa.rs",
+      "role": "ML-DSA parameter values and encoded lengths",
+      "sha256": "aa7990dd94ec56b02dfd2a945b56991383033ed27e92ed533a8e38f198ee0f20"
+    },
+    {
+      "path": "crates/params/src/pqc/ml_kem.rs",
+      "role": "ML-KEM public parameter values and encoded lengths",
+      "sha256": "0dfe9b954c86830b18962c2f520663e84e866b2aecf0ebebfa6f0104eb665f52"
+    },
+    {
+      "path": "crates/params/src/pqc/mod.rs",
+      "role": "post-quantum parameter module export topology",
+      "sha256": "cead5ab0dfb89c986ba2e0e4ad7216475649291eb4d6b56c870c7935376996fa"
+    },
+    {
+      "path": "crates/pke/Cargo.toml",
+      "role": "PKE feature and dependency manifest",
+      "sha256": "49cd2c6525b984157d2f9b8a19e8b3c533b41c11c0f2f043fc5ecbeecdfbca6d"
+    },
+    {
+      "path": "crates/pke/src/ecies/mod.rs",
+      "role": "ECIES frame and common KDF transcript",
+      "sha256": "050abda95d475d9e8e51dd71f7b1fb98b592d72b123bcdd16f07d62bf8cc47d8"
+    },
+    {
+      "path": "crates/pke/src/ecies/p224/mod.rs",
+      "role": "ECIES P-224 suite",
+      "sha256": "81dbe96ab60a1b8553b96ac61c33fea9d6e1761cbd4dd2445c24b33efd6ffd48"
+    },
+    {
+      "path": "crates/pke/src/ecies/p256/mod.rs",
+      "role": "ECIES P-256 suite",
+      "sha256": "fb104bbc65da6be2350007b1a3330f45a50a1f701c7a9882f989c1e682e0f780"
+    },
+    {
+      "path": "crates/pke/src/ecies/p384/mod.rs",
+      "role": "ECIES P-384 suite",
+      "sha256": "2c352c4ed92f9a4eefe89e3d0cc8b329c8fd94e6ff9e09d854726395361acd48"
+    },
+    {
+      "path": "crates/pke/src/ecies/p521/mod.rs",
+      "role": "ECIES P-521 suite",
+      "sha256": "3c8711fff7968e7471bc0babd7c667e95968c86f5e886eb88d46a25c766821aa"
+    },
+    {
+      "path": "crates/pke/src/error.rs",
+      "role": "ECIES public error conversion",
+      "sha256": "2cae9f919b9e283243b060da5bec99ab656714b14b638f53943891d19e7aa9e7"
+    },
+    {
+      "path": "crates/pke/src/lib.rs",
+      "role": "PKE crate feature gates and public exports",
+      "sha256": "aaf8f0dfe15d711e817af62a7e5a3cb8ea2f21e2fabde7c62b75c2867bdb1006"
+    },
+    {
+      "path": "crates/sign/Cargo.toml",
+      "role": "signature feature and dependency manifest",
+      "sha256": "760225eeef22b43cc3a5036cf214bbb777b4322dfb8c3ab84387d64897820378"
+    },
+    {
+      "path": "crates/sign/src/dilithium/encoding.rs",
+      "role": "ML-DSA canonical key and signature encodings",
+      "sha256": "bf64d684c4856c549d396a824286f57b62dc70d53f0eefc08e6d630f9acda93f"
+    },
+    {
+      "path": "crates/sign/src/dilithium/mod.rs",
+      "role": "ML-DSA-65 component mode, context, randomizer, and encodings",
+      "sha256": "43b44bd675b482101021543676ecec4900dc54577564f028616b68d469b3917b"
+    },
+    {
+      "path": "crates/sign/src/dilithium/sign.rs",
+      "role": "ML-DSA signing and verification transcript leaf",
+      "sha256": "5f05da1caed5ad807e7edcd5d0ed5f5c7489ef57fc9dc409ced732520cdb8d34"
+    },
+    {
+      "path": "crates/sign/src/ecdsa/common.rs",
+      "role": "ECDSA DER, RFC 6979, and low-S helpers",
+      "sha256": "26e6abf9df0436a2fecb90ce8e38198a48bccb67251d95070ce4173dcd144f05"
+    },
+    {
+      "path": "crates/sign/src/ecdsa/mod.rs",
+      "role": "ECDSA module declarations and public exports",
+      "sha256": "736cf80516fe6a017ea65003a565183353a0aff22bb2997b0354d459aa6ca98a"
+    },
+    {
+      "path": "crates/sign/src/ecdsa/p384/mod.rs",
+      "role": "ECDSA P-384 component semantics",
+      "sha256": "f14a51fc53189756b71001bcdcacfa266b7af66db77f2ec61b5035466be111e3"
+    },
+    {
+      "path": "crates/sign/src/error.rs",
+      "role": "signature component error conversion",
+      "sha256": "faf7f69585b99ae4023df5de58f519fb53e4fa8d690de0496b49562c9fb9d2d2"
+    },
+    {
+      "path": "crates/sign/src/lib.rs",
+      "role": "signature crate feature gates and public exports",
+      "sha256": "b253472b4f871cc899007994db16cb220efa42d912bf0620fe50da2fc22a1689"
+    }
+  ],
+  "status": "candidate-review-required",
+  "subject_binding": {
+    "binding_stage": "interim-rebind-required",
+    "curated_operations_path": "assurance/curated-operations.toml",
+    "curated_operations_sha256": "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4",
+    "final_rebind_required": true,
+    "manifest_file_count": 1395,
+    "manifest_include_policy": "production-and-evidence-v1",
+    "source_commit": "4582fc9c69e4119713671118869375d21473d486",
+    "source_tree": "56b4cf7761f4ecb406695a7d62ee7910acdfcbd1",
+    "subject_manifest_path": "assurance/subject-manifest.json",
+    "subject_manifest_sha256": "faac63ac208453e1d41c23a53d42a8d7f5a2ddd4201ca48b4f8bf6446c2580ac"
+  }
+}

@@ -1,0 +1,894 @@
+{
+  "$defs": {
+    "ecies_suite": {
+      "additionalProperties": false,
+      "properties": {
+        "aead": {
+          "enum": [
+            "AES-256-GCM",
+            "ChaCha20-Poly1305"
+          ]
+        },
+        "ciphertext_overhead": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "curve": {
+          "enum": [
+            "P-224",
+            "P-256",
+            "P-384",
+            "P-521"
+          ]
+        },
+        "hash": {
+          "enum": [
+            "SHA-256",
+            "SHA-384",
+            "SHA-512"
+          ]
+        },
+        "info_ascii": {
+          "pattern": "^dcrypt-v3/ECIES-",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^ECIES-",
+          "type": "string"
+        },
+        "point_length": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "supported",
+            "transitional"
+          ]
+        }
+      },
+      "required": [
+        "aead",
+        "ciphertext_overhead",
+        "curve",
+        "hash",
+        "info_ascii",
+        "name",
+        "point_length",
+        "status"
+      ],
+      "type": "object"
+    },
+    "error_rule": {
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "outcome": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "condition",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "hybrid_kem": {
+      "additionalProperties": false,
+      "properties": {
+        "ambiguities": {
+          "$ref": "#/$defs/string_array"
+        },
+        "combiner": {
+          "additionalProperties": false,
+          "properties": {
+            "hash": {
+              "const": "SHA-256"
+            },
+            "ikm": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "info": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "okm_length": {
+              "const": 32
+            },
+            "operation": {
+              "const": "HKDF-Extract then HKDF-Expand"
+            },
+            "salt": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "hash",
+            "ikm",
+            "info",
+            "okm_length",
+            "operation",
+            "salt"
+          ],
+          "type": "object"
+        },
+        "error_behavior": {
+          "items": {
+            "$ref": "#/$defs/error_rule"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "key_confirmation": {
+          "$ref": "#/$defs/key_confirmation"
+        },
+        "migration": {
+          "$ref": "#/$defs/migration"
+        },
+        "object_encodings": {
+          "items": {
+            "$ref": "#/$defs/hybrid_kem_object"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "suites": {
+          "items": {
+            "$ref": "#/$defs/hybrid_kem_suite"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "type": "array"
+        },
+        "tampering": {
+          "additionalProperties": false,
+          "properties": {
+            "classical_component": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "post_quantum_component": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "serialized_length": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "classical_component",
+            "post_quantum_component",
+            "serialized_length"
+          ],
+          "type": "object"
+        },
+        "versioning": {
+          "$ref": "#/$defs/versioning"
+        }
+      },
+      "required": [
+        "ambiguities",
+        "combiner",
+        "error_behavior",
+        "key_confirmation",
+        "migration",
+        "object_encodings",
+        "suites",
+        "tampering",
+        "versioning"
+      ],
+      "type": "object"
+    },
+    "hybrid_kem_object": {
+      "additionalProperties": false,
+      "properties": {
+        "first_component": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "formula": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "enum": [
+            "public_key",
+            "secret_key",
+            "ciphertext"
+          ]
+        },
+        "second_component": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "first_component",
+        "formula",
+        "name",
+        "second_component"
+      ],
+      "type": "object"
+    },
+    "hybrid_kem_suite": {
+      "additionalProperties": false,
+      "properties": {
+        "ciphertext_length": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "classical_ciphertext_length": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "classical_kdf_hash": {
+          "enum": [
+            "SHA-256",
+            "SHA-384",
+            "SHA-512"
+          ]
+        },
+        "classical_kdf_info_ascii": {
+          "pattern": "^dcrypt-v3/ECDH-",
+          "type": "string"
+        },
+        "classical_shared_secret_length": {
+          "enum": [
+            32,
+            48,
+            64
+          ]
+        },
+        "classical_suite_id": {
+          "pattern": "^ECDH-",
+          "type": "string"
+        },
+        "name": {
+          "pattern": "^ECDH-.*-ML-KEM-",
+          "type": "string"
+        },
+        "post_quantum_suite_id": {
+          "enum": [
+            "ML-KEM-512",
+            "ML-KEM-768",
+            "ML-KEM-1024"
+          ]
+        },
+        "public_key_length": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "secret_key_length": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ciphertext_length",
+        "classical_ciphertext_length",
+        "classical_kdf_hash",
+        "classical_kdf_info_ascii",
+        "classical_shared_secret_length",
+        "classical_suite_id",
+        "name",
+        "post_quantum_suite_id",
+        "public_key_length",
+        "secret_key_length"
+      ],
+      "type": "object"
+    },
+    "hybrid_signature": {
+      "additionalProperties": false,
+      "properties": {
+        "ambiguities": {
+          "$ref": "#/$defs/string_array"
+        },
+        "components": {
+          "additionalProperties": false,
+          "properties": {
+            "ecdsa": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "ml_dsa": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "ecdsa",
+            "ml_dsa"
+          ],
+          "type": "object"
+        },
+        "error_behavior": {
+          "items": {
+            "$ref": "#/$defs/error_rule"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "framing": {
+          "additionalProperties": false,
+          "properties": {
+            "accepts_trailing_bytes": {
+              "const": false
+            },
+            "formula": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "length_fields": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "maximum_label_length": {
+              "const": 255
+            }
+          },
+          "required": [
+            "accepts_trailing_bytes",
+            "formula",
+            "length_fields",
+            "maximum_label_length"
+          ],
+          "type": "object"
+        },
+        "key_confirmation": {
+          "$ref": "#/$defs/key_confirmation"
+        },
+        "migration": {
+          "$ref": "#/$defs/migration"
+        },
+        "object_encodings": {
+          "items": {
+            "$ref": "#/$defs/hybrid_signature_object"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        },
+        "signing": {
+          "additionalProperties": false,
+          "properties": {
+            "component_order": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "message_to_ecdsa": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "message_to_ml_dsa": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "not_signed": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "component_order",
+            "message_to_ecdsa",
+            "message_to_ml_dsa",
+            "not_signed"
+          ],
+          "type": "object"
+        },
+        "tampering": {
+          "additionalProperties": false,
+          "properties": {
+            "framing_or_label": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "message": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "signature_component": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "framing_or_label",
+            "message",
+            "signature_component"
+          ],
+          "type": "object"
+        },
+        "versioning": {
+          "$ref": "#/$defs/versioning"
+        }
+      },
+      "required": [
+        "ambiguities",
+        "components",
+        "error_behavior",
+        "framing",
+        "key_confirmation",
+        "migration",
+        "object_encodings",
+        "signing",
+        "tampering",
+        "versioning"
+      ],
+      "type": "object"
+    },
+    "hybrid_signature_object": {
+      "additionalProperties": false,
+      "properties": {
+        "first_component": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "label_ascii": {
+          "pattern": "^dcrypt-hybrid-sig/ecdsa-p384\\+ml-dsa-65/",
+          "type": "string"
+        },
+        "label_length": {
+          "maximum": 255,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "name": {
+          "enum": [
+            "public_key",
+            "secret_key",
+            "signature"
+          ]
+        },
+        "second_component": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "total_length": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "first_component",
+        "label_ascii",
+        "label_length",
+        "name",
+        "second_component",
+        "total_length"
+      ],
+      "type": "object"
+    },
+    "key_confirmation": {
+      "additionalProperties": false,
+      "properties": {
+        "behavior": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "limitations": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "behavior",
+        "limitations"
+      ],
+      "type": "object"
+    },
+    "migration": {
+      "additionalProperties": false,
+      "properties": {
+        "current_behavior": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "required_external_state": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "current_behavior",
+        "required_external_state"
+      ],
+      "type": "object"
+    },
+    "source_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "pattern": "^(Cargo\\.(lock|toml)|crates/[A-Za-z0-9_./-]+(Cargo\\.toml|\\.rs))$",
+          "type": "string"
+        },
+        "role": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "role",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "string_array": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "subject_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "binding_stage": {
+          "enum": [
+            "final-subject-candidate-review-required",
+            "interim-rebind-required"
+          ]
+        },
+        "curated_operations_path": {
+          "const": "assurance/curated-operations.toml"
+        },
+        "curated_operations_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "final_rebind_required": {
+          "type": "boolean"
+        },
+        "manifest_file_count": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "manifest_include_policy": {
+          "const": "production-and-evidence-v1"
+        },
+        "source_commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "source_tree": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "subject_manifest_path": {
+          "const": "assurance/subject-manifest.json"
+        },
+        "subject_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "binding_stage",
+        "curated_operations_path",
+        "curated_operations_sha256",
+        "final_rebind_required",
+        "manifest_file_count",
+        "manifest_include_policy",
+        "source_commit",
+        "source_tree",
+        "subject_manifest_path",
+        "subject_manifest_sha256"
+      ],
+      "type": "object"
+    },
+    "versioning": {
+      "additionalProperties": false,
+      "properties": {
+        "dispatch": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "in_band_suite_identifier": {
+          "type": "boolean"
+        },
+        "in_band_version_identifier": {
+          "type": "boolean"
+        },
+        "label_version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "dispatch",
+        "in_band_suite_identifier",
+        "in_band_version_identifier",
+        "label_version"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://dcrypt.invalid/assurance/interoperability/protocol-specs/protocol-spec.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "protocol-spec.schema.json"
+    },
+    "artifact_id": {
+      "const": "dcrypt-package-b-current-wire-behavior-1"
+    },
+    "assurance_effect": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_oracle_count": {
+          "const": 0
+        },
+        "counts_as_interoperability_evidence": {
+          "const": false
+        },
+        "counts_as_release_unblocking_evidence": {
+          "const": false
+        },
+        "purpose": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "accepted_oracle_count",
+        "counts_as_interoperability_evidence",
+        "counts_as_release_unblocking_evidence",
+        "purpose"
+      ],
+      "type": "object"
+    },
+    "byte_order": {
+      "const": "big-endian for every explicit integer length"
+    },
+    "clean_room_acceptance": {
+      "additionalProperties": false,
+      "properties": {
+        "required_reviews": {
+          "$ref": "#/$defs/string_array"
+        },
+        "status": {
+          "const": "blocked"
+        },
+        "stop_reasons": {
+          "$ref": "#/$defs/string_array"
+        }
+      },
+      "required": [
+        "required_reviews",
+        "status",
+        "stop_reasons"
+      ],
+      "type": "object"
+    },
+    "ecies": {
+      "additionalProperties": false,
+      "properties": {
+        "aad": {
+          "additionalProperties": false,
+          "properties": {
+            "binding": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "none_semantics": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "binding",
+            "none_semantics"
+          ],
+          "type": "object"
+        },
+        "ambiguities": {
+          "$ref": "#/$defs/string_array"
+        },
+        "error_behavior": {
+          "items": {
+            "$ref": "#/$defs/error_rule"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "frame": {
+          "additionalProperties": false,
+          "properties": {
+            "accepts_trailing_bytes": {
+              "const": false
+            },
+            "fields": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "encoding": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "length": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "name": {
+                    "enum": [
+                      "R_len",
+                      "R",
+                      "N_len",
+                      "N",
+                      "CT_len",
+                      "C_and_T"
+                    ]
+                  }
+                },
+                "required": [
+                  "encoding",
+                  "length",
+                  "name"
+                ],
+                "type": "object"
+              },
+              "maxItems": 6,
+              "minItems": 6,
+              "type": "array"
+            },
+            "grammar": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minimum_payload_length": {
+              "const": 16
+            },
+            "nonce_length": {
+              "const": 12
+            },
+            "parser_allocation_order": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "tag_length": {
+              "const": 16
+            }
+          },
+          "required": [
+            "accepts_trailing_bytes",
+            "fields",
+            "grammar",
+            "minimum_payload_length",
+            "nonce_length",
+            "parser_allocation_order",
+            "tag_length"
+          ],
+          "type": "object"
+        },
+        "kdf": {
+          "additionalProperties": false,
+          "properties": {
+            "ikm": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "okm_length": {
+              "const": 32
+            },
+            "operation": {
+              "const": "HKDF-Extract then HKDF-Expand"
+            },
+            "salt_ascii": {
+              "const": "dcrypt-v3/ECIES/extract"
+            },
+            "suite_info_source": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "ikm",
+            "okm_length",
+            "operation",
+            "salt_ascii",
+            "suite_info_source"
+          ],
+          "type": "object"
+        },
+        "key_confirmation": {
+          "additionalProperties": false,
+          "properties": {
+            "behavior": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "limitations": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "behavior",
+            "limitations"
+          ],
+          "type": "object"
+        },
+        "migration": {
+          "$ref": "#/$defs/migration"
+        },
+        "suites": {
+          "items": {
+            "$ref": "#/$defs/ecies_suite"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "versioning": {
+          "$ref": "#/$defs/versioning"
+        }
+      },
+      "required": [
+        "aad",
+        "ambiguities",
+        "error_behavior",
+        "frame",
+        "kdf",
+        "key_confirmation",
+        "migration",
+        "suites",
+        "versioning"
+      ],
+      "type": "object"
+    },
+    "format_version": {
+      "const": 1
+    },
+    "hybrid_kem": {
+      "$ref": "#/$defs/hybrid_kem"
+    },
+    "hybrid_signature": {
+      "$ref": "#/$defs/hybrid_signature"
+    },
+    "source_bindings": {
+      "items": {
+        "$ref": "#/$defs/source_binding"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "status": {
+      "const": "candidate-review-required"
+    },
+    "subject_binding": {
+      "$ref": "#/$defs/subject_binding"
+    }
+  },
+  "required": [
+    "$schema",
+    "artifact_id",
+    "assurance_effect",
+    "byte_order",
+    "clean_room_acceptance",
+    "ecies",
+    "format_version",
+    "hybrid_kem",
+    "hybrid_signature",
+    "source_bindings",
+    "status",
+    "subject_binding"
+  ],
+  "title": "dcrypt current ECIES and hybrid wire behavior",
+  "type": "object"
+}
