@@ -50,13 +50,20 @@ forbidden-package-suffixes = ["-sys", "_sys"]
 # isolated, non-published verification workspace, never in a published
 # package's dependency table or the main workspace dependency graph.
 test-oracle-packages = [
+    "bls12_381",
     "chacha20",
     "chacha20poly1305",
+    "crypto-bigint",
     "curve25519-dalek",
+    "ecdsa",
     "ed25519-dalek",
+    "elliptic-curve",
+    "ff",
     "fips204",
+    "group",
     "hkdf",
     "hmac",
+    "k256",
     "libcrux-intrinsics",
     "libcrux-ml-dsa",
     "libcrux-platform",
@@ -64,9 +71,20 @@ test-oracle-packages = [
     "libcrux-sha3",
     "libcrux-traits",
     "ml-dsa",
+    "p224",
+    "p256",
+    "p384",
+    "p521",
+    "pairing",
     "pbkdf2",
     "poly1305",
+    "primeorder",
+    "rfc6979",
+    "sec1",
     "sha2",
+    "sha3",
+    "signature",
+    "subtle",
 ]
 verification-workspace = "verification"
 

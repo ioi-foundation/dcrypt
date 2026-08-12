@@ -37,6 +37,21 @@ jobs:
         run: |
           python3 -B assurance/verify-assurance-ledger.py --self-test
           python3 -B assurance/verify-assurance-ledger.py --mode ci
+      - name: Verify blocked Package B interoperability controls
+        run: |
+          python3 -B assurance/interoperability/generate-interoperability-matrix.py --check
+          python3 -B assurance/interoperability/verify-interoperability.py --mode ci
+          python3 -B assurance/interoperability/interoperability-selftest.py
+          set +e
+          python3 -B assurance/interoperability/verify-interoperability.py --mode release
+          interop_release_rc=$?
+          set -e
+          test "$interop_release_rc" -eq 3
+          python3 -B assurance/interoperability/protocol-specs/verify-protocol-specs.py \
+            --require-final-subject --check-current-subject
+          python3 -B assurance/interoperability/protocol-specs/protocol-specs-selftest.py
+          python3 -B verification/clean-room-protocol-reference/verify-scaffold.py
+          python3 -B verification/clean-room-protocol-reference/scaffold-selftest.py
 
   implementation-boundary:
     name: Zero unsafe / zero FFI implementation boundary
@@ -121,8 +136,8 @@ jobs:
           cargo test --release -p dcrypt-tests --test property_aes_cbc
           -- --test-threads=1 --nocapture
 
-  independent-oracles:
-    name: Excluded independent interoperability oracles
+  candidate-comparators:
+    name: Candidate comparators (not independent assurance evidence)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -131,13 +146,41 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: stable
-      - name: Run the non-published differential verification workspace
-        run: cargo test --release --locked --manifest-path verification/Cargo.toml
-      - name: Test the isolated decrypt-only legacy migration tool
+          toolchain: 1.93.1
+      - name: Install the candidate replay sandbox tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes bubblewrap strace
+      - name: Acquire the exact verification closure without using Cargo's cache
         run: >-
-          cargo test --release --locked --manifest-path
-          migration/legacy-xchacha20poly1305/Cargo.toml
+          python3 -B verification/oracle-provisioning/acquire.py
+          --manifest verification/oracle-provisioning/manifest.json
+          --lock verification/Cargo.lock
+          --output "$RUNNER_TEMP/oracle-archives"
+      - name: Materialize and replay six exact candidate comparator targets offline
+        run: |
+          python3 -B verification/oracle-provisioning/selftest.py \
+            --manifest verification/oracle-provisioning/manifest.json \
+            --lock verification/Cargo.lock \
+            --archives "$RUNNER_TEMP/oracle-archives" \
+            --repo-root "$GITHUB_WORKSPACE"
+          python3 -B verification/oracle-provisioning/materialize.py \
+            --manifest verification/oracle-provisioning/manifest.json \
+            --lock verification/Cargo.lock \
+            --archives "$RUNNER_TEMP/oracle-archives" \
+            --output "$RUNNER_TEMP/oracle-materialized" \
+            --repo-root "$GITHUB_WORKSPACE"
+          python3 -B verification/oracle-provisioning/replay.py \
+            --manifest verification/oracle-provisioning/manifest.json \
+            --lock verification/Cargo.lock \
+            --archives "$RUNNER_TEMP/oracle-archives" \
+            --materialized "$RUNNER_TEMP/oracle-materialized" \
+            --toolchain-root "$HOME/.rustup/toolchains/1.93.1-x86_64-unknown-linux-gnu"
+      - name: Test the isolated decrypt-only legacy migration tool
+        run: |
+          cargo fetch --locked --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml
+          cargo test --release --locked --offline --manifest-path \
+            migration/legacy-xchacha20poly1305/Cargo.toml
 
   statistical-timing:
     name: Repository statistical timing regressions (not dudect or ctgrind)

@@ -55,7 +55,7 @@ EXPECTED_CHECK_CONTEXTS = (
     "Format and all-target workspace check",
     "Workspace crate tests",
     "Complete ACVP and AES-CBC property gates",
-    "Excluded independent interoperability oracles",
+    "Candidate comparators (not independent assurance evidence)",
     "Repository statistical timing regressions (not dudect or ctgrind)",
     "RustSec and workspace dependency policy",
     "Miri (dcrypt-api)",

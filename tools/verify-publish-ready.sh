@@ -136,10 +136,35 @@ else
     fail "failed to fetch the exact locked dependency closure"
     exit 1
 fi
+release_assurance_failed=false
 if python3 -B "$PROJECT_ROOT/assurance/verify-assurance-ledger.py" --mode release; then
     pass "assurance ledger and live public API inventory passed"
 else
     fail "assurance ledger or live public API inventory failed"
+    release_assurance_failed=true
+fi
+
+printf "\n${BLUE}Package B interoperability completeness and protocol controls${NC}\n"
+if python3 -B "$PROJECT_ROOT/assurance/interoperability/generate-interoperability-matrix.py" --check \
+    && python3 -B "$PROJECT_ROOT/assurance/interoperability/verify-interoperability.py" --mode ci \
+    && python3 -B "$PROJECT_ROOT/assurance/interoperability/interoperability-selftest.py" \
+    && python3 -B "$PROJECT_ROOT/assurance/interoperability/protocol-specs/verify-protocol-specs.py" \
+        --require-final-subject --check-current-subject \
+    && python3 -B "$PROJECT_ROOT/assurance/interoperability/protocol-specs/protocol-specs-selftest.py" \
+    && python3 -B "$PROJECT_ROOT/verification/clean-room-protocol-reference/verify-scaffold.py" \
+    && python3 -B "$PROJECT_ROOT/verification/clean-room-protocol-reference/scaffold-selftest.py"; then
+    pass "Package B structural controls reproduced without promoting candidate evidence"
+else
+    fail "Package B structural interoperability controls failed"
+    release_assurance_failed=true
+fi
+if python3 -B "$PROJECT_ROOT/assurance/interoperability/verify-interoperability.py" --mode release; then
+    pass "interoperability release completeness passed"
+else
+    fail "interoperability completeness remains release-blocking"
+    release_assurance_failed=true
+fi
+if [[ "$release_assurance_failed" == true ]]; then
     exit 1
 fi
 

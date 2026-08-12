@@ -228,6 +228,37 @@ run_publish_verifier() {
     "$SCRIPT_DIR/verify-publish-ready.sh" "${args[@]}"
 }
 
+run_candidate_comparator_replay() {
+    local workspace=$1
+    local replay_root
+    replay_root=$(mktemp -d "${TMPDIR:-/tmp}/dcrypt-oracle-release.XXXXXX")
+    (
+        set -Eeuo pipefail
+        trap 'chmod -R u+w -- "$replay_root" 2>/dev/null || true; rm -rf -- "$replay_root"' EXIT
+        python3 -B "$PROJECT_ROOT/verification/oracle-provisioning/acquire.py" \
+            --manifest "$PROJECT_ROOT/verification/oracle-provisioning/manifest.json" \
+            --lock "$PROJECT_ROOT/$workspace/Cargo.lock" \
+            --output "$replay_root/archives"
+        python3 -B "$PROJECT_ROOT/verification/oracle-provisioning/selftest.py" \
+            --manifest "$PROJECT_ROOT/verification/oracle-provisioning/manifest.json" \
+            --lock "$PROJECT_ROOT/$workspace/Cargo.lock" \
+            --archives "$replay_root/archives" \
+            --repo-root "$PROJECT_ROOT"
+        python3 -B "$PROJECT_ROOT/verification/oracle-provisioning/materialize.py" \
+            --manifest "$PROJECT_ROOT/verification/oracle-provisioning/manifest.json" \
+            --lock "$PROJECT_ROOT/$workspace/Cargo.lock" \
+            --archives "$replay_root/archives" \
+            --output "$replay_root/materialized" \
+            --repo-root "$PROJECT_ROOT"
+        python3 -B "$PROJECT_ROOT/verification/oracle-provisioning/replay.py" \
+            --manifest "$PROJECT_ROOT/verification/oracle-provisioning/manifest.json" \
+            --lock "$PROJECT_ROOT/$workspace/Cargo.lock" \
+            --archives "$replay_root/archives" \
+            --materialized "$replay_root/materialized" \
+            --toolchain-root "$(rustc --print sysroot)"
+    )
+}
+
 run_test_gates() {
     if [[ "$SKIP_TESTS" == true ]]; then
         warn "test gates were explicitly skipped"
@@ -253,9 +284,8 @@ run_test_gates() {
         [[ -n "$category" && -n "$workspace" ]] || continue
         case "$category" in
             verification)
-                info "Running excluded independent interoperability oracles: $workspace"
-                cargo test --release --locked --manifest-path \
-                    "$PROJECT_ROOT/$workspace/Cargo.toml"
+                info "Running isolated candidate comparators (not independent assurance evidence): $workspace"
+                run_candidate_comparator_replay "$workspace"
                 ;;
             owned)
                 info "Testing classified owned workspace: $workspace"
@@ -579,6 +609,15 @@ release_self_test() {
     grep -Fq 'RELEASE_BRANCH = "master"' \
         "$SCRIPT_DIR/verify-remote-release-ready.py" \
         || die "self-test: shell and remote gate release branches differ"
+    grep -Fq 'run_candidate_comparator_replay "$workspace"' "$0" \
+        || die "self-test: release test gate omitted the exact candidate comparator runner"
+    grep -Fq 'not independent assurance evidence' "$0" \
+        || die "self-test: candidate comparator status is not explicit"
+    local forbidden_oracle_claim='excluded independent interoperability'
+    forbidden_oracle_claim+=' oracles'
+    if grep -Fq "$forbidden_oracle_claim" "$0"; then
+        die "self-test: release tooling still claims comparator independence"
+    fi
     self_test_ambiguous_publish_resolution
     info "release-dcrypt self-test passed"
 }
@@ -972,6 +1011,10 @@ require_command curl
 require_command python3
 require_command awk
 require_command sha256sum
+if [[ "$SKIP_TESTS" == false ]]; then
+    require_command bwrap
+    require_command strace
+fi
 load_classified_workspace_records
 cargo_subcommand_available release \
     || die "cargo-release is required (cargo install cargo-release --locked)"
