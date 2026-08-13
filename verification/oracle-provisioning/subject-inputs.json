@@ -12,14 +12,14 @@
     ],
     "present_candidates": []
   },
-  "file_count": 265,
+  "file_count": 264,
   "files": [
     {
-      "git_blob": "3825f4da6e36813012eaff3ca83ebbebba4fb2ad",
+      "git_blob": "967d098b70468a0a30f8d4a9ef0f6192dee3c7b6",
       "git_mode": "100644",
       "path": "Cargo.lock",
-      "sha256": "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd",
-      "size": 33050
+      "sha256": "0f4a81042e4d73f6313e30d80668606e8528124e97936f669585669e4ce06736",
+      "size": 28598
     },
     {
       "git_blob": "c6a940f33c10e50e6d02dab2851eb224cf238871",
@@ -610,18 +610,18 @@
       "size": 16812
     },
     {
-      "git_blob": "b6ae01dcc3443c74010917099bfa99bdc594e855",
+      "git_blob": "d883c7b2c465cff191bc0948f7489250d04167d6",
       "git_mode": "100644",
       "path": "crates/algorithms/src/error/mod.rs",
-      "sha256": "ec6f468960602ede1687ab5e348e8f790872ce97efd99425a110557daaa1ebff",
-      "size": 9334
+      "sha256": "a23d84fc408f4e8521b5f16da0ce50e8047230c80386247dea624da99fccc923",
+      "size": 9216
     },
     {
-      "git_blob": "677d66959aa5d52b5f222389bbe48e466058a204",
+      "git_blob": "c7e16488280dc7fffe98e68dadd2e323ae36da8e",
       "git_mode": "100644",
       "path": "crates/algorithms/src/error/tests.rs",
-      "sha256": "47f9d43a567ad756cff55d1abd6d13f724462aa24eccbde2f98e2479acb81497",
-      "size": 2442
+      "sha256": "15506af21f552039a7a715273a369381d843c80229f4d1f2fb50ec09c41a7422",
+      "size": 296
     },
     {
       "git_blob": "8f5a4579edb1a2c36fe7d26672b3a512afeb7638",
@@ -792,11 +792,11 @@
       "size": 11438
     },
     {
-      "git_blob": "5ab0d407a0371ff5af16466e816d44cd66b48bb6",
+      "git_blob": "7f02bf4d813ad0fcf0a5c86c414417962019dbe3",
       "git_mode": "100644",
       "path": "crates/algorithms/src/lib.rs",
-      "sha256": "0d4ed7176e29585e359c7a799a6cefd6fc5837fc45997b54d4c283bf4b1994c4",
-      "size": 3976
+      "sha256": "6a7ebee869565525b18724fab60a1723b733622f9f9bb60690791bb4598f37ca",
+      "size": 3944
     },
     {
       "git_blob": "1c67f36c8583f67dbf06fa4be7d826434a0b232c",
@@ -1016,39 +1016,39 @@
       "size": 19151
     },
     {
-      "git_blob": "22d73824d272784ef993018b0ec3f912b9115d8b",
+      "git_blob": "ceb201fe1a0ac7aacf2c2bfeda470c342726b42f",
       "git_mode": "100644",
       "path": "crates/api/Cargo.toml",
-      "sha256": "7109f0ef85c0bc2b2e9b7832adb4feb78ec4e0e0740909a6b1f2325f0681071a",
-      "size": 587
+      "sha256": "4defac2356ef89414329f0fdc314027b417471c9c2dd23e56cfeedac3e6bb112",
+      "size": 552
     },
     {
-      "git_blob": "2dda82068c6e3342edd0b71bda82a1023b63edcb",
+      "git_blob": "edee91ad93e596a7f6f8271ebeb0a81540afb2ef",
       "git_mode": "100644",
       "path": "crates/api/README.md",
-      "sha256": "4838bcbab5e7d9b130631ab7d101658b1a60a8220c855a8c32909d19054f8548",
-      "size": 4715
+      "sha256": "85767607ff38e1d63df2df925907831de0b8a2dcfa57e5aadb119a6ab03dcc4a",
+      "size": 4668
     },
     {
-      "git_blob": "ad867b879a9cfdd88e50f4f1008af1883b36bed7",
+      "git_blob": "5dcd8076dcf9f4d71b7b428148bd937d9e14dd1f",
       "git_mode": "100644",
       "path": "crates/api/src/error/mod.rs",
-      "sha256": "bffdd5c58c318da7f4e874e3c5a8c8519328d567fc3515525ef533885a1d7945",
-      "size": 1428
+      "sha256": "4bf4bb01f04b9964c55732e478c363fea1e0ce5ac7c28ceda53c053a9d15d2f1",
+      "size": 1245
     },
     {
-      "git_blob": "99f59d3d63d303f14c5900321161672c73372f36",
+      "git_blob": "5a5d0332467a473cb070bdf398616e312c8becc5",
       "git_mode": "100644",
       "path": "crates/api/src/error/registry.rs",
-      "sha256": "4efee2c3cdf7e6a7fedf8389dbe8a99fb7df12c696c48ae37bf594f4027eb72e",
-      "size": 10283
+      "sha256": "e6f718a1df64478d4c243bafa060420eded04e97200037779fb544af7927f5ea",
+      "size": 323
     },
     {
-      "git_blob": "d115af2e91f9feb0a61c3b5c53d71426f3812602",
+      "git_blob": "beb2a6cee540d1aae59eba3850df2fb2bb9d874e",
       "git_mode": "100644",
       "path": "crates/api/src/error/traits.rs",
-      "sha256": "495f54e6ae1a8d0cbd7958383046c737935b207357de0550dd166242acd9e70c",
-      "size": 6262
+      "sha256": "2d06a290ea453fcfcabf41accf205b2a6205f91b523405d70803e1de2fa1ef7c",
+      "size": 291
     },
     {
       "git_blob": "380b920344fac5142a88b1ed8074bf31c6a979c0",
@@ -1119,13 +1119,6 @@
       "path": "crates/api/src/types.rs",
       "sha256": "90af62ccea6d5ecb7099a9465ce003aa757d4221d940b85a7c9d2b38373f5320",
       "size": 17156
-    },
-    {
-      "git_blob": "0832a90049dc5ac0b8421ffa51eb8198457bcbb1",
-      "git_mode": "100644",
-      "path": "crates/api/tests/error_registry_loom.rs",
-      "sha256": "c2604c3d9c44f6968cc7195446d59f903da0d4b61608767137be4a94e94b5a18",
-      "size": 5654
     },
     {
       "git_blob": "5076babfeb1623f3a0c3ed7c8ff2843b9c0623bf",
@@ -1998,8 +1991,8 @@
       "policy": "all_tracked_regular_files_except_generated_target"
     }
   ],
-  "source_commit": "9c7d2941819ef0e268d5835a30afdf796f94297f",
-  "source_tree": "249c0cb9ac76569e8e8934d2ea42f01ef9814efa",
+  "source_commit": "219ee68040fa48ae1973ba5a16ccf7f32f73657a",
+  "source_tree": "4390012075501659de01e21b24432967b5aa0c23",
   "vector_set": {
     "data_yaml_count": 20,
     "data_yaml_paths": [

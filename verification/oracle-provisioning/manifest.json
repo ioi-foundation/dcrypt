@@ -4653,13 +4653,13 @@
   "subject": {
     "binding_kind": "exact_prior_commit_and_tree_candidate_not_self_binding",
     "inputs": {
-      "file_count": 265,
+      "file_count": 264,
       "path": "verification/oracle-provisioning/subject-inputs.json",
-      "sha256": "90ea5b6d8366a912c453bea6f96b2556767a1b4f3ab668e90757b21b4cc700d6"
+      "sha256": "8b40683d1f48d59f6001d6c3c53e6caaacf86acfb4be77bca52826871bb1349f"
     },
     "rebind_policy": "rerun_after_every_subsequent_subject_change_before_replay",
-    "source_commit": "9c7d2941819ef0e268d5835a30afdf796f94297f",
-    "source_tree": "249c0cb9ac76569e8e8934d2ea42f01ef9814efa",
+    "source_commit": "219ee68040fa48ae1973ba5a16ccf7f32f73657a",
+    "source_tree": "4390012075501659de01e21b24432967b5aa0c23",
     "subsequent_assurance_binding_required": true
   },
   "tests": {
