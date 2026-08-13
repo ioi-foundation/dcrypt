@@ -17,9 +17,6 @@ no_std = []
 [dependencies]
 dcrypt-internal = { path = "../internal", version = "=3.0.0", default-features = false, features = ["alloc"] }
 
-[dev-dependencies]
-loom = "0.7.2"
-
 [package.metadata.release]
 publish = true
 

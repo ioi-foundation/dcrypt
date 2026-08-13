@@ -54,8 +54,8 @@ cargo test -p dcrypt-tests --test constant_time_tests -- \
 # ACVP ML-DSA coverage in release mode
 cargo test --release -p dcrypt-tests --test acvp_tests test_ml_dsa_ -- --nocapture
 
-# Exhaustive ErrorRegistry generation/ownership schedule model
-cargo test -p dcrypt-api --test error_registry_loom
+# Downstream v4 error API replacement fixture
+cargo test -p dcrypt-tests --test error_api_v4_migration
 
 # Public error and secret-buffer APIs under Miri
 cargo +nightly-2026-08-07 miri test -p dcrypt-api --lib --all-features

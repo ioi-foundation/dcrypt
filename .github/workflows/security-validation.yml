@@ -52,6 +52,17 @@ jobs:
           python3 -B assurance/interoperability/protocol-specs/protocol-specs-selftest.py
           python3 -B verification/clean-room-protocol-reference/verify-scaffold.py
           python3 -B verification/clean-room-protocol-reference/scaffold-selftest.py
+      - name: Verify Package E v4 error API removal and migration controls
+        run: |
+          python3 -B assurance/error-api-v4/generate.py --check
+          python3 -B assurance/error-api-v4/verify.py --ci
+          python3 -B assurance/error-api-v4/selftest.py
+          cargo test --locked --offline -p dcrypt-tests --test error_api_v4_migration
+          set +e
+          python3 -B assurance/error-api-v4/verify.py --release
+          error_api_v4_release_rc=$?
+          set -e
+          test "$error_api_v4_release_rc" -eq 3
       - name: Verify Package D side-channel foundations without claiming operational evidence
         run: |
           python3 -B assurance/side-channel/generate.py --check

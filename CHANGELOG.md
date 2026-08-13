@@ -7,6 +7,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Removed the process-global error registry and legacy `Result` compatibility
+  extension traits scheduled for the future v4 API. Callers now propagate
+  failures with `Result`/`?`, use standard combinators and caller-owned
+  diagnostics, and invoke the existing explicit symmetric error converters.
+  See `docs/migration/V4-ERROR-API.md`. This source change does not itself bump
+  package versions or authorize a release.
+
 ## [3.0.0] - 2026-08-09
 
 ### Added

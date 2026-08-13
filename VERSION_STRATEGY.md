@@ -1,5 +1,20 @@
 # Release and Version Strategy
 
+## Future v4 error API boundary (unreleased)
+
+The removal of the process-global error registry and the legacy `Result`
+compatibility extension traits is source-breaking and may ship only on a future
+SemVer-major v4 line. The repository remains at its current package versions
+until a separately authorized release-preparation step updates all twelve
+published crates together.
+
+Callers must migrate to ordinary `Result` propagation and combinators,
+caller-owned diagnostics, the inherent `Error::with_context` and
+`Error::with_message` methods, and the explicit symmetric error converters. See
+[`docs/migration/V4-ERROR-API.md`](docs/migration/V4-ERROR-API.md). This boundary
+does not alter historical advisory ranges, supported-version statements, or
+yank policy.
+
 ## Security release boundary
 
 Every published pre-v2 line contains one or more vulnerabilities documented in

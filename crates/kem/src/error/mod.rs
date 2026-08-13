@@ -202,6 +202,3 @@ impl From<Error> for CoreError {
 
 // Include validation submodule
 pub mod validate;
-
-// Re-export core error handling traits
-pub use dcrypt_api::error::{ResultExt, SecureErrorHandling};

@@ -8,13 +8,6 @@ pub mod validate;
 // Re-export the primary error type and result
 pub use types::{Error, Result};
 
-// Re-export the error registry
-pub use registry::ERROR_REGISTRY;
-
-// Re-export error traits
-#[allow(deprecated)]
-pub use traits::{ErrorRegistryExt, ResultExt, SecureErrorHandling};
-
 // Re-export validation utilities module (not as a nested function)
 pub use validate as validation;
 

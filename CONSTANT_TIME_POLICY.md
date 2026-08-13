@@ -32,8 +32,10 @@ proof.
 
 5. **Error Handling:**
    - A result variant that depends on a secret MUST NOT be used as ordinary
-     branching control flow. The deprecated `ConstantTimeResult` and
-     `SecureErrorHandling` compatibility names provide no timing guarantee.
+     branching control flow. The historical `ConstantTimeResult` and
+     `SecureErrorHandling` compatibility APIs were removed for v4 because their
+     names provided no timing guarantee. Standard `Result` inspection and
+     mapping also use ordinary, data-dependent control flow.
    - Error messages MUST NOT include details about secret values.
 
 ## Implementation Guidelines

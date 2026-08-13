@@ -7,7 +7,7 @@ use super::framed::{FramedDecryptStream, FramedEncryptStream};
 use super::{StreamingDecrypt, StreamingEncrypt};
 use crate::aead::gcm::{Aes128Gcm, Aes256Gcm};
 use crate::aes::keys::{Aes128Key, Aes256Key};
-use crate::error::{Result, SymmetricResultExt};
+use crate::error::{from_io_error, Result};
 use dcrypt_internal::{CryptoRng, Zeroizing};
 use std::io::{Read, Write};
 
@@ -31,7 +31,7 @@ pub fn encrypt_file_aes128<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     let mut stream = Aes128GcmEncryptStream::new(writer, key, aad, rng)?;
     let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = reader.read(&mut buffer[..]).map_io_err()?;
+        let read = reader.read(&mut buffer[..]).map_err(from_io_error)?;
         if read == 0 {
             break;
         }
@@ -55,7 +55,7 @@ pub fn decrypt_file_aes128<R: Read, W: Write>(
         if read == 0 {
             break;
         }
-        writer.write_all(&buffer[..read]).map_io_err()?;
+        writer.write_all(&buffer[..read]).map_err(from_io_error)?;
     }
     Ok(())
 }
@@ -71,7 +71,7 @@ pub fn encrypt_file_aes256<R: Read, W: Write, Rng: CryptoRng + ?Sized>(
     let mut stream = Aes256GcmEncryptStream::new(writer, key, aad, rng)?;
     let mut buffer = Zeroizing::new([0u8; 8192]);
     loop {
-        let read = reader.read(&mut buffer[..]).map_io_err()?;
+        let read = reader.read(&mut buffer[..]).map_err(from_io_error)?;
         if read == 0 {
             break;
         }
@@ -95,7 +95,7 @@ pub fn decrypt_file_aes256<R: Read, W: Write>(
         if read == 0 {
             break;
         }
-        writer.write_all(&buffer[..read]).map_io_err()?;
+        writer.write_all(&buffer[..read]).map_err(from_io_error)?;
     }
     Ok(())
 }

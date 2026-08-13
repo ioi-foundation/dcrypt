@@ -87,13 +87,13 @@ PACKAGE_C_RELEASE_SECTION_SHA256 = (
     "d15f9d10ac6426cec1d5eec2738c5050fcfbffe5dac66290524e2195e29e1df3"
 )
 PACKAGE_C_FULL_WORKFLOW_SHA256 = (
-    "0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52"
+    "0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c"
 )
 PACKAGE_C_FULL_RELEASE_SCRIPT_SHA256 = (
-    "813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7"
+    "4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf"
 )
 PACKAGE_C_FULL_PUBLISH_SCRIPT_SHA256 = (
-    "db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5"
+    "c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d"
 )
 
 # Exact Package D structural/HOLD and dated-selector lifecycle-control wiring.
@@ -109,6 +109,19 @@ PACKAGE_D_RELEASE_ASSERTIONS_SHA256 = (
 )
 PACKAGE_D_MIRI_SECTION_SHA256 = (
     "07983a798ffee7f1a1ed9f6b43f1f079186b2d51301ce0882528c0f01f103bf5"
+)
+
+# Package E is wired before its generated assurance implementation lands. These
+# seals bind the exact structural commands, downstream migration fixture, and
+# expected release HOLD contract without treating rc 3 as release authority.
+PACKAGE_E_WORKFLOW_SECTION_SHA256 = (
+    "3ff133ba07bfaaeeffb05e9368bce0bcead704c51ca0f74c694992fd18633d98"
+)
+PACKAGE_E_PUBLISH_SECTION_SHA256 = (
+    "d9301cdb8acdb985eceb97414bacf8ecc640109392cc187b07c44d94e8489123"
+)
+PACKAGE_E_RELEASE_ASSERTIONS_SHA256 = (
+    "ef52c5222bc161a845a23c890e463519798d3b02e64fc919545cc81b82949337"
 )
 
 
@@ -303,6 +316,100 @@ def verify_package_d_wiring_sources(
         raise GateError("Package D dated Miri selector count differs")
     if re.search(r"cargo\s+\+nightly\s+miri", release_script):
         raise GateError("Package D release runner uses a moving nightly Miri selector")
+
+
+def package_e_wiring_sections(
+    workflow: str, publish_ready: str, release_script: str
+) -> dict[str, str]:
+    return {
+        "workflow": exact_bounded_section(
+            workflow,
+            "      - name: Verify Package E v4 error API removal and migration controls\n",
+            "      - name: Verify Package D side-channel foundations without claiming operational evidence\n",
+            label="Package E assurance workflow section",
+        ),
+        "publish": exact_bounded_section(
+            publish_ready,
+            'printf "\\n${BLUE}Package E v4 error API removal and migration controls${NC}\\n"\n',
+            'printf "\\n${BLUE}Package D side-channel and secret-lifecycle foundations${NC}\\n"\n',
+            label="Package E publish verifier section",
+        ),
+        "release-assertions": exact_bounded_section(
+            release_script,
+            "    # Package E release wiring assertions begin.\n",
+            "    # Package E release wiring assertions end.\n",
+            label="Package E release self-test assertions",
+        ),
+    }
+
+
+def verify_package_e_wiring_sources(
+    workflow: str, publish_ready: str, release_script: str
+) -> None:
+    sections = package_e_wiring_sections(workflow, publish_ready, release_script)
+    expected = {
+        "workflow": PACKAGE_E_WORKFLOW_SECTION_SHA256,
+        "publish": PACKAGE_E_PUBLISH_SECTION_SHA256,
+        "release-assertions": PACKAGE_E_RELEASE_ASSERTIONS_SHA256,
+    }
+    for label, section in sections.items():
+        digest = hashlib.sha256(section.encode("utf-8")).hexdigest()
+        if expected[label] == "UNSTABLE" or digest != expected[label]:
+            raise GateError(f"Package E {label} wiring digest differs")
+
+    workflow_commands = shell_logical_commands(sections["workflow"])
+    for command in (
+        "python3 -B assurance/error-api-v4/generate.py --check",
+        "python3 -B assurance/error-api-v4/verify.py --ci",
+        "python3 -B assurance/error-api-v4/selftest.py",
+        "cargo test --locked --offline -p dcrypt-tests --test error_api_v4_migration",
+        "python3 -B assurance/error-api-v4/verify.py --release",
+        'test "$error_api_v4_release_rc" -eq 3',
+    ):
+        if workflow_commands.count(command) != 1:
+            raise GateError(f"Package E workflow command is absent or ambiguous: {command}")
+    if "continue-on-error:" in sections["workflow"]:
+        raise GateError("Package E workflow permits continue-on-error")
+
+    publish_commands = shell_logical_commands(sections["publish"])
+    expected_structural = (
+        'if python3 -B "$PROJECT_ROOT/assurance/error-api-v4/generate.py" --check '
+        '&& python3 -B "$PROJECT_ROOT/assurance/error-api-v4/verify.py" --ci '
+        '&& python3 -B "$PROJECT_ROOT/assurance/error-api-v4/selftest.py" '
+        '&& cargo test --locked --offline --manifest-path "$PROJECT_ROOT/Cargo.toml" '
+        '-p dcrypt-tests --test error_api_v4_migration; then'
+    )
+    if publish_commands.count(expected_structural) != 1:
+        raise GateError("Package E publish structural command differs")
+    if publish_commands.count(
+        'python3 -B "$PROJECT_ROOT/assurance/error-api-v4/verify.py" --release'
+    ) != 1:
+        raise GateError("Package E publish release command differs")
+    if publish_commands.count('if [[ "$error_api_v4_release_rc" -eq 3 ]]; then') != 1:
+        raise GateError("Package E publish HOLD rc 3 differs")
+    if sections["publish"].count("release_assurance_failed=true") != 3:
+        raise GateError("Package E publish HOLD propagation differs")
+    if sections["publish"].count(
+        'fail "Package E release HOLD remains explicit and release-blocking"'
+    ) != 1:
+        raise GateError("Package E expected HOLD is not release-blocking")
+
+    assertion_commands = shell_logical_commands(sections["release-assertions"])
+    required_assertion_fragments = (
+        "Package E generation check",
+        "Package E structural verification",
+        "Package E adversarial controls",
+        "Package E downstream migration fixture",
+        "Package E release mode",
+        "publish verifier omitted Package E HOLD rc 3",
+        "publish verifier did not propagate Package E HOLD",
+        "CI omitted Package E HOLD rc 3",
+    )
+    for fragment in required_assertion_fragments:
+        if sections["release-assertions"].count(fragment) != 1:
+            raise GateError(f"Package E release self-test omitted {fragment}")
+    if any(command.strip() == "return 0" for command in assertion_commands):
+        raise GateError("Package E release self-test can return before its assertions")
 
 
 class GateError(RuntimeError):
@@ -1926,6 +2033,88 @@ class GateSelfTests(unittest.TestCase):
         for mutated_workflow, mutated_publish, mutated_release in mutations:
             with self.assertRaisesRegex(GateError, "Package D"):
                 verify_package_d_wiring_sources(
+                    mutated_workflow, mutated_publish, mutated_release
+                )
+
+    def test_package_e_workflow_and_release_wiring_is_exact_and_non_skippable(self) -> None:
+        workflow = (
+            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
+        ).read_text()
+        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
+        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        verify_package_e_wiring_sources(workflow, publish_ready, release_script)
+
+        mutations = (
+            (
+                workflow.replace(
+                    "          python3 -B assurance/error-api-v4/generate.py --check\n",
+                    "          exit 0\n"
+                    "          python3 -B assurance/error-api-v4/generate.py --check\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow.replace(
+                    "      - name: Verify Package E v4 error API removal and migration controls\n",
+                    "      - name: Verify Package E v4 error API removal and migration controls\n"
+                    "        continue-on-error: true\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow.replace(
+                    '          test "$error_api_v4_release_rc" -eq 3\n',
+                    '          test "$error_api_v4_release_rc" -eq 0\n',
+                    1,
+                ),
+                publish_ready,
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    '    && cargo test --locked --offline --manifest-path "$PROJECT_ROOT/Cargo.toml" \\\n',
+                    '    && cargo test --manifest-path "$PROJECT_ROOT/Cargo.toml" \\\n',
+                    1,
+                ),
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    'if [[ "$error_api_v4_release_rc" -eq 3 ]]; then\n',
+                    'if [[ "$error_api_v4_release_rc" -eq 0 ]]; then\n',
+                    1,
+                ),
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    '    fail "Package E release HOLD remains explicit and release-blocking"\n'
+                    "    release_assurance_failed=true\n",
+                    '    pass "Package E release HOLD remains explicit"\n',
+                    1,
+                ),
+                release_script,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "    # Package E release wiring assertions begin.\n",
+                    "    # Package E release wiring assertions begin.\n    return 0\n",
+                    1,
+                ),
+            ),
+        )
+        for mutated_workflow, mutated_publish, mutated_release in mutations:
+            with self.assertRaisesRegex(GateError, "Package E"):
+                verify_package_e_wiring_sources(
                     mutated_workflow, mutated_publish, mutated_release
                 )
 

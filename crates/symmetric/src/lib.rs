@@ -31,5 +31,5 @@ pub use dcrypt_internal::{ChaCha20Rng, CryptoRng, RngCore};
 // Re-export the API error system instead of custom error types
 pub use dcrypt_api::error::{Error, Result};
 
-// Re-export commonly used validation and error handling utilities
-pub use dcrypt_api::error::{validate, ResultExt, SecureErrorHandling, ERROR_REGISTRY};
+// Re-export commonly used validation utilities
+pub use dcrypt_api::error::validate;

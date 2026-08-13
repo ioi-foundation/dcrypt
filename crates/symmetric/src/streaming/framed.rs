@@ -6,7 +6,7 @@ use crate::aead::chacha20poly1305::{
 use crate::aead::gcm::{Aes128Gcm, Aes256Gcm, GcmNonce};
 use crate::aes::keys::{Aes128Key, Aes256Key};
 use crate::cipher::{Aead, SymmetricCipher};
-use crate::error::{fill_random, validate_stream_state, Result, SymmetricResultExt};
+use crate::error::{fill_random, from_io_error, validate_stream_state, Result};
 use crate::streaming::{StreamingDecrypt, StreamingEncrypt};
 use dcrypt_api::SecretVec;
 use dcrypt_internal::CryptoRng;
@@ -175,11 +175,13 @@ impl<W: Write, C: FramedAead> FramedEncryptStream<W, C> {
         let mut base_nonce = [0u8; NONCE_SIZE];
         fill_random(rng, &mut base_nonce, "stream base nonce generation")?;
 
-        writer.write_all(MAGIC).map_io_err()?;
-        writer.write_all(&[VERSION]).map_io_err()?;
-        writer.write_all(&[C::ALGORITHM_ID]).map_io_err()?;
-        writer.write_all(&stream_id).map_io_err()?;
-        writer.write_all(&base_nonce).map_io_err()?;
+        writer.write_all(MAGIC).map_err(from_io_error)?;
+        writer.write_all(&[VERSION]).map_err(from_io_error)?;
+        writer
+            .write_all(&[C::ALGORITHM_ID])
+            .map_err(from_io_error)?;
+        writer.write_all(&stream_id).map_err(from_io_error)?;
+        writer.write_all(&base_nonce).map_err(from_io_error)?;
 
         Ok(Self {
             writer,
@@ -235,17 +237,17 @@ impl<W: Write, C: FramedAead> FramedEncryptStream<W, C> {
 
         self.writer
             .write_all(&self.sequence.to_be_bytes())
-            .map_io_err()?;
+            .map_err(from_io_error)?;
         self.writer
             .write_all(&[u8::from(final_frame)])
-            .map_io_err()?;
+            .map_err(from_io_error)?;
         self.writer
             .write_all(&plaintext_len.to_be_bytes())
-            .map_io_err()?;
+            .map_err(from_io_error)?;
         self.writer
             .write_all(&ciphertext_len.to_be_bytes())
-            .map_io_err()?;
-        self.writer.write_all(&ciphertext).map_io_err()?;
+            .map_err(from_io_error)?;
+        self.writer.write_all(&ciphertext).map_err(from_io_error)?;
 
         if final_frame {
             self.finalized = true;
@@ -288,7 +290,7 @@ impl<W: Write, C: FramedAead> StreamingEncrypt<W> for FramedEncryptStream<W, C> 
         )?;
         let final_plaintext = core::mem::replace(&mut self.buffer, SecretVec::empty());
         self.write_frame(&final_plaintext, true)?;
-        self.writer.flush().map_io_err()?;
+        self.writer.flush().map_err(from_io_error)?;
         Ok(self.writer)
     }
 }
@@ -319,7 +321,7 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
         )?;
 
         let mut header = [0u8; HEADER_SIZE];
-        reader.read_exact(&mut header).map_io_err()?;
+        reader.read_exact(&mut header).map_err(from_io_error)?;
         validate_stream_state(
             &header[..MAGIC.len()] == MAGIC,
             "stream header",
@@ -363,7 +365,9 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
         )?;
 
         let mut frame_header = [0u8; FRAME_HEADER_SIZE];
-        self.reader.read_exact(&mut frame_header).map_io_err()?;
+        self.reader
+            .read_exact(&mut frame_header)
+            .map_err(from_io_error)?;
         let sequence = u64::from_be_bytes(frame_header[..8].try_into().expect("fixed slice"));
         let flags = frame_header[8];
         let plaintext_len =
@@ -407,7 +411,9 @@ impl<R: Read, C: FramedAead> FramedDecryptStream<R, C> {
         // Allocation occurs only after every transmitted length is bounded and
         // cross-checked against the fixed AEAD tag size.
         let mut ciphertext = vec![0u8; ciphertext_len as usize];
-        self.reader.read_exact(&mut ciphertext).map_io_err()?;
+        self.reader
+            .read_exact(&mut ciphertext)
+            .map_err(from_io_error)?;
         let nonce = derive_nonce(&self.base_nonce, sequence);
         let aad = frame_aad(
             C::ALGORITHM_ID,

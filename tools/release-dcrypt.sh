@@ -626,6 +626,32 @@ release_self_test() {
     grep -Fq 'assurance/fuzzing/crash_lifecycle.py" --execute' \
         "$SCRIPT_DIR/verify-publish-ready.sh" \
         || die "self-test: publish verifier omitted the live private crash lifecycle"
+    # Package E release wiring assertions begin.
+    grep -Fq 'assurance/error-api-v4/generate.py" --check' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package E generation check"
+    grep -Fq 'assurance/error-api-v4/verify.py" --ci' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package E structural verification"
+    grep -Fq 'assurance/error-api-v4/selftest.py' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package E adversarial controls"
+    grep -Fq 'cargo test --locked --offline --manifest-path "$PROJECT_ROOT/Cargo.toml"' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package E downstream migration fixture"
+    grep -Fq 'assurance/error-api-v4/verify.py" --release' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package E release mode"
+    grep -Fq 'if [[ "$error_api_v4_release_rc" -eq 3 ]]; then' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package E HOLD rc 3"
+    grep -Fq 'fail "Package E release HOLD remains explicit and release-blocking"' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier did not propagate Package E HOLD"
+    grep -Fq 'test "$error_api_v4_release_rc" -eq 3' \
+        "$PROJECT_ROOT/.github/workflows/security-validation.yml" \
+        || die "self-test: CI omitted Package E HOLD rc 3"
+    # Package E release wiring assertions end.
     # Package D release wiring assertions begin.
     grep -Fq 'assurance/side-channel/generate.py" --check' \
         "$SCRIPT_DIR/verify-publish-ready.sh" \

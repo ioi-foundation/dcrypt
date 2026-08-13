@@ -32,7 +32,7 @@ mod alloc_prelude {
 
 // Error module and re-exports
 pub mod error;
-pub use error::{validate, Error, Result, ResultExt, SecureErrorHandling};
+pub use error::{validate, Error, Result};
 
 // Block cipher implementations
 pub mod block;

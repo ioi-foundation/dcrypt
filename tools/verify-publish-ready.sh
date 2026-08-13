@@ -164,6 +164,28 @@ else
     fail "interoperability completeness remains release-blocking"
     release_assurance_failed=true
 fi
+printf "\n${BLUE}Package E v4 error API removal and migration controls${NC}\n"
+if python3 -B "$PROJECT_ROOT/assurance/error-api-v4/generate.py" --check \
+    && python3 -B "$PROJECT_ROOT/assurance/error-api-v4/verify.py" --ci \
+    && python3 -B "$PROJECT_ROOT/assurance/error-api-v4/selftest.py" \
+    && cargo test --locked --offline --manifest-path "$PROJECT_ROOT/Cargo.toml" \
+        -p dcrypt-tests --test error_api_v4_migration; then
+    pass "Package E structural removal and downstream migration controls reproduced"
+else
+    fail "Package E structural removal or downstream migration controls failed"
+    release_assurance_failed=true
+fi
+set +e
+python3 -B "$PROJECT_ROOT/assurance/error-api-v4/verify.py" --release
+error_api_v4_release_rc=$?
+set -e
+if [[ "$error_api_v4_release_rc" -eq 3 ]]; then
+    fail "Package E release HOLD remains explicit and release-blocking"
+    release_assurance_failed=true
+else
+    fail "Package E release verifier returned $error_api_v4_release_rc; expected HOLD rc 3"
+    release_assurance_failed=true
+fi
 printf "\n${BLUE}Package D side-channel and secret-lifecycle foundations${NC}\n"
 if python3 -B "$PROJECT_ROOT/assurance/side-channel/generate.py" --check \
     && python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --ci \

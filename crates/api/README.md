@@ -19,11 +19,15 @@ The primary goal of this crate is to provide a stable and ergonomic interface fo
     Provides a unified error handling system:
     *   `Error` (enum): The primary error type for all dcrypt operations, with variants for common cryptographic failures (e.g., `InvalidKey`, `InvalidSignature`, `DecryptionFailed`, `InvalidLength`).
     *   `Result<T>`: A type alias for `core::result::Result<T, api::Error>`.
-    *   `ResultExt` (trait): Extension methods for `Result` types to easily add context or wrap errors.
-    *   `ErrorRegistryExt` (trait): For explicitly recording an error before returning a fallback value. This is ordinary, branching control flow and is not constant-time.
-    *   `SecureErrorHandling` (trait): A compatibility name whose deprecated `secure_unwrap` method is not constant-time.
-    *   `ErrorRegistry`: A synchronized, type-checked global last-error slot retained for compatibility. Returning errors normally is preferred.
+    *   `Error::with_context()` and `Error::with_message()`: Inherent methods
+        for enriching an error after an explicit `map_err` conversion.
+    *   Standard `Result` propagation and combinators: Use `?`, `map_err`,
+        `map_or_else`, `is_ok`, and `is_err`; deferred process-global error
+        recording is not part of the v4 API.
     *   `validate` (module): Utility functions for common input validations (e.g., length checks, parameter conditions).
+
+    Callers moving from the removed compatibility surface should follow the
+    [v4 error API migration guide](../../docs/migration/V4-ERROR-API.md).
 
 3.  **[Types](../../docs/api/types/README.md)**:
     Defines fundamental, security-conscious data types:
