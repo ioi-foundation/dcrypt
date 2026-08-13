@@ -52,6 +52,16 @@ jobs:
           python3 -B assurance/interoperability/protocol-specs/protocol-specs-selftest.py
           python3 -B verification/clean-room-protocol-reference/verify-scaffold.py
           python3 -B verification/clean-room-protocol-reference/scaffold-selftest.py
+      - name: Verify Package F supply-chain foundations without claiming operational evidence
+        run: |
+          python3 -B assurance/supply-chain/generate.py --check
+          python3 -B assurance/supply-chain/verify.py --ci
+          python3 -B assurance/supply-chain/selftest.py
+          set +e
+          python3 -B assurance/supply-chain/verify.py --release
+          supply_chain_release_rc=$?
+          set -e
+          test "$supply_chain_release_rc" -eq 3
       - name: Verify Package E v4 error API removal and migration controls
         run: |
           python3 -B assurance/error-api-v4/generate.py --check
@@ -98,13 +108,15 @@ jobs:
     name: Zero unsafe / zero FFI implementation boundary
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    env:
+      DCRYPT_ASSEMBLY_TOOLCHAIN: 1.93.1
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install stable Rust and every supported compilation target
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: stable
+          toolchain: 1.93.1
           targets: aarch64-unknown-linux-gnu,wasm32-unknown-unknown,thumbv7em-none-eabihf
       - name: Audit compiled and packaged implementation boundaries
         run: |
@@ -126,7 +138,7 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: stable
+          toolchain: 1.93.1
           components: rustfmt
       - name: Check formatting
         run: |
@@ -134,11 +146,14 @@ jobs:
           cargo fmt --manifest-path verification/Cargo.toml -- --check
           cargo fmt --manifest-path fuzz/Cargo.toml -- --check
           cargo fmt --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml -- --check
+          cargo fmt --manifest-path tools/bench-processor/Cargo.toml -- --check
       - name: Check every workspace target with every feature
         run: |
           cargo check --workspace --all-targets --all-features
           RUSTFLAGS="-Dunsafe-code" cargo check --locked --all-targets --all-features \
             --manifest-path migration/legacy-xchacha20poly1305/Cargo.toml
+          cargo check --locked --all-targets --all-features \
+            --manifest-path tools/bench-processor/Cargo.toml
 
   workspace-tests:
     name: Workspace crate tests
@@ -150,12 +165,14 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: stable
+          toolchain: 1.93.1
       - name: Run workspace library and integration tests
         # dcrypt-tests integration targets are heavyweight and gated in dedicated jobs below.
         run: |
           cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
           cargo test -p dcrypt-tests --lib --all-features
+          cargo test --locked --all-features \
+            --manifest-path tools/bench-processor/Cargo.toml
 
   acvp-and-aes-cbc-properties:
     name: Complete ACVP and AES-CBC property gates
@@ -167,7 +184,7 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: stable
+          toolchain: 1.93.1
       - name: Run every repository ACVP-format and regression-vector test
         run: >-
           cargo test --release -p dcrypt-tests --test acvp_tests
@@ -233,7 +250,7 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: stable
+          toolchain: 1.93.1
       - name: Run the in-repository statistical timing suite serially
         env:
           VERBOSE: "1"
@@ -251,7 +268,7 @@ jobs:
       - name: Install stable Rust
         uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
         with:
-          toolchain: stable
+          toolchain: 1.93.1
       - name: Install pinned security tools
         run: |
           cargo install --root "$RUNNER_TEMP/security-tools" cargo-audit --version 0.22.2 --locked
@@ -264,6 +281,7 @@ jobs:
             test -n "$category" && test -n "$workspace"
             cargo audit --file "$workspace/Cargo.lock"
           done < <(python3 tools/verify-implementation-boundary.py --list-classified-workspaces)
+          cargo audit --file tools/bench-processor/Cargo.lock
       - name: Enforce advisories, licenses, bans, and sources for all workspace roots
         run: |
           cargo deny --workspace --all-features check
@@ -272,6 +290,8 @@ jobs:
             cargo deny --manifest-path "$workspace/Cargo.toml" \
               --all-features check
           done < <(python3 tools/verify-implementation-boundary.py --list-classified-workspaces)
+          cargo deny --manifest-path tools/bench-processor/Cargo.toml \
+            --all-features check
 
   miri:
     name: Miri (${{ matrix.crate }})

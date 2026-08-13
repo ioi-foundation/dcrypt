@@ -84,16 +84,16 @@ PACKAGE_C_PUBLISH_SECTION_SHA256 = (
     "7871388b18326730b175c8f56cd00415d5cf41a43d9e3937583dc24b00c39cc7"
 )
 PACKAGE_C_RELEASE_SECTION_SHA256 = (
-    "d15f9d10ac6426cec1d5eec2738c5050fcfbffe5dac66290524e2195e29e1df3"
+    "a7fa4cd3551c3606e7d6c9d6fd14bbf1088d49b3b7eecd9cb910317e2ef36f7b"
 )
 PACKAGE_C_FULL_WORKFLOW_SHA256 = (
-    "0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c"
+    "17554d1950785e358c56147fd0352a8a4754b1e1886ff2707b56c40f42543396"
 )
 PACKAGE_C_FULL_RELEASE_SCRIPT_SHA256 = (
-    "4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf"
+    "76d67dc13035b5b118c24095a5b4db4b2aacbaf2836e48a552611fce3bff1caa"
 )
 PACKAGE_C_FULL_PUBLISH_SCRIPT_SHA256 = (
-    "c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d"
+    "de89affbd7c58fa31678716947b15a8904ddc77095477645ef01d8e2451f7c29"
 )
 
 # Exact Package D structural/HOLD and dated-selector lifecycle-control wiring.
@@ -109,6 +109,25 @@ PACKAGE_D_RELEASE_ASSERTIONS_SHA256 = (
 )
 PACKAGE_D_MIRI_SECTION_SHA256 = (
     "07983a798ffee7f1a1ed9f6b43f1f079186b2d51301ce0882528c0f01f103bf5"
+)
+
+# Package F binds the structural/HOLD supply-chain entry points, every local
+# auxiliary bench gate, and the exact reviewed stable selectors. The lock and
+# manifest seals deliberately make dependency drift a reviewed source change.
+PACKAGE_F_WORKFLOW_SECTION_SHA256 = (
+    "8eb1ba5abe5fbf2156283e3ad438e6b4d93eacab1092faebe379b8bdd595a8cb"
+)
+PACKAGE_F_PUBLISH_SECTION_SHA256 = (
+    "14e36468b149ac6a49af646d3db5cda8910d27ede76fd10563a5046e13b94467"
+)
+PACKAGE_F_RELEASE_ASSERTIONS_SHA256 = (
+    "1c3db7186dbc96d00a7610418c7bd916af61e50647103b1c18775b8996419fdb"
+)
+PACKAGE_F_BENCH_MANIFEST_SHA256 = (
+    "ec2976768c17ec9c7f9017fcf210e9ac76190273eaabb50506504c9ca120af54"
+)
+PACKAGE_F_BENCH_LOCK_SHA256 = (
+    "4df4216d12f78600953c055b675795ef3087da586396321b34b8a8d26231ceb4"
 )
 
 # Package E is wired before its generated assurance implementation lands. These
@@ -316,6 +335,161 @@ def verify_package_d_wiring_sources(
         raise GateError("Package D dated Miri selector count differs")
     if re.search(r"cargo\s+\+nightly\s+miri", release_script):
         raise GateError("Package D release runner uses a moving nightly Miri selector")
+
+
+def package_f_wiring_sections(
+    workflow: str, publish_ready: str, release_script: str
+) -> dict[str, str]:
+    return {
+        "workflow": exact_bounded_section(
+            workflow,
+            "      - name: Verify Package F supply-chain foundations without claiming operational evidence\n",
+            "      - name: Verify Package E v4 error API removal and migration controls\n",
+            label="Package F assurance workflow section",
+        ),
+        "publish": exact_bounded_section(
+            publish_ready,
+            'printf "\\n${BLUE}Package F supply-chain and reproducibility foundations${NC}\\n"\n',
+            'printf "\\n${BLUE}Package E v4 error API removal and migration controls${NC}\\n"\n',
+            label="Package F publish verifier section",
+        ),
+        "release-assertions": exact_bounded_section(
+            release_script,
+            "    # Package F release wiring assertions begin.\n",
+            "    # Package F release wiring assertions end.\n",
+            label="Package F release self-test assertions",
+        ),
+    }
+
+
+def verify_package_f_wiring_sources(
+    workflow: str,
+    publish_ready: str,
+    release_script: str,
+    bench_manifest: str,
+    bench_lock: str,
+) -> None:
+    sections = package_f_wiring_sections(workflow, publish_ready, release_script)
+    expected = {
+        "workflow": PACKAGE_F_WORKFLOW_SECTION_SHA256,
+        "publish": PACKAGE_F_PUBLISH_SECTION_SHA256,
+        "release-assertions": PACKAGE_F_RELEASE_ASSERTIONS_SHA256,
+    }
+    for label, section in sections.items():
+        digest = hashlib.sha256(section.encode("utf-8")).hexdigest()
+        if digest != expected[label]:
+            raise GateError(f"Package F {label} wiring digest differs")
+
+    if (
+        hashlib.sha256(bench_manifest.encode("utf-8")).hexdigest()
+        != PACKAGE_F_BENCH_MANIFEST_SHA256
+    ):
+        raise GateError("Package F bench manifest digest differs")
+    if (
+        hashlib.sha256(bench_lock.encode("utf-8")).hexdigest()
+        != PACKAGE_F_BENCH_LOCK_SHA256
+    ):
+        raise GateError("Package F bench lock digest differs")
+    for dependency in (
+        'serde = { version = "=1.0.228", features = ["derive"] }',
+        'serde_json = "=1.0.145"',
+        'regex = "=1.12.2"',
+        'clap = { version = "=4.5.53", features = ["derive"] }',
+        'walkdir = "=2.5.0"',
+    ):
+        if bench_manifest.count(dependency) != 1:
+            raise GateError(f"Package F bench direct pin differs: {dependency}")
+    if bench_lock.count("[[package]]") != 36:
+        raise GateError("Package F bench lock package count differs")
+
+    workflow_commands = shell_logical_commands(sections["workflow"])
+    for command in (
+        "python3 -B assurance/supply-chain/generate.py --check",
+        "python3 -B assurance/supply-chain/verify.py --ci",
+        "python3 -B assurance/supply-chain/selftest.py",
+        "python3 -B assurance/supply-chain/verify.py --release",
+        'test "$supply_chain_release_rc" -eq 3',
+    ):
+        if workflow_commands.count(command) != 1:
+            raise GateError(f"Package F workflow command is absent or ambiguous: {command}")
+    if "continue-on-error:" in sections["workflow"]:
+        raise GateError("Package F workflow permits continue-on-error")
+
+    publish_commands = shell_logical_commands(sections["publish"])
+    expected_structural = (
+        'if python3 -B "$PROJECT_ROOT/assurance/supply-chain/generate.py" --check '
+        '&& python3 -B "$PROJECT_ROOT/assurance/supply-chain/verify.py" --ci '
+        '&& python3 -B "$PROJECT_ROOT/assurance/supply-chain/selftest.py"; then'
+    )
+    if publish_commands.count(expected_structural) != 1:
+        raise GateError("Package F publish structural command differs")
+    if publish_commands.count(
+        'python3 -B "$PROJECT_ROOT/assurance/supply-chain/verify.py" --release'
+    ) != 1:
+        raise GateError("Package F publish release command differs")
+    if publish_commands.count('if [[ "$supply_chain_release_rc" -eq 3 ]]; then') != 1:
+        raise GateError("Package F publish HOLD rc 3 differs")
+    if sections["publish"].count("release_assurance_failed=true") != 3:
+        raise GateError("Package F publish HOLD propagation differs")
+    if sections["publish"].count(
+        'fail "Package F release HOLD remains explicit and release-blocking"'
+    ) != 1:
+        raise GateError("Package F expected HOLD is not release-blocking")
+
+    assertion_fragments = (
+        "Package F generation check",
+        "Package F structural verification",
+        "Package F adversarial controls",
+        "Package F release mode",
+        "publish verifier omitted Package F HOLD rc 3",
+        "publish verifier did not propagate Package F HOLD",
+        "CI omitted Package F HOLD rc 3",
+        "seven reviewed stable toolchain selectors",
+        "moving stable toolchain selector is forbidden",
+    )
+    for fragment in assertion_fragments:
+        if sections["release-assertions"].count(fragment) != 1:
+            raise GateError(f"Package F release self-test omitted {fragment}")
+    assertion_commands = shell_logical_commands(sections["release-assertions"])
+    if any(command.strip() == "return 0" for command in assertion_commands):
+        raise GateError("Package F release self-test can return before its assertions")
+
+    if len(re.findall(r"^\s*toolchain:\s*1\.93\.1\s*$", workflow, re.MULTILINE)) != 7:
+        raise GateError("Package F exact stable workflow selector count differs")
+    if re.search(r"^\s*toolchain:\s*stable\s*$", workflow, re.MULTILINE):
+        raise GateError("Package F workflow uses a moving stable selector")
+    if workflow.count("      DCRYPT_ASSEMBLY_TOOLCHAIN: 1.93.1\n") != 1:
+        raise GateError("Package F CI assembly toolchain selector differs")
+    if publish_ready.count(
+        'DCRYPT_ASSEMBLY_TOOLCHAIN=1.93.1 "$SCRIPT_DIR/verify-bls-secret-assembly.sh"'
+    ) != 1 or publish_ready.count(
+        'DCRYPT_ASSEMBLY_TOOLCHAIN=1.93.1 "$SCRIPT_DIR/verify-ghash-assembly.sh"'
+    ) != 1:
+        raise GateError("Package F local assembly toolchain selectors differ")
+
+    expected_ci_bench_commands = (
+        "cargo fmt --manifest-path tools/bench-processor/Cargo.toml -- --check",
+        "cargo check --locked --all-targets --all-features --manifest-path tools/bench-processor/Cargo.toml",
+        "cargo test --locked --all-features --manifest-path tools/bench-processor/Cargo.toml",
+        "cargo audit --file tools/bench-processor/Cargo.lock",
+        "cargo deny --manifest-path tools/bench-processor/Cargo.toml --all-features check",
+    )
+    all_workflow_commands = shell_logical_commands(workflow)
+    for command in expected_ci_bench_commands:
+        if all_workflow_commands.count(command) != 1:
+            raise GateError(f"Package F CI bench command differs: {command}")
+
+    expected_local_bench_commands = (
+        'cargo fmt --manifest-path "$PROJECT_ROOT/tools/bench-processor/Cargo.toml" -- --check',
+        'cargo check --locked --all-targets --all-features --manifest-path "$PROJECT_ROOT/tools/bench-processor/Cargo.toml"',
+        'cargo test --locked --all-features --manifest-path "$PROJECT_ROOT/tools/bench-processor/Cargo.toml"',
+        'cargo audit --file "$PROJECT_ROOT/tools/bench-processor/Cargo.lock"',
+        'cargo deny --manifest-path "$PROJECT_ROOT/tools/bench-processor/Cargo.toml" --all-features check',
+    )
+    all_release_commands = shell_logical_commands(release_script)
+    for command in expected_local_bench_commands:
+        if all_release_commands.count(command) != 1:
+            raise GateError(f"Package F local bench command differs: {command}")
 
 
 def package_e_wiring_sections(
@@ -2035,6 +2209,149 @@ class GateSelfTests(unittest.TestCase):
                 verify_package_d_wiring_sources(
                     mutated_workflow, mutated_publish, mutated_release
                 )
+
+    def test_package_f_workflow_bench_and_toolchain_wiring_is_exact(self) -> None:
+        workflow = (
+            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
+        ).read_text()
+        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
+        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        bench_manifest = (
+            PROJECT_ROOT / "tools" / "bench-processor" / "Cargo.toml"
+        ).read_text()
+        bench_lock = (
+            PROJECT_ROOT / "tools" / "bench-processor" / "Cargo.lock"
+        ).read_text()
+        verify_package_f_wiring_sources(
+            workflow, publish_ready, release_script, bench_manifest, bench_lock
+        )
+
+        mutations = (
+            (
+                workflow.replace(
+                    "          python3 -B assurance/supply-chain/generate.py --check\n",
+                    "          exit 0\n"
+                    "          python3 -B assurance/supply-chain/generate.py --check\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow.replace(
+                    "      - name: Verify Package F supply-chain foundations without claiming operational evidence\n",
+                    "      - name: Verify Package F supply-chain foundations without claiming operational evidence\n"
+                    "        continue-on-error: true\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow.replace(
+                    '          test "$supply_chain_release_rc" -eq 3\n',
+                    '          test "$supply_chain_release_rc" -eq 0\n',
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow.replace("          toolchain: 1.93.1\n", "          toolchain: stable\n", 1),
+                publish_ready,
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow.replace("      DCRYPT_ASSEMBLY_TOOLCHAIN: 1.93.1\n", "", 1),
+                publish_ready,
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow.replace(
+                    "          cargo check --locked --all-targets --all-features \\\n"
+                    "            --manifest-path tools/bench-processor/Cargo.toml\n",
+                    "          cargo check --all-targets --all-features \\\n"
+                    "            --manifest-path tools/bench-processor/Cargo.toml\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    '    fail "Package F release HOLD remains explicit and release-blocking"\n'
+                    "    release_assurance_failed=true\n",
+                    '    pass "Package F release HOLD remains explicit"\n',
+                    1,
+                ),
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    'DCRYPT_ASSEMBLY_TOOLCHAIN=1.93.1 "$SCRIPT_DIR/verify-bls-secret-assembly.sh"',
+                    '"$SCRIPT_DIR/verify-bls-secret-assembly.sh"',
+                    1,
+                ),
+                release_script,
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "    # Package F release wiring assertions begin.\n",
+                    "    # Package F release wiring assertions begin.\n    return 0\n",
+                    1,
+                ),
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "    cargo test --locked --all-features --manifest-path \\\n",
+                    "    cargo test --all-features --manifest-path \\\n",
+                    1,
+                ),
+                bench_manifest,
+                bench_lock,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script,
+                bench_manifest.replace('serde_json = "=1.0.145"', 'serde_json = "1.0"', 1),
+                bench_lock,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script,
+                bench_manifest,
+                bench_lock.replace("version = 4", "version = 3", 1),
+            ),
+        )
+        for mutation in mutations:
+            with self.assertRaisesRegex(GateError, "Package F"):
+                verify_package_f_wiring_sources(*mutation)
 
     def test_package_e_workflow_and_release_wiring_is_exact_and_non_skippable(self) -> None:
         workflow = (

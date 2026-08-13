@@ -268,6 +268,10 @@ run_test_gates() {
     info "Running workspace tests"
     cargo test --workspace --all-features --exclude dcrypt-tests --no-fail-fast
 
+    info "Running the locked auxiliary bench-processor tests"
+    cargo test --locked --all-features --manifest-path \
+        "$PROJECT_ROOT/tools/bench-processor/Cargo.toml"
+
     info "Running dcrypt-tests library unit tests"
     cargo test -p dcrypt-tests --lib --all-features
 
@@ -333,6 +337,10 @@ run_check_gates() {
                 --manifest-path "$PROJECT_ROOT/$workspace/Cargo.toml"
         fi
     done < <(classified_workspace_records)
+    cargo fmt --manifest-path \
+        "$PROJECT_ROOT/tools/bench-processor/Cargo.toml" -- --check
+    cargo check --locked --all-targets --all-features --manifest-path \
+        "$PROJECT_ROOT/tools/bench-processor/Cargo.toml"
     cargo check --workspace --all-targets --all-features
 
     require_security_subcommand audit "cargo install cargo-audit --locked"
@@ -341,6 +349,7 @@ run_check_gates() {
         [[ -n "$category" && -n "$workspace" ]] || continue
         cargo audit --file "$PROJECT_ROOT/$workspace/Cargo.lock"
     done < <(classified_workspace_records)
+    cargo audit --file "$PROJECT_ROOT/tools/bench-processor/Cargo.lock"
 
     require_security_subcommand deny "cargo install cargo-deny --locked"
     cargo deny --workspace --all-features check
@@ -349,6 +358,8 @@ run_check_gates() {
         cargo deny --manifest-path "$PROJECT_ROOT/$workspace/Cargo.toml" \
             --all-features check
     done < <(classified_workspace_records)
+    cargo deny --manifest-path "$PROJECT_ROOT/tools/bench-processor/Cargo.toml" \
+        --all-features check
 
     if cargo +nightly-2026-08-07 miri --version >/dev/null 2>&1; then
         info "Running Miri on public error and secret-memory APIs"
@@ -626,6 +637,39 @@ release_self_test() {
     grep -Fq 'assurance/fuzzing/crash_lifecycle.py" --execute' \
         "$SCRIPT_DIR/verify-publish-ready.sh" \
         || die "self-test: publish verifier omitted the live private crash lifecycle"
+    # Package F release wiring assertions begin.
+    grep -Fq 'assurance/supply-chain/generate.py" --check' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package F generation check"
+    grep -Fq 'assurance/supply-chain/verify.py" --ci' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package F structural verification"
+    grep -Fq 'assurance/supply-chain/selftest.py' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package F adversarial controls"
+    grep -Fq 'assurance/supply-chain/verify.py" --release' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package F release mode"
+    grep -Fq 'if [[ "$supply_chain_release_rc" -eq 3 ]]; then' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier omitted Package F HOLD rc 3"
+    grep -Fq 'fail "Package F release HOLD remains explicit and release-blocking"' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" \
+        || die "self-test: publish verifier did not propagate Package F HOLD"
+    grep -Fq 'test "$supply_chain_release_rc" -eq 3' \
+        "$PROJECT_ROOT/.github/workflows/security-validation.yml" \
+        || die "self-test: CI omitted Package F HOLD rc 3"
+    local exact_stable_selectors
+    exact_stable_selectors=$(grep -Ec \
+        '^[[:space:]]+toolchain:[[:space:]]+1\.93\.1[[:space:]]*$' \
+        "$PROJECT_ROOT/.github/workflows/security-validation.yml" || true)
+    [[ "$exact_stable_selectors" -eq 7 ]] \
+        || die "self-test: expected exactly seven reviewed stable toolchain selectors"
+    if grep -Eq '^[[:space:]]+toolchain:[[:space:]]+stable[[:space:]]*$' \
+        "$PROJECT_ROOT/.github/workflows/security-validation.yml"; then
+        die "self-test: moving stable toolchain selector is forbidden"
+    fi
+    # Package F release wiring assertions end.
     # Package E release wiring assertions begin.
     grep -Fq 'assurance/error-api-v4/generate.py" --check' \
         "$SCRIPT_DIR/verify-publish-ready.sh" \

@@ -164,6 +164,26 @@ else
     fail "interoperability completeness remains release-blocking"
     release_assurance_failed=true
 fi
+printf "\n${BLUE}Package F supply-chain and reproducibility foundations${NC}\n"
+if python3 -B "$PROJECT_ROOT/assurance/supply-chain/generate.py" --check \
+    && python3 -B "$PROJECT_ROOT/assurance/supply-chain/verify.py" --ci \
+    && python3 -B "$PROJECT_ROOT/assurance/supply-chain/selftest.py"; then
+    pass "Package F structural supply-chain controls reproduced without promoting artifact evidence"
+else
+    fail "Package F structural supply-chain controls failed"
+    release_assurance_failed=true
+fi
+set +e
+python3 -B "$PROJECT_ROOT/assurance/supply-chain/verify.py" --release
+supply_chain_release_rc=$?
+set -e
+if [[ "$supply_chain_release_rc" -eq 3 ]]; then
+    fail "Package F release HOLD remains explicit and release-blocking"
+    release_assurance_failed=true
+else
+    fail "Package F release verifier returned $supply_chain_release_rc; expected HOLD rc 3"
+    release_assurance_failed=true
+fi
 printf "\n${BLUE}Package E v4 error API removal and migration controls${NC}\n"
 if python3 -B "$PROJECT_ROOT/assurance/error-api-v4/generate.py" --check \
     && python3 -B "$PROJECT_ROOT/assurance/error-api-v4/verify.py" --ci \
@@ -231,7 +251,7 @@ else
 fi
 
 printf "\n${BLUE}Optimized BLS secret-scalar compiler inspection${NC}\n"
-if "$SCRIPT_DIR/verify-bls-secret-assembly.sh"; then
+if DCRYPT_ASSEMBLY_TOOLCHAIN=1.93.1 "$SCRIPT_DIR/verify-bls-secret-assembly.sh"; then
     pass "BLS G1/G2 secret-scalar assembly shape passed on every supported target"
 else
     fail "BLS secret-scalar assembly inspection failed"
@@ -239,7 +259,7 @@ else
 fi
 
 printf "\n${BLUE}Optimized owned GHASH compiler inspection${NC}\n"
-if "$SCRIPT_DIR/verify-ghash-assembly.sh"; then
+if DCRYPT_ASSEMBLY_TOOLCHAIN=1.93.1 "$SCRIPT_DIR/verify-ghash-assembly.sh"; then
     pass "GHASH multiplication assembly shape passed on every supported target"
 else
     fail "GHASH multiplication assembly inspection failed"
