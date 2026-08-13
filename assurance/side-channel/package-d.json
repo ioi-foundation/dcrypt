@@ -175145,8 +175145,8 @@
     {
       "git_mode": "100644",
       "path": ".github/workflows/security-validation.yml",
-      "sha256": "0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c",
-      "size": 16385
+      "sha256": "17554d1950785e358c56147fd0352a8a4754b1e1886ff2707b56c40f42543396",
+      "size": 17383
     },
     {
       "git_mode": "100644",
@@ -175157,13 +175157,13 @@
     {
       "git_mode": "100644",
       "path": "assurance/public-api-snapshot.json",
-      "sha256": "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f",
+      "sha256": "5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d",
       "size": 37066613
     },
     {
       "git_mode": "100644",
       "path": "assurance/subject-manifest.json",
-      "sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4",
+      "sha256": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7",
       "size": 296233
     },
     {
@@ -175181,8 +175181,8 @@
     {
       "git_mode": "100755",
       "path": "tools/release-dcrypt.sh",
-      "sha256": "4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf",
-      "size": 42039
+      "sha256": "76d67dc13035b5b118c24095a5b4db4b2aacbaf2836e48a552611fce3bff1caa",
+      "size": 44625
     },
     {
       "git_mode": "100755",
@@ -175211,14 +175211,14 @@
     {
       "git_mode": "100755",
       "path": "tools/verify-publish-ready.sh",
-      "sha256": "c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d",
-      "size": 13735
+      "sha256": "de89affbd7c58fa31678716947b15a8904ddc77095477645ef01d8e2451f7c29",
+      "size": 14708
     },
     {
       "git_mode": "100755",
       "path": "tools/verify-remote-release-ready.py",
-      "sha256": "0d41cc63a91ffb579273bb0be0d0a0b20b05de11f43acdf717aea1b391d59660",
-      "size": 103765
+      "sha256": "80f8dd937ef94d38f36078e9e4a3f9595902853d61ddeab1d1404d39a31042ed",
+      "size": 117643
     }
   ],
   "lifecycle_policy": {
@@ -175545,7 +175545,7 @@
     "exit_code": 3,
     "status": "HOLD"
   },
-  "reviewed_inventory_sha256": "22c9992bebfdb5d83f2b818fa2d9576f524bf34c3334c4c51b3d8c85a7c51097",
+  "reviewed_inventory_sha256": "62e857cf1b18c03a708d926a123668c87dd5a0880d17c0fa1771fd68c2f61850",
   "schema_version": 1,
   "source_inventory": {
     "files": [
@@ -178105,9 +178105,9 @@
   },
   "status": "HOLD-structural-foundation-only",
   "subject_binding": {
-    "source_commit": "276b78f9b3c2aed91d2548ab9add721c434ded06",
-    "source_tree": "c47c98062c43463818bb61bd3eed75ebaf189e1d",
-    "subject_manifest_sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+    "source_commit": "889cb8c4dc13a78679dc8a7677916484a9966f65",
+    "source_tree": "0d44b68b186913de68844d09b7e498bcda14d109",
+    "subject_manifest_sha256": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
   },
   "taint_profiles": [
     {

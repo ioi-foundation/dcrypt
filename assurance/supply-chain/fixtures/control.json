@@ -1,0 +1,18 @@
+{
+  "content_policy": "dcrypt-package-f-parser-smoke-control-v1",
+  "controls": [
+    "artifact-mode",
+    "double-slash",
+    "duplicate-json-key",
+    "empty-artifact",
+    "float",
+    "non-nfc",
+    "noncanonical-order",
+    "traversal"
+  ],
+  "evidence_effect": "none",
+  "purpose": "parser-and-path-negative-control-index",
+  "schema_version": 1,
+  "status": "synthetic-not-evidence",
+  "trusted": false
+}

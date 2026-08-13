@@ -16,7 +16,7 @@
     {
       "kind": "generated",
       "path": "campaign-status.json",
-      "sha256": "65d3125b7a2d5a3a7afedd09ca89761b0033c8e0d20635adfad11f2ebc5933e8",
+      "sha256": "234375fd4ed9bf24aa06444c0312678d1988672415e23f447c704ee051a1a965",
       "size": 54842
     },
     {
@@ -28,7 +28,7 @@
     {
       "kind": "generated",
       "path": "corpus-manifest.json",
-      "sha256": "d4806baa411ebd2f12faa63cfbd9317dfff1e585a2e3a685208e752d5402e377",
+      "sha256": "5cc64302bbfcac55259b4354af5b5f16dec60e0711bf27b7d02583d1331b574c",
       "size": 172485
     },
     {
@@ -52,8 +52,8 @@
     {
       "kind": "reviewed-source",
       "path": "fuzzing_lib.py",
-      "sha256": "677e298f1affbc54df1d737246cf06c873c2a794d63eab0178f8550c8e26eeee",
-      "size": 118759
+      "sha256": "6636d2cd2a53a4500aa3b70338c845268e8547cb6726a5748d270db61cc8d3fd",
+      "size": 118755
     },
     {
       "kind": "reviewed-source",
@@ -70,19 +70,19 @@
     {
       "kind": "generated",
       "path": "policy.json",
-      "sha256": "e34ca2a2e80add8731b544c6832f103cf873b321b0813fec229a7fe832a06a39",
+      "sha256": "cf47804939a121888d95781641fea9995e941c7fbf4186713af95058caf26a78",
       "size": 3844
     },
     {
       "kind": "reviewed-source",
       "path": "rebind-final-subject.py",
-      "sha256": "f2e7e5c0708922df89e3e336bf8fa0d3a640f368194e13876fb73ef04c334300",
-      "size": 79946
+      "sha256": "bab2d71a3d63db2bd79f8c93b3a8609e9a705c2d2d1a459376bee4df37b14f5e",
+      "size": 83549
     },
     {
       "kind": "generated",
       "path": "row-mapping.json",
-      "sha256": "0e4c1eb42515985d374518b33a24072b03a1bea4f5a2e9aa61c9dc426436aedf",
+      "sha256": "9feedae461b99e46cda1556a0eb13749fb65cfb53c495b77e1130e158835cc79",
       "size": 7422246
     },
     {
@@ -184,13 +184,13 @@
     {
       "kind": "reviewed-source",
       "path": "selftest.py",
-      "sha256": "6f2124c344fbc9ad797a7068f73040f5f3a48e2f413fe5a413880ddafcf95bd3",
-      "size": 80262
+      "sha256": "3f09c3e0d891e3fbe13c41f5fc949d73bca7209ab600a2f6e4d312bcb9eec7c6",
+      "size": 80544
     },
     {
       "kind": "generated",
       "path": "source-bindings.json",
-      "sha256": "e5569df1154d935d6857bb09beee3e5441284b14342e5af8f78aa2bcde86ce6d",
+      "sha256": "aee8ecfaab95d09ef193089b7ce00ce5e6e4077d4414ea0a92169c34d29269fb",
       "size": 5200
     },
     {

@@ -90,7 +90,7 @@ PROTECTED_GITIGNORE_SHA256 = "e4887e3f444e25b7baad39bd6ff3da3ae770f8dc5b3f7cf2c8
 PROTECTED_GITIGNORE_DIFF_SHA256 = "caa005fda38ed3a65d8b92a5b788169ebba47e7106c1389bf4cd7bff980c6552"
 PROTECTED_GITIGNORE_COMMITTED_SHA256 = "f34512e77a7cf5fdfd465243dbb286d8e16bfd698cad264bdb1360f008915f26"
 C_PROJECTION_POLICY = "dcrypt-package-c-package-d-subordinate-projection-v1"
-NORMALIZED_REBIND_SHA256 = "cd403f6bad6874447f7e24a5c266d51ee41b3f0f906e9900a583de015f03a0f2"
+NORMALIZED_REBIND_SHA256 = "186eb61d88af1492e6d5e45df0b9b17b88e7c17801453236627df45130c4168f"
 EXPECTED_D_REVIEWED_FILES = {
     "assurance/side-channel/README.md": ("100644", 2185, "d590f2540a47fb8dbc1d0057f468ba1b0e13796299642ed8c907419d16e89824"),
     "assurance/side-channel/capture.py": ("100644", 41378, "5e6d5e7fac002620fcc1a973197f11e7bfe0899804ab38c67e625eb9d0c73599"),
@@ -117,6 +117,15 @@ PACKAGE_E_CHANGED_PATHS = tuple(sorted((
     "assurance/side-channel/verify.py",
 )))
 PACKAGE_E_INVARIANT_PATHS = tuple(sorted(set(PACKAGE_D_PATHS) - set(PACKAGE_E_CHANGED_PATHS)))
+PACKAGE_F_CHANGED_PATHS = tuple(sorted((
+    "assurance/side-channel/ARTIFACTS.json",
+    "assurance/side-channel/model.py",
+    "assurance/side-channel/package-d.json",
+    "assurance/side-channel/rebind-final-subject.py",
+    "assurance/side-channel/reviewed-inventory.toml",
+)))
+PACKAGE_F_INVARIANT_PATHS = tuple(sorted(set(PACKAGE_D_PATHS) - set(PACKAGE_F_CHANGED_PATHS)))
+PACKAGE_E_A_COMMIT = "86a907154c1f8211a1775c1da8186b71a704536f"
 
 if (
     len(LEGACY_PATHS) != 14
@@ -128,6 +137,10 @@ if (
     or len(PACKAGE_E_INVARIANT_PATHS) != 4
     or set(PACKAGE_E_CHANGED_PATHS) | set(PACKAGE_E_INVARIANT_PATHS) != set(PACKAGE_D_PATHS)
     or set(PACKAGE_E_CHANGED_PATHS) & set(PACKAGE_E_INVARIANT_PATHS)
+    or len(PACKAGE_F_CHANGED_PATHS) != 5
+    or len(PACKAGE_F_INVARIANT_PATHS) != 7
+    or set(PACKAGE_F_CHANGED_PATHS) | set(PACKAGE_F_INVARIANT_PATHS) != set(PACKAGE_D_PATHS)
+    or set(PACKAGE_F_CHANGED_PATHS) & set(PACKAGE_F_INVARIANT_PATHS)
 ):
     raise RuntimeError("Package D exact changed-path partition differs")
 
@@ -406,18 +419,21 @@ def _package_e_file_row(path: str, *, revision: str | None) -> dict[str, Any]:
     return {"git_mode": mode, "path": path, "sha256": _sha(raw), "size": len(raw)}
 
 
-def _package_e_subject_manifest(*, revision: str | None, commit: str, tree: str) -> tuple[bytes, str]:
+def _package_subject_manifest(
+    *, revision: str | None, commit: str, tree: str, expected_sha256: str,
+    package_label: str,
+) -> tuple[bytes, str]:
     if revision is None:
         raw, _filesystem_mode = _read_worktree("assurance/subject-manifest.json", "100644")
         mode = "100644"
     else:
         mode, raw = _git_blob(revision, "assurance/subject-manifest.json")
-    if mode != "100644" or _sha(raw) != "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4":
-        raise RebindError("Package E subject manifest bytes/mode differ")
+    if mode != "100644" or _sha(raw) != expected_sha256:
+        raise RebindError(f"{package_label} subject manifest bytes/mode differ")
     try:
         document = json.loads(raw.decode("utf-8"))
     except (UnicodeError, ValueError, json.JSONDecodeError) as error:
-        raise RebindError("Package E subject manifest is malformed") from error
+        raise RebindError(f"{package_label} subject manifest is malformed") from error
     if (
         not isinstance(document, dict)
         or document.get("schema_version") != 1
@@ -425,14 +441,17 @@ def _package_e_subject_manifest(*, revision: str | None, commit: str, tree: str)
         or document.get("source_tree") != tree
         or not isinstance(document.get("files"), list)
     ):
-        raise RebindError("Package E subject manifest binding differs")
+        raise RebindError(f"{package_label} subject manifest binding differs")
     return raw, _sha(raw)
 
 
-def package_e_projection(
-    *, expected_r_commit: str, expected_r_tree: str, candidate_revision: str | None = None
+def _package_projection(
+    *, expected_r_commit: str, expected_r_tree: str,
+    candidate_revision: str | None = None, read_revision: str | None = None,
+    changed_paths: tuple[str, ...], invariant_paths: tuple[str, ...],
+    subject_manifest_sha256: str, content_policy: str, package_label: str,
 ) -> dict[str, Any]:
-    """Project Package D's complete owned subtree without global E authority."""
+    """Project Package D's complete owned subtree without global authority."""
 
     resolved_commit = _git(["rev-parse", "--verify", f"{expected_r_commit}^{{commit}}"])
     resolved_tree = _git(["rev-parse", "--verify", f"{expected_r_commit}^{{tree}}"])
@@ -442,16 +461,18 @@ def package_e_projection(
         or resolved_tree.returncode != 0
         or resolved_tree.stdout.strip() != expected_r_tree
     ):
-        raise RebindError("Package E expected R identity does not resolve exactly")
+        raise RebindError(f"{package_label} expected R identity does not resolve exactly")
     if candidate_revision is not None:
         candidate = _git(["rev-parse", "--verify", f"{candidate_revision}^{{commit}}"])
         if candidate.returncode != 0 or candidate.stdout.strip() != candidate_revision:
-            raise RebindError("Package E candidate commit does not resolve exactly")
-    _manifest_raw, manifest_sha256 = _package_e_subject_manifest(
-        revision=candidate_revision, commit=expected_r_commit, tree=expected_r_tree
+            raise RebindError(f"{package_label} candidate commit does not resolve exactly")
+    data_revision = candidate_revision if candidate_revision is not None else read_revision
+    _manifest_raw, manifest_sha256 = _package_subject_manifest(
+        revision=data_revision, commit=expected_r_commit, tree=expected_r_tree,
+        expected_sha256=subject_manifest_sha256, package_label=package_label,
     )
-    changed_files = [_package_e_file_row(path, revision=candidate_revision) for path in PACKAGE_E_CHANGED_PATHS]
-    invariant_files = [_package_e_file_row(path, revision=candidate_revision) for path in PACKAGE_E_INVARIANT_PATHS]
+    changed_files = [_package_e_file_row(path, revision=data_revision) for path in changed_paths]
+    invariant_files = [_package_e_file_row(path, revision=data_revision) for path in invariant_paths]
     for row, should_change in (
         *((item, True) for item in changed_files),
         *((item, False) for item in invariant_files),
@@ -464,11 +485,11 @@ def package_e_projection(
         )
         if same == should_change:
             disposition = "did not change" if should_change else "changed"
-            raise RebindError(f"Package E Package D path {disposition}: {row['path']}")
+            raise RebindError(f"{package_label} Package D path {disposition}: {row['path']}")
     model_raw = (
         _read_worktree("assurance/side-channel/model.py", "100644")[0]
-        if candidate_revision is None
-        else _git_blob(candidate_revision, "assurance/side-channel/model.py")[1]
+        if data_revision is None
+        else _git_blob(data_revision, "assurance/side-channel/model.py")[1]
     )
     namespace: dict[str, Any] = {}
     for name in (
@@ -494,12 +515,12 @@ def package_e_projection(
         or namespace["SUBJECT_MANIFEST_SHA256"] != manifest_sha256
     ):
         raise RebindError("Package E Package D subject binding differs")
-    if candidate_revision is None:
+    if data_revision is None:
         atomic_raw = _read_worktree("assurance/atomic-operations.toml", "100644")[0]
         public_raw = _read_worktree("assurance/public-api-snapshot.json", "100644")[0]
     else:
-        atomic_mode, atomic_raw = _git_blob(candidate_revision, "assurance/atomic-operations.toml")
-        public_mode, public_raw = _git_blob(candidate_revision, "assurance/public-api-snapshot.json")
+        atomic_mode, atomic_raw = _git_blob(data_revision, "assurance/atomic-operations.toml")
+        public_mode, public_raw = _git_blob(data_revision, "assurance/public-api-snapshot.json")
         if atomic_mode != "100644" or public_mode != "100644":
             raise RebindError("Package E Package D core input mode differs")
     try:
@@ -530,7 +551,7 @@ def package_e_projection(
         },
         "candidate_commit": candidate_revision,
         "changed_files": changed_files,
-        "content_policy": "dcrypt-package-d-package-e-subordinate-projection-v1",
+        "content_policy": content_policy,
         "counts": {
             "curated_rows": namespace["EXPECTED_CURATED"],
             "production_rust_sources": namespace["EXPECTED_SOURCES"],
@@ -545,7 +566,59 @@ def package_e_projection(
         "schema_version": 1,
         "subject_manifest_sha256": manifest_sha256,
     }
-    return {**body, "projection_sha256": _sha(_canonical(body))}
+    result = {**body, "projection_sha256": _sha(_canonical(body))}
+    if (
+        [row["path"] for row in [*changed_files, *invariant_files]]
+        != [*changed_paths, *invariant_paths]
+        or set(changed_paths) | set(invariant_paths) != set(PACKAGE_D_PATHS)
+        or set(changed_paths) & set(invariant_paths)
+        or any(
+            tuple(row) != ("git_mode", "path", "sha256", "size")
+            for row in [*changed_files, *invariant_files]
+        )
+        or set(result) != {
+            "binding_assignments", "candidate_commit", "changed_files",
+            "content_policy", "counts", "invariant_files", "projection_sha256",
+            "r_commit", "r_tree", "schema_version", "subject_manifest_sha256",
+        }
+    ):
+        raise RebindError(f"{package_label} Package D projection closure differs")
+    return result
+
+
+def package_e_projection(
+    *, expected_r_commit: str, expected_r_tree: str, candidate_revision: str | None = None
+) -> dict[str, Any]:
+    """Return the immutable completed Package E view of Package D."""
+
+    return _package_projection(
+        expected_r_commit=expected_r_commit,
+        expected_r_tree=expected_r_tree,
+        candidate_revision=candidate_revision,
+        read_revision=None if candidate_revision is not None else PACKAGE_E_A_COMMIT,
+        changed_paths=PACKAGE_E_CHANGED_PATHS,
+        invariant_paths=PACKAGE_E_INVARIANT_PATHS,
+        subject_manifest_sha256="d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4",
+        content_policy="dcrypt-package-d-package-e-subordinate-projection-v1",
+        package_label="Package E",
+    )
+
+
+def package_f_projection(
+    *, expected_r_commit: str, expected_r_tree: str, candidate_revision: str | None = None
+) -> dict[str, Any]:
+    """Project Package D's current complete subtree for Package F."""
+
+    return _package_projection(
+        expected_r_commit=expected_r_commit,
+        expected_r_tree=expected_r_tree,
+        candidate_revision=candidate_revision,
+        changed_paths=PACKAGE_F_CHANGED_PATHS,
+        invariant_paths=PACKAGE_F_INVARIANT_PATHS,
+        subject_manifest_sha256="95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7",
+        content_policy="dcrypt-package-d-package-f-subordinate-projection-v1",
+        package_label="Package F",
+    )
 
 
 def _package_e_projection_main(arguments: list[str]) -> int:
@@ -561,6 +634,26 @@ def _package_e_projection_main(arguments: list[str]) -> int:
     ):
         raise RebindError("Package E projection identities must be lowercase 40-hex")
     sys.stdout.buffer.write(_canonical(package_e_projection(
+        expected_r_commit=args.expected_r_commit,
+        expected_r_tree=args.expected_r_tree,
+        candidate_revision=args.candidate_commit,
+    )))
+    return 0
+
+
+def _package_f_projection_main(arguments: list[str]) -> int:
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--expected-r-commit", required=True)
+    parser.add_argument("--expected-r-tree", required=True)
+    parser.add_argument("--candidate-commit")
+    args = parser.parse_args(arguments)
+    if (
+        re.fullmatch(r"[0-9a-f]{40}", args.expected_r_commit) is None
+        or re.fullmatch(r"[0-9a-f]{40}", args.expected_r_tree) is None
+        or (args.candidate_commit is not None and re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None)
+    ):
+        raise RebindError("Package F projection identities must be lowercase 40-hex")
+    sys.stdout.buffer.write(_canonical(package_f_projection(
         expected_r_commit=args.expected_r_commit,
         expected_r_tree=args.expected_r_tree,
         candidate_revision=args.candidate_commit,
@@ -888,6 +981,12 @@ def _transaction(*, keep: bool) -> dict[str, Any]:
 
 
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "--package-f-projection":
+        try:
+            return _package_f_projection_main(sys.argv[2:])
+        except (OSError, RebindError, UnicodeError, ValueError, subprocess.SubprocessError) as error:
+            print(f"Package F subordinate projection HOLD: {error}", file=sys.stderr)
+            return 3
     if len(sys.argv) >= 2 and sys.argv[1] == "--package-e-projection":
         try:
             return _package_e_projection_main(sys.argv[2:])

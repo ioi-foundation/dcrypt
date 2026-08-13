@@ -1,0 +1,560 @@
+schema-version = 1
+content-policy = "dcrypt-package-f-reviewed-supply-chain-foundation-v1"
+status = "HOLD"
+release-gate = "HOLD"
+release-exit-code = 3
+workspace-version = "3.0.0"
+version-preparation-authorized = false
+publish-eligible = false
+promotion-eligible = false
+
+a-e-commit = "86a907154c1f8211a1775c1da8186b71a704536f"
+a-e-tree = "d9bd9b791038fc92c4581468708e9cf39cd6234f"
+s-f-commit = "ac91913afee3b91c823a1448e6200de26fdd1c8a"
+s-f-tree = "6952979606c28f739fca1aeb9bb14b1ca042d09d"
+r-f-commit = "889cb8c4dc13a78679dc8a7677916484a9966f65"
+r-f-tree = "0d44b68b186913de68844d09b7e498bcda14d109"
+r-f-subject-manifest-sha256 = "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+r-f-subject-manifest-files = 1511
+r-f-subject-manifest-size = 296233
+r-f-atomic-operations-sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
+r-f-public-api-snapshot-sha256 = "5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d"
+
+# Exact structural counts. These are current-state observations, not claims of
+# artifact availability, trusted signatures, or reproducibility.
+tracked-cargo-manifests = 17
+workspace-classifications = 5
+tracked-lockfiles = 5
+lock-package-occurrences = 342
+unique-lock-identities = 255
+unique-registry-lock-identities = 238
+unique-local-lock-identities = 17
+publishable-packages = 12
+internal-publish-edges = 42
+external-direct-dependency-occurrences = 5
+external-direct-dependency-identities = 2
+external-direct-dependency-rows-sha256 = "173ec8058dbb9ccfa414fa1902924a1f052c531bccce0c0da44f50862553f662"
+sbom-slots = 5
+candidate-crate-archive-slots = 12
+registry-crate-archive-slots = 12
+dependency-exceptions = 1
+artifact-subjects = 18
+producer-classes = 2
+producer-subject-obligations = 36
+required-byte-comparisons = 18
+artifact-subject-set-sha256 = "41cae985d2507f82ec0a90a4242cf814536474fa643b21078b60ae2b0186d099"
+accepted-sboms = 0
+accepted-signatures = 0
+accepted-attestations = 0
+accepted-independent-rebuilds = 0
+verified-container-images = 0
+verified-runner-images = 0
+verified-toolchain-distributions = 0
+completed-producer-subjects = 0
+completed-byte-comparisons = 0
+release-blocked-atomic-rows = 9198
+
+lock-unique-full-rows-sha256 = "1a6186f750f051224145af850c484961e577fba5c518395e8d4098f2bebbe069"
+lock-unique-identities-sha256 = "8bcedc8aa0bc4903ae877be933ce4537cfceac18d0835456658d68a97bd2239d"
+lock-occurrence-rows-sha256 = "3dc9fd8bdbf31a1f943919becbc83396b6e20b87f55207800b49f3b6bb0454e2"
+publish-order-rows-sha256 = "7b4a4deac444b6712380b70a0ba6bb52e93a74a5d7f4be0080e0e342e71ef7c8"
+
+[[source-prerequisite]]
+path = ".github/workflows/security-validation.yml"
+git-mode = "100644"
+size = 17383
+sha256 = "17554d1950785e358c56147fd0352a8a4754b1e1886ff2707b56c40f42543396"
+
+[[source-prerequisite]]
+path = "tools/bench-processor/Cargo.toml"
+git-mode = "100644"
+size = 286
+sha256 = "ec2976768c17ec9c7f9017fcf210e9ac76190273eaabb50506504c9ca120af54"
+
+[[source-prerequisite]]
+path = "tools/bench-processor/Cargo.lock"
+git-mode = "100644"
+size = 8176
+sha256 = "4df4216d12f78600953c055b675795ef3087da586396321b34b8a8d26231ceb4"
+
+[[source-prerequisite]]
+path = "tools/release-dcrypt.sh"
+git-mode = "100755"
+size = 44625
+sha256 = "76d67dc13035b5b118c24095a5b4db4b2aacbaf2836e48a552611fce3bff1caa"
+
+[[source-prerequisite]]
+path = "tools/verify-publish-ready.sh"
+git-mode = "100755"
+size = 14708
+sha256 = "de89affbd7c58fa31678716947b15a8904ddc77095477645ef01d8e2451f7c29"
+
+[[source-prerequisite]]
+path = "tools/verify-remote-release-ready.py"
+git-mode = "100755"
+size = 117643
+sha256 = "80f8dd937ef94d38f36078e9e4a3f9595902853d61ddeab1d1404d39a31042ed"
+
+[[rebind-input]]
+path = "verification/oracle-provisioning/bundle_lib.py"
+git-mode = "100644"
+size = 45587
+sha256 = "f6b455bf8354baf13db9852acfba545613e052ba00c0dc006c81400186b7666f"
+
+[[rebind-input]]
+path = "verification/oracle-provisioning/manifest.json"
+git-mode = "100644"
+size = 171974
+sha256 = "c3feb08e3f866ae1aee2becdb1639d64f4741ea5775e87172cf139ac21dd3dcf"
+
+[[rebind-input]]
+path = "verification/oracle-provisioning/subject-inputs.json"
+git-mode = "100644"
+size = 80633
+sha256 = "39dfe782b8011a80df7752df8e28135192345ba6b665bad1bfa202efe9f5530c"
+
+[[workspace-lock]]
+id = "production"
+path = "Cargo.lock"
+package-occurrences = 128
+registry-occurrences = 115
+local-occurrences = 13
+identity-rows-sha256 = "a077af6f70ec188797f31d38a287f4d181fcf35bbb5328ddb8c2b84beba9a541"
+
+[[workspace-lock]]
+id = "verification"
+path = "verification/Cargo.lock"
+package-occurrences = 146
+registry-occurrences = 138
+local-occurrences = 8
+identity-rows-sha256 = "08335db6a1c07f462689cd78e2c322fa4ed31850259c850c34b0178591c57c60"
+
+[[workspace-lock]]
+id = "fuzz"
+path = "fuzz/Cargo.lock"
+package-occurrences = 24
+registry-occurrences = 12
+local-occurrences = 12
+identity-rows-sha256 = "a57fd35e7ca0edb91d892269532711dee27726333db32af88ead304d1e807ba9"
+
+[[workspace-lock]]
+id = "migration"
+path = "migration/legacy-xchacha20poly1305/Cargo.lock"
+package-occurrences = 8
+registry-occurrences = 2
+local-occurrences = 6
+identity-rows-sha256 = "1af15cfae7d10062bd32a886c64441ae55e057d205ddb7d89cf370631e37b3e1"
+
+[[workspace-lock]]
+id = "bench"
+path = "tools/bench-processor/Cargo.lock"
+package-occurrences = 36
+registry-occurrences = 35
+local-occurrences = 1
+identity-rows-sha256 = "0dbd64dbab8d969792ca20b048de5d1761d6a0f23b319155b21dd8c9b3a95c5e"
+
+[bench-workspace-classification]
+path = "tools/bench-processor"
+classification = "auxiliary-workspace-not-in-audit-command-graph"
+publish = false
+lock-required = true
+status = "classified"
+zero-unsafe-claim = false
+exact-local-toolchain-execution-claim = false
+
+[[sbom-slot]]
+id = "production"
+workspace-lock = "production"
+format = "CycloneDX"
+spec-version = "1.6"
+status = "blocked"
+accepted = false
+
+[[sbom-slot]]
+id = "verification"
+workspace-lock = "verification"
+format = "CycloneDX"
+spec-version = "1.6"
+status = "blocked"
+accepted = false
+
+[[sbom-slot]]
+id = "fuzz"
+workspace-lock = "fuzz"
+format = "CycloneDX"
+spec-version = "1.6"
+status = "blocked"
+accepted = false
+
+[[sbom-slot]]
+id = "migration"
+workspace-lock = "migration"
+format = "CycloneDX"
+spec-version = "1.6"
+status = "blocked"
+accepted = false
+
+[[sbom-slot]]
+id = "bench"
+workspace-lock = "bench"
+format = "CycloneDX"
+spec-version = "1.6"
+status = "blocked"
+accepted = false
+
+[[dependency-exception]]
+advisory-id = "RUSTSEC-2026-0173"
+owner = "dcrypt dependency security"
+reviewer = "dcrypt supply-chain assurance"
+reviewed-at = 2026-08-13
+valid-through = 2026-09-10
+dependency-kind = "dev"
+published-production-reachable = false
+deny-file = "deny.toml"
+deny-file-sha256 = "0c8fdbf73656cb878e6bf06bff6c739f9737d868e7b00b64f873c034443819d1"
+deny-occurrences = 1
+workspace-lock = "verification/Cargo.lock"
+direct-manifest = "verification/Cargo.toml"
+direct-package = "libcrux-ml-dsa@0.0.10"
+direct-requirement = "=0.0.10"
+affected-package = "proc-macro-error2@2.0.1"
+lock-path = [
+  "libcrux-ml-dsa@0.0.10",
+  "hax-lib@0.3.7",
+  "hax-lib-macros@0.3.7",
+  "proc-macro-error2@2.0.1",
+]
+reason = "Build-time transitive dependency of the pinned, excluded, non-published ML-DSA verification oracle; no compatible oracle update is currently reviewed."
+deny-reason = "proc-macro-error2 is a build-time transitive dependency of the pinned libcrux ML-DSA test oracle in the excluded, non-published verification workspace; no compatible oracle update exists yet"
+
+[[dependency-exception.node]]
+package = "libcrux-ml-dsa@0.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "783ebed7cb27de6d44ef2aa662648d1a0869694f2f754f2f1ed45e959ef3b48e"
+
+[[dependency-exception.node]]
+package = "hax-lib@0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01a33cb227f97ee5c419064c31d7c55a7d895f28d8019ccdadc311cc036500c4"
+
+[[dependency-exception.node]]
+package = "hax-lib-macros@0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28da835a5f153e9f3d0cc1f42ee605a1cfa9093c93348193793d60a1b0908b51"
+
+[[dependency-exception.node]]
+package = "proc-macro-error2@2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802"
+
+[[producer-class]]
+id = "first-party"
+required-subjects = 18
+completed-subjects = 0
+accepted = false
+
+[[producer-class]]
+id = "administratively-independent"
+required-subjects = 18
+completed-subjects = 0
+accepted = false
+
+[[artifact-subject]]
+id = "sbom-production"
+class = "sbom"
+workspace = "production"
+status = "blocked"
+
+[[artifact-subject]]
+id = "sbom-verification"
+class = "sbom"
+workspace = "verification"
+status = "blocked"
+
+[[artifact-subject]]
+id = "sbom-fuzz"
+class = "sbom"
+workspace = "fuzz"
+status = "blocked"
+
+[[artifact-subject]]
+id = "sbom-migration"
+class = "sbom"
+workspace = "migration"
+status = "blocked"
+
+[[artifact-subject]]
+id = "sbom-bench"
+class = "sbom"
+workspace = "bench"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-internal"
+class = "candidate-crate-archive"
+package = "dcrypt-internal"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-params"
+class = "candidate-crate-archive"
+package = "dcrypt-params"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-api"
+class = "candidate-crate-archive"
+package = "dcrypt-api"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-common"
+class = "candidate-crate-archive"
+package = "dcrypt-common"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-algorithms"
+class = "candidate-crate-archive"
+package = "dcrypt-algorithms"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-symmetric"
+class = "candidate-crate-archive"
+package = "dcrypt-symmetric"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-kem"
+class = "candidate-crate-archive"
+package = "dcrypt-kem"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-sign"
+class = "candidate-crate-archive"
+package = "dcrypt-sign"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-pke"
+class = "candidate-crate-archive"
+package = "dcrypt-pke"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-utils"
+class = "candidate-crate-archive"
+package = "dcrypt-utils"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt-hybrid"
+class = "candidate-crate-archive"
+package = "dcrypt-hybrid"
+status = "blocked"
+
+[[artifact-subject]]
+id = "crate-dcrypt"
+class = "candidate-crate-archive"
+package = "dcrypt"
+status = "blocked"
+
+[[artifact-subject]]
+id = "canonical-source-archive"
+class = "source-archive"
+status = "blocked"
+
+[[toolchain-selector]]
+id = "stable-release"
+selector = "1.93.1"
+rustc-commit = "01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf"
+rustdoc-commit = "01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf"
+cargo-commit = "083ac5135f967fd9dc906ab057a2315861c7a80d"
+llvm = "21.1.8"
+host = "x86_64-unknown-linux-gnu"
+targets = [
+  "aarch64-unknown-linux-gnu",
+  "thumbv7em-none-eabihf",
+  "wasm32-unknown-unknown",
+  "x86_64-unknown-linux-gnu",
+]
+availability = "metadata-only-blocked"
+limitation = "toolchain-distribution-bundle-unavailable"
+distribution-status = "blocked"
+
+[[antecedent]]
+id = "dcrypt-v3.0.0-audit-candidate-003"
+path = "assurance/audit/freezes/dcrypt-v3.0.0-audit-candidate-003/freeze.json"
+sha256 = "fbf38be9f0bfa11fb077968685ce2d9279411d110a9f4b0b43ebd012803bd49a"
+classification = "historical-immutable-gap-evidence-only"
+accepted = false
+
+[[antecedent]]
+id = "audit-provisioning-lock"
+path = "assurance/audit/provisioning-lock.toml"
+sha256 = "3733ed23be2f93e6a756162bde9a841ab4a165037ccc1c0a22d3e23bd5030177"
+classification = "reviewed-selector-commit-input-operational-distribution-blocked"
+accepted = false
+
+[[supply-chain-blocker]]
+id = "dependency-provision-bundle-unavailable"
+owner = "dcrypt release engineering"
+status = "blocked"
+
+[[supply-chain-blocker]]
+id = "action-source-archives-unavailable"
+owner = "dcrypt CI security"
+status = "blocked"
+
+[[supply-chain-blocker]]
+id = "rustsec-database-unbound"
+owner = "dcrypt dependency security"
+status = "blocked"
+
+[[supply-chain-blocker]]
+id = "toolchain-distribution-bundle-unavailable"
+owner = "dcrypt release engineering"
+status = "blocked"
+
+[[supply-chain-blocker]]
+id = "ambient-local-cargo-invocation-not-byte-bound"
+owner = "dcrypt release engineering"
+status = "blocked"
+
+[[publish-package]]
+order = 1
+name = "dcrypt-internal"
+manifest = "crates/internal/Cargo.toml"
+internal-dependencies = []
+
+[[publish-package]]
+order = 2
+name = "dcrypt-params"
+manifest = "crates/params/Cargo.toml"
+internal-dependencies = []
+
+[[publish-package]]
+order = 3
+name = "dcrypt-api"
+manifest = "crates/api/Cargo.toml"
+internal-dependencies = ["dcrypt-internal"]
+
+[[publish-package]]
+order = 4
+name = "dcrypt-common"
+manifest = "crates/common/Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-api"]
+
+[[publish-package]]
+order = 5
+name = "dcrypt-algorithms"
+manifest = "crates/algorithms/Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-params", "dcrypt-api", "dcrypt-common"]
+
+[[publish-package]]
+order = 6
+name = "dcrypt-symmetric"
+manifest = "crates/symmetric/Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-params", "dcrypt-api", "dcrypt-algorithms"]
+
+[[publish-package]]
+order = 7
+name = "dcrypt-kem"
+manifest = "crates/kem/Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-api", "dcrypt-common", "dcrypt-algorithms"]
+
+[[publish-package]]
+order = 8
+name = "dcrypt-sign"
+manifest = "crates/sign/Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-params", "dcrypt-api", "dcrypt-common", "dcrypt-algorithms"]
+
+[[publish-package]]
+order = 9
+name = "dcrypt-pke"
+manifest = "crates/pke/Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-params", "dcrypt-api", "dcrypt-common", "dcrypt-algorithms"]
+
+[[publish-package]]
+order = 10
+name = "dcrypt-utils"
+manifest = "crates/utils/Cargo.toml"
+internal-dependencies = []
+
+[[publish-package]]
+order = 11
+name = "dcrypt-hybrid"
+manifest = "crates/hybrid/Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-params", "dcrypt-api", "dcrypt-common", "dcrypt-algorithms", "dcrypt-kem", "dcrypt-sign"]
+
+[[publish-package]]
+order = 12
+name = "dcrypt"
+manifest = "Cargo.toml"
+internal-dependencies = ["dcrypt-internal", "dcrypt-params", "dcrypt-api", "dcrypt-common", "dcrypt-algorithms", "dcrypt-symmetric", "dcrypt-kem", "dcrypt-sign", "dcrypt-pke", "dcrypt-hybrid"]
+
+[[blocked-slot]]
+id = "candidate-crate-archives"
+role = "crate-archives"
+expected-members = 12
+owner = "dcrypt release engineering"
+status = "blocked"
+accepted = false
+
+[[blocked-slot]]
+id = "registry-crate-archives"
+role = "registry-archives"
+expected-members = 12
+owner = "dcrypt release engineering"
+status = "blocked"
+accepted = false
+
+[[blocked-slot]]
+id = "canonical-source-archive"
+role = "source-archive"
+expected-members = 1
+owner = "dcrypt release engineering"
+status = "blocked"
+accepted = false
+
+[[blocked-slot]]
+id = "signed-attestations"
+role = "signature-attestation"
+expected-members = 18
+owner = "dcrypt supply-chain assurance"
+status = "blocked"
+accepted = false
+
+[[blocked-slot]]
+id = "independent-offline-rebuild"
+role = "independent-offline-rebuild"
+expected-members = 18
+owner = "independent assurance reviewer"
+status = "blocked"
+accepted = false
+
+[[blocked-slot]]
+id = "immutable-build-environment"
+role = "container-image"
+expected-members = 0
+owner = "dcrypt release engineering"
+status = "blocked"
+accepted = false
+
+[[blocked-slot]]
+id = "hosted-runner-identity"
+role = "runner-image"
+expected-members = 0
+owner = "dcrypt CI security"
+status = "blocked"
+accepted = false
+
+[[blocked-slot]]
+id = "toolchain-distribution"
+role = "toolchain-distribution"
+expected-members = 0
+owner = "dcrypt release engineering"
+status = "blocked"
+accepted = false

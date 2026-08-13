@@ -583,8 +583,17 @@ def main() -> int:
     checked(parse_canonical_lines, b"../escape\n", label="paths", paths=True)
     checked(parse_canonical_lines, "e\u0301\n".encode(), label="rows", paths=False)
     assert canonical_git_mode(0o664, "100644", label="nonexec fixture") == "100644"
-    assert canonical_git_mode(0o775, "100755", label="exec fixture") == "100755"
-    checked(canonical_git_mode, 0o664, "100755", label="missing executable intent")
+    for checkout_mode in (0o700, 0o750, 0o755, 0o770, 0o775):
+        assert canonical_git_mode(
+            checkout_mode, "100755", label="umask-varied executable fixture"
+        ) == "100755"
+    for checkout_mode in (
+        0o600, 0o640, 0o644, 0o655, 0o660, 0o664, 0o710, 0o774, 0o4700,
+    ):
+        checked(
+            canonical_git_mode, checkout_mode, "100755",
+            label="unreviewed or missing executable intent",
+        )
     checked(canonical_git_mode, 0o777, "100755", label="world-write executable")
 
     # Input-cap lexical bypasses.

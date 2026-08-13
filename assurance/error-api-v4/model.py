@@ -26,10 +26,17 @@ A_D_COMMIT = "39fed53adc1fa256812f6157396cd75a62b8fc8d"
 A_D_TREE = "0ab8a595efbff7fb857e8573e3f138ad4a8d9cb1"
 S_E_COMMIT = "219ee68040fa48ae1973ba5a16ccf7f32f73657a"
 S_E_TREE = "4390012075501659de01e21b24432967b5aa0c23"
-R_E_COMMIT = "276b78f9b3c2aed91d2548ab9add721c434ded06"
-R_E_TREE = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
-R_E_SUBJECT_MANIFEST_SHA256 = (
+HISTORICAL_R_E_COMMIT = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+HISTORICAL_R_E_TREE = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+HISTORICAL_R_E_SUBJECT_MANIFEST_SHA256 = (
     "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+)
+# Package E's migration baseline remains immutable above.  These bindings track
+# the latest reviewed non-assurance subject against which its evidence applies.
+R_E_COMMIT = "889cb8c4dc13a78679dc8a7677916484a9966f65"
+R_E_TREE = "0d44b68b186913de68844d09b7e498bcda14d109"
+R_E_SUBJECT_MANIFEST_SHA256 = (
+    "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
 )
 REVIEWED_INVENTORY_SHA256 = (
     "5d2ae3900fd3517f3fb6b36d2c4fb7970e984bc8a27e919a7b99562ff601b071"
@@ -508,9 +515,10 @@ def validate_baseline_bindings(inventory: dict[str, Any] | None = None) -> None:
         or inventory["a-d-tree"] != A_D_TREE
         or inventory["s-e-commit"] != S_E_COMMIT
         or inventory["s-e-tree"] != S_E_TREE
-        or inventory["r-e-commit"] != R_E_COMMIT
-        or inventory["r-e-tree"] != R_E_TREE
-        or inventory["r-e-subject-manifest-sha256"] != R_E_SUBJECT_MANIFEST_SHA256
+        or inventory["r-e-commit"] != HISTORICAL_R_E_COMMIT
+        or inventory["r-e-tree"] != HISTORICAL_R_E_TREE
+        or inventory["r-e-subject-manifest-sha256"]
+        != HISTORICAL_R_E_SUBJECT_MANIFEST_SHA256
         or inventory["counts"] != EXPECTED_COUNTS
     ):
         raise PackageEError("reviewed baseline/topology/count bindings differ")

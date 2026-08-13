@@ -26,7 +26,7 @@ REPO = FRAMEWORK.parent.parent
 MODEL = FRAMEWORK / "fuzzing_lib.py"
 MANIFEST = REPO / "assurance/subject-manifest.json"
 FINAL_STATUS = "STABLE-final-subject-bound"
-NORMALIZED_MODEL_SHA256 = "d99846d48922f861321b3b387e2bb12b86ec7f280e63e7282a045aad1b73114c"
+NORMALIZED_MODEL_SHA256 = "88de65c1469044a88c5a2e40b45411ca5f34f131bd1625b2ff0794fec49f4ff5"
 ALLOWLISTED_ASSIGNMENTS = (
     "STATUS",
     "FRAMEWORK_SUBJECT_COMMIT",
@@ -216,6 +216,15 @@ PACKAGE_E_CONTROL_PATHS = (
     "tools/verify-publish-ready.sh",
     "tools/verify-remote-release-ready.py",
 )
+PACKAGE_F_CHANGED_PATHS = tuple(sorted((
+    *PACKAGE_D_REFRESH_PATHS,
+    "assurance/fuzzing/selftest.py",
+)))
+PACKAGE_F_INVARIANT_PATHS = tuple(
+    sorted(set(PACKAGE_C_MODES) - set(PACKAGE_F_CHANGED_PATHS))
+)
+PACKAGE_F_CONTROL_PATHS = PACKAGE_E_CONTROL_PATHS
+PACKAGE_E_A_COMMIT = "86a907154c1f8211a1775c1da8186b71a704536f"
 KNOWN_A_MODES = {**LEGACY_A_MODES, **PACKAGE_C_MODES}
 KNOWN_A_PATHS = tuple(sorted(KNOWN_A_MODES))
 EXPECTED_CHANGED_A_MODES = {**LEGACY_CHANGED_A_MODES, **PACKAGE_C_MODES}
@@ -234,6 +243,11 @@ if (
     or len(PACKAGE_D_INVARIANT_PATHS) != 27
     or not set(PACKAGE_D_REFRESH_PATHS).issubset(PACKAGE_C_MODES)
     or set(PACKAGE_D_REFRESH_PATHS) & set(PACKAGE_D_INVARIANT_PATHS)
+    or len(PACKAGE_F_CHANGED_PATHS) != 9
+    or len(PACKAGE_F_INVARIANT_PATHS) != 26
+    or set(PACKAGE_F_CHANGED_PATHS) | set(PACKAGE_F_INVARIANT_PATHS)
+    != set(PACKAGE_C_MODES)
+    or set(PACKAGE_F_CHANGED_PATHS) & set(PACKAGE_F_INVARIANT_PATHS)
     or set(PACKAGE_D_REFRESH_PATHS) | set(PACKAGE_D_INVARIANT_PATHS)
     != set(PACKAGE_C_MODES)
     or len(PACKAGE_E_CHANGED_PATHS) != 12
@@ -1050,34 +1064,43 @@ def _projection_file_row(path: str, *, revision: str | None) -> dict[str, Any]:
     }
 
 
-def package_e_projection(
+def _package_projection(
     *,
     expected_r_commit: str,
     expected_r_tree: str,
     candidate_revision: str | None = None,
+    read_revision: str | None = None,
+    changed_paths: tuple[str, ...],
+    invariant_paths: tuple[str, ...],
+    control_paths: tuple[str, ...],
+    content_policy: str,
+    expected_public_sha256: str,
+    package_label: str,
 ) -> dict[str, Any]:
-    """Project Package C's complete owned subtree without global E authority."""
+    """Project Package C's complete owned subtree without global authority."""
 
     _resolve_r_identity(expected_r_commit, expected_r_tree)
     if candidate_revision is not None:
         resolved = _git(["rev-parse", "--verify", f"{candidate_revision}^{{commit}}"])
         if resolved.returncode != 0 or resolved.stdout.strip() != candidate_revision:
             raise RebindError("Package E candidate commit is absent or does not resolve exactly")
-        manifest_mode, manifest_raw = _git_blob(candidate_revision, "assurance/subject-manifest.json")
+    data_revision = candidate_revision if candidate_revision is not None else read_revision
+    if data_revision is not None:
+        manifest_mode, manifest_raw = _git_blob(data_revision, "assurance/subject-manifest.json")
         if manifest_mode != "100644":
-            raise RebindError("Package E subject manifest Git mode differs")
+            raise RebindError(f"{package_label} subject manifest Git mode differs")
     else:
         manifest_raw = _read_worktree_regular("assurance/subject-manifest.json", "100644")[0]
     manifest_sha256 = verify_subject_manifest_bytes(
         manifest_raw, expected_r_commit, expected_r_tree
     )
     changed_files = [
-        _projection_file_row(path, revision=candidate_revision)
-        for path in PACKAGE_E_CHANGED_PATHS
+        _projection_file_row(path, revision=data_revision)
+        for path in changed_paths
     ]
     invariant_files = [
-        _projection_file_row(path, revision=candidate_revision)
-        for path in PACKAGE_E_INVARIANT_PATHS
+        _projection_file_row(path, revision=data_revision)
+        for path in invariant_paths
     ]
     for changed, should_change in (
         *((row, True) for row in changed_files),
@@ -1097,8 +1120,8 @@ def package_e_projection(
     )
     model_raw = (
         _read_worktree_regular(model_row["path"], "100644")[0]
-        if candidate_revision is None
-        else _git_blob(candidate_revision, model_row["path"])[1]
+        if data_revision is None
+        else _git_blob(data_revision, model_row["path"])[1]
     )
     model_source = model_raw.decode("utf-8", errors="strict")
     assignments = {
@@ -1122,18 +1145,18 @@ def package_e_projection(
         raise RebindError("Package E Package C subject binding differs")
     atomic_raw = (
         _read_worktree_regular("assurance/atomic-operations.toml", "100644")[0]
-        if candidate_revision is None
-        else _git_blob(candidate_revision, "assurance/atomic-operations.toml")[1]
+        if data_revision is None
+        else _git_blob(data_revision, "assurance/atomic-operations.toml")[1]
     )
     public_raw = (
         _read_worktree_regular("assurance/public-api-snapshot.json", "100644")[0]
-        if candidate_revision is None
-        else _git_blob(candidate_revision, "assurance/public-api-snapshot.json")[1]
+        if data_revision is None
+        else _git_blob(data_revision, "assurance/public-api-snapshot.json")[1]
     )
     source_bindings_raw = (
         _read_worktree_regular("assurance/fuzzing/source-bindings.json", "100644")[0]
-        if candidate_revision is None
-        else _git_blob(candidate_revision, "assurance/fuzzing/source-bindings.json")[1]
+        if data_revision is None
+        else _git_blob(data_revision, "assurance/fuzzing/source-bindings.json")[1]
     )
     try:
         atomic = __import__("tomllib").loads(atomic_raw.decode("utf-8"))
@@ -1152,7 +1175,7 @@ def package_e_projection(
         raise RebindError("Package E Package C core inputs are malformed") from error
     if (
         sha256_bytes(atomic_raw) != "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
-        or sha256_bytes(public_raw) != "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
+        or sha256_bytes(public_raw) != expected_public_sha256
         or len(atomic.get("operation", [])) != 566
         or len(atomic.get("unreviewed-gap", [])) != 8632
         or not isinstance(public, dict)
@@ -1163,10 +1186,10 @@ def package_e_projection(
         raise RebindError("Package E Package C core input binding/counts differ")
     control_rows = [
         row for row in source_bindings["files"]
-        if isinstance(row, dict) and row.get("path") in PACKAGE_E_CONTROL_PATHS
+        if isinstance(row, dict) and row.get("path") in control_paths
     ]
     if (
-        [row.get("path") for row in control_rows] != list(PACKAGE_E_CONTROL_PATHS)
+        [row.get("path") for row in control_rows] != list(control_paths)
         or any(set(row) != {"git_mode", "path", "sha256", "size"} for row in control_rows)
         or sha256_bytes(
             (json.dumps(control_rows, ensure_ascii=True, separators=(",", ":"), sort_keys=True) + "\n").encode("utf-8")
@@ -1174,11 +1197,11 @@ def package_e_projection(
     ):
         raise RebindError("Package E Package C control-input binding rows differ")
     for row in control_rows:
-        if candidate_revision is None:
+        if data_revision is None:
             raw = _read_worktree_regular(row["path"], row["git_mode"])[0]
             mode = row["git_mode"]
         else:
-            mode, raw = _git_blob(candidate_revision, row["path"])
+            mode, raw = _git_blob(data_revision, row["path"])
         if (
             mode != row["git_mode"]
             or len(raw) != row["size"]
@@ -1198,7 +1221,7 @@ def package_e_projection(
         },
         "candidate_commit": candidate_revision,
         "changed_files": changed_files,
-        "content_policy": "dcrypt-package-c-package-e-subordinate-projection-v1",
+        "content_policy": content_policy,
         "counts": {
             "critical_family_rows": 372,
             "curated_rows": 566,
@@ -1215,13 +1238,56 @@ def package_e_projection(
     result = {**body, "projection_sha256": sha256_bytes(_canonical_json(body))}
     if (
         [row["path"] for row in [*changed_files, *invariant_files]]
-        != [*PACKAGE_E_CHANGED_PATHS, *PACKAGE_E_INVARIANT_PATHS]
-        or set(PACKAGE_E_CHANGED_PATHS) | set(PACKAGE_E_INVARIANT_PATHS)
+        != [*changed_paths, *invariant_paths]
+        or set(changed_paths) | set(invariant_paths)
         != set(PACKAGE_C_MODES)
         or any(tuple(row) != ("git_mode", "path", "sha256", "size") for row in [*changed_files, *invariant_files])
     ):
-        raise RebindError("Package E Package C projection closure differs")
+        raise RebindError(f"{package_label} Package C projection closure differs")
     return result
+
+
+def package_e_projection(
+    *,
+    expected_r_commit: str,
+    expected_r_tree: str,
+    candidate_revision: str | None = None,
+) -> dict[str, Any]:
+    """Return the immutable completed Package E view of Package C."""
+
+    return _package_projection(
+        expected_r_commit=expected_r_commit,
+        expected_r_tree=expected_r_tree,
+        candidate_revision=candidate_revision,
+        read_revision=None if candidate_revision is not None else PACKAGE_E_A_COMMIT,
+        changed_paths=PACKAGE_E_CHANGED_PATHS,
+        invariant_paths=PACKAGE_E_INVARIANT_PATHS,
+        control_paths=PACKAGE_E_CONTROL_PATHS,
+        content_policy="dcrypt-package-c-package-e-subordinate-projection-v1",
+        expected_public_sha256="0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f",
+        package_label="Package E",
+    )
+
+
+def package_f_projection(
+    *,
+    expected_r_commit: str,
+    expected_r_tree: str,
+    candidate_revision: str | None = None,
+) -> dict[str, Any]:
+    """Project Package C's current complete subtree for Package F."""
+
+    return _package_projection(
+        expected_r_commit=expected_r_commit,
+        expected_r_tree=expected_r_tree,
+        candidate_revision=candidate_revision,
+        changed_paths=PACKAGE_F_CHANGED_PATHS,
+        invariant_paths=PACKAGE_F_INVARIANT_PATHS,
+        control_paths=PACKAGE_F_CONTROL_PATHS,
+        content_policy="dcrypt-package-c-package-f-subordinate-projection-v1",
+        expected_public_sha256="5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d",
+        package_label="Package F",
+    )
 
 
 def _package_e_projection_main(arguments: list[str]) -> int:
@@ -1239,6 +1305,30 @@ def _package_e_projection_main(arguments: list[str]) -> int:
     sys.stdout.buffer.write(
         _canonical_json(
             package_e_projection(
+                expected_r_commit=args.expected_r_commit,
+                expected_r_tree=args.expected_r_tree,
+                candidate_revision=args.candidate_commit,
+            )
+        )
+    )
+    return 0
+
+
+def _package_f_projection_main(arguments: list[str]) -> int:
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--expected-r-commit", required=True)
+    parser.add_argument("--expected-r-tree", required=True)
+    parser.add_argument("--candidate-commit")
+    args = parser.parse_args(arguments)
+    if (
+        HEX40.fullmatch(args.expected_r_commit) is None
+        or HEX40.fullmatch(args.expected_r_tree) is None
+        or (args.candidate_commit is not None and HEX40.fullmatch(args.candidate_commit) is None)
+    ):
+        raise RebindError("Package F projection identities must be lowercase 40-hex")
+    sys.stdout.buffer.write(
+        _canonical_json(
+            package_f_projection(
                 expected_r_commit=args.expected_r_commit,
                 expected_r_tree=args.expected_r_tree,
                 candidate_revision=args.candidate_commit,
@@ -1756,6 +1846,12 @@ def _apply_or_preview(
 
 
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "--package-f-projection":
+        try:
+            return _package_f_projection_main(sys.argv[2:])
+        except (RebindError, OSError, UnicodeError, ValueError, subprocess.SubprocessError) as error:
+            print(f"Package F subordinate projection HOLD: {error}", file=sys.stderr)
+            return 3
     if len(sys.argv) >= 2 and sys.argv[1] == "--package-e-projection":
         try:
             return _package_e_projection_main(sys.argv[2:])

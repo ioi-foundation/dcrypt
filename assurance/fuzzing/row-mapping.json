@@ -16,7 +16,7 @@
     },
     {
       "path": "assurance/public-api-snapshot.json",
-      "sha256": "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f",
+      "sha256": "5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d",
       "size": 37066613
     }
   ],
@@ -62,7 +62,7 @@
       "target_id": "ml_kem_semantic"
     }
   ],
-  "policy_semantic_sha256": "e34ca2a2e80add8731b544c6832f103cf873b321b0813fec229a7fe832a06a39",
+  "policy_semantic_sha256": "cf47804939a121888d95781641fea9995e941c7fbf4186713af95058caf26a78",
   "registry_semantic_sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
   "rows": [
     {
@@ -165811,9 +165811,9 @@
   "rows_sha256": "0ae10f3418e4e1e8ee1b8b7bfb3a09aa26fc77a05eb10be0ecb56c63c38ee4e0",
   "schema_version": 1,
   "source_binding": {
-    "framework_subject_commit": "276b78f9b3c2aed91d2548ab9add721c434ded06",
-    "framework_subject_manifest_sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4",
-    "framework_subject_tree": "c47c98062c43463818bb61bd3eed75ebaf189e1d",
+    "framework_subject_commit": "889cb8c4dc13a78679dc8a7677916484a9966f65",
+    "framework_subject_manifest_sha256": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7",
+    "framework_subject_tree": "0d44b68b186913de68844d09b7e498bcda14d109",
     "package_b_assurance_commit": "682947afafdce5bf19339c90bc1a3e768fa15772",
     "package_b_assurance_tree": "7112eb96c4dc92ce24c277d512c286f183b04cf5",
     "package_b_subject_commit": "ba2685293bf326cef611f33445269071e9fddef1",

@@ -63,6 +63,10 @@ EXPECTED_REVIEWED_CURATED_SHA256 = (
 PACKAGE_E_PROJECTION_POLICY = (
     "dcrypt-protocol-specs-package-e-subordinate-projection-v1"
 )
+PACKAGE_F_PROJECTION_POLICY = (
+    "dcrypt-protocol-specs-package-f-subordinate-projection-v1"
+)
+PACKAGE_E_A_COMMIT = "86a907154c1f8211a1775c1da8186b71a704536f"
 PACKAGE_E_CHANGED_PATHS = (
     "assurance/interoperability/protocol-specs/ARTIFACTS.sha256",
     "assurance/interoperability/protocol-specs/CURRENT-BEHAVIOR.md",
@@ -1403,12 +1407,15 @@ def projection_manifest(
     )
 
 
-def package_e_projection(
+def _package_projection(
     repo_root: Path,
     *,
     expected_r_commit: str,
     expected_r_tree: str,
     candidate_commit: str | None,
+    read_revision: str | None,
+    content_policy: str,
+    package_label: str,
 ) -> dict[str, Any]:
     resolved = run_git(repo_root, ["rev-parse", "--verify", f"{expected_r_commit}^{{commit}}"])
     tree = run_git(repo_root, ["rev-parse", f"{expected_r_commit}^{{tree}}"])
@@ -1418,17 +1425,19 @@ def package_e_projection(
         or tree.returncode != 0
         or tree.stdout.strip() != expected_r_tree
     ):
-        fail("Package E R commit/tree identity differs")
+        fail(f"{package_label} R commit/tree identity differs")
     if candidate_commit is not None:
         candidate = run_git(
             repo_root, ["rev-parse", "--verify", f"{candidate_commit}^{{commit}}"]
         )
         if candidate.returncode != 0 or candidate.stdout.strip() != candidate_commit:
-            fail("Package E candidate commit is absent or does not resolve exactly")
+            fail(f"{package_label} candidate commit is absent or does not resolve exactly")
+
+    data_revision = candidate_commit if candidate_commit is not None else read_revision
 
     def raw(relative: str, mode: str) -> bytes:
         return projection_blob(
-            repo_root, relative, mode, revision=candidate_commit
+            repo_root, relative, mode, revision=data_revision
         )
 
     manifest_relative = SUBJECT_MANIFEST_RELATIVE.as_posix()
@@ -1447,6 +1456,17 @@ def package_e_projection(
     file_raw = {
         path: raw(path, PACKAGE_E_PATH_MODES[path]) for path in all_paths
     }
+    for path in all_paths:
+        r_raw = projection_blob(
+            repo_root,
+            path,
+            PACKAGE_E_PATH_MODES[path],
+            revision=expected_r_commit,
+        )
+        should_change = path in PACKAGE_E_CHANGED_PATHS
+        if (file_raw[path] == r_raw) == should_change:
+            disposition = "did not change" if should_change else "changed"
+            fail(f"{package_label} protocol path {disposition}: {path}")
     registry = json.loads(
         file_raw[f"{SPEC_RELATIVE_DIR.as_posix()}/current-behavior.json"].decode("utf-8")
     )
@@ -1487,7 +1507,7 @@ def package_e_projection(
 
     body = {
         "schema_version": 1,
-        "content_policy": PACKAGE_E_PROJECTION_POLICY,
+        "content_policy": content_policy,
         "r_commit": expected_r_commit,
         "r_tree": expected_r_tree,
         "candidate_commit": candidate_commit,
@@ -1512,6 +1532,46 @@ def package_e_projection(
     }
 
 
+def package_e_projection(
+    repo_root: Path,
+    *,
+    expected_r_commit: str,
+    expected_r_tree: str,
+    candidate_commit: str | None,
+) -> dict[str, Any]:
+    """Return the immutable completed Package E protocol projection."""
+
+    return _package_projection(
+        repo_root,
+        expected_r_commit=expected_r_commit,
+        expected_r_tree=expected_r_tree,
+        candidate_commit=candidate_commit,
+        read_revision=None if candidate_commit is not None else PACKAGE_E_A_COMMIT,
+        content_policy=PACKAGE_E_PROJECTION_POLICY,
+        package_label="Package E",
+    )
+
+
+def package_f_projection(
+    repo_root: Path,
+    *,
+    expected_r_commit: str,
+    expected_r_tree: str,
+    candidate_commit: str | None,
+) -> dict[str, Any]:
+    """Project the current complete protocol subtree for Package F."""
+
+    return _package_projection(
+        repo_root,
+        expected_r_commit=expected_r_commit,
+        expected_r_tree=expected_r_tree,
+        candidate_commit=candidate_commit,
+        read_revision=None,
+        content_policy=PACKAGE_F_PROJECTION_POLICY,
+        package_label="Package F",
+    )
+
+
 def package_e_projection_main(arguments: list[str]) -> int:
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--expected-r-commit", required=True)
@@ -1529,6 +1589,32 @@ def package_e_projection_main(arguments: list[str]) -> int:
     ):
         fail("Package E projection identities must be lowercase 40-hex")
     document = package_e_projection(
+        args.repo_root.resolve(strict=True),
+        expected_r_commit=args.expected_r_commit,
+        expected_r_tree=args.expected_r_tree,
+        candidate_commit=args.candidate_commit,
+    )
+    sys.stdout.buffer.write(canonical_json(document, sort_keys=True))
+    return 0
+
+
+def package_f_projection_main(arguments: list[str]) -> int:
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--expected-r-commit", required=True)
+    parser.add_argument("--expected-r-tree", required=True)
+    parser.add_argument("--candidate-commit")
+    parser.add_argument("--repo-root", type=Path, default=Path(__file__).absolute().parents[3])
+    args = parser.parse_args(arguments)
+    if (
+        HEX_GIT_ID.fullmatch(args.expected_r_commit) is None
+        or HEX_GIT_ID.fullmatch(args.expected_r_tree) is None
+        or (
+            args.candidate_commit is not None
+            and HEX_GIT_ID.fullmatch(args.candidate_commit) is None
+        )
+    ):
+        fail("Package F projection identities must be lowercase 40-hex")
+    document = package_f_projection(
         args.repo_root.resolve(strict=True),
         expected_r_commit=args.expected_r_commit,
         expected_r_tree=args.expected_r_tree,
@@ -1773,6 +1859,8 @@ def run() -> None:
 
 if __name__ == "__main__":
     try:
+        if len(sys.argv) >= 2 and sys.argv[1] == "--package-f-projection":
+            raise SystemExit(package_f_projection_main(sys.argv[2:]))
         if len(sys.argv) >= 2 and sys.argv[1] == "--package-e-projection":
             raise SystemExit(package_e_projection_main(sys.argv[2:]))
         run()

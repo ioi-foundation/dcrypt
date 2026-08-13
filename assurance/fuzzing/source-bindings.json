@@ -11,8 +11,8 @@
     {
       "git_mode": "100644",
       "path": ".github/workflows/security-validation.yml",
-      "sha256": "0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c",
-      "size": 16385
+      "sha256": "17554d1950785e358c56147fd0352a8a4754b1e1886ff2707b56c40f42543396",
+      "size": 17383
     },
     {
       "git_mode": "100644",
@@ -137,23 +137,23 @@
     {
       "git_mode": "100755",
       "path": "tools/release-dcrypt.sh",
-      "sha256": "4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf",
-      "size": 42039
+      "sha256": "76d67dc13035b5b118c24095a5b4db4b2aacbaf2836e48a552611fce3bff1caa",
+      "size": 44625
     },
     {
       "git_mode": "100755",
       "path": "tools/verify-publish-ready.sh",
-      "sha256": "c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d",
-      "size": 13735
+      "sha256": "de89affbd7c58fa31678716947b15a8904ddc77095477645ef01d8e2451f7c29",
+      "size": 14708
     },
     {
       "git_mode": "100755",
       "path": "tools/verify-remote-release-ready.py",
-      "sha256": "0d41cc63a91ffb579273bb0be0d0a0b20b05de11f43acdf717aea1b391d59660",
-      "size": 103765
+      "sha256": "80f8dd937ef94d38f36078e9e4a3f9595902853d61ddeab1d1404d39a31042ed",
+      "size": 117643
     }
   ],
-  "files_sha256": "0aaef8d934985ea256b63230fe03f6656a18cafc268e36f24a7a12e3d73b0334",
+  "files_sha256": "5c6dec96e5090e2dd77f59d8004604d5a3f3aac0c1529a5570d6dc277a9d9a17",
   "registry_semantic_sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
   "schema_version": 1,
   "status": "STABLE-final-subject-bound"

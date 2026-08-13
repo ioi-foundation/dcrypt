@@ -25,9 +25,9 @@ from typing import Any, Iterable
 
 SCHEMA_VERSION = 1
 STATUS = "STABLE-final-subject-bound"
-FRAMEWORK_SUBJECT_COMMIT = "276b78f9b3c2aed91d2548ab9add721c434ded06"
-FRAMEWORK_SUBJECT_TREE = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
-FRAMEWORK_SUBJECT_MANIFEST_SHA256 = "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+FRAMEWORK_SUBJECT_COMMIT = "889cb8c4dc13a78679dc8a7677916484a9966f65"
+FRAMEWORK_SUBJECT_TREE = "0d44b68b186913de68844d09b7e498bcda14d109"
+FRAMEWORK_SUBJECT_MANIFEST_SHA256 = "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
 CONTENT_PREFIX = "dcrypt-fuzzing"
 FRAMEWORK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = FRAMEWORK_DIR.parent.parent
@@ -44,12 +44,12 @@ EXPECTED_CRITICAL_ROWS = 372
 EXPECTED_EXPLICIT_BLOCKERS = EXPECTED_TOTAL_ROWS - EXPECTED_CRITICAL_ROWS
 
 PACKAGE_C_CONTROL_INPUTS = {
-    ".github/workflows/security-validation.yml": ("0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c", "100644"),
-    "tools/release-dcrypt.sh": ("4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf", "100755"),
-    "tools/verify-publish-ready.sh": ("c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d", "100755"),
-    "tools/verify-remote-release-ready.py": ("0d41cc63a91ffb579273bb0be0d0a0b20b05de11f43acdf717aea1b391d59660", "100755"),
+    ".github/workflows/security-validation.yml": ("17554d1950785e358c56147fd0352a8a4754b1e1886ff2707b56c40f42543396", "100644"),
+    "tools/release-dcrypt.sh": ("76d67dc13035b5b118c24095a5b4db4b2aacbaf2836e48a552611fce3bff1caa", "100755"),
+    "tools/verify-publish-ready.sh": ("de89affbd7c58fa31678716947b15a8904ddc77095477645ef01d8e2451f7c29", "100755"),
+    "tools/verify-remote-release-ready.py": ("80f8dd937ef94d38f36078e9e4a3f9595902853d61ddeab1d1404d39a31042ed", "100755"),
 }
-CONTROL_INPUTS_SHA256 = "1d6e478cf9fac07d2c938843099429f019d58976d5f742b503e62868bd863d58"
+CONTROL_INPUTS_SHA256 = "e37be66d9bdd6c90b571f4a690247b641fd2e6fe835d7804e462d2f81c5a19c1"
 
 WEEKLY_CRITICAL_CORE_SECONDS = 72 * 60 * 60
 WEEKLY_SECONDARY_CORE_SECONDS = 24 * 60 * 60
@@ -71,7 +71,7 @@ INTEGRATED_ASAN_FUNCTION_SYMBOLS = (
 
 # These are replaced once from the canonical in-code projections.  They are
 # literal trust anchors so a coherent data-only rewrite cannot promote itself.
-EXPECTED_POLICY_SEMANTIC_SHA256 = "e34ca2a2e80add8731b544c6832f103cf873b321b0813fec229a7fe832a06a39"
+EXPECTED_POLICY_SEMANTIC_SHA256 = "cf47804939a121888d95781641fea9995e941c7fbf4186713af95058caf26a78"
 EXPECTED_REGISTRY_SEMANTIC_SHA256 = "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b"
 
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -284,7 +284,7 @@ def canonical_git_mode(mode: int, expected: str, *, label: str) -> str:
         return canonical_nonexecutable_mode(mode, label=label)
     if expected != "100755" or not isinstance(mode, int) or isinstance(mode, bool):
         raise FuzzingError(f"{label} expected Git mode is unreviewed")
-    if mode & 0o7000 or mode & 0o002 or mode & 0o111 != 0o111:
+    if mode & 0o7000 or mode & 0o002 or mode & 0o100 == 0:
         raise FuzzingError(f"{label} mode has wrong executable intent, special bits, or world-write")
     if mode not in (0o700, 0o750, 0o755, 0o770, 0o775):
         raise FuzzingError(f"{label} mode is outside reviewed executable checkout modes")

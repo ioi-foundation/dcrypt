@@ -1,0 +1,89 @@
+{
+  "content_policy": "dcrypt-package-f-artifact-closure-v1",
+  "files": [
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "README.md",
+      "sha256": "311c9256f94e3a6abdbe81b6065fb118381c6a524611ffd1fbf8c27145b85280",
+      "size": 4625
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "capture.py",
+      "sha256": "235376707674d20a930ff31089fe6b021286c571f97bb165c9cf1fa6657b4d67",
+      "size": 61320
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "fixtures/control.json",
+      "sha256": "1dd84bbd4b630abaa07a180e4fd8e120be18427896e3e070f8b5a794b6326ef3",
+      "size": 412
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "generate.py",
+      "sha256": "49aa9119d6fc6891f190a1e7a2852514a5ac669db863134fed011f7ca61ebf1e",
+      "size": 4009
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "model.py",
+      "sha256": "c0d839f8844b1db3c6773587d54d9a6833a0dfa2085bcb0fff56eab6ea776f5c",
+      "size": 75898
+    },
+    {
+      "git_mode": "100644",
+      "kind": "generated",
+      "path": "package-f.json",
+      "sha256": "da052c4bad734d58e471ffe71db55009ba10ddf1d92423dbf28e3a02995f5e8c",
+      "size": 8040
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "rebind-final-subject.py",
+      "sha256": "c4abc8adfa9abc00d16e58da38c76be41615f7922096e9521cca2dfe7e04e4b7",
+      "size": 59759
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "reviewed-inventory.toml",
+      "sha256": "6786b8d5e312ab6ebe736db57289dfb552bae6b956fedec81a78232eaf7b77ca",
+      "size": 15753
+    },
+    {
+      "git_mode": "100644",
+      "kind": "generated",
+      "path": "schema.json",
+      "sha256": "d473f11be02030d1b7ebebe46b5a8425c4c5140a844fc4af784f1c169255222c",
+      "size": 88569
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "selftest.py",
+      "sha256": "bdc2cc65a5a74296edae21d99e0c174b45abd88992a860226a309ba78212f48f",
+      "size": 57892
+    },
+    {
+      "git_mode": "100644",
+      "kind": "reviewed-source",
+      "path": "verify.py",
+      "sha256": "26b739de3ecabbe285384090b4f8d14bcac814e51c1e6daf06876275af1a16fe",
+      "size": 6238
+    }
+  ],
+  "promotion_effect": "none",
+  "release_gate": {
+    "exit_code": 3,
+    "status": "HOLD"
+  },
+  "schema_version": 1,
+  "status": "local-foundation-complete-operational-evidence-absent"
+}

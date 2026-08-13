@@ -769,9 +769,9 @@
     "final_rebind_required": false,
     "manifest_file_count": 1511,
     "manifest_include_policy": "production-and-evidence-v1",
-    "source_commit": "276b78f9b3c2aed91d2548ab9add721c434ded06",
-    "source_tree": "c47c98062c43463818bb61bd3eed75ebaf189e1d",
+    "source_commit": "889cb8c4dc13a78679dc8a7677916484a9966f65",
+    "source_tree": "0d44b68b186913de68844d09b7e498bcda14d109",
     "subject_manifest_path": "assurance/subject-manifest.json",
-    "subject_manifest_sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+    "subject_manifest_sha256": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
   }
 }

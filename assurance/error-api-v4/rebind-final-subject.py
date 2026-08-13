@@ -36,6 +36,7 @@ R_E_TREE = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 R_E_SUBJECT_MANIFEST_SHA256 = (
     "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
 )
+A_E_COMMIT = "86a907154c1f8211a1775c1da8186b71a704536f"
 PROTECTED_GITIGNORE_SHA256 = (
     "e4887e3f444e25b7baad39bd6ff3da3ae770f8dc5b3f7cf2c87a117219a8fe2c"
 )
@@ -45,6 +46,45 @@ PROTECTED_GITIGNORE_DIFF_SHA256 = (
 PROTECTED_GITIGNORE_COMMITTED_SHA256 = (
     "f34512e77a7cf5fdfd465243dbb286d8e16bfd698cad264bdb1360f008915f26"
 )
+
+PACKAGE_F_R_COMMIT = "889cb8c4dc13a78679dc8a7677916484a9966f65"
+PACKAGE_F_R_TREE = "0d44b68b186913de68844d09b7e498bcda14d109"
+PACKAGE_F_SUBJECT_MANIFEST_SHA256 = (
+    "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+)
+PACKAGE_E_PATHS = tuple(sorted((
+    "assurance/error-api-v4/ARTIFACTS.json",
+    "assurance/error-api-v4/README.md",
+    "assurance/error-api-v4/capture.py",
+    "assurance/error-api-v4/fixtures/control.json",
+    "assurance/error-api-v4/generate.py",
+    "assurance/error-api-v4/model.py",
+    "assurance/error-api-v4/package-e.json",
+    "assurance/error-api-v4/rebind-final-subject.py",
+    "assurance/error-api-v4/reviewed-inventory.toml",
+    "assurance/error-api-v4/schema.json",
+    "assurance/error-api-v4/selftest.py",
+    "assurance/error-api-v4/verify.py",
+)))
+PACKAGE_F_CHANGED_PATHS = tuple(sorted((
+    "assurance/error-api-v4/ARTIFACTS.json",
+    "assurance/error-api-v4/model.py",
+    "assurance/error-api-v4/package-e.json",
+    "assurance/error-api-v4/rebind-final-subject.py",
+    "assurance/error-api-v4/schema.json",
+)))
+PACKAGE_F_INVARIANT_PATHS = tuple(
+    sorted(set(PACKAGE_E_PATHS) - set(PACKAGE_F_CHANGED_PATHS))
+)
+if (
+    len(PACKAGE_E_PATHS) != 12
+    or len(PACKAGE_F_CHANGED_PATHS) != 5
+    or len(PACKAGE_F_INVARIANT_PATHS) != 7
+    or set(PACKAGE_F_CHANGED_PATHS) | set(PACKAGE_F_INVARIANT_PATHS)
+    != set(PACKAGE_E_PATHS)
+    or set(PACKAGE_F_CHANGED_PATHS) & set(PACKAGE_F_INVARIANT_PATHS)
+):
+    raise RuntimeError("Package F Package E projection partition differs")
 
 S_E_PATHS = tuple(sorted((
     ".github/workflows/security-validation.yml",
@@ -148,7 +188,7 @@ FINAL_CHANGED_PATHS_SHA256 = (
     "4fdf16d9060e2f36874c69ad78a36548133a1a950858e75117fdc4653b19d4ed"
 )
 
-NORMALIZED_REBIND_SHA256 = "d87813d3ba83e550e05a5106ccbf9ce286ab9bdd91a48403921bbb472b1aa58e"
+NORMALIZED_REBIND_SHA256 = "668db7482f9d85e5604fa3e241e8ca4f94601fe3aba29c278c46823eac9b8702"
 EXPECTED_REVIEWED_FILES: dict[str, tuple[str, int, str]] = {
     "assurance/error-api-v4/README.md": (
         "100644", 2226, "776c07813e09297a6225634f01d8cdbc5f6898e1e26cadb242aafa249fac060f",
@@ -521,9 +561,19 @@ def verify_reviewed_anchors(revision: str | None = None) -> None:
         _read(REPO / self_relative)[0]
         if revision is None else _git_blob(revision, self_relative)[1]
     )
+    expected_self_anchor = NORMALIZED_REBIND_SHA256
+    if revision == A_E_COMMIT:
+        embedded = re.search(
+            rb'^NORMALIZED_REBIND_SHA256 = "([0-9a-f]{64})"$',
+            self_raw,
+            re.MULTILINE,
+        )
+        if embedded is None:
+            raise RebindError("completed Package E self anchor is absent")
+        expected_self_anchor = embedded.group(1).decode("ascii")
     if (
-        NORMALIZED_REBIND_SHA256 == "0" * 64
-        or _normalized_rebind_sha256(self_raw) != NORMALIZED_REBIND_SHA256
+        expected_self_anchor == "0" * 64
+        or _normalized_rebind_sha256(self_raw) != expected_self_anchor
     ):
         raise RebindError("Package E normalized rebind trust anchor is not finalized")
     if len(EXPECTED_REVIEWED_FILES) != 8 or len(EXPECTED_PROVIDER_FILES) != 3:
@@ -684,12 +734,15 @@ def verify_projection_rows(
     document: dict[str, Any], *, provider: str, candidate_commit: str | None
 ) -> None:
     contract = PROJECTION_CONTRACTS[provider]
+    row_revision = candidate_commit
+    if row_revision is None and _resolve("HEAD") != R_E_COMMIT:
+        row_revision = A_E_COMMIT
     for category, require_change in (("changed_files", True), ("invariant_files", False)):
         modes = contract["changed" if require_change else "invariant"]
         for row in document[category]:
             path = row["path"]
             expected_mode = modes[path]
-            raw = _projection_row_bytes(path, candidate_commit, expected_mode)
+            raw = _projection_row_bytes(path, row_revision, expected_mode)
             r_mode, r_raw = _git_blob(R_E_COMMIT, path)
             if (
                 r_mode != expected_mode
@@ -950,6 +1003,294 @@ def post_commit_manifest(candidate_commit: str) -> dict[str, Any]:
     )
 
 
+def _package_f_bytes(path: str, revision: str | None, expected_mode: str = "100644") -> bytes:
+    if revision is None:
+        return _read(REPO / path, expected_mode)[0]
+    mode, raw = _git_blob(revision, path)
+    if mode != expected_mode:
+        raise RebindError(f"Package F Package E projection mode differs: {path}")
+    return raw
+
+
+def _package_f_row(path: str, revision: str | None) -> dict[str, Any]:
+    raw = _package_f_bytes(path, revision)
+    return {
+        "git_mode": "100644",
+        "path": path,
+        "sha256": _sha(raw),
+        "size": len(raw),
+    }
+
+
+def package_f_projection(
+    *, expected_r_commit: str, expected_r_tree: str,
+    candidate_revision: str | None = None,
+) -> dict[str, Any]:
+    """Project Package E's current complete subtree without global F authority."""
+
+    if (
+        expected_r_commit != PACKAGE_F_R_COMMIT
+        or expected_r_tree != PACKAGE_F_R_TREE
+        or _resolve(expected_r_commit) != expected_r_commit
+        or _resolve(expected_r_commit, "tree") != expected_r_tree
+    ):
+        raise RebindError("Package F expected R identity differs")
+    if candidate_revision is not None and _resolve(candidate_revision) != candidate_revision:
+        raise RebindError("Package F candidate commit does not resolve exactly")
+
+    manifest_raw = _package_f_bytes(
+        "assurance/subject-manifest.json", candidate_revision
+    )
+    if _sha(manifest_raw) != PACKAGE_F_SUBJECT_MANIFEST_SHA256:
+        raise RebindError("Package F subject manifest digest differs")
+    try:
+        manifest = json.loads(manifest_raw.decode("utf-8"))
+    except (UnicodeError, ValueError, json.JSONDecodeError) as error:
+        raise RebindError("Package F subject manifest is malformed") from error
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("source_commit") != expected_r_commit
+        or manifest.get("source_tree") != expected_r_tree
+        or not isinstance(manifest.get("files"), list)
+        or len(manifest["files"]) != 1511
+    ):
+        raise RebindError("Package F subject manifest binding/count differs")
+
+    changed_files = [
+        _package_f_row(path, candidate_revision) for path in PACKAGE_F_CHANGED_PATHS
+    ]
+    invariant_files = [
+        _package_f_row(path, candidate_revision) for path in PACKAGE_F_INVARIANT_PATHS
+    ]
+    for row, should_change in (
+        *((item, True) for item in changed_files),
+        *((item, False) for item in invariant_files),
+    ):
+        r_mode, r_raw = _git_blob(expected_r_commit, row["path"])
+        same = (
+            r_mode == row["git_mode"]
+            and len(r_raw) == row["size"]
+            and _sha(r_raw) == row["sha256"]
+        )
+        if same == should_change:
+            disposition = "did not change" if should_change else "changed"
+            raise RebindError(
+                f"Package F Package E path {disposition}: {row['path']}"
+            )
+
+    model_raw = _package_f_bytes("assurance/error-api-v4/model.py", candidate_revision)
+    model_source = model_raw.decode("utf-8", errors="strict")
+    assignments: dict[str, str] = {}
+    for name in ("R_E_COMMIT", "R_E_TREE"):
+        match = re.search(rf'^{name} = "([0-9a-f]{{40}})"$', model_source, re.MULTILINE)
+        if match is None:
+            raise RebindError(f"Package F Package E model anchor differs: {name}")
+        assignments[name] = match.group(1)
+    manifest_match = re.search(
+        r'^R_E_SUBJECT_MANIFEST_SHA256 = \(\n    "([0-9a-f]{64})"\n\)$',
+        model_source,
+        re.MULTILINE,
+    )
+    inventory_match = re.search(
+        r'^REVIEWED_INVENTORY_SHA256 = \(\n    "([0-9a-f]{64})"\n\)$',
+        model_source,
+        re.MULTILINE,
+    )
+    if manifest_match is None or inventory_match is None:
+        raise RebindError("Package F Package E digest anchors differ")
+    assignments["R_E_SUBJECT_MANIFEST_SHA256"] = manifest_match.group(1)
+    assignments["REVIEWED_INVENTORY_SHA256"] = inventory_match.group(1)
+    if (
+        assignments["R_E_COMMIT"] != expected_r_commit
+        or assignments["R_E_TREE"] != expected_r_tree
+        or assignments["R_E_SUBJECT_MANIFEST_SHA256"]
+        != PACKAGE_F_SUBJECT_MANIFEST_SHA256
+    ):
+        raise RebindError("Package F Package E subject model binding differs")
+
+    package_raw = _package_f_bytes(
+        "assurance/error-api-v4/package-e.json", candidate_revision
+    )
+    schema_raw = _package_f_bytes(
+        "assurance/error-api-v4/schema.json", candidate_revision
+    )
+    artifacts_raw = _package_f_bytes(
+        "assurance/error-api-v4/ARTIFACTS.json", candidate_revision
+    )
+    try:
+        package = json.loads(package_raw.decode("utf-8"))
+        schema = json.loads(schema_raw.decode("utf-8"))
+        artifacts = json.loads(artifacts_raw.decode("utf-8"))
+    except (UnicodeError, ValueError, json.JSONDecodeError) as error:
+        raise RebindError("Package F Package E generated artifacts are malformed") from error
+    if any(
+        raw != _canonical(document)
+        for raw, document in (
+            (package_raw, package), (schema_raw, schema), (artifacts_raw, artifacts)
+        )
+    ):
+        raise RebindError("Package F Package E generated artifact is not canonical")
+
+    expected_counts = {
+        "curated_source_rows": 283,
+        "expanded_curated_atomic_rows": 566,
+        "production_rust_sources": 255,
+        "public_identities": 18891,
+        "release_blocked_rows": 9198,
+        "retained_other_transitional_public_identities": 124,
+        "unreviewed_gap_rows": 8632,
+    }
+    expected_binding = {
+        "a_d_commit": A_D_COMMIT,
+        "a_d_tree": A_D_TREE,
+        "r_e_commit": expected_r_commit,
+        "r_e_subject_manifest_sha256": PACKAGE_F_SUBJECT_MANIFEST_SHA256,
+        "r_e_tree": expected_r_tree,
+        "s_e_commit": S_E_COMMIT,
+        "s_e_tree": S_E_TREE,
+    }
+    if (
+        not isinstance(package, dict)
+        or package.get("counts") != expected_counts
+        or package.get("subject_binding") != expected_binding
+        or package.get("reviewed_inventory_sha256")
+        != assignments["REVIEWED_INVENTORY_SHA256"]
+        or package.get("release_state") != {
+            "promotion_eligible": False,
+            "publish_eligible": False,
+            "release_gate": "HOLD",
+            "release_gate_exit_code": 3,
+            "version_preparation_authorized": False,
+        }
+    ):
+        raise RebindError("Package F Package E package binding/counts differ")
+    input_rows = package.get("input_bindings")
+    if not isinstance(input_rows, list):
+        raise RebindError("Package F Package E input binding closure differs")
+    input_by_path = {
+        row.get("path"): row for row in input_rows if isinstance(row, dict)
+    }
+    expected_input_digests = {
+        "assurance/atomic-operations.toml":
+            "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a",
+        "assurance/curated-operations.toml":
+            "082cc81db8f9fcd9222b195af43208040811ae5f2e5e4565c249fecf6e10dcc8",
+        "assurance/public-api-snapshot.json":
+            "5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d",
+        "assurance/subject-manifest.json": PACKAGE_F_SUBJECT_MANIFEST_SHA256,
+    }
+    for path, digest in expected_input_digests.items():
+        raw = _package_f_bytes(path, candidate_revision)
+        row = input_by_path.get(path)
+        if row != {
+            "git_mode": "100644", "path": path, "sha256": digest, "size": len(raw)
+        } or _sha(raw) != digest:
+            raise RebindError(f"Package F Package E core input differs: {path}")
+
+    subject_schemas: list[dict[str, Any]] = []
+    def collect_subject_schemas(value: Any) -> None:
+        if isinstance(value, dict):
+            properties = value.get("properties")
+            if isinstance(properties, dict) and set(properties) == {
+                "r_commit", "r_tree", "subject_manifest_sha256"
+            }:
+                subject_schemas.append(properties)
+            for child in value.values():
+                collect_subject_schemas(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect_subject_schemas(child)
+    collect_subject_schemas(schema)
+    expected_subject_schema = {
+        "r_commit": {"const": expected_r_commit},
+        "r_tree": {"const": expected_r_tree},
+        "subject_manifest_sha256": {"const": PACKAGE_F_SUBJECT_MANIFEST_SHA256},
+    }
+    if len(subject_schemas) != 4 or any(row != expected_subject_schema for row in subject_schemas):
+        raise RebindError("Package F Package E evidence schema binding differs")
+
+    artifact_rows = artifacts.get("files") if isinstance(artifacts, dict) else None
+    if not isinstance(artifact_rows, list) or len(artifact_rows) != 11:
+        raise RebindError("Package F Package E artifact manifest closure differs")
+    artifact_by_path = {
+        row.get("path"): row for row in artifact_rows if isinstance(row, dict)
+    }
+    for path in PACKAGE_E_PATHS:
+        if path.endswith("/ARTIFACTS.json"):
+            continue
+        relative = path.removeprefix("assurance/error-api-v4/")
+        raw = _package_f_bytes(path, candidate_revision)
+        row = artifact_by_path.get(relative)
+        if (
+            not isinstance(row, dict)
+            or row.get("git_mode") != "100644"
+            or row.get("path") != relative
+            or row.get("sha256") != _sha(raw)
+            or row.get("size") != len(raw)
+        ):
+            raise RebindError(f"Package F Package E artifact row differs: {path}")
+
+    body = {
+        "binding_assignments": {
+            "atomic_operations_sha256": expected_input_digests["assurance/atomic-operations.toml"],
+            "curated_operations_sha256": expected_input_digests["assurance/curated-operations.toml"],
+            "public_api_snapshot_sha256": expected_input_digests["assurance/public-api-snapshot.json"],
+            "reviewed_inventory_sha256": assignments["REVIEWED_INVENTORY_SHA256"],
+            "subject_commit": expected_r_commit,
+            "subject_manifest_sha256": PACKAGE_F_SUBJECT_MANIFEST_SHA256,
+            "subject_tree": expected_r_tree,
+        },
+        "candidate_commit": candidate_revision,
+        "changed_files": changed_files,
+        "content_policy": "dcrypt-package-e-package-f-subordinate-projection-v1",
+        "counts": expected_counts,
+        "invariant_files": invariant_files,
+        "r_commit": expected_r_commit,
+        "r_tree": expected_r_tree,
+        "schema_version": 1,
+        "subject_manifest_sha256": PACKAGE_F_SUBJECT_MANIFEST_SHA256,
+    }
+    result = {**body, "projection_sha256": _sha(_canonical(body))}
+    if (
+        [row["path"] for row in [*changed_files, *invariant_files]]
+        != [*PACKAGE_F_CHANGED_PATHS, *PACKAGE_F_INVARIANT_PATHS]
+        or any(
+            tuple(row) != ("git_mode", "path", "sha256", "size")
+            for row in [*changed_files, *invariant_files]
+        )
+        or set(result) != {
+            "binding_assignments", "candidate_commit", "changed_files",
+            "content_policy", "counts", "invariant_files", "projection_sha256",
+            "r_commit", "r_tree", "schema_version", "subject_manifest_sha256",
+        }
+    ):
+        raise RebindError("Package F Package E projection closure differs")
+    return result
+
+
+def _package_f_projection_main(arguments: list[str]) -> int:
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--expected-r-commit", required=True)
+    parser.add_argument("--expected-r-tree", required=True)
+    parser.add_argument("--candidate-commit")
+    args = parser.parse_args(arguments)
+    if (
+        re.fullmatch(r"[0-9a-f]{40}", args.expected_r_commit) is None
+        or re.fullmatch(r"[0-9a-f]{40}", args.expected_r_tree) is None
+        or (
+            args.candidate_commit is not None
+            and re.fullmatch(r"[0-9a-f]{40}", args.candidate_commit) is None
+        )
+    ):
+        raise RebindError("Package F projection identities must be lowercase 40-hex")
+    sys.stdout.buffer.write(_canonical(package_f_projection(
+        expected_r_commit=args.expected_r_commit,
+        expected_r_tree=args.expected_r_tree,
+        candidate_revision=args.candidate_commit,
+    )))
+    return 0
+
+
 def self_test() -> int:
     controls = 0
     verify_base_topology()
@@ -1104,10 +1445,16 @@ def self_test() -> int:
             raise RebindError("unfinalized changed closure did not fail closed")
 
     if EXPECTED_REVIEWED_FILES and EXPECTED_PROVIDER_FILES:
-        verify_reviewed_anchors()
+        anchor_revision = None if _resolve("HEAD") == R_E_COMMIT else A_E_COMMIT
+        verify_reviewed_anchors(anchor_revision)
         controls += 1
         for path, expected in {**EXPECTED_REVIEWED_FILES, **EXPECTED_PROVIDER_FILES}.items():
-            raw_value, _filesystem_mode = _read(REPO / path, expected[0])
+            if anchor_revision is None:
+                raw_value, _filesystem_mode = _read(REPO / path, expected[0])
+            else:
+                committed_mode, raw_value = _git_blob(anchor_revision, path)
+                if committed_mode != expected[0]:
+                    raise RebindError(f"reviewed/provider committed mode differs: {path}")
             try:
                 _validate_file_anchor(path, expected[0], raw_value + b"mutation", expected)
             except RebindError:
@@ -1177,6 +1524,12 @@ def self_test() -> int:
     return controls
 
 def main() -> int:
+    if len(sys.argv) >= 2 and sys.argv[1] == "--package-f-projection":
+        try:
+            return _package_f_projection_main(sys.argv[2:])
+        except (OSError, RebindError, UnicodeError, ValueError) as error:
+            print(f"Package F subordinate projection HOLD: {error}", file=sys.stderr)
+            return 3
     parser = argparse.ArgumentParser(allow_abbrev=False)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--pre-commit", action="store_true")

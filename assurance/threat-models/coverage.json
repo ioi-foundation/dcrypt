@@ -222336,7 +222336,7 @@
   "sources": {
     "ledger": {
       "path": "../ledger.toml",
-      "sha256": "bbdafc06e8df89a81b3011596abd02ec28b515db87beb74471f766469dca077e"
+      "sha256": "049d524b5cbea96a18bcf901f95e83fdf1f02093aef0542012e78882aba8d8dd"
     },
     "operations": {
       "path": "../atomic-operations.toml",
@@ -222344,7 +222344,7 @@
     },
     "public_api_snapshot": {
       "path": "../public-api-snapshot.json",
-      "sha256": "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
+      "sha256": "5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d"
     },
     "schema": {
       "path": "schema.toml",
@@ -222352,7 +222352,7 @@
     },
     "threat_models": {
       "path": "threat-models.toml",
-      "sha256": "73d9956bc12df3f9b68e9725b41ec21673483a95868c87680dab8583dabd2462"
+      "sha256": "16b787d2eb100837b61b54f25f6e5ad96de696b4cd4274f09a3b5e511b41539e"
     }
   }
 }

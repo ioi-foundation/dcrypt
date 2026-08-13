@@ -1,0 +1,2844 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "local-foundation-proof"
+        },
+        "artifacts": {
+          "allOf": [
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "build-manifest"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "package-f-local-foundation"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            }
+          ],
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_class": {
+                "enum": [
+                  "sbom",
+                  "signature-envelope",
+                  "attestation",
+                  "certificate-chain",
+                  "trust-root",
+                  "transparency-proof",
+                  "source-archive",
+                  "crate-archive",
+                  "build-manifest",
+                  "rebuild-report"
+                ]
+              },
+              "file_mode": {
+                "const": "0600"
+              },
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "subject_id": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+@/-]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_class",
+              "file_mode",
+              "path",
+              "sha256",
+              "size",
+              "subject_id"
+            ],
+            "type": "object"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-f-local-foundation-proof-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_effect": {
+              "const": "structural-only"
+            },
+            "generated": {
+              "const": true
+            },
+            "lock_occurrences": {
+              "const": 342
+            },
+            "publishable_packages": {
+              "const": 12
+            },
+            "release_blocked_atomic_rows": {
+              "const": 9198
+            },
+            "sbom_slots": {
+              "const": 5
+            }
+          },
+          "required": [
+            "evidence_effect",
+            "generated",
+            "lock_occurrences",
+            "publishable_packages",
+            "release_blocked_atomic_rows",
+            "sbom_slots"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "generated-structural-only"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "889cb8c4dc13a78679dc8a7677916484a9966f65"
+            },
+            "r_tree": {
+              "const": "0d44b68b186913de68844d09b7e498bcda14d109"
+            },
+            "subject_manifest_sha256": {
+              "const": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "first-party-build-candidate"
+        },
+        "artifacts": {
+          "allOf": [
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "source-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "canonical-source-archive"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-algorithms"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-api"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-common"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-hybrid"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-internal"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-kem"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-params"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-pke"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-sign"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-symmetric"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-utils"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-bench"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-fuzz"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-migration"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-production"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-verification"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            }
+          ],
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_class": {
+                "enum": [
+                  "sbom",
+                  "signature-envelope",
+                  "attestation",
+                  "certificate-chain",
+                  "trust-root",
+                  "transparency-proof",
+                  "source-archive",
+                  "crate-archive",
+                  "build-manifest",
+                  "rebuild-report"
+                ]
+              },
+              "file_mode": {
+                "const": "0600"
+              },
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "subject_id": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+@/-]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_class",
+              "file_mode",
+              "path",
+              "sha256",
+              "size",
+              "subject_id"
+            ],
+            "type": "object"
+          },
+          "maxItems": 18,
+          "minItems": 18,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-f-first-party-build-candidate-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "accepted_subjects": {
+              "const": 0
+            },
+            "artifact_subject_count": {
+              "const": 18
+            },
+            "artifact_subject_set_sha256": {
+              "const": "41cae985d2507f82ec0a90a4242cf814536474fa643b21078b60ae2b0186d099"
+            },
+            "cache_policy": {
+              "const": "cold-bound-provisioning-only"
+            },
+            "command_target_profile_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "crate_archive_count": {
+              "const": 12
+            },
+            "dsse_envelope_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "environment_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "in_toto_statement_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "in_toto_statement_type": {
+              "const": "https://in-toto.io/Statement/v1"
+            },
+            "invocation_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "materials_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "network_policy": {
+              "const": "offline"
+            },
+            "producer_class": {
+              "const": "first-party"
+            },
+            "producer_identity_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "sbom_count": {
+              "const": 5
+            },
+            "sbom_format": {
+              "const": "CycloneDX"
+            },
+            "sbom_spec_version": {
+              "const": "1.6"
+            },
+            "slsa_predicate_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "slsa_predicate_type": {
+              "const": "https://slsa.dev/provenance/v1"
+            },
+            "source_and_lock_input_set_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "source_archive_count": {
+              "const": 1
+            },
+            "toolchain_bundle_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "toolchain_distribution_verified": {
+              "const": false
+            },
+            "workspace_ids": {
+              "const": [
+                "production",
+                "verification",
+                "fuzz",
+                "migration",
+                "bench"
+              ]
+            }
+          },
+          "required": [
+            "accepted_subjects",
+            "artifact_subject_count",
+            "artifact_subject_set_sha256",
+            "cache_policy",
+            "command_target_profile_sha256",
+            "crate_archive_count",
+            "dsse_envelope_sha256",
+            "environment_sha256",
+            "in_toto_statement_sha256",
+            "in_toto_statement_type",
+            "invocation_sha256",
+            "materials_sha256",
+            "network_policy",
+            "producer_class",
+            "producer_identity_sha256",
+            "sbom_count",
+            "sbom_format",
+            "sbom_spec_version",
+            "slsa_predicate_sha256",
+            "slsa_predicate_type",
+            "source_and_lock_input_set_sha256",
+            "source_archive_count",
+            "toolchain_bundle_sha256",
+            "toolchain_distribution_verified",
+            "workspace_ids"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "collected-unreviewed"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "889cb8c4dc13a78679dc8a7677916484a9966f65"
+            },
+            "r_tree": {
+              "const": "0d44b68b186913de68844d09b7e498bcda14d109"
+            },
+            "subject_manifest_sha256": {
+              "const": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "signature-transparency-candidate"
+        },
+        "artifacts": {
+          "allOf": [
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "attestation"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 16777216,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "attestation"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "certificate-chain"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 16777216,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "certificate-chain"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "signature-envelope"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 16777216,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "signature-envelope"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "transparency-proof"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 16777216,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "transparency-proof"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "trust-root"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 16777216,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "trust-root"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            }
+          ],
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_class": {
+                "enum": [
+                  "sbom",
+                  "signature-envelope",
+                  "attestation",
+                  "certificate-chain",
+                  "trust-root",
+                  "transparency-proof",
+                  "source-archive",
+                  "crate-archive",
+                  "build-manifest",
+                  "rebuild-report"
+                ]
+              },
+              "file_mode": {
+                "const": "0600"
+              },
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 16777216,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "subject_id": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+@/-]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_class",
+              "file_mode",
+              "path",
+              "sha256",
+              "size",
+              "subject_id"
+            ],
+            "type": "object"
+          },
+          "maxItems": 5,
+          "minItems": 5,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-f-signature-transparency-candidate-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "accepted_attestations": {
+              "const": 0
+            },
+            "cryptographic_verification_completed": {
+              "const": false
+            },
+            "dsse_payload_type": {
+              "const": "application/vnd.in-toto+json"
+            },
+            "envelope_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "first_party_artifact_set_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "identity_verified": {
+              "const": false
+            },
+            "in_toto_statement_type": {
+              "const": "https://in-toto.io/Statement/v1"
+            },
+            "signature_count": {
+              "const": 18
+            },
+            "signed_subject_set_sha256": {
+              "const": "41cae985d2507f82ec0a90a4242cf814536474fa643b21078b60ae2b0186d099"
+            },
+            "signer_identity_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "slsa_predicate_type": {
+              "const": "https://slsa.dev/provenance/v1"
+            },
+            "subject_count": {
+              "const": 18
+            },
+            "timestamp_binding_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "transparency_verified": {
+              "const": false
+            },
+            "trust_root_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "trust_root_verified": {
+              "const": false
+            }
+          },
+          "required": [
+            "accepted_attestations",
+            "cryptographic_verification_completed",
+            "dsse_payload_type",
+            "envelope_sha256",
+            "first_party_artifact_set_sha256",
+            "identity_verified",
+            "in_toto_statement_type",
+            "signature_count",
+            "signed_subject_set_sha256",
+            "signer_identity_sha256",
+            "slsa_predicate_type",
+            "subject_count",
+            "timestamp_binding_sha256",
+            "transparency_verified",
+            "trust_root_sha256",
+            "trust_root_verified"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "collected-unverified"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "889cb8c4dc13a78679dc8a7677916484a9966f65"
+            },
+            "r_tree": {
+              "const": "0d44b68b186913de68844d09b7e498bcda14d109"
+            },
+            "subject_manifest_sha256": {
+              "const": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "independent-rebuild-candidate"
+        },
+        "artifacts": {
+          "allOf": [
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "source-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "canonical-source-archive"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-algorithms"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-api"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-common"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-hybrid"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-internal"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-kem"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-params"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-pke"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-sign"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-symmetric"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "crate-archive"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "crate-dcrypt-utils"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "build-manifest"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "independent-build-manifest"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "rebuild-report"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "rebuild-comparison-report"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-bench"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-fuzz"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-migration"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-production"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            },
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "sbom"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "sbom-verification"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            }
+          ],
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_class": {
+                "enum": [
+                  "sbom",
+                  "signature-envelope",
+                  "attestation",
+                  "certificate-chain",
+                  "trust-root",
+                  "transparency-proof",
+                  "source-archive",
+                  "crate-archive",
+                  "build-manifest",
+                  "rebuild-report"
+                ]
+              },
+              "file_mode": {
+                "const": "0600"
+              },
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "subject_id": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+@/-]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_class",
+              "file_mode",
+              "path",
+              "sha256",
+              "size",
+              "subject_id"
+            ],
+            "type": "object"
+          },
+          "maxItems": 20,
+          "minItems": 20,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-f-independent-rebuild-candidate-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "accepted_rebuilds": {
+              "const": 0
+            },
+            "administrative_independence_claimed": {
+              "const": true
+            },
+            "administrative_independence_verified": {
+              "const": false
+            },
+            "artifact_subject_count": {
+              "const": 18
+            },
+            "artifact_subject_set_sha256": {
+              "const": "41cae985d2507f82ec0a90a4242cf814536474fa643b21078b60ae2b0186d099"
+            },
+            "byte_comparison_report_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "cache_policy": {
+              "const": "cold-bound-provisioning-only"
+            },
+            "command_target_profile_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "environment_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "first_party_artifact_set_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "invocation_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "matching_subjects": {
+              "maximum": 18,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "materials_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "mismatching_subjects": {
+              "maximum": 18,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "network_policy": {
+              "const": "offline"
+            },
+            "producer_identity_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "replayer_identity_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "source_and_lock_input_set_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "toolchain_bundle_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "accepted_rebuilds",
+            "administrative_independence_claimed",
+            "administrative_independence_verified",
+            "artifact_subject_count",
+            "artifact_subject_set_sha256",
+            "byte_comparison_report_sha256",
+            "cache_policy",
+            "command_target_profile_sha256",
+            "environment_sha256",
+            "first_party_artifact_set_sha256",
+            "invocation_sha256",
+            "matching_subjects",
+            "materials_sha256",
+            "mismatching_subjects",
+            "network_policy",
+            "producer_identity_sha256",
+            "replayer_identity_sha256",
+            "source_and_lock_input_set_sha256",
+            "toolchain_bundle_sha256"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "collected-unreviewed"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "889cb8c4dc13a78679dc8a7677916484a9966f65"
+            },
+            "r_tree": {
+              "const": "0d44b68b186913de68844d09b7e498bcda14d109"
+            },
+            "subject_manifest_sha256": {
+              "const": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "acceptance"
+        },
+        "artifacts": {
+          "allOf": [
+            {
+              "contains": {
+                "additionalProperties": false,
+                "properties": {
+                  "artifact_class": {
+                    "const": "attestation"
+                  },
+                  "file_mode": {
+                    "const": "0600"
+                  },
+                  "path": {
+                    "maxLength": 512,
+                    "minLength": 1,
+                    "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                    "type": "string"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  },
+                  "size": {
+                    "maximum": 67108864,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "subject_id": {
+                    "const": "attestation"
+                  }
+                },
+                "required": [
+                  "artifact_class",
+                  "file_mode",
+                  "path",
+                  "sha256",
+                  "size",
+                  "subject_id"
+                ],
+                "type": "object"
+              },
+              "maxContains": 1,
+              "minContains": 1
+            }
+          ],
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_class": {
+                "enum": [
+                  "sbom",
+                  "signature-envelope",
+                  "attestation",
+                  "certificate-chain",
+                  "trust-root",
+                  "transparency-proof",
+                  "source-archive",
+                  "crate-archive",
+                  "build-manifest",
+                  "rebuild-report"
+                ]
+              },
+              "file_mode": {
+                "const": "0600"
+              },
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^(?!(?:.*?/)?(?:\\.|\\.\\.)(?:/|$))[A-Za-z0-9_+.-]+(?:/[A-Za-z0-9_+.-]+)*$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 1,
+                "type": "integer"
+              },
+              "subject_id": {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+@/-]+$",
+                "type": "string"
+              }
+            },
+            "required": [
+              "artifact_class",
+              "file_mode",
+              "path",
+              "sha256",
+              "size",
+              "subject_id"
+            ],
+            "type": "object"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-f-disabled-acceptance-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "accepted": {
+              "const": false
+            },
+            "decision": {
+              "const": "disabled"
+            },
+            "reason": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "accepted",
+            "decision",
+            "reason"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "acceptance-disabled"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "889cb8c4dc13a78679dc8a7677916484a9966f65"
+            },
+            "r_tree": {
+              "const": "0d44b68b186913de68844d09b7e498bcda14d109"
+            },
+            "subject_manifest_sha256": {
+              "const": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "dcrypt Package F nonpromotable supply-chain candidate roles"
+}
