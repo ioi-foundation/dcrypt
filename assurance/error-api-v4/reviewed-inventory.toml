@@ -1,0 +1,606 @@
+schema-version = 1
+content-policy = "dcrypt-package-e-reviewed-error-api-removal-v1"
+status = "HOLD"
+release-gate = "HOLD"
+release-exit-code = 3
+target-major = 4
+workspace-version = "3.0.0"
+version-preparation-authorized = false
+publish-eligible = false
+promotion-eligible = false
+
+a-d-commit = "39fed53adc1fa256812f6157396cd75a62b8fc8d"
+a-d-tree = "0ab8a595efbff7fb857e8573e3f138ad4a8d9cb1"
+s-e-commit = "219ee68040fa48ae1973ba5a16ccf7f32f73657a"
+s-e-tree = "4390012075501659de01e21b24432967b5aa0c23"
+r-e-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+r-e-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+r-e-subject-manifest-sha256 = "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+
+a-d-curated-file-sha256 = "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4"
+a-d-atomic-file-sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
+a-d-public-snapshot-file-sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
+a-d-subject-manifest-sha256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+
+removed-curated-ids-sha256 = "207c942fb87a247fae08f45a3a84f86b6f3b3a62937ed0d627f5b76f9344461a"
+removed-atomic-ids-sha256 = "abe5e401904633e0cbfbcf1d0800400bd179086811bb087dd07f617f81737e17"
+removed-public-identities-sha256 = "32fcd564f80ffb7ea0638a556f237de4ad591d2e85ae942d203c505be97ccf3a"
+removed-public-records-sha256 = "70970b905e0e61232d4abc8b4c1a522dd350a556e7a1002e9efb1f902a1c77b8"
+post-curated-ids-sha256 = "37a8d4b0eab59494c31f99cc6241974c6a04bc59c7bdef4e0e961947f1b5f264"
+post-expanded-curated-ids-sha256 = "4e7087153cbb40dcb331138b3ea999fe196533a0437cc77efa1af1754eb34af3"
+post-all-atomic-ids-sha256 = "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff"
+post-public-identities-sha256 = "f8570cbda3504733e9545172fa4c01e6c9b32879f5cdb7e139c87452de71caba"
+a-d-all-public-identities-sha256 = "da0b8f46f99e2f07deddef80f22fe419174522477d4a2c653af851e2bad1c4f4"
+retained-other-transitional-sha256 = "7e9f22ac2cf35b4e325d4589971e4a78b7544186b97e1950693d1cd4a28592a6"
+retained-tombstones-sha256 = "e4e57254f0733f5bec758bdaf5f8e2b401ede1bed7b0d132d1ed90418ece7559"
+
+migration-guide = "docs/migration/V4-ERROR-API.md"
+migration-fixture = "tests/tests/error_api_v4_migration.rs"
+
+curated-ids = [
+  "legacy.error-registry.algorithms",
+  "legacy.error-registry.construct",
+  "legacy.error-registry.default",
+  "legacy.error-registry.drop",
+  "legacy.error-registry.global-state.clear",
+  "legacy.error-registry.global-state.error-registry",
+  "legacy.error-registry.global-state.errorregistryext",
+  "legacy.error-registry.global-state.get-error",
+  "legacy.error-registry.global-state.has-error",
+  "legacy.error-registry.global-state.secure-unwrap",
+  "legacy.error-registry.global-state.secureerrorhandling",
+  "legacy.error-registry.global-state.store",
+  "legacy.error-registry.global-state.unwrap-or-record-with",
+  "legacy.error-registry.kem",
+  "legacy.error-registry.pin-drop",
+  "legacy.error-registry.symmetric.error-registry",
+  "legacy.error-registry.symmetric.secureerrorhandling",
+  "legacy.result-compatibility.algorithms",
+  "legacy.result-compatibility.api.constanttimeresult",
+  "legacy.result-compatibility.api.ct-is-err",
+  "legacy.result-compatibility.api.ct-is-ok",
+  "legacy.result-compatibility.api.ct-map",
+  "legacy.result-compatibility.api.resultext",
+  "legacy.result-compatibility.api.with-context",
+  "legacy.result-compatibility.api.with-message",
+  "legacy.result-compatibility.api.wrap-err",
+  "legacy.result-compatibility.kem",
+  "legacy.result-compatibility.symmetric.map-io-err",
+  "legacy.result-compatibility.symmetric.map-primitive-err",
+  "legacy.result-compatibility.symmetric.resultext",
+  "legacy.result-compatibility.symmetric.symmetricresultext",
+]
+atomic-ids = [
+  "alias.dcrypt-algorithms.legacy.error-registry.global-state.secure-unwrap",
+  "alias.dcrypt-algorithms.legacy.error-registry.global-state.secureerrorhandling",
+  "alias.dcrypt-algorithms.legacy.error-registry.kem",
+  "alias.dcrypt-algorithms.legacy.error-registry.symmetric.secureerrorhandling",
+  "alias.dcrypt-algorithms.legacy.result-compatibility.api.resultext",
+  "alias.dcrypt-algorithms.legacy.result-compatibility.api.with-context",
+  "alias.dcrypt-algorithms.legacy.result-compatibility.api.with-message",
+  "alias.dcrypt-algorithms.legacy.result-compatibility.api.wrap-err",
+  "alias.dcrypt-algorithms.legacy.result-compatibility.kem",
+  "alias.dcrypt-algorithms.legacy.result-compatibility.symmetric.resultext",
+  "alias.dcrypt-api.legacy.error-registry.algorithms",
+  "alias.dcrypt-api.legacy.error-registry.kem",
+  "alias.dcrypt-api.legacy.error-registry.symmetric.error-registry",
+  "alias.dcrypt-api.legacy.error-registry.symmetric.secureerrorhandling",
+  "alias.dcrypt-api.legacy.result-compatibility.algorithms",
+  "alias.dcrypt-api.legacy.result-compatibility.kem",
+  "alias.dcrypt-api.legacy.result-compatibility.symmetric.resultext",
+  "alias.dcrypt-kem.legacy.error-registry.algorithms",
+  "alias.dcrypt-kem.legacy.error-registry.global-state.secure-unwrap",
+  "alias.dcrypt-kem.legacy.error-registry.global-state.secureerrorhandling",
+  "alias.dcrypt-kem.legacy.error-registry.symmetric.secureerrorhandling",
+  "alias.dcrypt-kem.legacy.result-compatibility.algorithms",
+  "alias.dcrypt-kem.legacy.result-compatibility.api.resultext",
+  "alias.dcrypt-kem.legacy.result-compatibility.api.with-context",
+  "alias.dcrypt-kem.legacy.result-compatibility.api.with-message",
+  "alias.dcrypt-kem.legacy.result-compatibility.api.wrap-err",
+  "alias.dcrypt-kem.legacy.result-compatibility.symmetric.resultext",
+  "alias.dcrypt-symmetric.legacy.error-registry.algorithms",
+  "alias.dcrypt-symmetric.legacy.error-registry.global-state.error-registry",
+  "alias.dcrypt-symmetric.legacy.error-registry.global-state.secure-unwrap",
+  "alias.dcrypt-symmetric.legacy.error-registry.global-state.secureerrorhandling",
+  "alias.dcrypt-symmetric.legacy.error-registry.kem",
+  "alias.dcrypt-symmetric.legacy.result-compatibility.algorithms",
+  "alias.dcrypt-symmetric.legacy.result-compatibility.api.resultext",
+  "alias.dcrypt-symmetric.legacy.result-compatibility.api.with-context",
+  "alias.dcrypt-symmetric.legacy.result-compatibility.api.with-message",
+  "alias.dcrypt-symmetric.legacy.result-compatibility.api.wrap-err",
+  "alias.dcrypt-symmetric.legacy.result-compatibility.kem",
+  "alias.dcrypt.legacy.error-registry.algorithms",
+  "alias.dcrypt.legacy.error-registry.construct",
+  "alias.dcrypt.legacy.error-registry.default",
+  "alias.dcrypt.legacy.error-registry.drop",
+  "alias.dcrypt.legacy.error-registry.global-state.clear",
+  "alias.dcrypt.legacy.error-registry.global-state.error-registry",
+  "alias.dcrypt.legacy.error-registry.global-state.errorregistryext",
+  "alias.dcrypt.legacy.error-registry.global-state.get-error",
+  "alias.dcrypt.legacy.error-registry.global-state.has-error",
+  "alias.dcrypt.legacy.error-registry.global-state.secure-unwrap",
+  "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling",
+  "alias.dcrypt.legacy.error-registry.global-state.store",
+  "alias.dcrypt.legacy.error-registry.global-state.unwrap-or-record-with",
+  "alias.dcrypt.legacy.error-registry.kem",
+  "alias.dcrypt.legacy.error-registry.pin-drop",
+  "alias.dcrypt.legacy.error-registry.symmetric.error-registry",
+  "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling",
+  "alias.dcrypt.legacy.result-compatibility.algorithms",
+  "alias.dcrypt.legacy.result-compatibility.api.constanttimeresult",
+  "alias.dcrypt.legacy.result-compatibility.api.ct-is-err",
+  "alias.dcrypt.legacy.result-compatibility.api.ct-is-ok",
+  "alias.dcrypt.legacy.result-compatibility.api.ct-map",
+  "alias.dcrypt.legacy.result-compatibility.api.resultext",
+  "alias.dcrypt.legacy.result-compatibility.api.with-context",
+  "alias.dcrypt.legacy.result-compatibility.api.with-message",
+  "alias.dcrypt.legacy.result-compatibility.api.wrap-err",
+  "alias.dcrypt.legacy.result-compatibility.kem",
+  "alias.dcrypt.legacy.result-compatibility.symmetric.map-io-err",
+  "alias.dcrypt.legacy.result-compatibility.symmetric.map-primitive-err",
+  "alias.dcrypt.legacy.result-compatibility.symmetric.resultext",
+  "alias.dcrypt.legacy.result-compatibility.symmetric.symmetricresultext",
+  "legacy.error-registry.algorithms",
+  "legacy.error-registry.construct",
+  "legacy.error-registry.default",
+  "legacy.error-registry.drop",
+  "legacy.error-registry.global-state.clear",
+  "legacy.error-registry.global-state.error-registry",
+  "legacy.error-registry.global-state.errorregistryext",
+  "legacy.error-registry.global-state.get-error",
+  "legacy.error-registry.global-state.has-error",
+  "legacy.error-registry.global-state.secure-unwrap",
+  "legacy.error-registry.global-state.secureerrorhandling",
+  "legacy.error-registry.global-state.store",
+  "legacy.error-registry.global-state.unwrap-or-record-with",
+  "legacy.error-registry.kem",
+  "legacy.error-registry.pin-drop",
+  "legacy.error-registry.symmetric.error-registry",
+  "legacy.error-registry.symmetric.secureerrorhandling",
+  "legacy.result-compatibility.algorithms",
+  "legacy.result-compatibility.api.constanttimeresult",
+  "legacy.result-compatibility.api.ct-is-err",
+  "legacy.result-compatibility.api.ct-is-ok",
+  "legacy.result-compatibility.api.ct-map",
+  "legacy.result-compatibility.api.resultext",
+  "legacy.result-compatibility.api.with-context",
+  "legacy.result-compatibility.api.with-message",
+  "legacy.result-compatibility.api.wrap-err",
+  "legacy.result-compatibility.kem",
+  "legacy.result-compatibility.symmetric.map-io-err",
+  "legacy.result-compatibility.symmetric.map-primitive-err",
+  "legacy.result-compatibility.symmetric.resultext",
+  "legacy.result-compatibility.symmetric.symmetricresultext",
+]
+retained-tombstones = [
+  "dcrypt::api::error::registry",
+  "dcrypt::api::error::traits",
+  "dcrypt_api::error::registry",
+  "dcrypt_api::error::traits",
+]
+removed-public-identities = [
+  ["dcrypt", "dcrypt::algorithms::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt", "dcrypt::algorithms::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt", "dcrypt::algorithms::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt", "dcrypt::algorithms::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt", "dcrypt::algorithms::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt", "dcrypt::algorithms::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt", "dcrypt::algorithms::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt", "dcrypt::algorithms::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt", "dcrypt::algorithms::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt", "dcrypt::algorithms::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt", "dcrypt::algorithms::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt", "dcrypt::algorithms::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt", "dcrypt::api::error::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt", "dcrypt::api::error::ErrorRegistryExt", "export", "trait", "dcrypt_api::error::traits::ErrorRegistryExt"],
+  ["dcrypt", "dcrypt::api::error::ErrorRegistryExt::unwrap_or_record_with", "member", "function", "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with"],
+  ["dcrypt", "dcrypt::api::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt", "dcrypt::api::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt", "dcrypt::api::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt", "dcrypt::api::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt", "dcrypt::api::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt", "dcrypt::api::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt", "dcrypt::api::error::registry::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry", "export", "struct", "dcrypt_api::error::registry::ErrorRegistry"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry::clear", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::clear"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry::get_error", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::get_error"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry::has_error", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::has_error"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry::new", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::new"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry::store", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::store"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry::{impl Default#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14}", "member", "trait_impl", "dcrypt_api::error::registry::ErrorRegistry::{impl core::default::Default}#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14"],
+  ["dcrypt", "dcrypt::api::error::registry::ErrorRegistry::{impl Drop#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54}", "member", "trait_impl", "dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54"],
+  ["dcrypt", "dcrypt::api::error::traits::ConstantTimeResult", "export", "trait", "dcrypt_api::error::traits::ConstantTimeResult"],
+  ["dcrypt", "dcrypt::api::error::traits::ConstantTimeResult::ct_is_err", "member", "function", "dcrypt_api::error::traits::ConstantTimeResult::ct_is_err"],
+  ["dcrypt", "dcrypt::api::error::traits::ConstantTimeResult::ct_is_ok", "member", "function", "dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok"],
+  ["dcrypt", "dcrypt::api::error::traits::ConstantTimeResult::ct_map", "member", "function", "dcrypt_api::error::traits::ConstantTimeResult::ct_map"],
+  ["dcrypt", "dcrypt::api::error::traits::ErrorRegistryExt", "export", "trait", "dcrypt_api::error::traits::ErrorRegistryExt"],
+  ["dcrypt", "dcrypt::api::error::traits::ErrorRegistryExt::unwrap_or_record_with", "member", "function", "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with"],
+  ["dcrypt", "dcrypt::api::error::traits::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt", "dcrypt::api::error::traits::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt", "dcrypt::api::error::traits::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt", "dcrypt::api::error::traits::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt", "dcrypt::api::error::traits::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt", "dcrypt::api::error::traits::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt", "dcrypt::kem::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt", "dcrypt::kem::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt", "dcrypt::kem::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt", "dcrypt::kem::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt", "dcrypt::kem::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt", "dcrypt::kem::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt", "dcrypt::symmetric::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt", "dcrypt::symmetric::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt", "dcrypt::symmetric::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt", "dcrypt::symmetric::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt", "dcrypt::symmetric::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt", "dcrypt::symmetric::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt", "dcrypt::symmetric::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt", "dcrypt::symmetric::error::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt", "dcrypt::symmetric::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt", "dcrypt::symmetric::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt", "dcrypt::symmetric::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt", "dcrypt::symmetric::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt", "dcrypt::symmetric::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt", "dcrypt::symmetric::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt", "dcrypt::symmetric::error::SymmetricResultExt", "export", "trait", "dcrypt_symmetric::error::SymmetricResultExt"],
+  ["dcrypt", "dcrypt::symmetric::error::SymmetricResultExt::map_io_err", "member", "function", "dcrypt_symmetric::error::SymmetricResultExt::map_io_err"],
+  ["dcrypt", "dcrypt::symmetric::error::SymmetricResultExt::map_primitive_err", "member", "function", "dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt-algorithms", "dcrypt_algorithms::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt-api", "dcrypt_api::error::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt-api", "dcrypt_api::error::ErrorRegistryExt", "export", "trait", "dcrypt_api::error::traits::ErrorRegistryExt"],
+  ["dcrypt-api", "dcrypt_api::error::ErrorRegistryExt::unwrap_or_record_with", "member", "function", "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with"],
+  ["dcrypt-api", "dcrypt_api::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt-api", "dcrypt_api::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt-api", "dcrypt_api::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt-api", "dcrypt_api::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt-api", "dcrypt_api::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt-api", "dcrypt_api::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry", "export", "struct", "dcrypt_api::error::registry::ErrorRegistry"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry::clear", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::clear"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry::get_error", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::get_error"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry::has_error", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::has_error"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry::new", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::new"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry::store", "member", "function", "dcrypt_api::error::registry::ErrorRegistry::store"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry::{impl Default#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14}", "member", "trait_impl", "dcrypt_api::error::registry::ErrorRegistry::{impl core::default::Default}#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14"],
+  ["dcrypt-api", "dcrypt_api::error::registry::ErrorRegistry::{impl Drop#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54}", "member", "trait_impl", "dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ConstantTimeResult", "export", "trait", "dcrypt_api::error::traits::ConstantTimeResult"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ConstantTimeResult::ct_is_err", "member", "function", "dcrypt_api::error::traits::ConstantTimeResult::ct_is_err"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok", "member", "function", "dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ConstantTimeResult::ct_map", "member", "function", "dcrypt_api::error::traits::ConstantTimeResult::ct_map"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ErrorRegistryExt", "export", "trait", "dcrypt_api::error::traits::ErrorRegistryExt"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with", "member", "function", "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt-api", "dcrypt_api::error::traits::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt-api", "dcrypt_api::error::traits::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt-api", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt-kem", "dcrypt_kem::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt-kem", "dcrypt_kem::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt-kem", "dcrypt_kem::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt-kem", "dcrypt_kem::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt-kem", "dcrypt_kem::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt-kem", "dcrypt_kem::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::ERROR_REGISTRY", "export", "static", "dcrypt_api::error::registry::ERROR_REGISTRY"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::ResultExt", "export", "trait", "dcrypt_api::error::traits::ResultExt"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::ResultExt::with_context", "member", "function", "dcrypt_api::error::traits::ResultExt::with_context"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::ResultExt::with_message", "member", "function", "dcrypt_api::error::traits::ResultExt::with_message"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::ResultExt::wrap_err", "member", "function", "dcrypt_api::error::traits::ResultExt::wrap_err"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::SecureErrorHandling", "export", "trait", "dcrypt_api::error::traits::SecureErrorHandling"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::SecureErrorHandling::secure_unwrap", "member", "function", "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::SymmetricResultExt", "export", "trait", "dcrypt_symmetric::error::SymmetricResultExt"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::SymmetricResultExt::map_io_err", "member", "function", "dcrypt_symmetric::error::SymmetricResultExt::map_io_err"],
+  ["dcrypt-symmetric", "dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err", "member", "function", "dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err"],
+]
+removed-public-records = [
+  { package = "dcrypt", path = "dcrypt::algorithms::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.algorithms", "alias.dcrypt.legacy.result-compatibility.api.resultext", "alias.dcrypt.legacy.result-compatibility.kem", "alias.dcrypt.legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.algorithms", "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt.legacy.error-registry.kem", "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.algorithms", "alias.dcrypt.legacy.result-compatibility.api.resultext", "alias.dcrypt.legacy.result-compatibility.kem", "alias.dcrypt.legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.algorithms", "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt.legacy.error-registry.kem", "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt", path = "dcrypt::algorithms::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt", path = "dcrypt::api::error::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.error-registry", "alias.dcrypt.legacy.error-registry.symmetric.error-registry"] },
+  { package = "dcrypt", path = "dcrypt::api::error::ErrorRegistryExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ErrorRegistryExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.errorregistryext"] },
+  { package = "dcrypt", path = "dcrypt::api::error::ErrorRegistryExt::unwrap_or_record_with", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.unwrap-or-record-with"] },
+  { package = "dcrypt", path = "dcrypt::api::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.algorithms", "alias.dcrypt.legacy.result-compatibility.api.resultext", "alias.dcrypt.legacy.result-compatibility.kem", "alias.dcrypt.legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt", path = "dcrypt::api::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt", path = "dcrypt::api::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt", path = "dcrypt::api::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt", path = "dcrypt::api::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.algorithms", "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt.legacy.error-registry.kem", "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt", path = "dcrypt::api::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.error-registry", "alias.dcrypt.legacy.error-registry.symmetric.error-registry"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry", unit = "export", kind = "struct", canonical = "dcrypt_api::error::registry::ErrorRegistry", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.construct", "alias.dcrypt.legacy.error-registry.global-state.error-registry"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry::clear", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::clear", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.clear"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry::get_error", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::get_error", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.get-error"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry::has_error", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::has_error", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.has-error"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry::new", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::new", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.construct"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry::store", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::store", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.store"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry::{impl Default#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14}", unit = "member", kind = "trait_impl", canonical = "dcrypt_api::error::registry::ErrorRegistry::{impl core::default::Default}#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.default"] },
+  { package = "dcrypt", path = "dcrypt::api::error::registry::ErrorRegistry::{impl Drop#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54}", unit = "member", kind = "trait_impl", canonical = "dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.drop", "alias.dcrypt.legacy.error-registry.pin-drop"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ConstantTimeResult", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ConstantTimeResult", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.constanttimeresult"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ConstantTimeResult::ct_is_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ConstantTimeResult::ct_is_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.ct-is-err"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ConstantTimeResult::ct_is_ok", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.ct-is-ok"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ConstantTimeResult::ct_map", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ConstantTimeResult::ct_map", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.ct-map"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ErrorRegistryExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ErrorRegistryExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.errorregistryext"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ErrorRegistryExt::unwrap_or_record_with", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.unwrap-or-record-with"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.algorithms", "alias.dcrypt.legacy.result-compatibility.api.resultext", "alias.dcrypt.legacy.result-compatibility.kem", "alias.dcrypt.legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.algorithms", "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt.legacy.error-registry.kem", "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt", path = "dcrypt::api::error::traits::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt", path = "dcrypt::kem::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.algorithms", "alias.dcrypt.legacy.result-compatibility.api.resultext", "alias.dcrypt.legacy.result-compatibility.kem", "alias.dcrypt.legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt", path = "dcrypt::kem::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt", path = "dcrypt::kem::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt", path = "dcrypt::kem::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt", path = "dcrypt::kem::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.algorithms", "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt.legacy.error-registry.kem", "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt", path = "dcrypt::kem::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.error-registry", "alias.dcrypt.legacy.error-registry.symmetric.error-registry"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.algorithms", "alias.dcrypt.legacy.result-compatibility.api.resultext", "alias.dcrypt.legacy.result-compatibility.kem", "alias.dcrypt.legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.algorithms", "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt.legacy.error-registry.kem", "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.error-registry", "alias.dcrypt.legacy.error-registry.symmetric.error-registry"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.algorithms", "alias.dcrypt.legacy.result-compatibility.api.resultext", "alias.dcrypt.legacy.result-compatibility.kem", "alias.dcrypt.legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.algorithms", "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt.legacy.error-registry.kem", "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::SymmetricResultExt", unit = "export", kind = "trait", canonical = "dcrypt_symmetric::error::SymmetricResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.symmetric.symmetricresultext"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::SymmetricResultExt::map_io_err", unit = "member", kind = "function", canonical = "dcrypt_symmetric::error::SymmetricResultExt::map_io_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.symmetric.map-io-err"] },
+  { package = "dcrypt", path = "dcrypt::symmetric::error::SymmetricResultExt::map_primitive_err", unit = "member", kind = "function", canonical = "dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt.legacy.result-compatibility.symmetric.map-primitive-err"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.resultext", "alias.dcrypt-algorithms.legacy.result-compatibility.kem", "alias.dcrypt-algorithms.legacy.result-compatibility.symmetric.resultext", "legacy.result-compatibility.algorithms"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt-algorithms.legacy.error-registry.kem", "alias.dcrypt-algorithms.legacy.error-registry.symmetric.secureerrorhandling", "legacy.error-registry.algorithms"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.resultext", "alias.dcrypt-algorithms.legacy.result-compatibility.kem", "alias.dcrypt-algorithms.legacy.result-compatibility.symmetric.resultext", "legacy.result-compatibility.algorithms"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt-algorithms.legacy.error-registry.kem", "alias.dcrypt-algorithms.legacy.error-registry.symmetric.secureerrorhandling", "legacy.error-registry.algorithms"] },
+  { package = "dcrypt-algorithms", path = "dcrypt_algorithms::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-algorithms.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-api.legacy.error-registry.symmetric.error-registry", "legacy.error-registry.global-state.error-registry"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::ErrorRegistryExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ErrorRegistryExt", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.errorregistryext"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::ErrorRegistryExt::unwrap_or_record_with", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.unwrap-or-record-with"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-api.legacy.result-compatibility.algorithms", "alias.dcrypt-api.legacy.result-compatibility.kem", "alias.dcrypt-api.legacy.result-compatibility.symmetric.resultext", "legacy.result-compatibility.api.resultext"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-api.legacy.error-registry.algorithms", "alias.dcrypt-api.legacy.error-registry.kem", "alias.dcrypt-api.legacy.error-registry.symmetric.secureerrorhandling", "legacy.error-registry.global-state.secureerrorhandling"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-api.legacy.error-registry.symmetric.error-registry", "legacy.error-registry.global-state.error-registry"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry", unit = "export", kind = "struct", canonical = "dcrypt_api::error::registry::ErrorRegistry", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.construct", "legacy.error-registry.global-state.error-registry"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry::clear", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::clear", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.clear"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry::get_error", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::get_error", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.get-error"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry::has_error", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::has_error", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.has-error"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry::new", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::new", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.construct"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry::store", unit = "member", kind = "function", canonical = "dcrypt_api::error::registry::ErrorRegistry::store", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.store"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry::{impl Default#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14}", unit = "member", kind = "trait_impl", canonical = "dcrypt_api::error::registry::ErrorRegistry::{impl core::default::Default}#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.default"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::registry::ErrorRegistry::{impl Drop#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54}", unit = "member", kind = "trait_impl", canonical = "dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.drop", "legacy.error-registry.pin-drop"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ConstantTimeResult", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ConstantTimeResult", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.constanttimeresult"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ConstantTimeResult::ct_is_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ConstantTimeResult::ct_is_err", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.ct-is-err"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.ct-is-ok"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ConstantTimeResult::ct_map", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ConstantTimeResult::ct_map", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.ct-map"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ErrorRegistryExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ErrorRegistryExt", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.errorregistryext"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.unwrap-or-record-with"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-api.legacy.result-compatibility.algorithms", "alias.dcrypt-api.legacy.result-compatibility.kem", "alias.dcrypt-api.legacy.result-compatibility.symmetric.resultext", "legacy.result-compatibility.api.resultext"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-api.legacy.error-registry.algorithms", "alias.dcrypt-api.legacy.error-registry.kem", "alias.dcrypt-api.legacy.error-registry.symmetric.secureerrorhandling", "legacy.error-registry.global-state.secureerrorhandling"] },
+  { package = "dcrypt-api", path = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt-kem", path = "dcrypt_kem::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-kem.legacy.result-compatibility.algorithms", "alias.dcrypt-kem.legacy.result-compatibility.api.resultext", "alias.dcrypt-kem.legacy.result-compatibility.symmetric.resultext", "legacy.result-compatibility.kem"] },
+  { package = "dcrypt-kem", path = "dcrypt_kem::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-kem.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt-kem", path = "dcrypt_kem::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-kem.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt-kem", path = "dcrypt_kem::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-kem.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt-kem", path = "dcrypt_kem::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-kem.legacy.error-registry.algorithms", "alias.dcrypt-kem.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt-kem.legacy.error-registry.symmetric.secureerrorhandling", "legacy.error-registry.kem"] },
+  { package = "dcrypt-kem", path = "dcrypt_kem::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-kem.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.error-registry.global-state.error-registry", "legacy.error-registry.symmetric.error-registry"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.algorithms", "alias.dcrypt-symmetric.legacy.result-compatibility.api.resultext", "alias.dcrypt-symmetric.legacy.result-compatibility.kem", "legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.error-registry.algorithms", "alias.dcrypt-symmetric.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt-symmetric.legacy.error-registry.kem", "legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::ERROR_REGISTRY", unit = "export", kind = "static", canonical = "dcrypt_api::error::registry::ERROR_REGISTRY", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.error-registry.global-state.error-registry", "legacy.error-registry.symmetric.error-registry"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::ResultExt", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::ResultExt", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.algorithms", "alias.dcrypt-symmetric.legacy.result-compatibility.api.resultext", "alias.dcrypt-symmetric.legacy.result-compatibility.kem", "legacy.result-compatibility.symmetric.resultext"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::ResultExt::with_context", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_context", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.api.with-context"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::ResultExt::with_message", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::with_message", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.api.with-message"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::ResultExt::wrap_err", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::ResultExt::wrap_err", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.result-compatibility.api.wrap-err"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::SecureErrorHandling", unit = "export", kind = "trait", canonical = "dcrypt_api::error::traits::SecureErrorHandling", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.error-registry.algorithms", "alias.dcrypt-symmetric.legacy.error-registry.global-state.secureerrorhandling", "alias.dcrypt-symmetric.legacy.error-registry.kem", "legacy.error-registry.symmetric.secureerrorhandling"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::SecureErrorHandling::secure_unwrap", unit = "member", kind = "function", canonical = "dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap", classification = "transitional-legacy", operation-refs = ["alias.dcrypt-symmetric.legacy.error-registry.global-state.secure-unwrap"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::SymmetricResultExt", unit = "export", kind = "trait", canonical = "dcrypt_symmetric::error::SymmetricResultExt", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.symmetric.symmetricresultext"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::SymmetricResultExt::map_io_err", unit = "member", kind = "function", canonical = "dcrypt_symmetric::error::SymmetricResultExt::map_io_err", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.symmetric.map-io-err"] },
+  { package = "dcrypt-symmetric", path = "dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err", unit = "member", kind = "function", canonical = "dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err", classification = "transitional-legacy", operation-refs = ["legacy.result-compatibility.symmetric.map-primitive-err"] },
+]
+
+[counts]
+baseline-curated-source-rows = 314
+baseline-expanded-curated-rows = 666
+baseline-unreviewed-gaps = 8632
+baseline-total-atomic-rows = 9298
+baseline-public-identities = 19021
+baseline-transitional-public-identities = 254
+post-curated-source-rows = 283
+post-expanded-curated-rows = 566
+post-canonical-expanded-rows = 283
+post-alias-expanded-rows = 283
+post-unreviewed-gaps = 8632
+post-total-atomic-rows = 9198
+post-public-identities = 18891
+post-production-rust-sources = 255
+post-critical-fuzz-rows = 372
+post-explicit-fuzz-blockers = 8826
+post-release-blocked-rows = 9198
+retained-other-transitional-public-identities = 124
+removed-curated-source-rows = 31
+removed-expanded-atomic-rows = 100
+removed-public-identities = 130
+interop-curated-operation-rows = 552
+interop-operation-atoms = 6184
+interop-curated-metadata-rows = 14
+interop-metadata-atoms = 56
+interop-generated-matrix-rows = 6240
+interop-blockers = 14816
+ledger-blockers = 9198
+
+[replacements]
+error-registry = "propagate Result or keep diagnostics in caller-owned state"
+constant-time-result = "Result::is_ok, Result::is_err, and Result::map_or_else"
+wrap-err = "Result::map_err with an explicit replacement closure"
+context-and-message = "convert to dcrypt_api::Error then call Error::with_context or Error::with_message"
+symmetric-io = "Result::map_err(dcrypt_symmetric::error::from_io_error)"
+symmetric-primitive = "Result::map_err(dcrypt_symmetric::error::from_primitive_error)"
+
+[[removed-curated]]
+id = "legacy.error-registry.algorithms"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.construct"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.default"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.drop"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.clear"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.error-registry"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.errorregistryext"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.get-error"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.has-error"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.secure-unwrap"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.secureerrorhandling"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.store"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.global-state.unwrap-or-record-with"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.kem"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.pin-drop"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.symmetric.error-registry"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.error-registry.symmetric.secureerrorhandling"
+replacement-category = "caller-owned-result-state"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.algorithms"
+replacement-category = "standard-result-and-explicit-mapping"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.constanttimeresult"
+replacement-category = "standard-result-inspection"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.ct-is-err"
+replacement-category = "standard-result-inspection"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.ct-is-ok"
+replacement-category = "standard-result-inspection"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.ct-map"
+replacement-category = "standard-result-inspection"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.resultext"
+replacement-category = "standard-result-and-explicit-mapping"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.with-context"
+replacement-category = "explicit-error-enrichment"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.with-message"
+replacement-category = "explicit-error-enrichment"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.api.wrap-err"
+replacement-category = "explicit-map-err"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.kem"
+replacement-category = "standard-result-and-explicit-mapping"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.symmetric.map-io-err"
+replacement-category = "from-io-error"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.symmetric.map-primitive-err"
+replacement-category = "from-primitive-error"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.symmetric.resultext"
+replacement-category = "standard-result-and-explicit-mapping"
+
+[[removed-curated]]
+id = "legacy.result-compatibility.symmetric.symmetricresultext"
+replacement-category = "standard-result-and-explicit-mapping"

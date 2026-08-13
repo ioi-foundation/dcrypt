@@ -116,6 +116,43 @@ def main() -> int:
     rebind_module = module_from_spec(rebind_spec)
     sys.modules[rebind_spec.name] = rebind_module
     rebind_spec.loader.exec_module(rebind_module)
+    package_e_r = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+    package_e_tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+    package_e = rebind_module.package_e_projection(
+        expected_r_commit=package_e_r,
+        expected_r_tree=package_e_tree,
+    )
+    assert set(package_e) == {
+        "binding_assignments", "candidate_commit", "changed_files", "content_policy",
+        "counts", "invariant_files", "projection_sha256", "r_commit", "r_tree",
+        "schema_version", "subject_manifest_sha256",
+    }
+    assert package_e["candidate_commit"] is None
+    assert package_e["counts"] == {
+        "critical_family_rows": 372,
+        "curated_rows": 566,
+        "explicit_blocker_rows": 8826,
+        "total_atomic_rows": 9198,
+        "unreviewed_gap_rows": 8632,
+    }
+    assert [row["path"] for row in package_e["changed_files"]] == list(rebind_module.PACKAGE_E_CHANGED_PATHS)
+    assert [row["path"] for row in package_e["invariant_files"]] == list(rebind_module.PACKAGE_E_INVARIANT_PATHS)
+    package_e_raw = __import__("subprocess").run(
+        [
+            sys.executable, "-B", "assurance/fuzzing/rebind-final-subject.py",
+            "--package-e-projection", "--expected-r-commit", package_e_r,
+            "--expected-r-tree", package_e_tree,
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        check=True,
+    ).stdout
+    assert package_e_raw == rebind_module._canonical_json(package_e)
+    checked(
+        rebind_module.package_e_projection,
+        expected_r_commit=package_e_r,
+        expected_r_tree="0" * 40,
+    )
     rebind_module.validate_exact_changed_a_paths(
         list(rebind_module.EXPECTED_CHANGED_A_PATHS)
     )
@@ -1657,7 +1694,7 @@ def main() -> int:
         )
         assert blocker_sizes == {
             ("curated-operation", True, 4): 372,
-            ("curated-operation", False, 2): 294,
+            ("curated-operation", False, 2): 194,
             ("unreviewed-gap", False, 3): 8632,
         }
         assert all(len(target["blocker_codes"]) == 5 for target in stable_campaign["targets"])

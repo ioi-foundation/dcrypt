@@ -143,7 +143,7 @@ def main() -> int:
         result = verify_structural()
         if args.release:
             print(
-                "Package D release HOLD: all 9,298 rows remain blocked; dedicated timing, "
+                "Package D release HOLD: all 9,198 rows remain blocked; dedicated timing, "
                 "taint, transitive compiler/secret-flow, platform, physical, and external-audit "
                 "evidence are not accepted",
                 file=sys.stderr,

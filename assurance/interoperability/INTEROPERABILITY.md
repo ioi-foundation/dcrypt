@@ -9,25 +9,25 @@ records must be empty, and no matrix operation row can have passing status.
 
 ## Counts
 
-- Curated operation rows: 652
-- Exact operation path/profile/platform atoms: 7070
-- Blocked operation atoms: 7070
+- Curated operation rows: 552
+- Exact operation path/profile/platform atoms: 6184
+- Blocked operation atoms: 6184
 - Passing operation atoms: 0
 - Curated data-surface rows: 14
 - Explicit N/A data-surface atoms: 56
 - Individually digest-bound blocked unreviewed gaps: 8632
-- Interoperability blocker atoms: 15702
-- Existing assurance-ledger atomic blockers (unchanged): 9298
+- Interoperability blocker atoms: 14816
+- Existing assurance-ledger atomic blockers (unchanged): 9198
 - Accepted oracle dossiers: 0
 - Candidate oracle dossiers: 6
 - Rejected-as-independent oracle dossiers: 6
 
 The interoperability blocker count is a separate completeness dimension. It must
-not be added to or substituted for the 9,298 atomic assurance-ledger blockers.
+not be added to or substituted for the 9,198 atomic assurance-ledger blockers.
 
 ## Standards-scope atoms
 
-- `compatibility`: 910
+- `compatibility`: 24
 - `project-specified`: 716
 - `standardized`: 4632
 - `transitional`: 812
@@ -35,7 +35,6 @@ not be added to or substituted for the 9,298 atomic assurance-ledger blockers.
 ## Algorithm atoms
 
 - `AES-GCM`: 576
-- `Legacy Result compatibility`: 432
 - `ML-DSA`: 384
 - `prime-field elliptic curve`: 384
 - `BLS12-381 signatures`: 368
@@ -43,8 +42,6 @@ not be added to or substituted for the 9,298 atomic assurance-ledger blockers.
 - `ChaCha20-Poly1305`: 356
 - `ECDSA`: 288
 - `dcrypt ECIES`: 288
-- `ERROR_REGISTRY compatibility API`: 230
-- `Legacy global error registry`: 200
 - `SHA-2`: 200
 - `ML-KEM`: 192
 - `P-224 scalar arithmetic`: 192
@@ -78,7 +75,6 @@ not be added to or substituted for the 9,298 atomic assurance-ledger blockers.
 - `SHA3-256`: 24
 - `SHA3-384`: 24
 - `SHA3-512`: 24
-- `legacy ErrorRegistry compatibility`: 24
 - `ChaCha20-Poly1305 key derivation`: 16
 - `SHA-512/224`: 16
 - `SHA-512/256`: 16

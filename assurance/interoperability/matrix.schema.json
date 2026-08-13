@@ -91,18 +91,18 @@
       "additionalProperties": false,
       "required": ["curated_operation_rows", "curated_operation_atoms", "curated_data_surface_rows", "curated_data_surface_atoms", "unreviewed_gap_rows", "generated_matrix_rows", "passing_operation_atoms", "blocked_operation_atoms", "not_applicable_data_surface_atoms", "blocked_unreviewed_gaps", "interoperability_blockers", "ledger_atomic_release_blockers", "accepted_oracle_dossiers", "candidate_oracle_dossiers", "rejected_as_independent_oracle_dossiers"],
       "properties": {
-        "curated_operation_rows": {"const": 652},
-        "curated_operation_atoms": {"const": 7070},
+        "curated_operation_rows": {"const": 552},
+        "curated_operation_atoms": {"const": 6184},
         "curated_data_surface_rows": {"const": 14},
         "curated_data_surface_atoms": {"const": 56},
         "unreviewed_gap_rows": {"const": 8632},
-        "generated_matrix_rows": {"const": 7126},
+        "generated_matrix_rows": {"const": 6240},
         "passing_operation_atoms": {"const": 0},
-        "blocked_operation_atoms": {"const": 7070},
+        "blocked_operation_atoms": {"const": 6184},
         "not_applicable_data_surface_atoms": {"const": 56},
         "blocked_unreviewed_gaps": {"const": 8632},
-        "interoperability_blockers": {"const": 15702},
-        "ledger_atomic_release_blockers": {"const": 9298},
+        "interoperability_blockers": {"const": 14816},
+        "ledger_atomic_release_blockers": {"const": 9198},
         "accepted_oracle_dossiers": {"const": 0},
         "candidate_oracle_dossiers": {"type": "integer", "minimum": 0},
         "rejected_as_independent_oracle_dossiers": {"type": "integer", "minimum": 0}
@@ -123,8 +123,8 @@
     },
     "rows": {
       "type": "array",
-      "minItems": 7126,
-      "maxItems": 7126,
+      "minItems": 6240,
+      "maxItems": 6240,
       "items": {"$ref": "#/$defs/row"}
     },
     "unreviewed_gaps": {

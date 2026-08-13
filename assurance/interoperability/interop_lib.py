@@ -282,7 +282,7 @@ EXPECTED_PUBLISHED_MANIFEST_PACKAGES = {
 EXPECTED_PUBLISHED_MANIFEST_RECORD_SHA256 = {
     "crates/internal/Cargo.toml": "5828bd1d90c93fe4843b525f8563d6a2d93d25d3b516530f4e75cb9fb7309c19",
     "crates/params/Cargo.toml": "bf1f1b65502e6d1fb473f90c8cb01fb087df80009086c730542b61f10acc6c6a",
-    "crates/api/Cargo.toml": "56289b425eb06673eda02ab1c3d1df56a810ba56ebf9187709d2d6af810d0224",
+    "crates/api/Cargo.toml": "67b130c216a8b5e3b6ce989f0490b3235bc1041e07b39b94f75b1be197006ebf",
     "crates/common/Cargo.toml": "a86ba48b2605fade26e6d800a9d55d12dd90bc8a864194e5f7bd27697a01cd5b",
     "crates/algorithms/Cargo.toml": "e808403b09b3815fcb62aed5dff254be8a0a3f1c31257cd15b97a53bb58b492e",
     "crates/symmetric/Cargo.toml": "0bda4f80550e099b683ce8acb24720e30d75858414437e0845ad339ddd692d6a",
@@ -293,7 +293,7 @@ EXPECTED_PUBLISHED_MANIFEST_RECORD_SHA256 = {
     "crates/hybrid/Cargo.toml": "729d12e76d84795c26b2c6f821da046c2faa5065d9e3bef20024fab2e4c0171f",
     "Cargo.toml": "73b5662e222774b3370f6c19385a94aa048f3470bd122045ebb84218eb26043e",
 }
-EXPECTED_ROOT_LOCK_SHA256 = "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd"
+EXPECTED_ROOT_LOCK_SHA256 = "0f4a81042e4d73f6313e30d80668606e8528124e97936f669585669e4ce06736"
 
 MATRIX_TOP_KEYS = {
     "schema_version",
@@ -1855,7 +1855,7 @@ def build_matrix(
             "structural_ci_may_pass_with_blockers": True,
             "release_mode_must_fail_with_blockers": True,
             "no_scaffold_or_candidate_counts_as_evidence": True,
-            "counting_semantics": "7,070 exact curated operation public-path/profile/platform atoms plus 8,632 individually digest-bound unreviewed gaps; 56 public metadata atoms are explicit N/A and do not pass evidence",
+            "counting_semantics": "6,184 exact curated operation public-path/profile/platform atoms plus 8,632 individually digest-bound unreviewed gaps; 56 public metadata atoms are explicit N/A and do not pass evidence",
         },
         "rows": rows,
         "unreviewed_gaps": {
@@ -1903,7 +1903,7 @@ def render_document(matrix: dict[str, Any]) -> bytes:
         f"- Rejected-as-independent oracle dossiers: {counts['rejected_as_independent_oracle_dossiers']}",
         "",
         "The interoperability blocker count is a separate completeness dimension. It must",
-        "not be added to or substituted for the 9,298 atomic assurance-ledger blockers.",
+        "not be added to or substituted for the 9,198 atomic assurance-ledger blockers.",
         "",
         "## Standards-scope atoms",
         "",

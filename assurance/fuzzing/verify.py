@@ -125,7 +125,7 @@ def verify() -> dict[str, Any]:
     )
     if mapping["counts"] != {
         "critical_family_rows": EXPECTED_CRITICAL_ROWS,
-        "curated_rows": 666,
+        "curated_rows": 566,
         "explicit_blocker_rows": EXPECTED_EXPLICIT_BLOCKERS,
         "release_blocked_rows": EXPECTED_TOTAL_ROWS,
         "total_atomic_rows": EXPECTED_TOTAL_ROWS,

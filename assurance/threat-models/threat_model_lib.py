@@ -387,8 +387,8 @@ def validate_schema(schema: dict[str, Any]) -> list[str]:
         if schema.get(field) != expected:
             errors.append(f"{field} differs from the verifier's closed evidence contract")
     for field in ("expected-atomic-row-count", "expected-release-blocked-count"):
-        if schema.get(field) != 9298:
-            errors.append(f"{field} must be exactly 9298 for this candidate baseline")
+        if schema.get(field) != 9198:
+            errors.append(f"{field} must be exactly 9198 for this candidate baseline")
     validity = schema.get("maximum-validity-days")
     if not isinstance(validity, int) or isinstance(validity, bool) or not 1 <= validity <= 180:
         errors.append("maximum-validity-days must be an integer from 1 through 180")
@@ -496,8 +496,8 @@ def validate_models(
     if blocked != expected_blocked or document.get("expected-release-blocked-count") != expected_blocked:
         errors.append(f"release-blocked row count must remain {expected_blocked}, found {blocked}")
     entries = snapshot.get("entries") if isinstance(snapshot, dict) else None
-    if not isinstance(entries, list) or len(entries) != 19021:
-        errors.append("bound public API snapshot must contain exactly 19,021 classified units")
+    if not isinstance(entries, list) or len(entries) != 18891:
+        errors.append("bound public API snapshot must contain exactly 18,891 classified units")
     evidence_records = ledger.get("evidence", [])
     if not isinstance(evidence_records, list):
         errors.append("ledger evidence must be an array of tables")

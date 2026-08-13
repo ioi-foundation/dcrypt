@@ -7,13 +7,13 @@
 
 - Model set: `2026-08-11-candidate-1`
 - Coverage policy: `conservative-all-atomic-rows-v1`
-- Public API units: 19,021
-- Exact atomic rows: 9,298
-- Curated rows: 666
+- Public API units: 18,891
+- Exact atomic rows: 9,198
+- Curated rows: 566
 - Semantically unreviewed rows: 8,632
-- Release-blocked rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
-- Public binding set SHA-256: `1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5`
+- Release-blocked rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
+- Public binding set SHA-256: `e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d`
 
 Every exact row in `coverage.json` names all eleven applicable threat models.
 This deliberately conservative mapping remains in force while low-level rows await
@@ -23,17 +23,17 @@ semantic review. It does not clear or reduce any release blocker.
 
 | ID | Status | Independent review | Residual rating | Valid through | Exact rows |
 | --- | --- | --- | --- | --- | ---: |
-| `TM-DEPENDENCY-ORACLE-COMMON-MODE` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-DOS-RESOURCE-BOUNDS` | candidate | required | high | 2026-11-09 | 9,298 |
-| `TM-EMBEDDED-PHYSICAL-ACCESS` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-FAULT-INJECTION` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-LOCAL-CORESIDENT-CACHE` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-POWER-EM` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-PROTOCOL-MISUSE` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-REMOTE-MALICIOUS-INPUT` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-RNG-FAILURE` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-SECRET-LIFECYCLE` | candidate | required | critical | 2026-11-09 | 9,298 |
-| `TM-SUPPLY-CHAIN-TOOLCHAIN` | candidate | required | critical | 2026-11-09 | 9,298 |
+| `TM-DEPENDENCY-ORACLE-COMMON-MODE` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-DOS-RESOURCE-BOUNDS` | candidate | required | high | 2026-11-09 | 9,198 |
+| `TM-EMBEDDED-PHYSICAL-ACCESS` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-FAULT-INJECTION` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-LOCAL-CORESIDENT-CACHE` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-POWER-EM` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-PROTOCOL-MISUSE` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-REMOTE-MALICIOUS-INPUT` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-RNG-FAILURE` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-SECRET-LIFECYCLE` | candidate | required | critical | 2026-11-09 | 9,198 |
+| `TM-SUPPLY-CHAIN-TOOLCHAIN` | candidate | required | critical | 2026-11-09 | 9,198 |
 
 ## TM-DEPENDENCY-ORACLE-COMMON-MODE: Dependency and interoperability-oracle common-mode failure
 
@@ -44,8 +44,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: Every atomic row and every vector/oracle result used to support its correctness or interoperability classification.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-DEPENDENCY-ORACLE-COMMON-MODE`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -121,8 +121,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: All atomic rows, including low-level parsing/data surfaces and operations with caller-controlled lengths, iterations, streams, or rejection work.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-DOS-RESOURCE-BOUNDS`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -198,8 +198,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: All atomic rows and declared Thumb/no_std profiles, conservatively including code that may be linked into embedded products.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-EMBEDDED-PHYSICAL-ACCESS`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -275,8 +275,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: All atomic rows are included until operation-level fault relevance is independently classified.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-FAULT-INJECTION`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -350,8 +350,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: All atomic rows are conservatively included until every low-level secret/public data flow is classified.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-LOCAL-CORESIDENT-CACHE`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -427,8 +427,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: All atomic rows are conservatively included; product-specific scope must later identify secret-bearing operations and physical profiles.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-POWER-EM`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -500,8 +500,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: Every public operation and low-level composition surface that can participate in a protocol; exact rows are recorded in coverage.json.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-PROTOCOL-MISUSE`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -579,8 +579,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: All operation-bearing public bindings and parameter/data surfaces; exact bindings are recorded per row in coverage.json.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-REMOTE-MALICIOUS-INPUT`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -659,8 +659,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: Every atomic row is conservatively included until all randomness-consuming and randomness-dependent low-level operations are classified.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-RNG-FAILURE`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -735,8 +735,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: Every atomic row is included because unreviewed low-level declarations may create, copy, format, serialize, retain, or destroy secret-derived state.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-SECRET-LIFECYCLE`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`
@@ -812,8 +812,8 @@ semantic review. It does not clear or reduce any release blocker.
 - Review date: 2026-08-11
 - Expiry: 2026-11-09
 - Public scope: Every atomic row, published crate, excluded workspace, workflow, build input, and generated evidence path.
-- Exact atomic rows: 9,298
-- Atomic row ID set SHA-256: `ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723`
+- Exact atomic rows: 9,198
+- Atomic row ID set SHA-256: `ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff`
 - Exact mapping: `coverage.json#/models/TM-SUPPLY-CHAIN-TOOLCHAIN`
 - Affected algorithms: `coverage.json#/dimensions/algorithms/values`
 - Affected operations: `coverage.json#/dimensions/operations/values`

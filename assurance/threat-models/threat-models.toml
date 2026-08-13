@@ -5,15 +5,15 @@ schema-version = 1
 model-set-version = "2026-08-11-candidate-1"
 coverage-policy = "conservative-all-atomic-rows-v1"
 source-ledger = "../ledger.toml"
-source-ledger-sha256 = "d29e4ee1a88f1c10990a3ad2421afdc9f2dec559cff2063cd400dc9938558779"
+source-ledger-sha256 = "bbdafc06e8df89a81b3011596abd02ec28b515db87beb74471f766469dca077e"
 source-operations = "../atomic-operations.toml"
-source-operations-sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
+source-operations-sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
 source-api-snapshot = "../public-api-snapshot.json"
-source-api-snapshot-sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
+source-api-snapshot-sha256 = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
 generated-coverage = "coverage.json"
 generated-document = "THREAT-MODELS.md"
-expected-atomic-row-count = 9298
-expected-release-blocked-count = 9298
+expected-atomic-row-count = 9198
+expected-release-blocked-count = 9198
 
 [[model]]
 id = "TM-REMOTE-MALICIOUS-INPUT"

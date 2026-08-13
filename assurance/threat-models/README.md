@@ -7,7 +7,7 @@ therefore either `planned` or `implemented-unverified`; no model or mitigation
 has a passing verdict.
 
 The coverage policy is deliberately conservative while 8,632 low-level rows
-remain semantically unreviewed: every one of the 9,298 atomic rows is mapped to
+remain semantically unreviewed: every one of the 9,198 atomic rows is mapped to
 all eleven mandatory threat classes. `coverage.json` preserves that exact
 row-to-model mapping. Later semantic refinement may narrow a model only through
 a reviewed change that keeps every row explicitly dispositioned.

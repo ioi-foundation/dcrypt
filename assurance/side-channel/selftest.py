@@ -434,6 +434,46 @@ def main() -> int:
     controls += 1
 
     rebind = _load_rebind()
+    package_e_r = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+    package_e_tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+    package_e = rebind.package_e_projection(
+        expected_r_commit=package_e_r,
+        expected_r_tree=package_e_tree,
+    )
+    assert set(package_e) == {
+        "binding_assignments", "candidate_commit", "changed_files", "content_policy",
+        "counts", "invariant_files", "projection_sha256", "r_commit", "r_tree",
+        "schema_version", "subject_manifest_sha256",
+    }
+    assert package_e["candidate_commit"] is None
+    assert package_e["counts"] == {
+        "curated_rows": 566,
+        "production_rust_sources": 255,
+        "public_api_units": 18891,
+        "release_blocked_rows": 9198,
+        "total_atomic_rows": 9198,
+        "unreviewed_gap_rows": 8632,
+    }
+    assert [row["path"] for row in package_e["changed_files"]] == list(rebind.PACKAGE_E_CHANGED_PATHS)
+    assert [row["path"] for row in package_e["invariant_files"]] == list(rebind.PACKAGE_E_INVARIANT_PATHS)
+    package_e_raw = __import__("subprocess").run(
+        [
+            sys.executable, "-B", "assurance/side-channel/rebind-final-subject.py",
+            "--package-e-projection", "--expected-r-commit", package_e_r,
+            "--expected-r-tree", package_e_tree,
+        ],
+        cwd=model.REPO,
+        capture_output=True,
+        check=True,
+    ).stdout
+    assert package_e_raw == rebind._canonical(package_e)
+    _expect_failure(
+        rebind.package_e_projection,
+        expected_r_commit=package_e_r,
+        expected_r_tree="0" * 40,
+        exceptions=(rebind.RebindError,),
+    )
+    controls += 1
     rebind.validate_changed_paths(list(rebind.CHANGED_PATHS))
     for mutation in (
         list(rebind.CHANGED_PATHS)[1:],
@@ -451,13 +491,16 @@ def main() -> int:
             sys.executable, "-B", "assurance/fuzzing/rebind-final-subject.py",
             "--package-d-projection", "--expected-r-commit", rebind.R_COMMIT,
             "--expected-r-tree", rebind.R_TREE,
+            "--candidate-commit", "39fed53adc1fa256812f6157396cd75a62b8fc8d",
         ],
         cwd=model.REPO,
         capture_output=True,
         check=True,
     ).stdout
     c_projection = rebind._parse_c_projection(c_raw)
-    rebind._verify_c_projection_rows(c_projection, revision=None)
+    rebind._verify_c_projection_rows(
+        c_projection, revision="39fed53adc1fa256812f6157396cd75a62b8fc8d"
+    )
     c_missing = copy.deepcopy(c_projection)
     c_missing["changed_files"].pop()
     c_missing["projection_sha256"] = rebind._sha(rebind._canonical({key: value for key, value in c_missing.items() if key != "projection_sha256"}))

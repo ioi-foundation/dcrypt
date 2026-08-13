@@ -1,0 +1,494 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "local-removal-proof"
+        },
+        "artifacts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+/-]+$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path",
+              "sha256",
+              "size"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-e-local-removal-proof-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_effect": {
+              "const": "structural-only"
+            },
+            "generated": {
+              "const": true
+            },
+            "post_public_identities": {
+              "const": 18891
+            },
+            "post_total_atomic_rows": {
+              "const": 9198
+            },
+            "removed_atomic_ids": {
+              "const": 100
+            },
+            "removed_curated_ids": {
+              "const": 31
+            },
+            "removed_public_identities": {
+              "const": 130
+            }
+          },
+          "required": [
+            "evidence_effect",
+            "generated",
+            "post_public_identities",
+            "post_total_atomic_rows",
+            "removed_atomic_ids",
+            "removed_curated_ids",
+            "removed_public_identities"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "generated-structural-only"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "276b78f9b3c2aed91d2548ab9add721c434ded06"
+            },
+            "r_tree": {
+              "const": "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+            },
+            "subject_manifest_sha256": {
+              "const": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "downstream-migration-candidate"
+        },
+        "artifacts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+/-]+$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path",
+              "sha256",
+              "size"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-e-downstream-migration-candidate-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "compile_succeeded": {
+              "type": "boolean"
+            },
+            "fixture": {
+              "const": "tests/tests/error_api_v4_migration.rs"
+            },
+            "legacy_compile_failed": {
+              "type": "boolean"
+            },
+            "stderr_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "stdout_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "toolchain_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "compile_succeeded",
+            "fixture",
+            "legacy_compile_failed",
+            "stderr_sha256",
+            "stdout_sha256",
+            "toolchain_sha256"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "collected-unreviewed"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "276b78f9b3c2aed91d2548ab9add721c434ded06"
+            },
+            "r_tree": {
+              "const": "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+            },
+            "subject_manifest_sha256": {
+              "const": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "external-review-candidate"
+        },
+        "artifacts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+/-]+$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path",
+              "sha256",
+              "size"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-e-external-review-candidate-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "accepted": {
+              "const": false
+            },
+            "independent": {
+              "type": "boolean"
+            },
+            "report_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "reviewer_identity_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "signature_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "accepted",
+            "independent",
+            "report_sha256",
+            "reviewer_identity_sha256",
+            "signature_sha256"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "collected-unreviewed"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "276b78f9b3c2aed91d2548ab9add721c434ded06"
+            },
+            "r_tree": {
+              "const": "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+            },
+            "subject_manifest_sha256": {
+              "const": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_role": {
+          "const": "acceptance"
+        },
+        "artifacts": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "maxLength": 512,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9._+/-]+$",
+                "type": "string"
+              },
+              "sha256": {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              "size": {
+                "maximum": 67108864,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "path",
+              "sha256",
+              "size"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "type": "array"
+        },
+        "content_policy": {
+          "const": "dcrypt-package-e-disabled-acceptance-v1"
+        },
+        "promotion_eligible": {
+          "const": false
+        },
+        "raw_artifact_set_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "role_data": {
+          "additionalProperties": false,
+          "properties": {
+            "accepted": {
+              "const": false
+            },
+            "decision": {
+              "const": "disabled"
+            },
+            "reason": {
+              "maxLength": 1024,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "accepted",
+            "decision",
+            "reason"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "status": {
+          "const": "acceptance-disabled"
+        },
+        "subject_binding": {
+          "additionalProperties": false,
+          "properties": {
+            "r_commit": {
+              "const": "276b78f9b3c2aed91d2548ab9add721c434ded06"
+            },
+            "r_tree": {
+              "const": "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+            },
+            "subject_manifest_sha256": {
+              "const": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+            }
+          },
+          "required": [
+            "r_commit",
+            "r_tree",
+            "subject_manifest_sha256"
+          ],
+          "type": "object"
+        },
+        "trusted": {
+          "const": false
+        }
+      },
+      "required": [
+        "artifact_role",
+        "artifacts",
+        "content_policy",
+        "promotion_eligible",
+        "raw_artifact_set_sha256",
+        "role_data",
+        "schema_version",
+        "status",
+        "subject_binding",
+        "trusted"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "dcrypt Package E nonpromotable migration candidate roles"
+}

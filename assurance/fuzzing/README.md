@@ -81,9 +81,9 @@ rows return explicit machine-readable HOLD records rather than silent emptiness.
 
 ## Evidence boundaries
 
-The checked-in row map contains all 9,298 atomic rows: exactly 372 critical
-family rows are assigned to planned semantic targets, and all 8,926 other rows
-are explicit blockers. All 9,298 remain release-blocked. Shared or unknown
+The checked-in row map contains all 9,198 atomic rows: exactly 372 critical
+family rows are assigned to planned semantic targets, and all 8,826 other rows
+are explicit blockers. All 9,198 remain release-blocked. Shared or unknown
 Package B comparator lineage is corroborative only and cannot satisfy mapping.
 
 The live controls execute an ASan stack overflow, an address-mode `Box::leak`

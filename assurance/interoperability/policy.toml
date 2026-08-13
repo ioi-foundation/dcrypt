@@ -5,14 +5,14 @@ as-of = "2026-08-11"
 evidence-promotion-enabled = false
 
 [expected]
-curated-operation-rows = 652
-curated-operation-atoms = 7070
+curated-operation-rows = 552
+curated-operation-atoms = 6184
 curated-data-surface-rows = 14
 curated-data-surface-atoms = 56
 unreviewed-gap-rows = 8632
-ledger-atomic-rows = 9298
-ledger-release-blockers = 9298
-public-api-units = 19021
+ledger-atomic-rows = 9198
+ledger-release-blockers = 9198
+public-api-units = 18891
 snapshot-profiles = 4
 
 [review]
@@ -23,12 +23,12 @@ default-expiry = "2026-11-09"
 maximum-validity-days = 90
 
 [inputs]
-atomic-operations = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
-public-api-snapshot = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
-assurance-ledger = "d29e4ee1a88f1c10990a3ad2421afdc9f2dec559cff2063cd400dc9938558779"
+atomic-operations = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
+public-api-snapshot = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
+assurance-ledger = "bbdafc06e8df89a81b3011596abd02ec28b515db87beb74471f766469dca077e"
 implementation-boundary = "50483ab0f94c81e32a861035c245d61a59927c75cb02943226279386b47921a6"
 root-manifest = "0dcf0e8826cd4f9e5aee6e120df981ead7a01923e3eb33aa36f4054da426baaf"
-root-lockfile = "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd"
+root-lockfile = "0f4a81042e4d73f6313e30d80668606e8528124e97936f669585669e4ce06736"
 verification-manifest = "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8"
 verification-lockfile = "2f05e057dc06ea3e5634afc880fd01b401abdeab22627f05bb97b58acb2ba0d5"
 
@@ -76,7 +76,7 @@ manifests = [
 [published.manifest-record-sha256]
 "crates/internal/Cargo.toml" = "5828bd1d90c93fe4843b525f8563d6a2d93d25d3b516530f4e75cb9fb7309c19"
 "crates/params/Cargo.toml" = "bf1f1b65502e6d1fb473f90c8cb01fb087df80009086c730542b61f10acc6c6a"
-"crates/api/Cargo.toml" = "56289b425eb06673eda02ab1c3d1df56a810ba56ebf9187709d2d6af810d0224"
+"crates/api/Cargo.toml" = "67b130c216a8b5e3b6ce989f0490b3235bc1041e07b39b94f75b1be197006ebf"
 "crates/common/Cargo.toml" = "a86ba48b2605fade26e6d800a9d55d12dd90bc8a864194e5f7bd27697a01cd5b"
 "crates/algorithms/Cargo.toml" = "e808403b09b3815fcb62aed5dff254be8a0a3f1c31257cd15b97a53bb58b492e"
 "crates/symmetric/Cargo.toml" = "0bda4f80550e099b683ce8acb24720e30d75858414437e0845ad339ddd692d6a"

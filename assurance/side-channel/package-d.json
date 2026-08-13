@@ -1,7 +1,7 @@
 {
   "artifact_role": "package-d-baseline",
   "atomic_inventory": {
-    "row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
+    "row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
     "rows": [
       {
         "blockers": [
@@ -609,728 +609,6 @@
         "row_kind": "operation",
         "source_kind": "curated-operation",
         "source_record_sha256": "6ac7676deb3fa29597249e82ff68f0fa5084070e784c35581a932c445f978b1b",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.error-registry.global-state.secure-unwrap",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7ed6db462f26cdf8e4dd1345ad320d357d28ff2dc8bb2842d8c8d09502ac7e69",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.error-registry.global-state.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "84d042f6cad54b7df4ace8ce5f09bd00dade3c6e1bcc98111c6b7d121e68ee12",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.error-registry.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "ebba7e3125cba06ab848b4f4264dfbb18265f97ed63c586a261af03d4d7de44d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.error-registry.symmetric.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "b27b41e1ae746e8d3a2f390a1902ff4f49432e2a349c2d10b421dd644ae2ebe4",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7cdad55ac80294a6aedd4001d84507645a855a32489d3582ec31b2f50574b83a",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.with-context",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "97b910b831fae0ab5449519b142615d38eaaf805bae6f5b6ea23a729e610fdf4",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.with-message",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "b2be3c5468aa6eb93fce4b64e833d81fbcee7f0bfa5d2d292627037fcd80b425",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.wrap-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "6fcf27108abf0d925140f08d8c7289435299266b26e360eabc09fc0ac202eb46",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.result-compatibility.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7c405986933d1d9b8be58b5d692f13244ab64b9a7a5f13980545206d3a5e7844",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-algorithms.legacy.result-compatibility.symmetric.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "8a9a5fd1e7dc084829d72346519e51e7e574350b4ed1833b38663c19c345bde3",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-api.legacy.error-registry.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "0afd8b09b0f739f0d47bbc63fa65dafc6fa5fa5c9ff279901c2b0adbc5bef4fb",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-api.legacy.error-registry.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "5391f6079b36c3373f6a6dfa29ea8cc9cbd9ce6c9ad4fed216e17aa0c44f76b1",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-api.legacy.error-registry.symmetric.error-registry",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "4f0d43784bd91623ecb4918e86cd31e6c4d6f765d7ed30f31d2e1e1f39908482",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-api.legacy.error-registry.symmetric.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "2bf6b5c6bf86e3a907e28b79b1ab4403880b3fefefe4451965dcc6d2e5e95611",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-api.legacy.result-compatibility.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "1849318949d4481e6b8dd5c58490be072fd91edc2cd2ca48bc8ef7c2ffe86cb5",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-api.legacy.result-compatibility.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "0f089f45c9b4598109385e230e5c1333c3cfbd0f638aa0bc128d84f037ff39fe",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-api.legacy.result-compatibility.symmetric.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "e3ff248ab249108475d24d4ccdb1dda2d3691fa57758cb4a0d265d9ff9982a60",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.error-registry.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "38517a1731605b504a569ee93d65fce66603d2a3cc7316b094134f008baeda21",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.error-registry.global-state.secure-unwrap",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "f90895f3dded46bbad60c45c9e03722d985dc3ef775c55ce7a77c4499cc1dd8c",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.error-registry.global-state.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "c393cade570f1e9c8bff88593178aee48559686541e0d821f659994124b2b587",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.error-registry.symmetric.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "27f5e4bdd04d565fed413743038a3036ab630ece4a409f21113f7bff564c87a7",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.result-compatibility.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "92e7d29da02e32f5df5397cbe39b40f0a94b25a97148d3a898a95f0c43333534",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.result-compatibility.api.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "bea85ac40caf75dd8df3599c27e8ce964561c29c70aafc5e9f4f60b665f37026",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.result-compatibility.api.with-context",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "ad89826e4022fb4031b3fd2ef6f26044b0367245bed3e63a43d08f3676ef6acb",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.result-compatibility.api.with-message",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d78438c1031ebbe7ad3535db2f9d73b905ca3aaf513036a6831272454425e8eb",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.result-compatibility.api.wrap-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "fbd4b25194cc1d040fa0513c1f8ad4361997d0fb395fe8fa33d8eebf44078431",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-kem.legacy.result-compatibility.symmetric.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "e35428667feba629f7e93a5220656ee09e02d5374fd5614f64630789e0fd9c57",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.error-registry.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "538b5cfe17d9a5f43126bf34924fa7e156e45fb587b615aef3c9451f82b750b7",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.error-registry.global-state.error-registry",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "1ff2ec0898c3f5862311f0a97ba0e16405f409e79e1337a3cf026d8275d62ee5",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.error-registry.global-state.secure-unwrap",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "0bbcca8cbc4b5546c53542f707ad19a1b1ee3045b5ae7ae9e2f80301c5916f56",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.error-registry.global-state.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "aeb3c447a966eb06324e743ad425305da7de9d4b666c79bb4571690b1451b65d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.error-registry.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "4a6a57f56411908d761e96b352941ba82d4231112e6b75a842967eb3e813e25e",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.result-compatibility.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "81c79fdeea50cfbacfc919ca6cf2af57a5ae26699c0e16ac1803443980c7343a",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d6970340a05c9d325253a4569e5d93280291fb4a215a451c1bbef159598c5d2b",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.with-context",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "1cef0df6679c3b59d25c3d664869c1d074f31078be3ecf18efbd8621a4c4f5a8",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.with-message",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "f29a43eb3943fc5dbb4ccc93e8559ed1dfa3c9ea0d85b7b28fff55ed37924b45",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.wrap-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "1f5dfaa97fadc3d276759913072bd53e60b1d4ac80424a17c34a72ad83e95b51",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt-symmetric.legacy.result-compatibility.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "275f423dafbc264e098ffd3926068151a1b7a50ca90ffb22aa6851530b035587",
         "trace_status": "blocked-untraced"
       },
       {
@@ -4998,595 +4276,6 @@
         "row_kind": "operation",
         "source_kind": "curated-operation",
         "source_record_sha256": "46a3cb900df166e260ace3a862101e82ac5b5a7e77cdcdf84676a7b57b8b50d4",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "cc658973a9d1f6b22938794432bec53e9b9971783b08ae5e35388fd73fc9a495",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.construct",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "a920b24cc9621d9e6cd3cebe7fc68718e9743f0ef1f0b6e85c318eb2c06f28b5",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.default",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "aed3ab8461ca321c59b7a7f0c2188c014498b2a42460628ee90634cba7333487",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.drop",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "19809ba8dfebabcbe101d9d5b4708e5f3916d027e06f13cc2138e6344408da17",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.clear",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "317695ec533041fe79f00788fc1951823cd85834ec2f91f1c5a8e986b4fc1495",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.error-registry",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "ff3a7841032c0b5958655e33e64cd0873bf6c02f1326063e9a1c75a4d91cdd17",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.errorregistryext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "0f4a371e7d485f189079123f5fa170da313b6cb9c0c78d09b8ed29ae8ff3746f",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.get-error",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "2bd0a69a647e58bb3e76eb0e9af1498ce97661058a34931975056f3943a351da",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.has-error",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "754a259effc79895ea02515ea3cee4de9f9b2087851705a38c98a1433e730972",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.secure-unwrap",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7a8f6f045e526e9c5ab307f1562cd69740f69e1a39136571569dba9339bb004d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "86bc755f17240ab3da9141f5ab22bce98b4dac4f37c22bad79e3a3a056392421",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.store",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "3f9cb4ab0082836f9b635547fce61c6f3b24f96fcd0a61d967699a57fdfa4691",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.global-state.unwrap-or-record-with",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "004483ace36b21af5394c4f1967b87e4e99fb14695fa243e348095cd685a58c9",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "cd4b7faea84f435efc88745b90d027e52f885eca69bb63e56b17a1c75dc061bd",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.pin-drop",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "611d5df70c8905fe1366cb09af51ffe2b2f7a5aa7fa08ed998623e6d79d7f150",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.symmetric.error-registry",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d3299b809f843f659d09a85da9e7eb26affaed1a04ae1fd1e4204e4c85e20301",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "32d99eec4d837815e662913d2aedbffb71b686e7fadfa419aa304114edcee69d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "38700c84f0f59104daac4669667bf243f3ed1ab2053bf520e700f808169802b4",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.constanttimeresult",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "0d8cea7829fe4ee6a59d45e2416304edbf53279cc8cf05cfc54f3c64cc221f7d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.ct-is-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "2026625a72a72551696b66279a39e9e9a8804171ccdc53e4ebaceba69a1d35ff",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.ct-is-ok",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "6ef0033dda5fb1e37aebee423f660c807afb2b151b0c63b9e68d93bc8a30178a",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.ct-map",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "4b8bf773f9ecf855f1a321337f449326c8027287c24112af504cae4205dc5ca0",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "0490e569aaf7532d7c2a8ac2a4680ba286241442e0d0d0859787c70eb1c8cc2c",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.with-context",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "be3d00d322e82de02c575b0ae06842a1f16b78e46cec00071fd6cea49bf88cbc",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.with-message",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "12bc3d995232df9ca891d770f0128dd3874e98eb109c667562d1856b2d015e4f",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.api.wrap-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d1078cb2eb9c562ea8c396f5bbc5569ea7a04b9ad66fe7f87741e21131fb0929",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "cad4a4fff089b20753a0394de08ee5dbe0d8aab38795f3064ff902ca45f2ff0a",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.symmetric.map-io-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d77fecaf45fdc74eca345411fcaf4dee805956b28218622beff9cd1acd5e39f2",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.symmetric.map-primitive-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "2f14b147c065cc66dee75462b7b629a7d1858cb710705aefd9bad41db334e60b",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.symmetric.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "b24643717a794db7671a56c44320137739a393309d90f149d85e963fe6adb20d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "alias.dcrypt.legacy.result-compatibility.symmetric.symmetricresultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "03dbc60314bdec3bdf6af622abc1c7ebbc8a9bcc765e10318ff8c76243b7b17c",
         "trace_status": "blocked-untraced"
       },
       {
@@ -174379,595 +173068,6 @@
         ],
         "promotion_eligible": false,
         "release_status": "blocked",
-        "row_id": "legacy.error-registry.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "b868082b3a20aeb950cc6edea6d84340f9d1e70314855dc7e7a675b1763fd664",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.construct",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "5449231dd2dfe042da70e647122f6dada6ff1956c2e43f5f4975d6d3dc13210d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.default",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7dcc0553a45650c4d99591f0cf624d6eb44aea26d12211964a0c80b371d12120",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.drop",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "c6426c87122680888df1ced47100f19425092e37a317d4dec181187bd17bd150",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.clear",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7bdfe390f182e78e7fda193fd0b8bd22749fd29d2d8668f1ce6cf100e7dc38ab",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.error-registry",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "19239fbd268a895dcd4239444695c5ab7f902fce7366d1bbe2795e1122230da8",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.errorregistryext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "6e619b3ab1de704c729c9555f40c8e9cb02756adc53639fd039d8e0004d85cab",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.get-error",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7d1e2934168a7f2b2876a7caa6be00d2123ad07ca9159789709f6a59e66baf25",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.has-error",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "52c24a11367e3b7140e643639460331152202f65c8b42316c610a81993db61bc",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.secure-unwrap",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "20ddd84b5c000998341e911a086f93c960ab22ab1a4388811ffa86dcc8229f5e",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d095ac3d3b07380c1dcb3bf1d6da7111114928b08c6b325e9f34a9a026d6a8b3",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.store",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "51f4e78d98fb4db6a9f9c4a1753ff63363238cb2b20dd1e3f900770b836dcf16",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.global-state.unwrap-or-record-with",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "6dd2f9efd9799448952322e66a6d907d43b0fb2500ea99c51bc55e5a39405711",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "342d81e39f5f7ce17f68fa98f11cf1b2f622a998330905e87b7ba77c9edd9202",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.pin-drop",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "f26cb242428502a2bdb73678c11f4fb414e0b27d6af28b9b7bc5ba59f797587d",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.symmetric.error-registry",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d9020b501dfedc47635599c3cccf0b44647342eaf51596aa80530b9f2b2a8edf",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.error-registry.symmetric.secureerrorhandling",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "69c0dbf8cbf67d5e1abcdcdfbedbd0d8ea9d91a37153b064a8ebb389ca9a53cd",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.algorithms",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "7ca5294628037864ba210a786b4d859f536716da0c54264482a5f65ea9b13c71",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.constanttimeresult",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "5e97674d6c6c9d85739a190cbb9874daedf7c0375c2cfb2031cd911d29c408b1",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.ct-is-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "d83ca0a238e30815cf8c182886a99c5dd7b5582c75a6cc34128a619d0cd4714f",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.ct-is-ok",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "cdc54afca151e0919954a1a0f08a0a3e9ef89825e3113766adfb74d4bf9d8c64",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.ct-map",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "2eea7c9414c33b728d33f5af047125c2395a7a291519b7e41d90aea6fe056c42",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "71c8d985c87afe376effa8c39035924900eeb5ae0c5f90c6c136f36ae1b71705",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.with-context",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "b46ca702c9a7e273ef9321b0cf0a64ac7fec15de88df72cf3e913316aca306b0",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.with-message",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "531febf1a7ea2c638026e8c0e6c216ec2a881ce02b0ca5a7af46a42aaace581c",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.api.wrap-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "af288dbb87904798baad88b6d785c95a0e223da88e1b569a7c3385f8225fcb72",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.kem",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "04d14d9ba76e012351c20107b44faa36cb111cfdb1c752e177e72f1e3bea670c",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.symmetric.map-io-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "5c875953ecd7d541d1ddb80f4cb33375c52cdfea2a8c3dc965a5987394212a58",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.symmetric.map-primitive-err",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "5a24e8a6722fef0f2219244ba24e1fd95094018944a9de786dbb3ed45c5f9d98",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.symmetric.resultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "8d270e13370e110088aaed227543e34c223d6129e0ec2da603b2490e2907da2f",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
-        "row_id": "legacy.result-compatibility.symmetric.symmetricresultext",
-        "row_kind": "operation",
-        "source_kind": "curated-operation",
-        "source_record_sha256": "8075d00511c25511df198e8028bbc5b821f27769264c282aa8632e7d0946ed1e",
-        "trace_status": "blocked-untraced"
-      },
-      {
-        "blockers": [
-          "acceptance-and-promotion-disabled",
-          "dedicated-fixed-vs-random-unprovisioned",
-          "external-audit-unaccepted",
-          "physical-profile-unselected",
-          "platform-runtime-unaccepted",
-          "secret-taint-unprovisioned",
-          "transitive-compiler-closure-incomplete",
-          "transitive-secret-flow-incomplete"
-        ],
-        "promotion_eligible": false,
-        "release_status": "blocked",
         "row_id": "ml-dsa-44.key-generation",
         "row_kind": "operation",
         "source_kind": "curated-operation",
@@ -176977,15 +175077,16 @@
     "accepted_physical_profiles": 0,
     "accepted_platform_runtime_records": 0,
     "compiler_controls": 12,
-    "curated_rows": 666,
+    "curated_rows": 566,
     "dedicated_timing_runs": 0,
     "local_timing_controls": 29,
     "production_source_files": 255,
     "promoted_records": 0,
     "promotion_eligible_records": 0,
-    "release_blocked_rows": 9298,
+    "public_api_units": 18891,
+    "release_blocked_rows": 9198,
     "secret_taint_runs": 0,
-    "total_atomic_rows": 9298,
+    "total_atomic_rows": 9198,
     "transitive_compiler_closures": 0,
     "transitive_secret_flow_closures": 0,
     "unreviewed_gap_rows": 8632
@@ -177044,26 +175145,26 @@
     {
       "git_mode": "100644",
       "path": ".github/workflows/security-validation.yml",
-      "sha256": "0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52",
-      "size": 15847
+      "sha256": "0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c",
+      "size": 16385
     },
     {
       "git_mode": "100644",
       "path": "assurance/atomic-operations.toml",
-      "sha256": "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c",
-      "size": 7099872
+      "sha256": "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a",
+      "size": 6886529
     },
     {
       "git_mode": "100644",
       "path": "assurance/public-api-snapshot.json",
-      "sha256": "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540",
-      "size": 37254636
+      "sha256": "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f",
+      "size": 37066613
     },
     {
       "git_mode": "100644",
       "path": "assurance/subject-manifest.json",
-      "sha256": "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b",
-      "size": 296063
+      "sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4",
+      "size": 296233
     },
     {
       "git_mode": "100644",
@@ -177080,8 +175181,8 @@
     {
       "git_mode": "100755",
       "path": "tools/release-dcrypt.sh",
-      "sha256": "813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7",
-      "size": 40385
+      "sha256": "4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf",
+      "size": 42039
     },
     {
       "git_mode": "100755",
@@ -177110,14 +175211,14 @@
     {
       "git_mode": "100755",
       "path": "tools/verify-publish-ready.sh",
-      "sha256": "db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5",
-      "size": 12688
+      "sha256": "c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d",
+      "size": 13735
     },
     {
       "git_mode": "100755",
       "path": "tools/verify-remote-release-ready.py",
-      "sha256": "08581d04df268a9d859a70207d91e68b0c80631be8aaf94ce7e84e19f2bd4d3d",
-      "size": 95248
+      "sha256": "0d41cc63a91ffb579273bb0be0d0a0b20b05de11f43acdf717aea1b391d59660",
+      "size": 103765
     }
   ],
   "lifecycle_policy": {
@@ -177444,7 +175545,7 @@
     "exit_code": 3,
     "status": "HOLD"
   },
-  "reviewed_inventory_sha256": "7e71bd2ad17f318643593307536d0c08e0f42ced5a34a6a61aeac748296de0d6",
+  "reviewed_inventory_sha256": "22c9992bebfdb5d83f2b818fa2d9576f524bf34c3334c4c51b3d8c85a7c51097",
   "schema_version": 1,
   "source_inventory": {
     "files": [
@@ -178124,7 +176225,7 @@
         "git_mode": "100644",
         "path": "crates/algorithms/src/error/mod.rs",
         "promotion_eligible": false,
-        "sha256": "ec6f468960602ede1687ab5e348e8f790872ce97efd99425a110557daaa1ebff",
+        "sha256": "a23d84fc408f4e8521b5f16da0ce50e8047230c80386247dea624da99fccc923",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -178134,7 +176235,7 @@
         "git_mode": "100644",
         "path": "crates/algorithms/src/error/tests.rs",
         "promotion_eligible": false,
-        "sha256": "47f9d43a567ad756cff55d1abd6d13f724462aa24eccbde2f98e2479acb81497",
+        "sha256": "15506af21f552039a7a715273a369381d843c80229f4d1f2fb50ec09c41a7422",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -178384,7 +176485,7 @@
         "git_mode": "100644",
         "path": "crates/algorithms/src/lib.rs",
         "promotion_eligible": false,
-        "sha256": "0d4ed7176e29585e359c7a799a6cefd6fc5837fc45997b54d4c283bf4b1994c4",
+        "sha256": "6a7ebee869565525b18724fab60a1723b733622f9f9bb60690791bb4598f37ca",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -178704,7 +176805,7 @@
         "git_mode": "100644",
         "path": "crates/api/src/error/mod.rs",
         "promotion_eligible": false,
-        "sha256": "bffdd5c58c318da7f4e874e3c5a8c8519328d567fc3515525ef533885a1d7945",
+        "sha256": "4bf4bb01f04b9964c55732e478c363fea1e0ce5ac7c28ceda53c053a9d15d2f1",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -178714,7 +176815,7 @@
         "git_mode": "100644",
         "path": "crates/api/src/error/registry.rs",
         "promotion_eligible": false,
-        "sha256": "4efee2c3cdf7e6a7fedf8389dbe8a99fb7df12c696c48ae37bf594f4027eb72e",
+        "sha256": "e6f718a1df64478d4c243bafa060420eded04e97200037779fb544af7927f5ea",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -178724,7 +176825,7 @@
         "git_mode": "100644",
         "path": "crates/api/src/error/traits.rs",
         "promotion_eligible": false,
-        "sha256": "495f54e6ae1a8d0cbd7958383046c737935b207357de0550dd166242acd9e70c",
+        "sha256": "2d06a290ea453fcfcabf41accf205b2a6205f91b523405d70803e1de2fa1ef7c",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -179174,7 +177275,7 @@
         "git_mode": "100644",
         "path": "crates/kem/src/error/mod.rs",
         "promotion_eligible": false,
-        "sha256": "7d74efaf2c2fe24db9d02a34892cacf4ab6889f8e776d769307857f06ccc3b55",
+        "sha256": "8b6891774cb24fbc347b72093827762f7761a33eda82cbf731a8c5d858d3adb3",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -179884,7 +177985,7 @@
         "git_mode": "100644",
         "path": "crates/symmetric/src/error/mod.rs",
         "promotion_eligible": false,
-        "sha256": "7737205b7d97019603c89b46ab628f8129bce295be4ff9f593295fac06a75635",
+        "sha256": "9e5bf8e9816728a2643e161b454fe476254dbfa054ff354c8d4bd922afa9286a",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -179894,7 +177995,7 @@
         "git_mode": "100644",
         "path": "crates/symmetric/src/lib.rs",
         "promotion_eligible": false,
-        "sha256": "b947a5be755bd1a94ed1b110f7ce53f04cca07bba316ccc638c9ac58de78e4e4",
+        "sha256": "44bae0540f18ae4eadc58ec496a3b282afcf0e17a54135efada3870db9dbbca4",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -179904,7 +178005,7 @@
         "git_mode": "100644",
         "path": "crates/symmetric/src/streaming/chacha20poly1305.rs",
         "promotion_eligible": false,
-        "sha256": "9205338f8084fd026d2a78b3e0f5b554b9966e7f00e713d700ee9648db48e98e",
+        "sha256": "7b3a0e5d2c4105d0e248ab454e8c50d094adbcdcbe14f4a20308437f75f65aca",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -179914,7 +178015,7 @@
         "git_mode": "100644",
         "path": "crates/symmetric/src/streaming/framed.rs",
         "promotion_eligible": false,
-        "sha256": "aad8e1190a20c71415f96970b18001d20bf5fa4c6984c50169858e5800f1b1a0",
+        "sha256": "30597c72b905c97f8f731d083f029bc2437fe35dd721a0130e6afa5f0e8431e5",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -179924,7 +178025,7 @@
         "git_mode": "100644",
         "path": "crates/symmetric/src/streaming/gcm.rs",
         "promotion_eligible": false,
-        "sha256": "41b647cf65d848a1307fa89e4b142931be73947ef1bb6151c0c1cc4d3184f926",
+        "sha256": "7be798623085b204a5b367b470c58b9f03dc7ddcde9679ddd482291040902d4f",
         "trace_status": "blocked-untraced",
         "transitive_closure_complete": false
       },
@@ -180000,13 +178101,13 @@
       }
     ],
     "paths_sha256": "5aae5258561c750a920b36be67c2652f28ea1c8536ad7527f73967633a62b804",
-    "rows_sha256": "67f0ebc742d494943a2a42a9698e3f0c47543dbfcb612e485420839bc161280c"
+    "rows_sha256": "e35cb1924e6f4480a557651db3fdebec3b9d1518d42160a8e7895c000f21f2f5"
   },
   "status": "HOLD-structural-foundation-only",
   "subject_binding": {
-    "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
-    "source_tree": "28c04fffd98b76f447d55aa313fba13881604649",
-    "subject_manifest_sha256": "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+    "source_commit": "276b78f9b3c2aed91d2548ab9add721c434ded06",
+    "source_tree": "c47c98062c43463818bb61bd3eed75ebaf189e1d",
+    "subject_manifest_sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
   },
   "taint_profiles": [
     {

@@ -413,7 +413,7 @@
     {
       "path": "Cargo.lock",
       "role": "exact dependency resolution for the bound workspace",
-      "sha256": "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd"
+      "sha256": "0f4a81042e4d73f6313e30d80668606e8528124e97936f669585669e4ce06736"
     },
     {
       "path": "Cargo.toml",
@@ -488,17 +488,17 @@
     {
       "path": "crates/algorithms/src/lib.rs",
       "role": "primitive crate export and feature boundary",
-      "sha256": "0d4ed7176e29585e359c7a799a6cefd6fc5837fc45997b54d4c283bf4b1994c4"
+      "sha256": "6a7ebee869565525b18724fab60a1723b733622f9f9bb60690791bb4598f37ca"
     },
     {
       "path": "crates/api/Cargo.toml",
       "role": "public API feature and dependency manifest",
-      "sha256": "7109f0ef85c0bc2b2e9b7832adb4feb78ec4e0e0740909a6b1f2325f0681071a"
+      "sha256": "4defac2356ef89414329f0fdc314027b417471c9c2dd23e56cfeedac3e6bb112"
     },
     {
       "path": "crates/api/src/error/mod.rs",
       "role": "public API error taxonomy and exports",
-      "sha256": "bffdd5c58c318da7f4e874e3c5a8c8519328d567fc3515525ef533885a1d7945"
+      "sha256": "4bf4bb01f04b9964c55732e478c363fea1e0ce5ac7c28ceda53c053a9d15d2f1"
     },
     {
       "path": "crates/api/src/lib.rs",
@@ -623,7 +623,7 @@
     {
       "path": "crates/kem/src/error/mod.rs",
       "role": "KEM component error conversion",
-      "sha256": "7d74efaf2c2fe24db9d02a34892cacf4ab6889f8e776d769307857f06ccc3b55"
+      "sha256": "8b6891774cb24fbc347b72093827762f7761a33eda82cbf731a8c5d858d3adb3"
     },
     {
       "path": "crates/kem/src/lib.rs",
@@ -765,13 +765,13 @@
   "subject_binding": {
     "binding_stage": "final-subject-candidate-review-required",
     "curated_operations_path": "assurance/curated-operations.toml",
-    "curated_operations_sha256": "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4",
+    "curated_operations_sha256": "082cc81db8f9fcd9222b195af43208040811ae5f2e5e4565c249fecf6e10dcc8",
     "final_rebind_required": false,
-    "manifest_file_count": 1510,
+    "manifest_file_count": 1511,
     "manifest_include_policy": "production-and-evidence-v1",
-    "source_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
-    "source_tree": "28c04fffd98b76f447d55aa313fba13881604649",
+    "source_commit": "276b78f9b3c2aed91d2548ab9add721c434ded06",
+    "source_tree": "c47c98062c43463818bb61bd3eed75ebaf189e1d",
     "subject_manifest_path": "assurance/subject-manifest.json",
-    "subject_manifest_sha256": "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+    "subject_manifest_sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
   }
 }

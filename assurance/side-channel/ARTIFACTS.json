@@ -5,7 +5,7 @@
       "git_mode": "100644",
       "kind": "reviewed-source",
       "path": "README.md",
-      "sha256": "d590f2540a47fb8dbc1d0057f468ba1b0e13796299642ed8c907419d16e89824",
+      "sha256": "f82464bc6cca15319e2accc1b5263d71b4ba6b24b2be0eedf726db870038ecb7",
       "size": 2185
     },
     {
@@ -33,29 +33,29 @@
       "git_mode": "100644",
       "kind": "reviewed-source",
       "path": "model.py",
-      "sha256": "289c85a5578709878be40a1f7b2dcb5e51d5575d02f1572bf6e0bfbffb6fde1a",
-      "size": 57970
+      "sha256": "af56478f902a0f6264989352a71893c3bcec2702f5c0b60c76fd4a0b6cb8c1f5",
+      "size": 58776
     },
     {
       "git_mode": "100644",
       "kind": "generated",
       "path": "package-d.json",
-      "sha256": "f1fe0ba6adc0aba0a817181daccfeff507db6b274d06fd0a4ebea3e346758703",
-      "size": 7623052
+      "sha256": "d1f204c9a4ba485b2eee9a1eafc634387ffa40183749d8fd5282f7224b3460b0",
+      "size": 7545201
     },
     {
       "git_mode": "100644",
       "kind": "reviewed-source",
       "path": "rebind-final-subject.py",
-      "sha256": "770fda967d39ce47b634fb2af0fa351d487a4afacbb6f227a7d5675c2a67165a",
-      "size": 31253
+      "sha256": "20749115645db60b22b7a5b715a009a6ea7d3733d167a9459469c21e36cea818",
+      "size": 41172
     },
     {
       "git_mode": "100644",
       "kind": "reviewed-source",
       "path": "reviewed-inventory.toml",
-      "sha256": "7e71bd2ad17f318643593307536d0c08e0f42ced5a34a6a61aeac748296de0d6",
-      "size": 9028
+      "sha256": "22c9992bebfdb5d83f2b818fa2d9576f524bf34c3334c4c51b3d8c85a7c51097",
+      "size": 9062
     },
     {
       "git_mode": "100644",
@@ -68,14 +68,14 @@
       "git_mode": "100644",
       "kind": "reviewed-source",
       "path": "selftest.py",
-      "sha256": "76af9abc9e447acf35fab076e6cc27f1731898752a22af4e3988e9877f50bd7a",
-      "size": 27345
+      "sha256": "7a60985330d477bfd7aeacfc3d924916a6e9ca65f3b5275737c23e1fb2066ed3",
+      "size": 29119
     },
     {
       "git_mode": "100644",
       "kind": "reviewed-source",
       "path": "verify.py",
-      "sha256": "372e4c8aeeb7473bd61c0a5ada6ef3358524b13ea5125c49970e678cbd6ce389",
+      "sha256": "9d6139ab265202c39aaa1cda9a835c67656d67e0bc80a8766e7c6c32660da26e",
       "size": 6993
     }
   ],

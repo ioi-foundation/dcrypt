@@ -1,0 +1,138 @@
+{
+  "artifact_role": "package-e-error-api-v4-migration",
+  "content_policy": "dcrypt-package-e-local-breaking-removal-v1",
+  "counts": {
+    "curated_source_rows": 283,
+    "expanded_curated_atomic_rows": 566,
+    "production_rust_sources": 255,
+    "public_identities": 18891,
+    "release_blocked_rows": 9198,
+    "retained_other_transitional_public_identities": 124,
+    "unreviewed_gap_rows": 8632
+  },
+  "input_bindings": [
+    {
+      "git_mode": "100644",
+      "path": "assurance/curated-operations.toml",
+      "sha256": "082cc81db8f9fcd9222b195af43208040811ae5f2e5e4565c249fecf6e10dcc8",
+      "size": 527852
+    },
+    {
+      "git_mode": "100644",
+      "path": "assurance/atomic-operations.toml",
+      "sha256": "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a",
+      "size": 6886529
+    },
+    {
+      "git_mode": "100644",
+      "path": "assurance/public-api-snapshot.json",
+      "sha256": "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f",
+      "size": 37066613
+    },
+    {
+      "git_mode": "100644",
+      "path": "assurance/subject-manifest.json",
+      "sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4",
+      "size": 296233
+    },
+    {
+      "git_mode": "100644",
+      "path": "docs/migration/V4-ERROR-API.md",
+      "sha256": "201275b161c9acf3a36dd84debb4b54fc8391d517f39460e4275fa0d7c5c3e80",
+      "size": 3718
+    },
+    {
+      "git_mode": "100644",
+      "path": "tests/tests/error_api_v4_migration.rs",
+      "sha256": "c9a3b1c7628873ec9fbe091e170c74318817688d013e98d0b0a2c7ac284c434a",
+      "size": 10863
+    }
+  ],
+  "migration": {
+    "guide": "docs/migration/V4-ERROR-API.md",
+    "replacement_categories": {
+      "constant-time-result": "Result::is_ok, Result::is_err, and Result::map_or_else",
+      "context-and-message": "convert to dcrypt_api::Error then call Error::with_context or Error::with_message",
+      "error-registry": "propagate Result or keep diagnostics in caller-owned state",
+      "symmetric-io": "Result::map_err(dcrypt_symmetric::error::from_io_error)",
+      "symmetric-primitive": "Result::map_err(dcrypt_symmetric::error::from_primitive_error)",
+      "wrap-err": "Result::map_err with an explicit replacement closure"
+    },
+    "test_fixture": "tests/tests/error_api_v4_migration.rs"
+  },
+  "promotion_effect": "none",
+  "public_removal": {
+    "package_distribution": {
+      "dcrypt": 65,
+      "dcrypt-algorithms": 12,
+      "dcrypt-api": 30,
+      "dcrypt-kem": 6,
+      "dcrypt-symmetric": 17
+    },
+    "removed_atomic_ids": 100,
+    "removed_atomic_ids_sha256": "abe5e401904633e0cbfbcf1d0800400bd179086811bb087dd07f617f81737e17",
+    "removed_curated_ids": 31,
+    "removed_curated_ids_sha256": "207c942fb87a247fae08f45a3a84f86b6f3b3a62937ed0d627f5b76f9344461a",
+    "removed_public_identities": 130,
+    "removed_public_identities_sha256": "32fcd564f80ffb7ea0638a556f237de4ad591d2e85ae942d203c505be97ccf3a"
+  },
+  "release_state": {
+    "promotion_eligible": false,
+    "publish_eligible": false,
+    "release_gate": "HOLD",
+    "release_gate_exit_code": 3,
+    "version_preparation_authorized": false
+  },
+  "reviewed_inventory_sha256": "5d2ae3900fd3517f3fb6b36d2c4fb7970e984bc8a27e919a7b99562ff601b071",
+  "schema_version": 1,
+  "semantic_bindings": {
+    "post_all_atomic_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+    "post_curated_ids_sha256": "37a8d4b0eab59494c31f99cc6241974c6a04bc59c7bdef4e0e961947f1b5f264",
+    "post_expanded_curated_ids_sha256": "4e7087153cbb40dcb331138b3ea999fe196533a0437cc77efa1af1754eb34af3",
+    "post_public_identities_sha256": "f8570cbda3504733e9545172fa4c01e6c9b32879f5cdb7e139c87452de71caba",
+    "retained_other_transitional_sha256": "7e9f22ac2cf35b4e325d4589971e4a78b7544186b97e1950693d1cd4a28592a6",
+    "retained_tombstones": [
+      [
+        "dcrypt",
+        "dcrypt::api::error::registry",
+        "export",
+        "module",
+        "dcrypt_api::error::registry"
+      ],
+      [
+        "dcrypt",
+        "dcrypt::api::error::traits",
+        "export",
+        "module",
+        "dcrypt_api::error::traits"
+      ],
+      [
+        "dcrypt-api",
+        "dcrypt_api::error::registry",
+        "export",
+        "module",
+        "dcrypt_api::error::registry"
+      ],
+      [
+        "dcrypt-api",
+        "dcrypt_api::error::traits",
+        "export",
+        "module",
+        "dcrypt_api::error::traits"
+      ]
+    ],
+    "retained_tombstones_sha256": "e4e57254f0733f5bec758bdaf5f8e2b401ede1bed7b0d132d1ed90418ece7559"
+  },
+  "status": "local-breaking-removal-complete",
+  "subject_binding": {
+    "a_d_commit": "39fed53adc1fa256812f6157396cd75a62b8fc8d",
+    "a_d_tree": "0ab8a595efbff7fb857e8573e3f138ad4a8d9cb1",
+    "r_e_commit": "276b78f9b3c2aed91d2548ab9add721c434ded06",
+    "r_e_subject_manifest_sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4",
+    "r_e_tree": "c47c98062c43463818bb61bd3eed75ebaf189e1d",
+    "s_e_commit": "219ee68040fa48ae1973ba5a16ccf7f32f73657a",
+    "s_e_tree": "4390012075501659de01e21b24432967b5aa0c23"
+  },
+  "target_major": 4,
+  "workspace_version": "3.0.0"
+}

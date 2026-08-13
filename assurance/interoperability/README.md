@@ -5,13 +5,13 @@ control. It inventories exact public operation atoms and candidate oracle
 provenance. It does not assert that current harnesses or third-party packages are
 independent assurance evidence.
 
-`matrix.json` deterministically expands 652 curated executable atomic rows over
+`matrix.json` deterministically expands 552 curated executable atomic rows over
 their exact public path and rustdoc feature/target profile bindings. The expected
-result is 7,070 operation atoms. Fourteen curated public metadata rows expand to
+result is 6,184 operation atoms. Fourteen curated public metadata rows expand to
 56 explicit `not-applicable` atoms with a rationale. All 8,632 unreviewed atomic
-gaps are retained as individual digest-bound blockers. The resulting 15,702
+gaps are retained as individual digest-bound blockers. The resulting 14,816
 interoperability blockers are a distinct completeness count and neither add to
-nor clear the assurance ledger's 9,298 atomic release blockers.
+nor clear the assurance ledger's 9,198 atomic release blockers.
 
 Every executable matrix key includes the crate and public path, algorithm,
 parameter set, operation, encoding/wire format, profile/mode/DST/context/prehash,

@@ -839,7 +839,7 @@ def main() -> int:
     candidate_operations["operation"].append(added)
     added_rows, added_errors = expand_atomic_rows(candidate_operations)
     added_errors.extend(validate_models(schema, models, ledger, added_rows, snapshot, mode="ci", as_of=AS_OF))
-    expect_error("new atomic row changes baseline", added_errors, "effective atomic row count must remain 9298")
+    expect_error("new atomic row changes baseline", added_errors, "effective atomic row count must remain 9198")
     candidate_operations = copy.deepcopy(operations)
     candidate_operations["operation"][0]["release-readiness"] = "ready"
     _, readiness_errors = expand_atomic_rows(candidate_operations)

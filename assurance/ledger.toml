@@ -7,7 +7,7 @@
 
 schema-version = 2
 ledger-version = "2026-08-11"
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
 boundary-policy = "../implementation-boundary.toml"
 api-snapshot = "public-api-snapshot.json"
 rustdoc-toolchain = "nightly-2026-08-07"
@@ -15,20 +15,20 @@ rustdoc-commit = "1a98b1e135b254f209c67d447b6d8bcd56a859e0"
 cargo-commit = "c79e8f89441b3e73d6d65d125c0c745792808c74"
 rustc-commit = "1a98b1e135b254f209c67d447b6d8bcd56a859e0"
 rustdoc-format-version = 61
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 atomic-operations = "atomic-operations.toml"
 curated-operations = "curated-operations.toml"
 ledger-generator = "generate-assurance-ledger.py"
 acvp-vector-manifest = "acvp-vector-manifest.json"
 generated-document = "SUPPORTED-ALGORITHMS.md"
 subject-manifest = "subject-manifest.json"
-api-snapshot-sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
-atomic-operations-sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
-curated-operations-sha256 = "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4"
+api-snapshot-sha256 = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
+atomic-operations-sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
+curated-operations-sha256 = "082cc81db8f9fcd9222b195af43208040811ae5f2e5e4565c249fecf6e10dcc8"
 ledger-generator-sha256 = "d7fb97ff5c7d5a7a0a6f3e82dfe96a655ef25664ff08b89fd9a2d35d055074c2"
-acvp-vector-manifest-sha256 = "990cf57689edaeefb46a67be1739fd59a95ffec490c429c4b42b0f7172ff2211"
-generated-document-sha256 = "55bd0631d6486087faedd7898798bed170b63dadd6c18211e44e27d3d48287b1"
-subject-manifest-sha256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+acvp-vector-manifest-sha256 = "c3f44365ecefb74154d4870df61f2ae295d4cc7ca0458246841839cc09af0a61"
+generated-document-sha256 = "fddf202e8abcbbb98136d747128d48e77a50fc8eecfc551442627b3c5d891fca"
+subject-manifest-sha256 = "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
 
 # Each published package has one package-level public surface.  Exact API units
 # in the snapshot point to one of these IDs; semantic cryptographic distinctions
@@ -620,7 +620,7 @@ surfaces = ["facade-surface"]
 
 [[lockfile]]
 path = "Cargo.lock"
-sha256 = "350de8b632d80329a7020f49b8ba3c8df35611b61c12039c30b8c7745b4170bd"
+sha256 = "0f4a81042e4d73f6313e30d80668606e8528124e97936f669585669e4ce06736"
 
 [[lockfile]]
 path = "verification/Cargo.lock"
@@ -648,17 +648,17 @@ command = "python3 -B assurance/verify-assurance-ledger.py --self-test && python
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "assurance/verify-assurance-ledger.py", sha256 = "d6ece912e9ac62ded409a005d7ad5580cb40644cd0c8fff594e91ee3382f8dcd" },
   { path = "assurance/assurance-selftest.py", sha256 = "a162dd46408b9c9d81df0546d86d9bf8647f77f9c36affd153ad1303cd0694d8" },
   { path = "assurance/generate-assurance-ledger.py", sha256 = "d7fb97ff5c7d5a7a0a6f3e82dfe96a655ef25664ff08b89fd9a2d35d055074c2" },
-  { path = "assurance/curated-operations.toml", sha256 = "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4" },
-  { path = "assurance/atomic-operations.toml", sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c" },
-  { path = "assurance/public-api-snapshot.json", sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540" },
-  { path = "assurance/SUPPORTED-ALGORITHMS.md", sha256 = "55bd0631d6486087faedd7898798bed170b63dadd6c18211e44e27d3d48287b1" },
-  { path = "assurance/acvp-vector-manifest.json", sha256 = "990cf57689edaeefb46a67be1739fd59a95ffec490c429c4b42b0f7172ff2211" },
+  { path = "assurance/curated-operations.toml", sha256 = "082cc81db8f9fcd9222b195af43208040811ae5f2e5e4565c249fecf6e10dcc8" },
+  { path = "assurance/atomic-operations.toml", sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a" },
+  { path = "assurance/public-api-snapshot.json", sha256 = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f" },
+  { path = "assurance/SUPPORTED-ALGORITHMS.md", sha256 = "fddf202e8abcbbb98136d747128d48e77a50fc8eecfc551442627b3c5d891fca" },
+  { path = "assurance/acvp-vector-manifest.json", sha256 = "c3f44365ecefb74154d4870df61f2ae295d4cc7ca0458246841839cc09af0a61" },
   { path = "assurance/IMPLEMENTATION-BASELINE.md", sha256 = "5fefffd17043190ff1226d41cb01f75ced2e13fc21e7eb3c4528d552a18df047" },
   { path = "assurance/README.md", sha256 = "ff42ebd69fc1602ca266d2fe2a60cbb92b2d5cd2c7e76c3d726a3cc30f12d0ae" },
 ]
@@ -674,8 +674,8 @@ command = "python3 tools/verify-implementation-boundary.py --self-test && tools/
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "implementation-boundary.toml", sha256 = "50483ab0f94c81e32a861035c245d61a59927c75cb02943226279386b47921a6" },
   { path = "tools/verify-implementation-boundary.py", sha256 = "57cf228d89b3d4cb1541848a4224c71be127fd993008cc291f4f13b53f58751d" },
@@ -692,15 +692,15 @@ command = "python3 -B assurance/verify-assurance-ledger.py --self-test && python
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "assurance/generate-assurance-ledger.py", sha256 = "d7fb97ff5c7d5a7a0a6f3e82dfe96a655ef25664ff08b89fd9a2d35d055074c2" },
   { path = "assurance/verify-assurance-ledger.py", sha256 = "d6ece912e9ac62ded409a005d7ad5580cb40644cd0c8fff594e91ee3382f8dcd" },
   { path = "assurance/assurance-selftest.py", sha256 = "a162dd46408b9c9d81df0546d86d9bf8647f77f9c36affd153ad1303cd0694d8" },
-  { path = "assurance/curated-operations.toml", sha256 = "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4" },
-  { path = "assurance/atomic-operations.toml", sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c" },
-  { path = "assurance/public-api-snapshot.json", sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540" },
+  { path = "assurance/curated-operations.toml", sha256 = "082cc81db8f9fcd9222b195af43208040811ae5f2e5e4565c249fecf6e10dcc8" },
+  { path = "assurance/atomic-operations.toml", sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a" },
+  { path = "assurance/public-api-snapshot.json", sha256 = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f" },
 ]
 
 [[evidence]]
@@ -714,8 +714,8 @@ command = "cargo test --release --locked --offline -p dcrypt-tests --lib suites:
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "tests/src/suites/acvp/runner.rs", sha256 = "8669ea29975b4e14dbf567ce858e00f2c6210d1bffc8e6a8deb38557fddd875f" },
   { path = "tests/src/suites/acvp/model.rs", sha256 = "ab91b19736252ddef5ac992cca5fb3142186eab5f44121316a5a288a52bcda73" },
@@ -726,7 +726,7 @@ artifacts = [
   { path = "tests/src/suites/acvp/mod.rs", sha256 = "2c5b3d0611fb21ec6f72d5ddfebefb58ec571f83b2b4d958591c528e85198131" },
   { path = "tests/src/suites/acvp/algorithms/mod.rs", sha256 = "356b965f61fb416c6e7daa9ba8ae6cff011812f51d66b70cc79d013f6ae66761" },
   { path = "tests/tests/acvp_tests.rs", sha256 = "f8a575ca43fea35981e5111d4f068db8de7c5a3e281073eed8430926752b59b2" },
-  { path = "assurance/acvp-vector-manifest.json", sha256 = "990cf57689edaeefb46a67be1739fd59a95ffec490c429c4b42b0f7172ff2211" },
+  { path = "assurance/acvp-vector-manifest.json", sha256 = "c3f44365ecefb74154d4870df61f2ae295d4cc7ca0458246841839cc09af0a61" },
 ]
 
 [[evidence]]
@@ -740,8 +740,8 @@ command = "cargo test --release --locked --offline -p dcrypt-tests --test acvp_t
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "tests/tests/acvp_tests.rs", sha256 = "f8a575ca43fea35981e5111d4f068db8de7c5a3e281073eed8430926752b59b2" },
   { path = "tests/src/suites/acvp/algorithms/aes_cbc.rs", sha256 = "b1c3f3283030695cc8bf08b718469092f0db9e9dc7ef1d7411558838f29ba363" },
@@ -760,8 +760,8 @@ command = "cargo test --release --locked --offline -p dcrypt-tests --test acvp_t
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "tests/tests/acvp_tests.rs", sha256 = "f8a575ca43fea35981e5111d4f068db8de7c5a3e281073eed8430926752b59b2" },
   { path = "tests/src/suites/acvp/algorithms/sha2.rs", sha256 = "6e56fa2f11fe3f121bc6234169320bbc8e26b7338a6025cee32eca0a37e7587f" },
@@ -780,8 +780,8 @@ command = "cargo test --release --locked --offline -p dcrypt-tests --test acvp_t
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "tests/tests/acvp_tests.rs", sha256 = "f8a575ca43fea35981e5111d4f068db8de7c5a3e281073eed8430926752b59b2" },
   { path = "tests/src/suites/acvp/algorithms/hkdf.rs", sha256 = "3f1fe09086cc790d2a086b7a6d6fcac7ae27f0284c2c68709819c9a0f7a8d2ee" },
@@ -800,17 +800,17 @@ command = 'python3 -B verification/oracle-provisioning/replay.py --manifest veri
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "verification/Cargo.lock", sha256 = "2f05e057dc06ea3e5634afc880fd01b401abdeab22627f05bb97b58acb2ba0d5" },
   { path = "verification/Cargo.toml", sha256 = "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8" },
-  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "6daa56c863dc5cfb9ec3db8b1d803cb2e5fc78363fdb19cfa3d1a905ec98e79b" },
-  { path = "verification/oracle-provisioning/manifest.json", sha256 = "a4ce57c78444a83c755bd4f61ac5dfde100d25737a3a72d6e1a878316b683e9a" },
+  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "fadf1cb23d641faaa3359462da4b74939eceab8ad9ee9fd7fced685b144ab217" },
+  { path = "verification/oracle-provisioning/manifest.json", sha256 = "0cb5a94d434b1db270a65d91d9067f2975f1269773d928bea35ddb84abe6972d" },
   { path = "verification/oracle-provisioning/replay.py", sha256 = "831f3df0d048e10fae27856684c90a81490db5e209209c0314260267ede31656" },
   { path = "verification/oracle-provisioning/run-targets.py", sha256 = "d66a8628996a8445e4f24b5827d69ddd3f03262b46fb397485f52592db203626" },
   { path = "verification/oracle-provisioning/subject_lib.py", sha256 = "9e93431b1efbb6ef4789fe68ef1fe8307870a95aa99b685dd40bcdba97314194" },
-  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "90ea5b6d8366a912c453bea6f96b2556767a1b4f3ab668e90757b21b4cc700d6" },
+  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "8b40683d1f48d59f6001d6c3c53e6caaacf86acfb4be77bca52826871bb1349f" },
   { path = "verification/tests/bls12_381_interop.rs", sha256 = "52c250d00e3ed3c92dbb71ed2bc293836cf11a7cd4649cb9f367427fd70fa6a6" },
   { path = "verification/tests/ethereum_consensus_bls.rs", sha256 = "7905595c7cad44aba6d5e50006b287bd398f147836c1eb5f15333404c5deb443" },
   { path = "verification/tests/legacy_xchacha20poly1305.rs", sha256 = "60758723207b15f954d1fb968c86570566f8f7565fad47a1c220f48ef475d1f1" },
@@ -830,17 +830,17 @@ command = 'python3 -B verification/oracle-provisioning/replay.py --manifest veri
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "verification/Cargo.lock", sha256 = "2f05e057dc06ea3e5634afc880fd01b401abdeab22627f05bb97b58acb2ba0d5" },
   { path = "verification/Cargo.toml", sha256 = "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8" },
-  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "6daa56c863dc5cfb9ec3db8b1d803cb2e5fc78363fdb19cfa3d1a905ec98e79b" },
-  { path = "verification/oracle-provisioning/manifest.json", sha256 = "a4ce57c78444a83c755bd4f61ac5dfde100d25737a3a72d6e1a878316b683e9a" },
+  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "fadf1cb23d641faaa3359462da4b74939eceab8ad9ee9fd7fced685b144ab217" },
+  { path = "verification/oracle-provisioning/manifest.json", sha256 = "0cb5a94d434b1db270a65d91d9067f2975f1269773d928bea35ddb84abe6972d" },
   { path = "verification/oracle-provisioning/replay.py", sha256 = "831f3df0d048e10fae27856684c90a81490db5e209209c0314260267ede31656" },
   { path = "verification/oracle-provisioning/run-targets.py", sha256 = "d66a8628996a8445e4f24b5827d69ddd3f03262b46fb397485f52592db203626" },
   { path = "verification/oracle-provisioning/subject_lib.py", sha256 = "9e93431b1efbb6ef4789fe68ef1fe8307870a95aa99b685dd40bcdba97314194" },
-  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "90ea5b6d8366a912c453bea6f96b2556767a1b4f3ab668e90757b21b4cc700d6" },
+  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "8b40683d1f48d59f6001d6c3c53e6caaacf86acfb4be77bca52826871bb1349f" },
   { path = "verification/tests/bls12_381_interop.rs", sha256 = "52c250d00e3ed3c92dbb71ed2bc293836cf11a7cd4649cb9f367427fd70fa6a6" },
   { path = "verification/tests/ethereum_consensus_bls.rs", sha256 = "7905595c7cad44aba6d5e50006b287bd398f147836c1eb5f15333404c5deb443" },
   { path = "verification/tests/legacy_xchacha20poly1305.rs", sha256 = "60758723207b15f954d1fb968c86570566f8f7565fad47a1c220f48ef475d1f1" },
@@ -860,17 +860,17 @@ command = 'python3 -B verification/oracle-provisioning/replay.py --manifest veri
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "verification/Cargo.lock", sha256 = "2f05e057dc06ea3e5634afc880fd01b401abdeab22627f05bb97b58acb2ba0d5" },
   { path = "verification/Cargo.toml", sha256 = "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8" },
-  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "6daa56c863dc5cfb9ec3db8b1d803cb2e5fc78363fdb19cfa3d1a905ec98e79b" },
-  { path = "verification/oracle-provisioning/manifest.json", sha256 = "a4ce57c78444a83c755bd4f61ac5dfde100d25737a3a72d6e1a878316b683e9a" },
+  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "fadf1cb23d641faaa3359462da4b74939eceab8ad9ee9fd7fced685b144ab217" },
+  { path = "verification/oracle-provisioning/manifest.json", sha256 = "0cb5a94d434b1db270a65d91d9067f2975f1269773d928bea35ddb84abe6972d" },
   { path = "verification/oracle-provisioning/replay.py", sha256 = "831f3df0d048e10fae27856684c90a81490db5e209209c0314260267ede31656" },
   { path = "verification/oracle-provisioning/run-targets.py", sha256 = "d66a8628996a8445e4f24b5827d69ddd3f03262b46fb397485f52592db203626" },
   { path = "verification/oracle-provisioning/subject_lib.py", sha256 = "9e93431b1efbb6ef4789fe68ef1fe8307870a95aa99b685dd40bcdba97314194" },
-  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "90ea5b6d8366a912c453bea6f96b2556767a1b4f3ab668e90757b21b4cc700d6" },
+  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "8b40683d1f48d59f6001d6c3c53e6caaacf86acfb4be77bca52826871bb1349f" },
   { path = "verification/tests/bls12_381_interop.rs", sha256 = "52c250d00e3ed3c92dbb71ed2bc293836cf11a7cd4649cb9f367427fd70fa6a6" },
   { path = "verification/tests/ethereum_consensus_bls.rs", sha256 = "7905595c7cad44aba6d5e50006b287bd398f147836c1eb5f15333404c5deb443" },
   { path = "verification/tests/legacy_xchacha20poly1305.rs", sha256 = "60758723207b15f954d1fb968c86570566f8f7565fad47a1c220f48ef475d1f1" },
@@ -890,17 +890,17 @@ command = 'python3 -B verification/oracle-provisioning/replay.py --manifest veri
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "verification/Cargo.lock", sha256 = "2f05e057dc06ea3e5634afc880fd01b401abdeab22627f05bb97b58acb2ba0d5" },
   { path = "verification/Cargo.toml", sha256 = "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8" },
-  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "6daa56c863dc5cfb9ec3db8b1d803cb2e5fc78363fdb19cfa3d1a905ec98e79b" },
-  { path = "verification/oracle-provisioning/manifest.json", sha256 = "a4ce57c78444a83c755bd4f61ac5dfde100d25737a3a72d6e1a878316b683e9a" },
+  { path = "verification/oracle-provisioning/bundle_lib.py", sha256 = "fadf1cb23d641faaa3359462da4b74939eceab8ad9ee9fd7fced685b144ab217" },
+  { path = "verification/oracle-provisioning/manifest.json", sha256 = "0cb5a94d434b1db270a65d91d9067f2975f1269773d928bea35ddb84abe6972d" },
   { path = "verification/oracle-provisioning/replay.py", sha256 = "831f3df0d048e10fae27856684c90a81490db5e209209c0314260267ede31656" },
   { path = "verification/oracle-provisioning/run-targets.py", sha256 = "d66a8628996a8445e4f24b5827d69ddd3f03262b46fb397485f52592db203626" },
   { path = "verification/oracle-provisioning/subject_lib.py", sha256 = "9e93431b1efbb6ef4789fe68ef1fe8307870a95aa99b685dd40bcdba97314194" },
-  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "90ea5b6d8366a912c453bea6f96b2556767a1b4f3ab668e90757b21b4cc700d6" },
+  { path = "verification/oracle-provisioning/subject-inputs.json", sha256 = "8b40683d1f48d59f6001d6c3c53e6caaacf86acfb4be77bca52826871bb1349f" },
   { path = "verification/tests/bls12_381_interop.rs", sha256 = "52c250d00e3ed3c92dbb71ed2bc293836cf11a7cd4649cb9f367427fd70fa6a6" },
   { path = "verification/tests/ethereum_consensus_bls.rs", sha256 = "7905595c7cad44aba6d5e50006b287bd398f147836c1eb5f15333404c5deb443" },
   { path = "verification/tests/legacy_xchacha20poly1305.rs", sha256 = "60758723207b15f954d1fb968c86570566f8f7565fad47a1c220f48ef475d1f1" },
@@ -920,8 +920,8 @@ command = "cargo test --locked --offline -p dcrypt-tests --test constant_time_te
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "tests/tests/constant_time_tests.rs", sha256 = "98e1d807cec84704921640f75bcf90c46826aa9b6a5c8bd9fe68e775578946af" },
   { path = "tests/tests/constant_time/bls.rs", sha256 = "724804627034d51b0cbb23bd3fd45696526387d64336a9e50a4128e546d1046d" },
@@ -940,8 +940,8 @@ command = "cargo fuzz run kem_decoders -- -runs=1000 -seed=424242"
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "fuzz/fuzz_targets/kem_decoders.rs", sha256 = "a79cdbac86ea38f57790ccd60506c15fdf22dba87aea96cbfeec59b059d58d74" },
 ]
@@ -957,8 +957,8 @@ command = "cargo fuzz run signature_decoders -- -runs=1000 -seed=424242"
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "fuzz/fuzz_targets/signature_decoders.rs", sha256 = "cfde2f46a7bb3bb050e5c6050dabad484b0135590bee871d8bf1cf3d5d4d1d18" },
   { path = "fuzz/fuzz_targets/bls12_381_decoders.rs", sha256 = "1002fe75dc820593d556bf1ac71d947657dc2f0ab6be012155734fc321c86832" },
@@ -975,8 +975,8 @@ command = "cargo fuzz run symmetric_decoders -- -runs=1000 -seed=424242"
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "fuzz/fuzz_targets/symmetric_decoders.rs", sha256 = "c09bcf9f328efc4738e2a29dc36b2be1421926545dc11300f4bbd0519cbe6ec4" },
   { path = "fuzz/fuzz_targets/stream_frames.rs", sha256 = "d4a11ccc20a3cdb630626c8c7cbd485c9a511c08edb6cb3edd0f2737ce3383c3" },
@@ -993,8 +993,8 @@ command = "cargo fuzz run hybrid_decoders -- -runs=1000 -seed=424242"
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "fuzz/fuzz_targets/hybrid_decoders.rs", sha256 = "abc8f570182e6c0cda0bcbdea64186a4dab1b1acd5c330e16afc3488cb76fa84" },
 ]
@@ -1010,8 +1010,8 @@ command = "cargo test --release --locked --offline -p dcrypt-tests --test proper
 verdict = "informational"
 reviewed-at = 2026-08-11
 valid-through = 2026-11-09
-source-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-source-tree = "28c04fffd98b76f447d55aa313fba13881604649"
+source-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+source-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
 artifacts = [
   { path = "tests/tests/property_aes_cbc.rs", sha256 = "82d3ecaa6d251e1435f5c073212d27e2ab8920f2878a89c5b7f333ab0add907f" },
 ]

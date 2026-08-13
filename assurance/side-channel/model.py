@@ -20,21 +20,22 @@ sys.dont_write_bytecode = True
 FRAMEWORK = Path(__file__).resolve().parent
 REPO = FRAMEWORK.parent.parent
 INVENTORY = FRAMEWORK / "reviewed-inventory.toml"
-SUBJECT_COMMIT = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-SUBJECT_TREE = "28c04fffd98b76f447d55aa313fba13881604649"
-SUBJECT_MANIFEST_SHA256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
-ATOMIC_SHA256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
-PUBLIC_SNAPSHOT_SHA256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
-REVIEWED_INVENTORY_SHA256 = "7e71bd2ad17f318643593307536d0c08e0f42ced5a34a6a61aeac748296de0d6"
-EXPECTED_ROW_IDS_SHA256 = "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723"
-EXPECTED_SOURCE_ROWS_SHA256 = "67f0ebc742d494943a2a42a9698e3f0c47543dbfcb612e485420839bc161280c"
+SUBJECT_COMMIT = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+SUBJECT_TREE = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+SUBJECT_MANIFEST_SHA256 = "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+ATOMIC_SHA256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
+PUBLIC_SNAPSHOT_SHA256 = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
+REVIEWED_INVENTORY_SHA256 = "22c9992bebfdb5d83f2b818fa2d9576f524bf34c3334c4c51b3d8c85a7c51097"
+EXPECTED_ROW_IDS_SHA256 = "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff"
+EXPECTED_SOURCE_ROWS_SHA256 = "e35cb1924e6f4480a557651db3fdebec3b9d1518d42160a8e7895c000f21f2f5"
 EXPECTED_SOURCE_PATHS_SHA256 = "5aae5258561c750a920b36be67c2652f28ea1c8536ad7527f73967633a62b804"
 EXPECTED_SOURCE_ROOTS_SHA256 = "3bdf8ea3f968c18983d73ef3d4523e915e4b1c3fa4f7d8949e73d07b97ec298f"
 EXPECTED_TIMING_NAMES_SHA256 = "99d4d109b29625053fb1ca96b37d9391d229642c26e4df1ead105b6f8a501bb5"
-EXPECTED_ROWS = 9_298
-EXPECTED_CURATED = 666
+EXPECTED_ROWS = 9_198
+EXPECTED_CURATED = 566
 EXPECTED_GAPS = 8_632
 EXPECTED_SOURCES = 255
+EXPECTED_PUBLIC_API_UNITS = 18_891
 EXPECTED_TIMING_CASES = 29
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -436,6 +437,7 @@ def load_inventory() -> tuple[dict[str, Any], bytes]:
         "expected-atomic-rows",
         "expected-curated-rows",
         "expected-production-rust-sources",
+        "expected-public-api-units",
         "expected-unreviewed-gap-rows",
         "ghash-compiler-cell",
         "input",
@@ -471,6 +473,7 @@ def load_inventory() -> tuple[dict[str, Any], bytes]:
         or inventory["expected-curated-rows"] != EXPECTED_CURATED
         or inventory["expected-unreviewed-gap-rows"] != EXPECTED_GAPS
         or inventory["expected-production-rust-sources"] != EXPECTED_SOURCES
+        or inventory["expected-public-api-units"] != EXPECTED_PUBLIC_API_UNITS
         or inventory["atomic-row-ids-sha256"] != EXPECTED_ROW_IDS_SHA256
         or inventory["production-source-paths-sha256"] != EXPECTED_SOURCE_PATHS_SHA256
         or inventory["production-source-rows-sha256"] != EXPECTED_SOURCE_ROWS_SHA256
@@ -507,6 +510,16 @@ def build_input_bindings(inventory: dict[str, Any]) -> list[dict[str, Any]]:
         raw, metadata = read_regular(REPO / path, label=f"reviewed input {path}")
         if _git_intent(metadata) != record["git-mode"] or sha256_bytes(raw) != record["sha256"]:
             raise PackageDError(f"reviewed input bytes/mode differ: {path}")
+        if path == "assurance/public-api-snapshot.json":
+            public = parse_json(raw, label="public API snapshot")
+            if (
+                not isinstance(public, dict)
+                or public.get("source_commit") != SUBJECT_COMMIT
+                or public.get("source_tree") != SUBJECT_TREE
+                or not isinstance(public.get("entries"), list)
+                or len(public["entries"]) != EXPECTED_PUBLIC_API_UNITS
+            ):
+                raise PackageDError("public API snapshot binding/count differs")
         result.append(
             {
                 "git_mode": record["git-mode"],
@@ -804,6 +817,7 @@ def build_package_document() -> dict[str, Any]:
             "dedicated_timing_runs": 0,
             "local_timing_controls": EXPECTED_TIMING_CASES,
             "production_source_files": EXPECTED_SOURCES,
+            "public_api_units": EXPECTED_PUBLIC_API_UNITS,
             "promoted_records": 0,
             "promotion_eligible_records": 0,
             "release_blocked_rows": EXPECTED_ROWS,
@@ -885,6 +899,7 @@ def validate_package_document(document: dict[str, Any]) -> None:
         "dedicated_timing_runs": 0,
         "local_timing_controls": EXPECTED_TIMING_CASES,
         "production_source_files": EXPECTED_SOURCES,
+        "public_api_units": EXPECTED_PUBLIC_API_UNITS,
         "promoted_records": 0,
         "promotion_eligible_records": 0,
         "release_blocked_rows": EXPECTED_ROWS,

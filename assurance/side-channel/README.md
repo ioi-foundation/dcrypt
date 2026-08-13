@@ -1,7 +1,7 @@
 # Package D side-channel and secret-flow foundation
 
 Package D is a fail-closed inventory and evidence-ingestion boundary.  It maps
-all 9,298 atomic assurance rows, every production Rust source, the repository's
+all 9,198 atomic assurance rows, every production Rust source, the repository's
 29 local statistical timing controls, the reviewed BLS/GHASH compiler-output
 controls, future dedicated fixed-vs-random and secret-taint profiles, and the
 minimum physical-evidence disposition policy.

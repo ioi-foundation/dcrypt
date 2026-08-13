@@ -7,10 +7,10 @@ campaign, sanitizer, coverage, crash, or release evidence.
 
 ## Counts
 
-- Total atomic rows: 9298
+- Total atomic rows: 9198
 - Exact critical-family rows mapped: 372
-- Explicit blocker rows: 8926
-- Release-blocked rows: 9298
+- Explicit blocker rows: 8826
+- Release-blocked rows: 9198
 
 ## Planned semantic targets
 

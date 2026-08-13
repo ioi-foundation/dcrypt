@@ -57,8 +57,28 @@ EXPECTED_REVIEWED_RENDERING_SEMANTICS_SHA256 = (
     "81291f16db5bb9b3353594f427b2e31ed90dc3daa03914757977a11a9ecaeae2"
 )
 EXPECTED_REVIEWED_CURATED_SHA256 = (
-    "5e2b8cf7de029ff79bda08c0709d6c14b58b2ee655ef44966ef0a0a876ab21f4"
+    "082cc81db8f9fcd9222b195af43208040811ae5f2e5e4565c249fecf6e10dcc8"
 )
+
+PACKAGE_E_PROJECTION_POLICY = (
+    "dcrypt-protocol-specs-package-e-subordinate-projection-v1"
+)
+PACKAGE_E_CHANGED_PATHS = (
+    "assurance/interoperability/protocol-specs/ARTIFACTS.sha256",
+    "assurance/interoperability/protocol-specs/CURRENT-BEHAVIOR.md",
+    "assurance/interoperability/protocol-specs/current-behavior.json",
+    "assurance/interoperability/protocol-specs/rebind-final-subject.py",
+    "assurance/interoperability/protocol-specs/verify-protocol-specs.py",
+)
+PACKAGE_E_INVARIANT_PATHS = (
+    "assurance/interoperability/protocol-specs/README.md",
+    "assurance/interoperability/protocol-specs/protocol-spec.schema.json",
+    "assurance/interoperability/protocol-specs/protocol-specs-selftest.py",
+)
+PACKAGE_E_PATH_MODES = {
+    f"{SPEC_RELATIVE_DIR.as_posix()}/{name}": mode
+    for name, mode in EXPECTED_ARTIFACT_GIT_MODES.items()
+}
 
 BINDING_PARAGRAPH_RE = re.compile(
     r"^This candidate currently has (?:a|an) \*\*[^*\n]+\*\* binding\."
@@ -1278,6 +1298,246 @@ def build_candidates(
     return proposed
 
 
+def projection_blob(
+    repo_root: Path,
+    relative: str,
+    expected_mode: str,
+    *,
+    revision: str | None,
+) -> bytes:
+    if revision is None:
+        path = repo_root / PurePosixPath(relative)
+        ensure_regular(
+            path,
+            repo_root,
+            f"Package E projection file {relative}",
+            expected_git_mode=expected_mode,
+        )
+        return path.read_bytes()
+    listing = run_git(
+        repo_root,
+        ["ls-tree", "-z", "--full-tree", revision, "--", relative],
+        binary=True,
+    )
+    records = [record for record in listing.stdout.split(b"\0") if record]
+    if listing.returncode != 0 or len(records) != 1:
+        fail(f"Package E candidate file is absent or ambiguous: {relative}")
+    try:
+        metadata, raw_path = records[0].split(b"\t", 1)
+        mode, kind, object_id = metadata.decode("ascii").split(" ")
+        path_value = raw_path.decode("utf-8")
+    except (UnicodeDecodeError, ValueError):
+        fail(f"Package E candidate tree row is malformed: {relative}")
+    if path_value != relative or kind != "blob" or mode != expected_mode:
+        fail(f"Package E candidate Git mode/path differs: {relative}")
+    blob = run_git(repo_root, ["cat-file", "blob", object_id], binary=True)
+    if blob.returncode != 0:
+        fail(f"Package E candidate blob is unreadable: {relative}")
+    return blob.stdout
+
+
+def projection_manifest(
+    repo_root: Path,
+    raw: bytes,
+    expected_commit: str,
+    expected_tree: str,
+) -> tuple[dict[str, str], int, str]:
+    try:
+        manifest = json.loads(raw.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError) as error:
+        fail(f"Package E subject manifest is invalid JSON: {error}")
+    if not isinstance(manifest, dict) or list(manifest) != SUBJECT_ROOT_KEYS:
+        fail("Package E subject manifest root keys are invalid")
+    if (
+        manifest.get("schema_version") != 1
+        or manifest.get("source_commit") != expected_commit
+        or manifest.get("source_tree") != expected_tree
+        or manifest.get("roots") != SUBJECT_ROOTS
+        or manifest.get("root_files") != SUBJECT_ROOT_FILES
+        or manifest.get("absent_build_inputs") != SUBJECT_ABSENT_BUILD_INPUTS
+        or manifest.get("include_policy") != SUBJECT_INCLUDE_POLICY
+        or raw
+        != (json.dumps(manifest, ensure_ascii=True, indent=2, sort_keys=False) + "\n").encode(
+            "utf-8"
+        )
+    ):
+        fail("Package E subject manifest binding or canonical bytes differ")
+    committed = inspect_bound_tree(repo_root, expected_commit)
+    rows = manifest.get("files")
+    if not isinstance(rows, list):
+        fail("Package E subject manifest files must be an array")
+    declared: dict[str, tuple[str, str]] = {}
+    ordered: list[str] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict) or list(row) != ["path", "sha256", "git_mode"]:
+            fail(f"Package E subject manifest files[{index}] shape differs")
+        path_value = row.get("path")
+        digest = row.get("sha256")
+        mode = row.get("git_mode")
+        if not isinstance(path_value, str):
+            fail(f"Package E subject manifest files[{index}] path differs")
+        validate_path(path_value)
+        if (
+            not subject_path_included(path_value)
+            or not isinstance(digest, str)
+            or HEX_SHA256.fullmatch(digest) is None
+            or mode not in {"100644", "100755"}
+            or path_value in declared
+        ):
+            fail(f"Package E subject manifest files[{index}] value differs")
+        declared[path_value] = (digest, mode)
+        ordered.append(path_value)
+    if ordered != sorted(ordered) or set(declared) != set(committed):
+        fail("Package E subject manifest closure differs from R_E")
+    blob_digests = git_blob_sha256s(
+        repo_root, [object_id for _mode, object_id in committed.values()]
+    )
+    for path_value, (digest, mode) in declared.items():
+        commit_mode, object_id = committed[path_value]
+        if mode != commit_mode or digest != blob_digests[object_id]:
+            fail(f"Package E subject manifest row differs from R_E: {path_value}")
+    return (
+        {path: digest for path, (digest, _mode) in declared.items()},
+        len(rows),
+        sha256_bytes(raw),
+    )
+
+
+def package_e_projection(
+    repo_root: Path,
+    *,
+    expected_r_commit: str,
+    expected_r_tree: str,
+    candidate_commit: str | None,
+) -> dict[str, Any]:
+    resolved = run_git(repo_root, ["rev-parse", "--verify", f"{expected_r_commit}^{{commit}}"])
+    tree = run_git(repo_root, ["rev-parse", f"{expected_r_commit}^{{tree}}"])
+    if (
+        resolved.returncode != 0
+        or resolved.stdout.strip() != expected_r_commit
+        or tree.returncode != 0
+        or tree.stdout.strip() != expected_r_tree
+    ):
+        fail("Package E R commit/tree identity differs")
+    if candidate_commit is not None:
+        candidate = run_git(
+            repo_root, ["rev-parse", "--verify", f"{candidate_commit}^{{commit}}"]
+        )
+        if candidate.returncode != 0 or candidate.stdout.strip() != candidate_commit:
+            fail("Package E candidate commit is absent or does not resolve exactly")
+
+    def raw(relative: str, mode: str) -> bytes:
+        return projection_blob(
+            repo_root, relative, mode, revision=candidate_commit
+        )
+
+    manifest_relative = SUBJECT_MANIFEST_RELATIVE.as_posix()
+    manifest_raw = raw(manifest_relative, "100644")
+    _subject_rows, subject_files, manifest_digest = projection_manifest(
+        repo_root, manifest_raw, expected_r_commit, expected_r_tree
+    )
+    curated_raw = raw(CURATED_RELATIVE.as_posix(), "100644")
+    curated_digest = sha256_bytes(curated_raw)
+    if curated_digest != EXPECTED_REVIEWED_CURATED_SHA256:
+        fail("Package E curated operations digest differs")
+
+    all_paths = (*PACKAGE_E_CHANGED_PATHS, *PACKAGE_E_INVARIANT_PATHS)
+    if set(all_paths) != set(PACKAGE_E_PATH_MODES) or len(all_paths) != len(set(all_paths)):
+        fail("Package E protocol path closure differs")
+    file_raw = {
+        path: raw(path, PACKAGE_E_PATH_MODES[path]) for path in all_paths
+    }
+    registry = json.loads(
+        file_raw[f"{SPEC_RELATIVE_DIR.as_posix()}/current-behavior.json"].decode("utf-8")
+    )
+    if sha256_bytes(normalized_registry_semantics(registry)) != (
+        EXPECTED_REVIEWED_REGISTRY_SEMANTICS_SHA256
+    ):
+        fail("Package E protocol registry semantics differ")
+    binding = registry.get("subject_binding")
+    if not isinstance(binding, dict) or binding != {
+        "binding_stage": "final-subject-candidate-review-required",
+        "curated_operations_path": CURATED_RELATIVE.as_posix(),
+        "curated_operations_sha256": curated_digest,
+        "final_rebind_required": False,
+        "manifest_file_count": subject_files,
+        "manifest_include_policy": SUBJECT_INCLUDE_POLICY,
+        "source_commit": expected_r_commit,
+        "source_tree": expected_r_tree,
+        "subject_manifest_path": manifest_relative,
+        "subject_manifest_sha256": manifest_digest,
+    }:
+        fail("Package E protocol registry subject binding differs")
+    manifested = set(EXPECTED_ARTIFACT_GIT_MODES) - {"ARTIFACTS.sha256"}
+    expected_manifest = "".join(
+        f"{sha256_bytes(file_raw[f'{SPEC_RELATIVE_DIR.as_posix()}/{name}'])}  {name}\n"
+        for name in sorted(manifested)
+    ).encode("utf-8")
+    if file_raw[f"{SPEC_RELATIVE_DIR.as_posix()}/ARTIFACTS.sha256"] != expected_manifest:
+        fail("Package E protocol artifact manifest differs")
+
+    def row(path: str) -> dict[str, Any]:
+        value = file_raw[path]
+        return {
+            "path": path,
+            "git_mode": PACKAGE_E_PATH_MODES[path],
+            "size": len(value),
+            "sha256": sha256_bytes(value),
+        }
+
+    body = {
+        "schema_version": 1,
+        "content_policy": PACKAGE_E_PROJECTION_POLICY,
+        "r_commit": expected_r_commit,
+        "r_tree": expected_r_tree,
+        "candidate_commit": candidate_commit,
+        "subject_manifest_sha256": manifest_digest,
+        "counts": {
+            "protocol_files": len(all_paths),
+            "changed_files": len(PACKAGE_E_CHANGED_PATHS),
+            "invariant_files": len(PACKAGE_E_INVARIANT_PATHS),
+            "subject_files": subject_files,
+        },
+        "binding_assignments": {
+            "curated_operations_sha256": curated_digest,
+            "semantic_registry_sha256": EXPECTED_REVIEWED_REGISTRY_SEMANTICS_SHA256,
+            "subject_manifest_sha256": manifest_digest,
+        },
+        "changed_files": [row(path) for path in PACKAGE_E_CHANGED_PATHS],
+        "invariant_files": [row(path) for path in PACKAGE_E_INVARIANT_PATHS],
+    }
+    return {
+        **body,
+        "projection_sha256": sha256_bytes(canonical_json(body, sort_keys=True)),
+    }
+
+
+def package_e_projection_main(arguments: list[str]) -> int:
+    parser = argparse.ArgumentParser(allow_abbrev=False)
+    parser.add_argument("--expected-r-commit", required=True)
+    parser.add_argument("--expected-r-tree", required=True)
+    parser.add_argument("--candidate-commit")
+    parser.add_argument("--repo-root", type=Path, default=Path(__file__).absolute().parents[3])
+    args = parser.parse_args(arguments)
+    if (
+        HEX_GIT_ID.fullmatch(args.expected_r_commit) is None
+        or HEX_GIT_ID.fullmatch(args.expected_r_tree) is None
+        or (
+            args.candidate_commit is not None
+            and HEX_GIT_ID.fullmatch(args.candidate_commit) is None
+        )
+    ):
+        fail("Package E projection identities must be lowercase 40-hex")
+    document = package_e_projection(
+        args.repo_root.resolve(strict=True),
+        expected_r_commit=args.expected_r_commit,
+        expected_r_tree=args.expected_r_tree,
+        candidate_commit=args.candidate_commit,
+    )
+    sys.stdout.buffer.write(canonical_json(document, sort_keys=True))
+    return 0
+
+
 def parse_args() -> argparse.Namespace:
     own_dir = Path(__file__).absolute().parent
     parser = argparse.ArgumentParser()
@@ -1513,6 +1773,8 @@ def run() -> None:
 
 if __name__ == "__main__":
     try:
+        if len(sys.argv) >= 2 and sys.argv[1] == "--package-e-projection":
+            raise SystemExit(package_e_projection_main(sys.argv[2:]))
         run()
     except InjectedRebindFault as error:
         print(f"final-subject rebind: FAIL: {error}", file=sys.stderr)

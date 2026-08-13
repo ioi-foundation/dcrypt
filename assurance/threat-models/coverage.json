@@ -1,17 +1,17 @@
 {
-  "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
+  "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
   "counts": {
-    "atomic_rows": 9298,
-    "curated_rows": 666,
-    "public_api_units": 19021,
-    "release_blocked_rows": 9298,
+    "atomic_rows": 9198,
+    "curated_rows": 566,
+    "public_api_units": 18891,
+    "release_blocked_rows": 9198,
     "threat_models": 11,
     "unreviewed_rows": 8632
   },
   "coverage_policy": "conservative-all-atomic-rows-v1",
   "dimensions": {
     "algorithms": {
-      "count": 535,
+      "count": 531,
       "values": [
         "AES",
         "AES key derivation",
@@ -36,14 +36,11 @@
         "ECDH+ML-KEM hybrid KEM",
         "ECDSA",
         "ECDSA+ML-DSA hybrid signature",
-        "ERROR_REGISTRY compatibility API",
         "Ed25519",
         "GCM<B: BlockCipher>",
         "HKDF<H: HashFunction>",
         "HMAC<H: HashFunction>",
         "Keccak-256",
-        "Legacy Result compatibility",
-        "Legacy global error registry",
         "ML-DSA",
         "ML-KEM",
         "P-224 curve parameters",
@@ -546,13 +543,12 @@
         "dcrypt_symmetric::streaming::StreamingDecrypt",
         "dcrypt_symmetric::streaming::StreamingEncrypt",
         "dcrypt_utils::data_conversion",
-        "legacy ErrorRegistry compatibility",
         "prime-field elliptic curve"
       ],
-      "values_sha256": "8b188b418ad3acfd708ca14a0f8129c4d44214feb5d5050d627a1cfe6a6dea28"
+      "values_sha256": "9a295f763828a21c4ec008c7f28c5798f6ca1595aa4e143396e6a3e84b98e75a"
     },
     "encodings": {
-      "count": 52,
+      "count": 48,
       "values": [
         "1..32-byte digest",
         "1..32-byte key and tag",
@@ -586,13 +582,9 @@
         "exact public declaration; format classification pending",
         "field/scalar/point/ciphertext/tag size constants",
         "m_cost KiB, t_cost, p lanes, output length; 8/16/24/32/64-byte salt; optional AD and secret",
-        "n/a",
         "one-block counter; 1..8-byte prefix/postfix/custom counter",
-        "operation-scoped Result and typed Error",
         "p, a, b, Gx, Gy, n, h",
         "password, salt, iteration count, output length",
-        "process-global error registry state",
-        "process-global last-error side channel",
         "public Nonce<N> (N=12,15,16) and 12..16-byte tag",
         "raw password and salt to 16-byte key",
         "raw password and salt to 32-byte key",
@@ -607,7 +599,7 @@
         "versioned hybrid signature transcript with domain separation",
         "versioned hybrid transcript with domain-separated HKDF-SHA256"
       ],
-      "values_sha256": "72bf7374d2c94fcf3f3cb56cab01951f7e106a1e9bb1b7b7fa3a76ef1eb87640"
+      "values_sha256": "7006152f094e9a0c5117adaa5239f386476a2910385bb23288e40ed158182f87"
     },
     "feature_profiles": {
       "count": 15,
@@ -631,7 +623,7 @@
       "values_sha256": "0d4ea7c70a94f0528f35bfcdc6958a0751c990f1049b5a360fb005a0d61907e7"
     },
     "modes_profiles": {
-      "count": 115,
+      "count": 90,
       "values": [
         "Draft-07 RNG wrapper",
         "Draft-07 RNG wrapper with key_info",
@@ -655,16 +647,9 @@
         "caller-selected length and caller-owned CryptoRng",
         "caller-selected positive iteration count",
         "compressed G1 validation and subgroup check",
-        "deprecated explicit ErrorRegistry construction",
-        "deprecated registry lifecycle",
-        "deprecated v3 compatibility",
         "derive-key",
         "deterministic",
         "exact-callable",
-        "exact-selector:ConstantTimeResult; deprecated v3 compatibility",
-        "exact-selector:ERROR_REGISTRY; base",
-        "exact-selector:ERROR_REGISTRY; deprecated v3 compatibility",
-        "exact-selector:ErrorRegistryExt; base",
         "exact-selector:P224_CIPHERTEXT_SIZE; base",
         "exact-selector:P224_FIELD_ELEMENT_SIZE; base",
         "exact-selector:P224_KEM_SHARED_SECRET_KDF_OUTPUT_SIZE; base",
@@ -672,10 +657,6 @@
         "exact-selector:P224_POINT_UNCOMPRESSED_SIZE; base",
         "exact-selector:P224_SCALAR_SIZE; base",
         "exact-selector:P224_TAG_SIZE; base",
-        "exact-selector:ResultExt; deprecated v3 compatibility",
-        "exact-selector:SecureErrorHandling; base",
-        "exact-selector:SecureErrorHandling; deprecated v3 compatibility",
-        "exact-selector:SymmetricResultExt; deprecated v3 compatibility",
         "exact-selector:aes128_decrypt; base",
         "exact-selector:aes128_decrypt_package; base",
         "exact-selector:aes128_encrypt; base",
@@ -685,10 +666,6 @@
         "exact-selector:aes256_encrypt; base",
         "exact-selector:aes256_encrypt_package; base",
         "exact-selector:as_secret_buffer; base",
-        "exact-selector:clear; base",
-        "exact-selector:ct_is_err; deprecated v3 compatibility",
-        "exact-selector:ct_is_ok; deprecated v3 compatibility",
-        "exact-selector:ct_map; deprecated v3 compatibility",
         "exact-selector:decrypt; base",
         "exact-selector:decrypt_and_verify; base",
         "exact-selector:decrypt_package; base",
@@ -709,27 +686,17 @@
         "exact-selector:extract; base",
         "exact-selector:finalize; base",
         "exact-selector:from_secret_buffer; base",
-        "exact-selector:get_error; base",
-        "exact-selector:has_error; base",
         "exact-selector:internal_decrypt; base",
         "exact-selector:internal_decrypt_protected; base",
         "exact-selector:internal_encrypt; base",
         "exact-selector:keypair; pure Ed25519",
         "exact-selector:mac; base",
-        "exact-selector:map_io_err; deprecated v3 compatibility",
-        "exact-selector:map_primitive_err; deprecated v3 compatibility",
         "exact-selector:new; base",
         "exact-selector:pbkdf2; base",
         "exact-selector:pbkdf2_secure; base",
-        "exact-selector:secure_unwrap; base",
-        "exact-selector:store; base",
-        "exact-selector:unwrap_or_record_with; base",
-        "exact-selector:with_context; deprecated v3 compatibility",
         "exact-selector:with_key; base",
-        "exact-selector:with_message; deprecated v3 compatibility",
         "exact-selector:with_output_size; base",
         "exact-selector:with_parameter_block; base",
-        "exact-selector:wrap_err; deprecated v3 compatibility",
         "final-exponentiation",
         "hedged",
         "keyed",
@@ -749,10 +716,10 @@
         "unkeyed",
         "version 0x13"
       ],
-      "values_sha256": "4314b953c22cb35fd9f5fd597fc19cb7ba76821b238344d96fae9d7503b998aa"
+      "values_sha256": "ce6bf045eff4e0a3cce5d13e7e5305133089b719cf7d056371d9a1c8a58af0a3"
     },
     "operations": {
-      "count": 625,
+      "count": 601,
       "values": [
         "AES128_KEY_SIZE",
         "AES192_KEY_SIZE",
@@ -906,7 +873,6 @@
         "__chaining_gt",
         "__chaining_le",
         "__chaining_lt",
-        "access-global-error-registry",
         "add",
         "add-mod-n",
         "add_assign",
@@ -978,13 +944,7 @@
         "compute_tag",
         "conditional_select",
         "conditional_swap",
-        "constant-time-result-compatibility-contract",
         "constant_time_eq",
-        "construct-registry",
-        "convert-result-error",
-        "ct-is-err",
-        "ct-is-ok",
-        "ct-map",
         "ct_eq",
         "data",
         "data_mut",
@@ -1000,7 +960,6 @@
         "decrypt_block",
         "decrypt_with_aad",
         "default",
-        "default-construct",
         "degree",
         "deref",
         "deref_mut",
@@ -1038,7 +997,6 @@
         "encrypt_block",
         "encrypt_with_aad",
         "eq",
-        "error-registry-extension-contract",
         "execute",
         "expand",
         "export_seed",
@@ -1092,9 +1050,7 @@
         "generate_nonce",
         "generate_salt",
         "generator",
-        "get-error",
         "gt",
-        "has-error",
         "hash-password",
         "hash-to-g1",
         "hash-to-g2",
@@ -1155,8 +1111,6 @@
         "lt",
         "mac",
         "map",
-        "map-io-err",
-        "map-primitive-err",
         "max",
         "max_length",
         "meets_minimum",
@@ -1213,7 +1167,6 @@
         "partial_cmp",
         "pbkdf2",
         "pbkdf2-secure",
-        "pin-drop",
         "pin_drop",
         "pop",
         "pow2k",
@@ -1230,12 +1183,10 @@
         "read",
         "recommended_output_size",
         "recommended_params",
-        "record-error",
         "reduce-mod-n",
         "reduce_coeffs",
         "reset",
         "resize",
-        "result-compatibility-contract",
         "sample_cbd",
         "sample_uniform",
         "scalar-multiply",
@@ -1247,8 +1198,6 @@
         "seal",
         "secret_key",
         "secret_key_bytes_are_valid",
-        "secure-error-compatibility-contract",
-        "secure-unwrap",
         "secure_clone",
         "secure_clone_and_zero",
         "secure_cmp",
@@ -1286,7 +1235,6 @@
         "square",
         "squeeze",
         "squeeze_into_vec",
-        "store",
         "stream-decrypt",
         "stream-encrypt",
         "strict-verify",
@@ -1295,7 +1243,6 @@
         "sub_mod_n",
         "subtract-mod-n",
         "sum",
-        "symmetric-result-compatibility-contract",
         "tag_size",
         "to_be_bytes",
         "to_be_bytes_zeroizing",
@@ -1325,7 +1272,6 @@
         "unpack_10bit",
         "unpack_coeffs",
         "unwrap",
-        "unwrap-or-record-with",
         "unwrap_or",
         "unwrap_or_else",
         "unwrap_u8",
@@ -1348,9 +1294,7 @@
         "verify_mu",
         "verify_tag",
         "verify_with_context",
-        "with-context",
         "with-key",
-        "with-message",
         "with-output-size",
         "with-parameter-block",
         "with_aad",
@@ -1368,7 +1312,6 @@
         "with_output_length",
         "with_params",
         "with_salt",
-        "wrap-err",
         "write",
         "x_coordinate_bytes",
         "y_coordinate_bytes",
@@ -1380,10 +1323,10 @@
         "zeroizing_box",
         "zeroizing_bytes_from_slice"
       ],
-      "values_sha256": "709e6b165c42a8b809678e0ced26d2844c7f78dca6472a455e1df637494bfaa8"
+      "values_sha256": "be4419fd55fbb4f3fd01045bd3b346d585e5fff2dd4175f0085bfb0ffb4862f6"
     },
     "parameter_sets": {
-      "count": 69,
+      "count": 60,
       "values": [
         "256-bit AEAD key",
         "256-bit key",
@@ -1409,7 +1352,6 @@
         "ChaCha20-Poly1305-stream-v3",
         "ECDSA-P-384+ML-DSA-65",
         "Ed25519",
-        "ErrorRegistry",
         "Keccak-256",
         "ML-DSA-44",
         "ML-DSA-65",
@@ -1443,19 +1385,11 @@
         "caller-selected BlockCipher",
         "caller-selected HashFunction",
         "caller-selected byte length",
-        "dcrypt-algorithms Result compatibility surface",
-        "dcrypt-algorithms registry compatibility re-export",
-        "dcrypt-api Result compatibility surface",
-        "dcrypt-kem Result compatibility surface",
-        "dcrypt-kem registry compatibility re-export",
-        "dcrypt-symmetric Result compatibility surface",
-        "dcrypt-symmetric registry compatibility re-export",
-        "process-global",
         "secp256k1",
         "secp256k1+ML-KEM-512",
         "unclassified type-bound-generic"
       ],
-      "values_sha256": "a3bf5254a5ae20a7c9fbc8d2687ed2218ef91c898d601cf722f6afaa0a2b9bdf"
+      "values_sha256": "248d3a964068ee919e89e76facf37987233b8cfddc2e7d2fd3a8d21d93cea584"
     },
     "platforms": {
       "count": 4,
@@ -1471,95 +1405,95 @@
   "model_set_version": "2026-08-11-candidate-1",
   "models": {
     "TM-DEPENDENCY-ORACLE-COMMON-MODE": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-DOS-RESOURCE-BOUNDS": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-EMBEDDED-PHYSICAL-ACCESS": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-FAULT-INJECTION": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-LOCAL-CORESIDENT-CACHE": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-POWER-EM": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-PROTOCOL-MISUSE": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-REMOTE-MALICIOUS-INPUT": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-RNG-FAILURE": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-SECRET-LIFECYCLE": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     },
     "TM-SUPPLY-CHAIN-TOOLCHAIN": {
-      "atomic_row_count": 9298,
-      "atomic_row_ids_sha256": "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723",
-      "dimension_set_sha256": "a9a04c3006389a4ff0216e2fec7e856ffd235bfa62489368c03ededa12f68a5f",
-      "public_binding_count": 4516,
-      "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+      "atomic_row_count": 9198,
+      "atomic_row_ids_sha256": "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff",
+      "dimension_set_sha256": "93aed44f97a667b2e4c46aff7a7699cf43293f39cc6fd93ae5394d240d005f79",
+      "public_binding_count": 4491,
+      "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
       "row_membership_field": "rows[].threat_models"
     }
   },
-  "public_bindings_sha256": "1922e34bddb1140773c15b5c3874d1180b2337d01fc7ef7ffd2f82cc467e7ed5",
+  "public_bindings_sha256": "e888664029152c3fd621028c2687d7ee5fba91b4e81a73a7d87399c2db7bd92d",
   "rows": [
     {
       "algorithm": "AES-GCM",
@@ -2317,918 +2251,6 @@
       "row_kind": "operation",
       "semantic_review": "curated",
       "support": "supported",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt-algorithms.legacy.error-registry.global-state.secure-unwrap",
-      "operation": "secure-unwrap",
-      "public_bindings": [
-        "function:secure_unwrap|dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt-algorithms.legacy.error-registry.global-state.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-algorithms.legacy.error-registry.kem",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-algorithms.legacy.error-registry.symmetric.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.with-context",
-      "operation": "with-context",
-      "public_bindings": [
-        "function:with_context|dcrypt_api::error::traits::ResultExt::with_context"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.with-message",
-      "operation": "with-message",
-      "public_bindings": [
-        "function:with_message|dcrypt_api::error::traits::ResultExt::with_message"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-algorithms.legacy.result-compatibility.api.wrap-err",
-      "operation": "wrap-err",
-      "public_bindings": [
-        "function:wrap_err|dcrypt_api::error::traits::ResultExt::wrap_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-algorithms.legacy.result-compatibility.kem",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-algorithms.legacy.result-compatibility.symmetric.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-api.legacy.error-registry.algorithms",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-api.legacy.error-registry.kem",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-api.legacy.error-registry.symmetric.error-registry",
-      "operation": "access-global-error-registry",
-      "public_bindings": [
-        "static:ERROR_REGISTRY|dcrypt_api::error::registry::ERROR_REGISTRY"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-api.legacy.error-registry.symmetric.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-api.legacy.result-compatibility.algorithms",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-api.legacy.result-compatibility.kem",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-api.legacy.result-compatibility.symmetric.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-kem.legacy.error-registry.algorithms",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt-kem.legacy.error-registry.global-state.secure-unwrap",
-      "operation": "secure-unwrap",
-      "public_bindings": [
-        "function:secure_unwrap|dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt-kem.legacy.error-registry.global-state.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-kem.legacy.error-registry.symmetric.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-kem.legacy.result-compatibility.algorithms",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-kem.legacy.result-compatibility.api.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-kem.legacy.result-compatibility.api.with-context",
-      "operation": "with-context",
-      "public_bindings": [
-        "function:with_context|dcrypt_api::error::traits::ResultExt::with_context"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-kem.legacy.result-compatibility.api.with-message",
-      "operation": "with-message",
-      "public_bindings": [
-        "function:with_message|dcrypt_api::error::traits::ResultExt::with_message"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-kem.legacy.result-compatibility.api.wrap-err",
-      "operation": "wrap-err",
-      "public_bindings": [
-        "function:wrap_err|dcrypt_api::error::traits::ResultExt::wrap_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-kem.legacy.result-compatibility.symmetric.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-symmetric.legacy.error-registry.algorithms",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt-symmetric.legacy.error-registry.global-state.error-registry",
-      "operation": "access-global-error-registry",
-      "public_bindings": [
-        "static:ERROR_REGISTRY|dcrypt_api::error::registry::ERROR_REGISTRY"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt-symmetric.legacy.error-registry.global-state.secure-unwrap",
-      "operation": "secure-unwrap",
-      "public_bindings": [
-        "function:secure_unwrap|dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt-symmetric.legacy.error-registry.global-state.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt-symmetric.legacy.error-registry.kem",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-symmetric.legacy.result-compatibility.algorithms",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.with-context",
-      "operation": "with-context",
-      "public_bindings": [
-        "function:with_context|dcrypt_api::error::traits::ResultExt::with_context"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.with-message",
-      "operation": "with-message",
-      "public_bindings": [
-        "function:with_message|dcrypt_api::error::traits::ResultExt::with_message"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-symmetric.legacy.result-compatibility.api.wrap-err",
-      "operation": "wrap-err",
-      "public_bindings": [
-        "function:wrap_err|dcrypt_api::error::traits::ResultExt::wrap_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt-symmetric.legacy.result-compatibility.kem",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
       "threat_models": [
         "TM-DEPENDENCY-ORACLE-COMMON-MODE",
         "TM-DOS-RESOURCE-BOUNDS",
@@ -7886,752 +6908,6 @@
       "row_kind": "operation",
       "semantic_review": "curated",
       "support": "supported",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt.legacy.error-registry.algorithms",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.construct",
-      "operation": "construct-registry",
-      "public_bindings": [
-        "function:new|dcrypt_api::error::registry::ErrorRegistry::new",
-        "struct:ErrorRegistry|dcrypt_api::error::registry::ErrorRegistry"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "legacy ErrorRegistry compatibility",
-      "id": "alias.dcrypt.legacy.error-registry.default",
-      "operation": "default-construct",
-      "public_bindings": [
-        "trait-method:default|dcrypt_api::error::registry::ErrorRegistry::{impl core::default::Default}#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "legacy ErrorRegistry compatibility",
-      "id": "alias.dcrypt.legacy.error-registry.drop",
-      "operation": "drop",
-      "public_bindings": [
-        "trait-method:drop|dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.clear",
-      "operation": "clear",
-      "public_bindings": [
-        "function:clear|dcrypt_api::error::registry::ErrorRegistry::clear"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.error-registry",
-      "operation": "access-global-error-registry",
-      "public_bindings": [
-        "static:ERROR_REGISTRY|dcrypt_api::error::registry::ERROR_REGISTRY",
-        "struct:ErrorRegistry|dcrypt_api::error::registry::ErrorRegistry"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.errorregistryext",
-      "operation": "error-registry-extension-contract",
-      "public_bindings": [
-        "trait:ErrorRegistryExt|dcrypt_api::error::traits::ErrorRegistryExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.get-error",
-      "operation": "get-error",
-      "public_bindings": [
-        "function:get_error|dcrypt_api::error::registry::ErrorRegistry::get_error"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.has-error",
-      "operation": "has-error",
-      "public_bindings": [
-        "function:has_error|dcrypt_api::error::registry::ErrorRegistry::has_error"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.secure-unwrap",
-      "operation": "secure-unwrap",
-      "public_bindings": [
-        "function:secure_unwrap|dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.store",
-      "operation": "store",
-      "public_bindings": [
-        "function:store|dcrypt_api::error::registry::ErrorRegistry::store"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "alias.dcrypt.legacy.error-registry.global-state.unwrap-or-record-with",
-      "operation": "unwrap-or-record-with",
-      "public_bindings": [
-        "function:unwrap_or_record_with|dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt.legacy.error-registry.kem",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "legacy ErrorRegistry compatibility",
-      "id": "alias.dcrypt.legacy.error-registry.pin-drop",
-      "operation": "pin-drop",
-      "public_bindings": [
-        "trait-method:pin_drop|dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt.legacy.error-registry.symmetric.error-registry",
-      "operation": "access-global-error-registry",
-      "public_bindings": [
-        "static:ERROR_REGISTRY|dcrypt_api::error::registry::ERROR_REGISTRY"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "alias.dcrypt.legacy.error-registry.symmetric.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.algorithms",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.constanttimeresult",
-      "operation": "constant-time-result-compatibility-contract",
-      "public_bindings": [
-        "trait:ConstantTimeResult|dcrypt_api::error::traits::ConstantTimeResult"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.ct-is-err",
-      "operation": "ct-is-err",
-      "public_bindings": [
-        "function:ct_is_err|dcrypt_api::error::traits::ConstantTimeResult::ct_is_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.ct-is-ok",
-      "operation": "ct-is-ok",
-      "public_bindings": [
-        "function:ct_is_ok|dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.ct-map",
-      "operation": "ct-map",
-      "public_bindings": [
-        "function:ct_map|dcrypt_api::error::traits::ConstantTimeResult::ct_map"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.with-context",
-      "operation": "with-context",
-      "public_bindings": [
-        "function:with_context|dcrypt_api::error::traits::ResultExt::with_context"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.with-message",
-      "operation": "with-message",
-      "public_bindings": [
-        "function:with_message|dcrypt_api::error::traits::ResultExt::with_message"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.api.wrap-err",
-      "operation": "wrap-err",
-      "public_bindings": [
-        "function:wrap_err|dcrypt_api::error::traits::ResultExt::wrap_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.kem",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.symmetric.map-io-err",
-      "operation": "map-io-err",
-      "public_bindings": [
-        "function:map_io_err|dcrypt_symmetric::error::SymmetricResultExt::map_io_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.symmetric.map-primitive-err",
-      "operation": "map-primitive-err",
-      "public_bindings": [
-        "function:map_primitive_err|dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.symmetric.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "alias.dcrypt.legacy.result-compatibility.symmetric.symmetricresultext",
-      "operation": "symmetric-result-compatibility-contract",
-      "public_bindings": [
-        "trait:SymmetricResultExt|dcrypt_symmetric::error::SymmetricResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
       "threat_models": [
         "TM-DEPENDENCY-ORACLE-COMMON-MODE",
         "TM-DOS-RESOURCE-BOUNDS",
@@ -221879,752 +220155,6 @@
       ]
     },
     {
-      "algorithm": "Legacy global error registry",
-      "id": "legacy.error-registry.algorithms",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.construct",
-      "operation": "construct-registry",
-      "public_bindings": [
-        "function:new|dcrypt_api::error::registry::ErrorRegistry::new",
-        "struct:ErrorRegistry|dcrypt_api::error::registry::ErrorRegistry"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "legacy ErrorRegistry compatibility",
-      "id": "legacy.error-registry.default",
-      "operation": "default-construct",
-      "public_bindings": [
-        "trait-method:default|dcrypt_api::error::registry::ErrorRegistry::{impl core::default::Default}#cf50b1d505b6e5be5a32a4942137f22ce0c5ee2ee5752502ea622a600e030e14"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "legacy ErrorRegistry compatibility",
-      "id": "legacy.error-registry.drop",
-      "operation": "drop",
-      "public_bindings": [
-        "trait-method:drop|dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.clear",
-      "operation": "clear",
-      "public_bindings": [
-        "function:clear|dcrypt_api::error::registry::ErrorRegistry::clear"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.error-registry",
-      "operation": "access-global-error-registry",
-      "public_bindings": [
-        "static:ERROR_REGISTRY|dcrypt_api::error::registry::ERROR_REGISTRY",
-        "struct:ErrorRegistry|dcrypt_api::error::registry::ErrorRegistry"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.errorregistryext",
-      "operation": "error-registry-extension-contract",
-      "public_bindings": [
-        "trait:ErrorRegistryExt|dcrypt_api::error::traits::ErrorRegistryExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.get-error",
-      "operation": "get-error",
-      "public_bindings": [
-        "function:get_error|dcrypt_api::error::registry::ErrorRegistry::get_error"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.has-error",
-      "operation": "has-error",
-      "public_bindings": [
-        "function:has_error|dcrypt_api::error::registry::ErrorRegistry::has_error"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.secure-unwrap",
-      "operation": "secure-unwrap",
-      "public_bindings": [
-        "function:secure_unwrap|dcrypt_api::error::traits::SecureErrorHandling::secure_unwrap"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.store",
-      "operation": "store",
-      "public_bindings": [
-        "function:store|dcrypt_api::error::registry::ErrorRegistry::store"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "ERROR_REGISTRY compatibility API",
-      "id": "legacy.error-registry.global-state.unwrap-or-record-with",
-      "operation": "unwrap-or-record-with",
-      "public_bindings": [
-        "function:unwrap_or_record_with|dcrypt_api::error::traits::ErrorRegistryExt::unwrap_or_record_with"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "legacy.error-registry.kem",
-      "operation": "record-error",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "legacy ErrorRegistry compatibility",
-      "id": "legacy.error-registry.pin-drop",
-      "operation": "pin-drop",
-      "public_bindings": [
-        "trait-method:pin_drop|dcrypt_api::error::registry::ErrorRegistry::{impl core::ops::drop::Drop}#0154a51217b0ca1b7617b1b769b59c90c59c3685eeb88f58a63c45c8a7a9fe54"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "legacy.error-registry.symmetric.error-registry",
-      "operation": "access-global-error-registry",
-      "public_bindings": [
-        "static:ERROR_REGISTRY|dcrypt_api::error::registry::ERROR_REGISTRY"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy global error registry",
-      "id": "legacy.error-registry.symmetric.secureerrorhandling",
-      "operation": "secure-error-compatibility-contract",
-      "public_bindings": [
-        "trait:SecureErrorHandling|dcrypt_api::error::traits::SecureErrorHandling"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.algorithms",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.constanttimeresult",
-      "operation": "constant-time-result-compatibility-contract",
-      "public_bindings": [
-        "trait:ConstantTimeResult|dcrypt_api::error::traits::ConstantTimeResult"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.ct-is-err",
-      "operation": "ct-is-err",
-      "public_bindings": [
-        "function:ct_is_err|dcrypt_api::error::traits::ConstantTimeResult::ct_is_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.ct-is-ok",
-      "operation": "ct-is-ok",
-      "public_bindings": [
-        "function:ct_is_ok|dcrypt_api::error::traits::ConstantTimeResult::ct_is_ok"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.ct-map",
-      "operation": "ct-map",
-      "public_bindings": [
-        "function:ct_map|dcrypt_api::error::traits::ConstantTimeResult::ct_map"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.with-context",
-      "operation": "with-context",
-      "public_bindings": [
-        "function:with_context|dcrypt_api::error::traits::ResultExt::with_context"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.with-message",
-      "operation": "with-message",
-      "public_bindings": [
-        "function:with_message|dcrypt_api::error::traits::ResultExt::with_message"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.api.wrap-err",
-      "operation": "wrap-err",
-      "public_bindings": [
-        "function:wrap_err|dcrypt_api::error::traits::ResultExt::wrap_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.kem",
-      "operation": "convert-result-error",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.symmetric.map-io-err",
-      "operation": "map-io-err",
-      "public_bindings": [
-        "function:map_io_err|dcrypt_symmetric::error::SymmetricResultExt::map_io_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.symmetric.map-primitive-err",
-      "operation": "map-primitive-err",
-      "public_bindings": [
-        "function:map_primitive_err|dcrypt_symmetric::error::SymmetricResultExt::map_primitive_err"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.symmetric.resultext",
-      "operation": "result-compatibility-contract",
-      "public_bindings": [
-        "trait:ResultExt|dcrypt_api::error::traits::ResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
-      "algorithm": "Legacy Result compatibility",
-      "id": "legacy.result-compatibility.symmetric.symmetricresultext",
-      "operation": "symmetric-result-compatibility-contract",
-      "public_bindings": [
-        "trait:SymmetricResultExt|dcrypt_symmetric::error::SymmetricResultExt"
-      ],
-      "row_kind": "operation",
-      "semantic_review": "curated",
-      "support": "transitional",
-      "threat_models": [
-        "TM-DEPENDENCY-ORACLE-COMMON-MODE",
-        "TM-DOS-RESOURCE-BOUNDS",
-        "TM-EMBEDDED-PHYSICAL-ACCESS",
-        "TM-FAULT-INJECTION",
-        "TM-LOCAL-CORESIDENT-CACHE",
-        "TM-POWER-EM",
-        "TM-PROTOCOL-MISUSE",
-        "TM-REMOTE-MALICIOUS-INPUT",
-        "TM-RNG-FAILURE",
-        "TM-SECRET-LIFECYCLE",
-        "TM-SUPPLY-CHAIN-TOOLCHAIN"
-      ]
-    },
-    {
       "algorithm": "ML-DSA",
       "id": "ml-dsa-44.key-generation",
       "operation": "key-generation-rng",
@@ -224806,23 +222336,23 @@
   "sources": {
     "ledger": {
       "path": "../ledger.toml",
-      "sha256": "d29e4ee1a88f1c10990a3ad2421afdc9f2dec559cff2063cd400dc9938558779"
+      "sha256": "bbdafc06e8df89a81b3011596abd02ec28b515db87beb74471f766469dca077e"
     },
     "operations": {
       "path": "../atomic-operations.toml",
-      "sha256": "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
+      "sha256": "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
     },
     "public_api_snapshot": {
       "path": "../public-api-snapshot.json",
-      "sha256": "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
+      "sha256": "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
     },
     "schema": {
       "path": "schema.toml",
-      "sha256": "129324564061429a2fdbf4e787af02256343c6975135209956a2775f43b2f036"
+      "sha256": "3613aea3e2e038efd7c7512fc8a3276373f7d38bcb1a81cc3bda18866994dc8f"
     },
     "threat_models": {
       "path": "threat-models.toml",
-      "sha256": "598fc393ca7b8cbbe45f1b00b166da1f921edf9bc45ff5ef283351cedb1841ce"
+      "sha256": "73d9956bc12df3f9b68e9725b41ec21673483a95868c87680dab8583dabd2462"
     }
   }
 }

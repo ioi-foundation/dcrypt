@@ -12,9 +12,9 @@
   },
   "schema_version": 1,
   "source_binding": {
-    "framework_subject_commit": "a79f1ac6b8cd2d853482f4a32a83f239611ba13e",
-    "framework_subject_manifest_sha256": "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b",
-    "framework_subject_tree": "28c04fffd98b76f447d55aa313fba13881604649",
+    "framework_subject_commit": "276b78f9b3c2aed91d2548ab9add721c434ded06",
+    "framework_subject_manifest_sha256": "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4",
+    "framework_subject_tree": "c47c98062c43463818bb61bd3eed75ebaf189e1d",
     "package_b_assurance_commit": "682947afafdce5bf19339c90bc1a3e768fa15772",
     "package_b_assurance_tree": "7112eb96c4dc92ce24c277d512c286f183b04cf5",
     "package_b_subject_commit": "ba2685293bf326cef611f33445269071e9fddef1",

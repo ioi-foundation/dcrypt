@@ -1,20 +1,21 @@
 schema-version = 1
 content-policy = "dcrypt-package-d-reviewed-inventory-v1"
 status = "HOLD"
-subject-commit = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-subject-tree = "28c04fffd98b76f447d55aa313fba13881604649"
-subject-manifest-sha256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
-atomic-operations-sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
-public-api-snapshot-sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
+subject-commit = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+subject-tree = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+subject-manifest-sha256 = "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
+atomic-operations-sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
+public-api-snapshot-sha256 = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
 
 production-source-policy = "root-src-lib-plus-crates-src-rust-v1"
 expected-production-rust-sources = 255
-expected-atomic-rows = 9298
-expected-curated-rows = 666
+expected-public-api-units = 18891
+expected-atomic-rows = 9198
+expected-curated-rows = 566
 expected-unreviewed-gap-rows = 8632
-atomic-row-ids-sha256 = "ca03bb166d7bf258c9cab7cb6105081974f9c6eb54d70da91c8673351b826723"
+atomic-row-ids-sha256 = "ec0a192f6067448d9c610d38719ee47dc95d3ffdeb385708291cb7989f46e0ff"
 production-source-paths-sha256 = "5aae5258561c750a920b36be67c2652f28ea1c8536ad7527f73967633a62b804"
-production-source-rows-sha256 = "67f0ebc742d494943a2a42a9698e3f0c47543dbfcb612e485420839bc161280c"
+production-source-rows-sha256 = "e35cb1924e6f4480a557651db3fdebec3b9d1518d42160a8e7895c000f21f2f5"
 production-source-roots-sha256 = "3bdf8ea3f968c18983d73ef3d4523e915e4b1c3fa4f7d8949e73d07b97ec298f"
 
 local-timing-cases = [
@@ -134,37 +135,37 @@ stopping-policy = "fixed-preregistered-sample-count-no-optional-stopping"
 
 [[input]]
 path = "assurance/atomic-operations.toml"
-sha256 = "1177eea6ff7fb48b8e3b7fc49f83da47d50949b724711331f4faf25311b56c3c"
+sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
 git-mode = "100644"
 
 [[input]]
 path = "assurance/public-api-snapshot.json"
-sha256 = "9b0cadc30f7dd922e127b04251015136330d9883b6ee00e7ebcca32140595540"
+sha256 = "0a7c7d6585b6612f35e9dd5622018ca3c87c5fb51f8fa0e4652904d651c6215f"
 git-mode = "100644"
 
 [[input]]
 path = "assurance/subject-manifest.json"
-sha256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+sha256 = "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
 git-mode = "100644"
 
 [[input]]
 path = ".github/workflows/security-validation.yml"
-sha256 = "0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52"
+sha256 = "0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c"
 git-mode = "100644"
 
 [[input]]
 path = "tools/release-dcrypt.sh"
-sha256 = "813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7"
+sha256 = "4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf"
 git-mode = "100755"
 
 [[input]]
 path = "tools/verify-publish-ready.sh"
-sha256 = "db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5"
+sha256 = "c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d"
 git-mode = "100755"
 
 [[input]]
 path = "tools/verify-remote-release-ready.py"
-sha256 = "08581d04df268a9d859a70207d91e68b0c80631be8aaf94ce7e84e19f2bd4d3d"
+sha256 = "0d41cc63a91ffb579273bb0be0d0a0b20b05de11f43acdf717aea1b391d59660"
 git-mode = "100755"
 
 [[input]]

@@ -25,9 +25,9 @@ from typing import Any, Iterable
 
 SCHEMA_VERSION = 1
 STATUS = "STABLE-final-subject-bound"
-FRAMEWORK_SUBJECT_COMMIT = "a79f1ac6b8cd2d853482f4a32a83f239611ba13e"
-FRAMEWORK_SUBJECT_TREE = "28c04fffd98b76f447d55aa313fba13881604649"
-FRAMEWORK_SUBJECT_MANIFEST_SHA256 = "12a8ddb037816e802640e921a7012e28a638943dba38eceed6f3ef0cf5465d5b"
+FRAMEWORK_SUBJECT_COMMIT = "276b78f9b3c2aed91d2548ab9add721c434ded06"
+FRAMEWORK_SUBJECT_TREE = "c47c98062c43463818bb61bd3eed75ebaf189e1d"
+FRAMEWORK_SUBJECT_MANIFEST_SHA256 = "d48d134daa383fb12c03e45aebe3bcf16f40e2c6930e17f209e0af95f1133eb4"
 CONTENT_PREFIX = "dcrypt-fuzzing"
 FRAMEWORK_DIR = Path(__file__).resolve().parent
 REPO_ROOT = FRAMEWORK_DIR.parent.parent
@@ -37,18 +37,19 @@ PACKAGE_B_TREE = "7112eb96c4dc92ce24c277d512c286f183b04cf5"
 PACKAGE_B_SUBJECT_COMMIT = "ba2685293bf326cef611f33445269071e9fddef1"
 PACKAGE_B_SUBJECT_TREE = "869608f3379bf91ebed67308f22117312ddd0e5b"
 
-EXPECTED_CURATED_ROWS = 666
+EXPECTED_CURATED_ROWS = 566
 EXPECTED_UNREVIEWED_GAPS = 8_632
-EXPECTED_TOTAL_ROWS = 9_298
+EXPECTED_TOTAL_ROWS = 9_198
 EXPECTED_CRITICAL_ROWS = 372
 EXPECTED_EXPLICIT_BLOCKERS = EXPECTED_TOTAL_ROWS - EXPECTED_CRITICAL_ROWS
 
 PACKAGE_C_CONTROL_INPUTS = {
-    ".github/workflows/security-validation.yml": ("0d879c3496be86f5b31d673e81df477cd33f4da50b51881be9b6069cb267af52", "100644"),
-    "tools/release-dcrypt.sh": ("813bcf5e35276183bb6592cf6149aae6cd2893637bea04201e16b1f299fa3ec7", "100755"),
-    "tools/verify-publish-ready.sh": ("db8f51118fcf041dfcf4e8daaa5c7c58d02507e421436b0eb4bf6f80318783d5", "100755"),
-    "tools/verify-remote-release-ready.py": ("08581d04df268a9d859a70207d91e68b0c80631be8aaf94ce7e84e19f2bd4d3d", "100755"),
+    ".github/workflows/security-validation.yml": ("0c24d78da2e8b89206bd03faf688c85680b9e469de1be18c48121052e765919c", "100644"),
+    "tools/release-dcrypt.sh": ("4ea88601f32244ad552158e94ea94f5fc8d0d9316f04447488be348864d651bf", "100755"),
+    "tools/verify-publish-ready.sh": ("c578a05465298f96abb324cc3ac7ac0e9f750d50d5b416f49a4d4dfbf04a087d", "100755"),
+    "tools/verify-remote-release-ready.py": ("0d41cc63a91ffb579273bb0be0d0a0b20b05de11f43acdf717aea1b391d59660", "100755"),
 }
+CONTROL_INPUTS_SHA256 = "1d6e478cf9fac07d2c938843099429f019d58976d5f742b503e62868bd863d58"
 
 WEEKLY_CRITICAL_CORE_SECONDS = 72 * 60 * 60
 WEEKLY_SECONDARY_CORE_SECONDS = 24 * 60 * 60
@@ -70,7 +71,7 @@ INTEGRATED_ASAN_FUNCTION_SYMBOLS = (
 
 # These are replaced once from the canonical in-code projections.  They are
 # literal trust anchors so a coherent data-only rewrite cannot promote itself.
-EXPECTED_POLICY_SEMANTIC_SHA256 = "a9f3be423ccfe187963dc45436dfcb3df1f0db876af8e6310b5ee58ff989f305"
+EXPECTED_POLICY_SEMANTIC_SHA256 = "e34ca2a2e80add8731b544c6832f103cf873b321b0813fec229a7fe832a06a39"
 EXPECTED_REGISTRY_SEMANTIC_SHA256 = "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b"
 
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -1321,9 +1322,21 @@ def build_source_bindings(repo: Path) -> dict[str, Any]:
         )
         if path in PACKAGE_C_CONTROL_INPUTS and digest != PACKAGE_C_CONTROL_INPUTS[path][0]:
             raise FuzzingError(f"Package C workflow/release control input differs: {path}")
-    validate_control_source_binding_rows(
-        [row for row in files if row["path"] in PACKAGE_C_CONTROL_INPUTS]
+    control_rows = [row for row in files if row["path"] in PACKAGE_C_CONTROL_INPUTS]
+    validate_control_source_binding_rows(control_rows)
+    control_digest = sha256_bytes(
+        (
+            json.dumps(
+                control_rows,
+                ensure_ascii=True,
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+            + "\n"
+        ).encode("utf-8")
     )
+    if control_digest != CONTROL_INPUTS_SHA256:
+        raise FuzzingError("Package C compact control-input binding digest differs")
     return {
         "content_policy": "dcrypt-fuzzing-source-bindings-v1",
         "counts": {

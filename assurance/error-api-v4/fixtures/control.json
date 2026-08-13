@@ -1,0 +1,76 @@
+{
+  "after": {
+    "curated_ids": [
+      "retained.operation"
+    ],
+    "public_identities": [
+      [
+        "example-api",
+        "example_api::error::registry",
+        "module",
+        "module",
+        "example_api::error::registry"
+      ],
+      [
+        "example-api",
+        "example_api::unrelated_transitional",
+        "export",
+        "function",
+        "example_api::unrelated_transitional"
+      ]
+    ]
+  },
+  "before": {
+    "curated_ids": [
+      "legacy.error-registry.control",
+      "retained.operation"
+    ],
+    "public_identities": [
+      [
+        "example-api",
+        "example_api::error::ERROR_REGISTRY",
+        "export",
+        "static",
+        "example_api::error::registry::ERROR_REGISTRY"
+      ],
+      [
+        "example-api",
+        "example_api::error::registry",
+        "module",
+        "module",
+        "example_api::error::registry"
+      ],
+      [
+        "example-api",
+        "example_api::unrelated_transitional",
+        "export",
+        "function",
+        "example_api::unrelated_transitional"
+      ]
+    ]
+  },
+  "content_policy": "dcrypt-package-e-synthetic-structural-control-v1",
+  "removed_curated_ids": [
+    "legacy.error-registry.control"
+  ],
+  "removed_public_identities": [
+    [
+      "example-api",
+      "example_api::error::ERROR_REGISTRY",
+      "export",
+      "static",
+      "example_api::error::registry::ERROR_REGISTRY"
+    ]
+  ],
+  "retained_tombstones": [
+    [
+      "example-api",
+      "example_api::error::registry",
+      "module",
+      "module",
+      "example_api::error::registry"
+    ]
+  ],
+  "schema_version": 1,
+  "status": "synthetic-not-evidence"
+}
