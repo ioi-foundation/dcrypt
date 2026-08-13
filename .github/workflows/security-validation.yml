@@ -26,82 +26,25 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: Install the pinned rustdoc toolchain and inventory targets
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          toolchain: nightly-2026-08-07
-          targets: aarch64-unknown-linux-gnu,wasm32-unknown-unknown,thumbv7em-none-eabihf
-      - name: Fetch the exact locked dependency closure
-        run: cargo fetch --locked
-      - name: Verify ledger negative fixtures and live public API inventory
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify Package G release-acceptance and threat-model foundations
         run: |
-          python3 -B assurance/verify-assurance-ledger.py --self-test
-          python3 -B assurance/verify-assurance-ledger.py --mode ci
-      - name: Verify blocked Package B interoperability controls
-        run: |
-          python3 -B assurance/interoperability/generate-interoperability-matrix.py --check
-          python3 -B assurance/interoperability/verify-interoperability.py --mode ci
-          python3 -B assurance/interoperability/interoperability-selftest.py
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/generate.py --check
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --ci --phase foundation
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/generate-threat-models.py --check
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --mode ci
           set +e
-          python3 -B assurance/interoperability/verify-interoperability.py --mode release
-          interop_release_rc=$?
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --mode release
+          threat_model_release_rc=$?
           set -e
-          test "$interop_release_rc" -eq 3
-          python3 -B assurance/interoperability/protocol-specs/verify-protocol-specs.py \
-            --require-final-subject --check-current-subject
-          python3 -B assurance/interoperability/protocol-specs/protocol-specs-selftest.py
-          python3 -B verification/clean-room-protocol-reference/verify-scaffold.py
-          python3 -B verification/clean-room-protocol-reference/scaffold-selftest.py
-      - name: Verify Package F supply-chain foundations without claiming operational evidence
-        run: |
-          python3 -B assurance/supply-chain/generate.py --check
-          python3 -B assurance/supply-chain/verify.py --ci
-          python3 -B assurance/supply-chain/selftest.py
+          test "$threat_model_release_rc" -eq 1
           set +e
-          python3 -B assurance/supply-chain/verify.py --release
-          supply_chain_release_rc=$?
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --release --phase foundation
+          release_acceptance_rc=$?
           set -e
-          test "$supply_chain_release_rc" -eq 3
-      - name: Verify Package E v4 error API removal and migration controls
-        run: |
-          python3 -B assurance/error-api-v4/generate.py --check
-          python3 -B assurance/error-api-v4/verify.py --ci
-          python3 -B assurance/error-api-v4/selftest.py
-          cargo test --locked --offline -p dcrypt-tests --test error_api_v4_migration
-          set +e
-          python3 -B assurance/error-api-v4/verify.py --release
-          error_api_v4_release_rc=$?
-          set -e
-          test "$error_api_v4_release_rc" -eq 3
-      - name: Verify Package D side-channel foundations without claiming operational evidence
-        run: |
-          python3 -B assurance/side-channel/generate.py --check
-          python3 -B assurance/side-channel/verify.py --ci
-          python3 -B assurance/side-channel/selftest.py
-          set +e
-          python3 -B assurance/side-channel/verify.py --release
-          side_channel_release_rc=$?
-          set -e
-          test "$side_channel_release_rc" -eq 3
-      - name: Install the exact Package C local-control compiler
-        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
-        with:
-          # Distribution 2026-08-08 contains rustc commit 1a98b1e13 dated 2026-08-07.
-          toolchain: nightly-2026-08-08
-      - name: Install the exact Package C cargo-fuzz control tool
-        run: cargo +nightly-2026-08-08 install cargo-fuzz --version =0.13.2 --locked --force
-      - name: Verify Package C fuzz controls without claiming operational evidence
-        run: |
-          python3 -B assurance/fuzzing/generate.py --check
-          python3 -B assurance/fuzzing/verify.py --ci
-          python3 -B assurance/fuzzing/selftest.py
-          python3 -B assurance/fuzzing/sanitizer_positive.py --execute
-          python3 -B assurance/fuzzing/crash_lifecycle.py --execute
-          set +e
-          python3 -B assurance/fuzzing/verify.py --release
-          fuzz_release_rc=$?
-          set -e
-          test "$fuzz_release_rc" -eq 3
+          test "$release_acceptance_rc" -eq 3
           bash tools/release-dcrypt.sh --self-test
 
   implementation-boundary:

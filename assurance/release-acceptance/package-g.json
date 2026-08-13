@@ -1,0 +1,252 @@
+{
+  "acceptance": {
+    "enabled": false,
+    "validation": "always-reject"
+  },
+  "artifact_role": "package-g-release-acceptance-foundation",
+  "content_policy": "dcrypt-package-g-release-acceptance-foundation-v1",
+  "counts": {
+    "antecedents": 8,
+    "artifact_subjects": 18,
+    "independent_comparisons": 18,
+    "producer_classes": 2,
+    "producer_obligations": 36,
+    "publishable_packages": 12,
+    "release_blocked_rows": 9198
+  },
+  "deadlines": {
+    "dependency-exception-reject-on-or-after": "2026-09-10",
+    "dependency-exception-valid-before": "2026-09-10",
+    "evidence-reject-after": "2026-11-09",
+    "historical-advisory-replay-required": true,
+    "historical-advisory-review-deadline": "2026-09-10",
+    "ledger-evidence-valid-through": "2026-11-09",
+    "threat-model-valid-through": "2026-11-09"
+  },
+  "immutable_antecedents": [
+    {
+      "blocked-rows": 9198,
+      "document-status": "not-applicable",
+      "id": "assurance-ledger",
+      "path": "assurance/ledger.toml",
+      "release-gate": "informational-only",
+      "schema-version": 2,
+      "sha256": "049d524b5cbea96a18bcf901f95e83fdf1f02093aef0542012e78882aba8d8dd",
+      "temporal-bound": "2026-11-09",
+      "temporal-rule": "valid-through-inclusive"
+    },
+    {
+      "blocked-rows": 14816,
+      "document-status": "not-applicable",
+      "id": "package-b-interoperability",
+      "path": "assurance/interoperability/matrix.json",
+      "release-gate": "blocked",
+      "schema-version": 1,
+      "sha256": "307e3ef67b596ba1ffe06cec0e58629f498d2ca4555458fbb8d6d313524fbadd",
+      "temporal-bound": "2026-11-09",
+      "temporal-rule": "deadline-and-expiry-bound"
+    },
+    {
+      "blocked-rows": 9198,
+      "document-status": "STABLE-final-subject-bound",
+      "id": "package-c-fuzzing",
+      "path": "assurance/fuzzing/row-mapping.json",
+      "release-gate": "HOLD",
+      "schema-version": 1,
+      "sha256": "9feedae461b99e46cda1556a0eb13749fb65cfb53c495b77e1130e158835cc79",
+      "temporal-bound": "2026-11-09",
+      "temporal-rule": "antecedent-evidence-bound"
+    },
+    {
+      "blocked-rows": 9198,
+      "document-status": "HOLD-structural-foundation-only",
+      "id": "package-d-side-channel",
+      "path": "assurance/side-channel/package-d.json",
+      "release-gate": "HOLD",
+      "schema-version": 1,
+      "sha256": "59e9961813ac4fa0bc3ab186268889073cb89036b967f81619ab5e1f294ee22e",
+      "temporal-bound": "2026-11-09",
+      "temporal-rule": "antecedent-evidence-bound"
+    },
+    {
+      "blocked-rows": 9198,
+      "document-status": "local-breaking-removal-complete",
+      "id": "package-e-migration",
+      "path": "assurance/error-api-v4/package-e.json",
+      "release-gate": "HOLD",
+      "schema-version": 1,
+      "sha256": "110cf0dc0c0993c59cf2b9b53a4985873a0e85914d544022e87caedccf1f8411",
+      "temporal-bound": "2026-11-09",
+      "temporal-rule": "antecedent-evidence-bound"
+    },
+    {
+      "blocked-rows": 9198,
+      "document-status": "local-foundation-complete-operational-evidence-absent",
+      "id": "package-f-supply-chain",
+      "path": "assurance/supply-chain/package-f.json",
+      "release-gate": "HOLD",
+      "schema-version": 1,
+      "sha256": "da052c4bad734d58e471ffe71db55009ba10ddf1d92423dbf28e3a02995f5e8c",
+      "temporal-bound": "2026-09-10",
+      "temporal-rule": "dependency-exception-reject-on-or-after"
+    },
+    {
+      "blocked-rows": 9198,
+      "document-status": "11-candidate-models",
+      "id": "threat-model-release",
+      "path": "assurance/threat-models/threat-models.toml",
+      "release-gate": "blocked-current-release-rc1",
+      "schema-version": 1,
+      "sha256": "16b787d2eb100837b61b54f25f6e5ad96de696b4cd4274f09a3b5e511b41539e",
+      "temporal-bound": "2026-11-09",
+      "temporal-rule": "valid-through-inclusive"
+    },
+    {
+      "blocked-rows": 11,
+      "document-status": "inventory-only-replay-required",
+      "id": "historical-advisory-replay",
+      "path": "assurance/audit/historical-advisory-regressions.toml",
+      "release-gate": "blocked-replay-required",
+      "schema-version": 1,
+      "sha256": "ce6fa84b1a8de37d938e51b82806e67b8cc6c7dcb4d3234cdcd44c76cf96acc7",
+      "temporal-bound": "2026-09-10",
+      "temporal-rule": "review-deadline-metadata-no-expiry-invented"
+    }
+  ],
+  "immutable_projection": {
+    "blob": [
+      {
+        "git-object": "b6ba707f0c8cb74af4d90b25d2e465ad734982c5",
+        "path": "assurance/ledger.toml",
+        "sha256": "049d524b5cbea96a18bcf901f95e83fdf1f02093aef0542012e78882aba8d8dd"
+      },
+      {
+        "git-object": "bf6f9afa7828de87b663ccb9a699762336202008",
+        "path": "assurance/atomic-operations.toml",
+        "sha256": "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
+      },
+      {
+        "git-object": "22ff7a129184fe4187aad81538bf365ec5cf8ce2",
+        "path": "assurance/public-api-snapshot.json",
+        "sha256": "5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d"
+      },
+      {
+        "git-object": "15742ca9d33e21b2c4ba927bca71dfdf08fe7540",
+        "path": "assurance/subject-manifest.json",
+        "sha256": "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+      }
+    ],
+    "commit": "56d837d72467cd78d696218dabf016fb6dd6c457",
+    "parent": "889cb8c4dc13a78679dc8a7677916484a9966f65",
+    "replacement-objects-allowed": false,
+    "subtree": [
+      {
+        "git-object": "c7c7858973631746a41c84264bf8088e7ff95f7f",
+        "path": "assurance/interoperability"
+      },
+      {
+        "git-object": "19a8ee6506471d38f7ea3bd15c1d0bb562522b65",
+        "path": "assurance/fuzzing"
+      },
+      {
+        "git-object": "d0c1544d0560e40a336265522869eb37d2f67fb0",
+        "path": "assurance/side-channel"
+      },
+      {
+        "git-object": "d57913804568c66114bc7e4a36dee1bf2d04c5b0",
+        "path": "assurance/error-api-v4"
+      },
+      {
+        "git-object": "632f03f75141c0a59abbe243067288f05a3cf481",
+        "path": "assurance/supply-chain"
+      },
+      {
+        "git-object": "1c50a55deaf424678e28f6dd881ad3d31399cdac",
+        "path": "assurance/threat-models"
+      },
+      {
+        "git-object": "a11f344fdd8e08ace083e62c14f2100c4c083ae7",
+        "path": "assurance/audit"
+      }
+    ],
+    "tree": "c1183ca6480655cd253e6e3527eef69b9d6607e8"
+  },
+  "phase_order": [
+    "foundation",
+    "prepublish",
+    "registry-prefix",
+    "postpublish"
+  ],
+  "publish_order": [
+    "dcrypt-internal",
+    "dcrypt-params",
+    "dcrypt-api",
+    "dcrypt-common",
+    "dcrypt-algorithms",
+    "dcrypt-symmetric",
+    "dcrypt-kem",
+    "dcrypt-sign",
+    "dcrypt-pke",
+    "dcrypt-utils",
+    "dcrypt-hybrid",
+    "dcrypt"
+  ],
+  "release_state": {
+    "promotion_eligible": false,
+    "publish_eligible": false,
+    "release_gate": "HOLD",
+    "release_gate_exit_code": 3,
+    "version_preparation_authorized": false
+  },
+  "schema_version": 1,
+  "scope": {
+    "executable-path-count": 3,
+    "mode-path-list-sha256": "043175aa5d4c14c5c28243902fa7a4edb38d97a93a775a2502f70914d2aeacf2",
+    "path-count": 14,
+    "path-list-sha256": "31f865655ce1eda985d50d1e0ca46d578468eba0c4bdbc066800d91f190fcde0",
+    "regular-path-count": 11
+  },
+  "status": "pre-version-foundation-active-consumer-wiring",
+  "subject_binding": {
+    "a-f-commit": "56d837d72467cd78d696218dabf016fb6dd6c457",
+    "a-f-tree": "c1183ca6480655cd253e6e3527eef69b9d6607e8",
+    "construction-g-path-state": "untracked-g10-and-tracked-consumer4",
+    "construction-head": "56d837d72467cd78d696218dabf016fb6dd6c457",
+    "final-diff-path-count": 14,
+    "final-diff-path-list-sha256": "31f865655ce1eda985d50d1e0ca46d578468eba0c4bdbc066800d91f190fcde0",
+    "final-g-identity-claim": false,
+    "final-parent-count": 1,
+    "r-f-commit": "889cb8c4dc13a78679dc8a7677916484a9966f65",
+    "r-f-tree": "0d44b68b186913de68844d09b7e498bcda14d109",
+    "required-g-parent": "56d837d72467cd78d696218dabf016fb6dd6c457",
+    "s-f-commit": "ac91913afee3b91c823a1448e6200de26fdd1c8a",
+    "s-f-tree": "6952979606c28f739fca1aeb9bb14b1ca042d09d"
+  },
+  "threat_model_dependency": {
+    "command": [
+      "python3",
+      "-B",
+      "assurance/threat-models/verify-threat-models.py",
+      "--mode",
+      "release"
+    ],
+    "current_exit_code": 1,
+    "known_blocker": {
+      "active_mitigations": 0,
+      "candidate_models": 11,
+      "critical_residual": 10,
+      "high_residual": 1,
+      "implemented_unverified_mitigations": 9,
+      "independent_review_required": 11,
+      "planned_mitigations": 22,
+      "verified_mitigations": 0
+    },
+    "mapped_release_exit_code": 3
+  },
+  "top_level_wiring_deferred": false,
+  "trusted": false,
+  "versions": {
+    "current": "3.0.0",
+    "target": "4.0.0"
+  }
+}

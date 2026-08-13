@@ -9,9 +9,11 @@ import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import unittest
+import unicodedata
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Protocol, Sequence
@@ -70,6 +72,27 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 BOUNDARY_REPORT = PROJECT_ROOT / "target" / "implementation-boundary" / "report.json"
 BOUNDARY_POLICY = PROJECT_ROOT / "implementation-boundary.toml"
 LOCK_FILE = PROJECT_ROOT / "Cargo.lock"
+A_F_COMMIT = "56d837d72467cd78d696218dabf016fb6dd6c457"
+A_F_TREE = "c1183ca6480655cd253e6e3527eef69b9d6607e8"
+A_F_CONTROL_BLOBS = {
+    ".github/workflows/security-validation.yml": (
+        "100644",
+        "44c4e99708af9a8acb77fd1ec018550ce6305743",
+    ),
+    "tools/release-dcrypt.sh": (
+        "100755",
+        "05b4e012fa00ba0803895f828b56714ba209bf0f",
+    ),
+    "tools/verify-publish-ready.sh": (
+        "100755",
+        "60558e219bbb15feb32be18e7ba07c9651a1641a",
+    ),
+    "tools/verify-remote-release-ready.py": (
+        "100755",
+        "9d3cf3611e79f52797af482eb912040f41e5d876",
+    ),
+}
+ASSURANCE_PHASES = ("prepublish", "postpublish")
 
 # Exact Package C execution sections. These literals intentionally make any
 # control-flow, step-policy, command, argument, or ordering change require a
@@ -142,6 +165,194 @@ PACKAGE_E_PUBLISH_SECTION_SHA256 = (
 PACKAGE_E_RELEASE_ASSERTIONS_SHA256 = (
     "ef52c5222bc161a845a23c890e463519798d3b02e64fc919545cc81b82949337"
 )
+
+# Package G is the sole live release-acceptance wiring. B--F seals above remain
+# immutable A_F antecedent anchors and are never resealed to these consumers.
+PACKAGE_G_WORKFLOW_SECTION_SHA256 = (
+    "a546e7f8bb54f9c9deb4b0dcc895d6f64d1475501c37f64c27bb4bc84029d20b"
+)
+PACKAGE_G_PUBLISH_SECTION_SHA256 = (
+    "31474cc9bbce2075977bc22af38f290ebe58dfbcd5e0416a14503c803ae394eb"
+)
+PACKAGE_G_RELEASE_GATE_SHA256 = (
+    "4e5105e152640440173dda3f1ad22ebc544e9d473c984c0993c4b77b3584c446"
+)
+PACKAGE_G_RELEASE_ASSERTIONS_SHA256 = (
+    "632325355a4f01bae52819d513ed1155b09bb47370dcae59fae101a0cf79ed2c"
+)
+PACKAGE_G_REMOTE_GATE_SHA256 = (
+    "ce82e9252638d51769f8922dbc62fbead545c34c0ec7ca4bfd702528eca63478"
+)
+PACKAGE_G_REMOTE_SOURCE_AUDIT_SHA256 = (
+    "8e3563c4313cd13ccc45e4c43f7d72dc0cf47717fc8b67d6087e6ced23fdac2f"
+)
+PACKAGE_G_REMOTE_SELFTEST_SHA256 = (
+    "154b26fd090d93e482e5b560cdf81397eb2b226c58257fac770bd889152f1e72"
+)
+PACKAGE_G_REMOTE_MAIN_SHA256 = (
+    "99c2ba8caa65b30ce20e0112f1743ed0f16a15f36d8cdddd65fe341b4f8292e6"
+)
+
+
+def _trusted_git_executable() -> str:
+    """Return the reviewed system Git executable, rejecting mutable shims."""
+    candidate = Path("/usr/bin/git")
+    try:
+        metadata = candidate.stat(follow_symlinks=False)
+    except OSError as error:
+        raise GateError("trusted Git executable is unavailable") from error
+    if not stat.S_ISREG(metadata.st_mode):
+        raise GateError("trusted Git executable is not a regular file")
+    if metadata.st_uid != 0:
+        raise GateError("trusted Git executable is not root-owned")
+    if metadata.st_mode & 0o022:
+        raise GateError("trusted Git executable is group- or world-writable")
+    if not os.access(candidate, os.X_OK, follow_symlinks=False):
+        raise GateError("trusted Git executable is not executable")
+    return str(candidate)
+
+
+def _local_git_bytes(args: Sequence[str], label: str) -> bytes:
+    git_executable = _trusted_git_executable()
+    environment = {
+        "PATH": "/usr/bin:/bin",
+        "LANG": "C",
+        "LC_ALL": "C",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_NO_LAZY_FETCH": "1",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": "/dev/null",
+        "GIT_PAGER": "cat",
+        "GIT_TERMINAL_PROMPT": "0",
+    }
+    try:
+        completed = subprocess.run(
+            (git_executable, *args),
+            cwd=PROJECT_ROOT,
+            env=environment,
+            capture_output=True,
+            check=False,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise GateError(f"{label} is unavailable") from error
+    if completed.returncode != 0:
+        raise GateError(f"{label} failed with status {completed.returncode}")
+    return completed.stdout
+
+
+def read_a_f_blob(relative_path: str) -> str:
+    """Read one pinned immutable A_F antecedent without consulting a remote."""
+    if relative_path not in A_F_CONTROL_BLOBS:
+        raise GateError(f"unreviewed A_F control path: {relative_path}")
+    expected_mode, expected_blob = A_F_CONTROL_BLOBS[relative_path]
+    commit_type = _local_git_bytes(
+        ("cat-file", "-t", A_F_COMMIT), "immutable A_F object type"
+    ).rstrip(b"\n")
+    if commit_type != b"commit":
+        raise GateError("immutable A_F object is not a commit")
+    tree = _local_git_bytes(
+        ("rev-parse", f"{A_F_COMMIT}^{{tree}}"), "immutable A_F tree"
+    ).rstrip(b"\n")
+    if tree != A_F_TREE.encode("ascii"):
+        raise GateError("immutable A_F tree differs from its pinned identity")
+    entry = _local_git_bytes(
+        ("ls-tree", A_F_COMMIT, "--", relative_path),
+        f"immutable A_F tree entry for {relative_path}",
+    ).rstrip(b"\n")
+    expected_entry = (
+        f"{expected_mode} blob {expected_blob}\t{relative_path}".encode("utf-8")
+    )
+    if entry != expected_entry:
+        raise GateError(f"immutable A_F tree entry differs: {relative_path}")
+    blob_type = _local_git_bytes(
+        ("cat-file", "-t", expected_blob),
+        f"immutable A_F blob type for {relative_path}",
+    ).rstrip(b"\n")
+    if blob_type != b"blob":
+        raise GateError(f"immutable A_F path is not a blob: {relative_path}")
+    raw = _local_git_bytes(
+        ("cat-file", "blob", expected_blob),
+        f"immutable A_F blob for {relative_path}",
+    )
+    try:
+        text = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise GateError(f"immutable A_F blob is not strict UTF-8: {relative_path}") from error
+    if unicodedata.normalize("NFC", text) != text:
+        raise GateError(f"immutable A_F blob is not NFC: {relative_path}")
+    return text
+
+
+def read_live_control(relative_path: str) -> str:
+    """Read one reviewed live control once through a no-follow descriptor."""
+    if relative_path not in A_F_CONTROL_BLOBS:
+        raise GateError(f"unreviewed live control path: {relative_path}")
+    path = PROJECT_ROOT / relative_path
+    expected_mode, _ = A_F_CONTROL_BLOBS[relative_path]
+    index_entry = _local_git_bytes(
+        ("ls-files", "--stage", "--", relative_path),
+        f"live control index entry for {relative_path}",
+    ).rstrip(b"\n")
+    entry_match = re.fullmatch(
+        rb"(100644|100755) ([0-9a-f]{40}(?:[0-9a-f]{24})?) 0\t(.+)",
+        index_entry,
+    )
+    if (
+        entry_match is None
+        or entry_match.group(1) != expected_mode.encode("ascii")
+        or entry_match.group(3) != relative_path.encode("utf-8")
+    ):
+        raise GateError(f"live control Git mode or index identity differs: {relative_path}")
+    flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as error:
+        raise GateError(f"live control is unavailable: {relative_path}") from error
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise GateError(f"live control is not a regular file: {relative_path}")
+        if before.st_nlink != 1:
+            raise GateError(f"live control link count differs: {relative_path}")
+        if before.st_uid != os.getuid():
+            raise GateError(f"live control owner differs: {relative_path}")
+        if before.st_size < 1 or before.st_size > 4 * 1024 * 1024:
+            raise GateError(f"live control size is outside reviewed bounds: {relative_path}")
+        blocks: list[bytes] = []
+        remaining = before.st_size
+        while remaining:
+            block = os.read(descriptor, min(remaining, 1024 * 1024))
+            if not block:
+                raise GateError(f"live control was truncated while reading: {relative_path}")
+            blocks.append(block)
+            remaining -= len(block)
+        if os.read(descriptor, 1):
+            raise GateError(f"live control grew while reading: {relative_path}")
+        after = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    identity_fields = (
+        "st_dev",
+        "st_ino",
+        "st_mode",
+        "st_nlink",
+        "st_uid",
+        "st_gid",
+        "st_size",
+        "st_mtime_ns",
+        "st_ctime_ns",
+    )
+    if any(getattr(before, field) != getattr(after, field) for field in identity_fields):
+        raise GateError(f"live control changed while reading: {relative_path}")
+    raw = b"".join(blocks)
+    try:
+        text = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as error:
+        raise GateError(f"live control is not strict UTF-8: {relative_path}") from error
+    if unicodedata.normalize("NFC", text) != text:
+        raise GateError(f"live control is not NFC: {relative_path}")
+    return text
 
 
 def shell_logical_commands(source: str) -> list[str]:
@@ -586,8 +797,369 @@ def verify_package_e_wiring_sources(
         raise GateError("Package E release self-test can return before its assertions")
 
 
+def package_g_wiring_sections(
+    workflow: str,
+    publish_ready: str,
+    release_script: str,
+    remote_verifier: str,
+) -> dict[str, str]:
+    return {
+        "workflow": exact_bounded_section(
+            workflow,
+            "  assurance-ledger:\n",
+            "\n  implementation-boundary:\n",
+            label="Package G assurance workflow section",
+        ),
+        "publish": exact_bounded_section(
+            publish_ready,
+            'printf "\\n${BLUE}Package G release-acceptance foundation${NC}\\n"\n',
+            "require_command cargo || true\n",
+            label="Package G publish verifier section",
+        ),
+        "release-gate": exact_bounded_section(
+            release_script,
+            "run_release_acceptance_gate() {\n",
+            "\nrun_publish_verifier() {\n",
+            label="Package G release runner gate",
+        ),
+        "release-assertions": exact_bounded_section(
+            release_script,
+            "    # Package G release wiring assertions begin.\n",
+            "    # Package G release wiring assertions end.\n",
+            label="Package G release runner assertions",
+        ),
+        "remote-gate": exact_bounded_section(
+            remote_verifier,
+            "def run_local_release_acceptance(\n",
+            "\n\n@dataclass(frozen=True)\nclass GitState:\n",
+            label="Package G remote local gate",
+        ),
+        "remote-source-audit": exact_bounded_section(
+            remote_verifier,
+            "def _trusted_git_executable() -> str:\n",
+            "\n\nclass GateError(RuntimeError):\n",
+            label="Package G remote source audit",
+        ),
+        "remote-selftest": exact_bounded_section(
+            remote_verifier,
+            "    def test_local_package_g_hold_precedes_all_remote_provider_access(self) -> None:\n",
+            "    def test_local_and_ci_workspace_gates_run_test_harness_unit_tests(self) -> None:\n",
+            label="Package G remote self-tests",
+        ),
+        "remote-main": exact_bounded_section(
+            remote_verifier,
+            "def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:\n",
+            "\n\nif __name__ == \"__main__\":\n",
+            label="Package G remote argument and main wiring",
+        ),
+    }
+
+
+def verify_package_g_wiring_sources(
+    workflow: str,
+    publish_ready: str,
+    release_script: str,
+    remote_verifier: str,
+    *,
+    verify_digests: bool = True,
+) -> None:
+    sections = package_g_wiring_sections(
+        workflow, publish_ready, release_script, remote_verifier
+    )
+    expected = {
+        "workflow": PACKAGE_G_WORKFLOW_SECTION_SHA256,
+        "publish": PACKAGE_G_PUBLISH_SECTION_SHA256,
+        "release-gate": PACKAGE_G_RELEASE_GATE_SHA256,
+        "release-assertions": PACKAGE_G_RELEASE_ASSERTIONS_SHA256,
+        "remote-gate": PACKAGE_G_REMOTE_GATE_SHA256,
+        "remote-source-audit": PACKAGE_G_REMOTE_SOURCE_AUDIT_SHA256,
+        "remote-selftest": PACKAGE_G_REMOTE_SELFTEST_SHA256,
+        "remote-main": PACKAGE_G_REMOTE_MAIN_SHA256,
+    }
+    if verify_digests:
+        for label, section in sections.items():
+            digest = hashlib.sha256(section.encode("utf-8")).hexdigest()
+            if expected[label] == "UNSTABLE" or digest != expected[label]:
+                raise GateError(f"Package G {label} wiring digest differs")
+
+    workflow_commands = shell_logical_commands(sections["workflow"])
+    if workflow.count("  assurance-ledger:\n") != 1:
+        raise GateError("Package G assurance workflow job key is absent or ambiguous")
+    if sections["workflow"].count(
+        "    name: Atomic public API assurance ledger\n"
+    ) != 1:
+        raise GateError("Package G required check context differs")
+    if sections["workflow"].count(
+        "        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n"
+    ) != 1:
+        raise GateError("Package G checkout action identity differs")
+    if sections["workflow"].count(
+        "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n"
+    ) != 1:
+        raise GateError("Package G checkout is not bound to the exact PR head or event SHA")
+    expected_workflow_order = (
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/generate.py --check",
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py",
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --ci --phase foundation",
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/generate-threat-models.py --check",
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --self-test",
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --mode ci",
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --mode release",
+        'test "$threat_model_release_rc" -eq 1',
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --release --phase foundation",
+        'test "$release_acceptance_rc" -eq 3',
+        "bash tools/release-dcrypt.sh --self-test",
+    )
+    positions: list[int] = []
+    for command in expected_workflow_order:
+        if workflow_commands.count(command) != 1:
+            raise GateError(f"Package G workflow command is absent or ambiguous: {command}")
+        positions.append(workflow_commands.index(command))
+    if positions != sorted(positions) or len(set(positions)) != len(positions):
+        raise GateError("Package G workflow command order differs")
+
+    for label in ("workflow", "publish", "release-gate", "remote-gate", "remote-main"):
+        section = sections[label]
+        if "continue-on-error:" in section:
+            raise GateError(f"Package G {label} permits continue-on-error")
+        if label != "remote-main":
+            commands = shell_logical_commands(section)
+            if any(command.strip() in {"exit 0", "return 0"} for command in commands):
+                raise GateError(f"Package G {label} contains an early success bypass")
+
+    publish = sections["publish"]
+    release_gate = sections["release-gate"]
+    for source, label, phase in (
+        (publish, "publish verifier", '"$ASSURANCE_PHASE"'),
+        (release_gate, "release runner", '"$phase"'),
+    ):
+        for fragment in (
+            "assurance/release-acceptance/generate.py",
+            "assurance/release-acceptance/selftest.py",
+            "--ci --phase foundation",
+            "assurance/threat-models/generate-threat-models.py",
+            'assurance/threat-models/verify-threat-models.py" --self-test',
+            'assurance/threat-models/verify-threat-models.py" --mode ci',
+            'assurance/threat-models/verify-threat-models.py" --mode release',
+            f"--release --phase {phase}",
+        ):
+            if source.count(fragment) != 1:
+                raise GateError(f"Package G {label} command is absent or ambiguous: {fragment}")
+        if source.count("threat_model_release_rc") < 3:
+            raise GateError(f"Package G {label} threat-model rc capture differs")
+        if source.count("release_acceptance_rc") < 3:
+            raise GateError(f"Package G {label} acceptance rc capture differs")
+        if source.count("exit 3") != 1:
+            raise GateError(f"Package G {label} does not propagate HOLD rc 3 exactly once")
+        if "forbidden rc 0" not in source:
+            raise GateError(f"Package G {label} permits forbidden release rc 0")
+    if 'if [[ "$threat_model_release_rc" -ne 1 ]]; then' not in publish:
+        raise GateError("Package G publish verifier threat-model rc 1 mapping differs")
+    if '[[ "$threat_model_release_rc" -eq 1 ]]' not in release_gate:
+        raise GateError("Package G release runner threat-model rc 1 mapping differs")
+    if 'case "$release_acceptance_rc" in\n    3)' not in publish:
+        raise GateError("Package G publish verifier HOLD case differs")
+    if 'case "$release_acceptance_rc" in\n        3)' not in release_gate:
+        raise GateError("Package G release runner HOLD case differs")
+
+    release_commands = shell_logical_commands(release_script)
+    early_gate = "run_release_acceptance_gate prepublish"
+    if release_commands.count(early_gate) != 1:
+        raise GateError("Package G release runner early gate is absent or ambiguous")
+    early_index = release_commands.index(early_gate)
+    for fragment in (
+        "require_command cargo",
+        "load_classified_workspace_records",
+        "cargo_subcommand_available release",
+    ):
+        candidates = [
+            index for index, command in enumerate(release_commands)
+            if fragment in command and index > early_index
+        ]
+        if not candidates:
+            raise GateError(f"Package G release runner ordering anchor is missing: {fragment}")
+    publish_invocation = exact_bounded_section(
+        release_script,
+        "run_publish_verifier() {\n",
+        "\nrun_candidate_comparator_replay() {\n",
+        label="Package G publish verifier invocation",
+    )
+    remote_routing = exact_bounded_section(
+        release_script,
+        "run_remote_release_gate() {\n",
+        "\nverify_registry_progress() {\n",
+        label="Package G remote phase routing",
+    )
+    if publish_invocation.count("--assurance-phase prepublish") != 1:
+        raise GateError("Package G publish verifier phase binding differs")
+    if remote_routing.count("assurance_phase=prepublish") != 2:
+        raise GateError("Package G remote prepublish phase routing differs")
+    if remote_routing.count("assurance_phase=postpublish") != 1:
+        raise GateError("Package G remote postpublish phase routing differs")
+    release_selftest = exact_bounded_section(
+        release_script,
+        "release_self_test() {\n",
+        "\nself_test_ambiguous_publish_resolution() {\n",
+        label="Package G release self-test",
+    )
+    if release_selftest.count(
+        '"$SCRIPT_DIR/verify-remote-release-ready.py" --self-test'
+    ) != 1:
+        raise GateError("Package G release self-test omitted the remote source audit")
+
+    remote_gate = sections["remote-gate"]
+    for fragment in (
+        '"--release",',
+        '"--phase",',
+        "if completed.returncode == 3:",
+        "if completed.returncode == 0:",
+        "forbidden rc 0",
+        "unexpected rc",
+    ):
+        if remote_gate.count(fragment) != 1:
+            raise GateError(f"Package G remote gate invariant differs: {fragment}")
+    if "return 0" in remote_gate:
+        raise GateError("Package G remote gate can translate release acceptance to success")
+
+    remote_source_audit = sections["remote-source-audit"]
+    remote_source_oracle = remote_source_audit.split(
+        "\ndef package_g_wiring_sections(\n", 1
+    )[0]
+    for fragment in (
+        'candidate = Path("/usr/bin/git")',
+        "candidate.stat(follow_symlinks=False)",
+        "metadata.st_uid != 0",
+        "metadata.st_mode & 0o022",
+        "os.access(candidate, os.X_OK, follow_symlinks=False)",
+        '"PATH": "/usr/bin:/bin"',
+        "(git_executable, *args)",
+        '"GIT_NO_REPLACE_OBJECTS": "1"',
+        '"GIT_NO_LAZY_FETCH": "1"',
+        '"GIT_CONFIG_NOSYSTEM": "1"',
+        '"GIT_CONFIG_GLOBAL": "/dev/null"',
+    ):
+        if remote_source_oracle.count(fragment) != 1:
+            raise GateError(f"Package G trusted local Git invariant differs: {fragment}")
+    if 'os.environ.get("PATH"' in remote_source_oracle:
+        raise GateError("Package G immutable-object oracle trusts ambient PATH")
+
+    remote_main = sections["remote-main"]
+    remote_main_body = remote_main.split("def main(\n", 1)[1].split(
+        ") -> int:\n", 1
+    )[1]
+    before_local_acceptance = remote_main_body.split(
+        "        assurance_rc = run_local_release_acceptance(\n", 1
+    )[0]
+    if "provider_factory" in before_local_acceptance:
+        raise GateError("Package G remote provider is constructed before local HOLD")
+    remote_pre_provider = remote_main.split("            provider_factory(\n", 1)[0]
+    if any(
+        command.strip() in {"exit 0", "return 0"}
+        for command in shell_logical_commands(remote_pre_provider)
+    ):
+        raise GateError("Package G remote main can succeed before provider validation")
+    main_order = (
+        "verify_release_control_wiring()",
+        "run_local_release_acceptance(",
+        'for command in ("git", "gh", "curl", "cargo"):',
+        "            provider_factory(\n",
+    )
+    positions = []
+    for fragment in main_order:
+        if remote_main.count(fragment) != 1:
+            raise GateError(f"Package G remote main invariant differs: {fragment}")
+        positions.append(remote_main.index(fragment))
+    if positions != sorted(positions):
+        raise GateError("Package G remote provider access precedes local HOLD")
+    for fragment in (
+        'choices=ASSURANCE_PHASES',
+        'parser.error("--assurance-phase is required")',
+        'args.assurance_phase == "postpublish" and not args.allow_complete',
+        'args.assurance_phase == "prepublish" and args.allow_complete',
+        "if assurance_rc == 3:",
+        "return 3",
+    ):
+        if remote_main.count(fragment) != 1:
+            raise GateError(f"Package G remote phase/HOLD invariant differs: {fragment}")
+
+
+def verify_release_control_wiring() -> None:
+    """Verify immutable B--F antecedents and the sole live Package G wiring."""
+    antecedent_workflow = read_a_f_blob(
+        ".github/workflows/security-validation.yml"
+    )
+    antecedent_publish = read_a_f_blob("tools/verify-publish-ready.sh")
+    antecedent_release = read_a_f_blob("tools/release-dcrypt.sh")
+    verify_package_c_wiring_sources(
+        antecedent_workflow, antecedent_publish, antecedent_release
+    )
+    verify_package_d_wiring_sources(
+        antecedent_workflow, antecedent_publish, antecedent_release
+    )
+    verify_package_e_wiring_sources(
+        antecedent_workflow, antecedent_publish, antecedent_release
+    )
+    verify_package_f_wiring_sources(
+        antecedent_workflow,
+        antecedent_publish,
+        antecedent_release,
+        (PROJECT_ROOT / "tools" / "bench-processor" / "Cargo.toml").read_text(
+            encoding="utf-8"
+        ),
+        (PROJECT_ROOT / "tools" / "bench-processor" / "Cargo.lock").read_text(
+            encoding="utf-8"
+        ),
+    )
+    verify_package_g_wiring_sources(
+        read_live_control(".github/workflows/security-validation.yml"),
+        read_live_control("tools/verify-publish-ready.sh"),
+        read_live_control("tools/release-dcrypt.sh"),
+        read_live_control("tools/verify-remote-release-ready.py"),
+    )
+
+
 class GateError(RuntimeError):
     """A failed invariant or an unavailable source of release evidence."""
+
+
+def run_local_release_acceptance(
+    phase: str,
+    *,
+    runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
+) -> int:
+    """Run Package G locally and preserve HOLD before any remote provider exists."""
+    if phase not in ASSURANCE_PHASES:
+        raise GateError(f"unsupported remote assurance phase: {phase}")
+    environment = os.environ.copy()
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
+    try:
+        completed = runner(
+            (
+                sys.executable,
+                "-B",
+                str(PROJECT_ROOT / "assurance" / "release-acceptance" / "verify.py"),
+                "--release",
+                "--phase",
+                phase,
+            ),
+            cwd=PROJECT_ROOT,
+            env=environment,
+            capture_output=True,
+            check=False,
+            timeout=120,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise GateError("Package G local release verifier is unavailable") from error
+    if completed.returncode == 3:
+        return 3
+    if completed.returncode == 0:
+        raise GateError(
+            "Package G local release verifier returned forbidden rc 0 under the v1 HOLD contract"
+        )
+    raise GateError(
+        "Package G local release verifier returned unexpected rc "
+        f"{completed.returncode}"
+    )
 
 
 @dataclass(frozen=True)
@@ -1800,11 +2372,250 @@ class GateSelfTests(unittest.TestCase):
     def test_clean_absent_state_passes(self) -> None:
         verify_release_gate(_mock_provider(), "3.0.0", report=None)
 
+    def test_local_package_g_hold_precedes_all_remote_provider_access(self) -> None:
+        calls: list[str] = []
+
+        def hold_runner(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+            del args, kwargs
+            calls.append("assurance")
+            return subprocess.CompletedProcess((), 3, b"", b"")
+
+        def forbidden_provider(*args: object, **kwargs: object) -> EvidenceProvider:
+            del args, kwargs
+            calls.append("provider")
+            raise AssertionError("provider constructed after Package G HOLD")
+
+        def forbidden_finder(command: str) -> str | None:
+            calls.append(f"command:{command}")
+            raise AssertionError("command lookup reached after Package G HOLD")
+
+        status = main(
+            ("--version", "3.0.0", "--assurance-phase", "prepublish"),
+            assurance_runner=hold_runner,
+            provider_factory=forbidden_provider,
+            command_finder=forbidden_finder,
+        )
+        self.assertEqual(status, 3)
+        self.assertEqual(calls, ["assurance"])
+
+    def test_local_package_g_rc_zero_is_a_structural_defect(self) -> None:
+        calls: list[str] = []
+
+        def invalid_runner(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+            del args, kwargs
+            calls.append("assurance")
+            return subprocess.CompletedProcess((), 0, b"", b"")
+
+        def forbidden_provider(*args: object, **kwargs: object) -> EvidenceProvider:
+            del args, kwargs
+            calls.append("provider")
+            raise AssertionError("provider constructed after forbidden Package G rc 0")
+
+        status = main(
+            ("--version", "3.0.0", "--assurance-phase", "prepublish"),
+            assurance_runner=invalid_runner,
+            provider_factory=forbidden_provider,
+            command_finder=lambda command: f"/mock/{command}",
+        )
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, ["assurance"])
+
+    def test_local_package_g_unexpected_rc_is_a_structural_defect(self) -> None:
+        for returncode in (1, 2, 4):
+            with self.subTest(returncode=returncode):
+                def invalid_runner(
+                    *args: object,
+                    _returncode: int = returncode,
+                    **kwargs: object,
+                ) -> subprocess.CompletedProcess[bytes]:
+                    del args, kwargs
+                    return subprocess.CompletedProcess((), _returncode, b"", b"")
+
+                with self.assertRaisesRegex(GateError, f"unexpected rc {returncode}"):
+                    run_local_release_acceptance(
+                        "prepublish", runner=invalid_runner
+                    )
+
+    def test_remote_acceptance_phase_is_explicit_and_complete_is_postpublish(self) -> None:
+        prepublish = parse_args(
+            ("--version", "3.0.0", "--assurance-phase", "prepublish")
+        )
+        self.assertEqual(prepublish.assurance_phase, "prepublish")
+        postpublish = parse_args(
+            (
+                "--version",
+                "3.0.0",
+                "--assurance-phase",
+                "postpublish",
+                "--require-local-archives",
+                "--allow-complete",
+            )
+        )
+        self.assertEqual(postpublish.assurance_phase, "postpublish")
+
+    def test_package_g_live_wiring_is_exact_and_adversarially_closed(self) -> None:
+        workflow = read_live_control(".github/workflows/security-validation.yml")
+        publish_ready = read_live_control("tools/verify-publish-ready.sh")
+        release_script = read_live_control("tools/release-dcrypt.sh")
+        remote_verifier = read_live_control("tools/verify-remote-release-ready.py")
+        verify_package_g_wiring_sources(
+            workflow, publish_ready, release_script, remote_verifier
+        )
+
+        mutations = (
+            (
+                workflow.replace(
+                    "          ref: ${{ github.event.pull_request.head.sha || github.sha }}\n",
+                    "",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow.replace(
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py\n",
+                    "",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow.replace(
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py\n",
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py\n"
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow.replace(
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py\n"
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --ci --phase foundation\n",
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --ci --phase foundation\n"
+                    "          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow.replace(
+                    "--release --phase foundation\n",
+                    "--release --phase prepublish\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow.replace(
+                    '          test "$release_acceptance_rc" -eq 3\n',
+                    '          test "$release_acceptance_rc" -eq 0\n',
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow.replace(
+                    "      - name: Verify Package G release-acceptance and threat-model foundations\n",
+                    "      - name: Verify Package G release-acceptance and threat-model foundations\n"
+                    "        continue-on-error: true\n",
+                    1,
+                ),
+                publish_ready,
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow,
+                publish_ready.replace(
+                    'case "$release_acceptance_rc" in\n    3)',
+                    'case "$release_acceptance_rc" in\n    0)',
+                    1,
+                ),
+                release_script,
+                remote_verifier,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "        0)\n            die \"Package G $phase release verifier returned forbidden rc 0 under the v1 HOLD contract\"\n",
+                    "        0)\n            return 0\n",
+                    1,
+                ),
+                remote_verifier,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script.replace(
+                    "        complete)\n            assurance_phase=postpublish\n",
+                    "        complete)\n            assurance_phase=prepublish\n",
+                    1,
+                ),
+                remote_verifier,
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script,
+                remote_verifier.replace(
+                    "        verify_release_control_wiring()\n        assurance_rc = run_local_release_acceptance(\n",
+                    "        provider_factory(PROJECT_ROOT)\n"
+                    "        verify_release_control_wiring()\n"
+                    "        assurance_rc = run_local_release_acceptance(\n",
+                    1,
+                ),
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script,
+                remote_verifier.replace(
+                    'candidate = Path("/usr/bin/git")',
+                    'candidate = Path("git")',
+                    1,
+                ),
+            ),
+            (
+                workflow,
+                publish_ready,
+                release_script,
+                remote_verifier.replace(
+                    '        "GIT_NO_LAZY_FETCH": "1",\n',
+                    "",
+                    1,
+                ),
+            ),
+        )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index):
+                self.assertNotEqual(mutation, (
+                    workflow, publish_ready, release_script, remote_verifier
+                ))
+                with self.assertRaisesRegex(GateError, "Package G"):
+                    verify_package_g_wiring_sources(
+                        *mutation, verify_digests=False
+                    )
+
+    def test_combined_immutable_antecedent_and_live_g_source_audit(self) -> None:
+        verify_release_control_wiring()
+
     def test_local_and_ci_workspace_gates_run_test_harness_unit_tests(self) -> None:
-        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
-        ).read_text()
+        release_script = read_a_f_blob("tools/release-dcrypt.sh")
+        workflow = read_a_f_blob(".github/workflows/security-validation.yml")
         timing_tester = (
             PROJECT_ROOT / "tests" / "src" / "suites" / "constant_time" / "tester.rs"
         ).read_text()
@@ -1880,10 +2691,8 @@ class GateSelfTests(unittest.TestCase):
             )
 
     def test_assurance_ledger_is_live_non_skippable_and_exactly_once(self) -> None:
-        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
-        ).read_text()
+        publish_ready = read_a_f_blob("tools/verify-publish-ready.sh")
+        workflow = read_a_f_blob(".github/workflows/security-validation.yml")
         release_command = (
             'python3 -B "$PROJECT_ROOT/assurance/verify-assurance-ledger.py" '
             "--mode release"
@@ -1915,11 +2724,9 @@ class GateSelfTests(unittest.TestCase):
         self.assertNotIn("--snapshot-only", assurance_job)
 
     def test_package_c_workflow_and_release_wiring_is_exact_and_non_skippable(self) -> None:
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
-        ).read_text()
-        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
-        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        workflow = read_a_f_blob(".github/workflows/security-validation.yml")
+        publish_ready = read_a_f_blob("tools/verify-publish-ready.sh")
+        release_script = read_a_f_blob("tools/release-dcrypt.sh")
         verify_package_c_wiring_sources(workflow, publish_ready, release_script)
 
         assurance_job = workflow.split("  assurance-ledger:", 1)[1].split(
@@ -2138,11 +2945,9 @@ class GateSelfTests(unittest.TestCase):
                 )
 
     def test_package_d_workflow_and_release_wiring_is_exact_and_non_skippable(self) -> None:
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
-        ).read_text()
-        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
-        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        workflow = read_a_f_blob(".github/workflows/security-validation.yml")
+        publish_ready = read_a_f_blob("tools/verify-publish-ready.sh")
+        release_script = read_a_f_blob("tools/release-dcrypt.sh")
         verify_package_d_wiring_sources(workflow, publish_ready, release_script)
 
         mutations = (
@@ -2211,11 +3016,9 @@ class GateSelfTests(unittest.TestCase):
                 )
 
     def test_package_f_workflow_bench_and_toolchain_wiring_is_exact(self) -> None:
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
-        ).read_text()
-        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
-        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        workflow = read_a_f_blob(".github/workflows/security-validation.yml")
+        publish_ready = read_a_f_blob("tools/verify-publish-ready.sh")
+        release_script = read_a_f_blob("tools/release-dcrypt.sh")
         bench_manifest = (
             PROJECT_ROOT / "tools" / "bench-processor" / "Cargo.toml"
         ).read_text()
@@ -2354,11 +3157,9 @@ class GateSelfTests(unittest.TestCase):
                 verify_package_f_wiring_sources(*mutation)
 
     def test_package_e_workflow_and_release_wiring_is_exact_and_non_skippable(self) -> None:
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
-        ).read_text()
-        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
-        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
+        workflow = read_a_f_blob(".github/workflows/security-validation.yml")
+        publish_ready = read_a_f_blob("tools/verify-publish-ready.sh")
+        release_script = read_a_f_blob("tools/release-dcrypt.sh")
         verify_package_e_wiring_sources(workflow, publish_ready, release_script)
 
         mutations = (
@@ -2436,11 +3237,9 @@ class GateSelfTests(unittest.TestCase):
                 )
 
     def test_assembly_gates_remain_in_release_and_ci_boundary_scope(self) -> None:
-        publish_ready = (PROJECT_ROOT / "tools" / "verify-publish-ready.sh").read_text()
-        release_script = (PROJECT_ROOT / "tools" / "release-dcrypt.sh").read_text()
-        workflow = (
-            PROJECT_ROOT / ".github" / "workflows" / "security-validation.yml"
-        ).read_text()
+        publish_ready = read_a_f_blob("tools/verify-publish-ready.sh")
+        release_script = read_a_f_blob("tools/release-dcrypt.sh")
+        workflow = read_a_f_blob(".github/workflows/security-validation.yml")
 
         publish_boundary = publish_ready.split(
             'printf "\\n${BLUE}Zero-unsafe and zero-FFI implementation boundary', 1
@@ -2904,6 +3703,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         help="require exactly this many leaf-first registry records",
     )
     parser.add_argument(
+        "--assurance-phase",
+        choices=ASSURANCE_PHASES,
+        help="required Package G acceptance phase for a live remote check",
+    )
+    parser.add_argument(
         "--self-test", action="store_true", help="run mock-only fail-closed tests"
     )
     args = parser.parse_args(argv)
@@ -2914,14 +3718,21 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
             or args.require_local_archives
             or args.allow_complete
             or args.expected_prefix is not None
+            or args.assurance_phase is not None
         ):
             parser.error("--self-test cannot be combined with release options")
     elif args.version is None:
         parser.error("--version is required")
+    elif args.assurance_phase is None:
+        parser.error("--assurance-phase is required")
     elif not SEMVER.fullmatch(args.version):
         parser.error("--version must be a semantic version")
     elif args.allow_complete and not args.require_local_archives:
         parser.error("--allow-complete requires --require-local-archives")
+    elif args.assurance_phase == "postpublish" and not args.allow_complete:
+        parser.error("--assurance-phase postpublish requires --allow-complete")
+    elif args.assurance_phase == "prepublish" and args.allow_complete:
+        parser.error("--allow-complete requires --assurance-phase postpublish")
     return args
 
 
@@ -2931,12 +3742,34 @@ def run_self_tests() -> int:
     return 0 if result.wasSuccessful() else 1
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    assurance_runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
+    provider_factory: Callable[..., EvidenceProvider] = LiveEvidenceProvider,
+    command_finder: Callable[[str], str | None] = shutil.which,
+) -> int:
     args = parse_args(argv)
     if args.self_test:
         return run_self_tests()
+    assert args.assurance_phase is not None
+    try:
+        verify_release_control_wiring()
+        assurance_rc = run_local_release_acceptance(
+            args.assurance_phase,
+            runner=assurance_runner,
+        )
+    except GateError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 1
+    if assurance_rc == 3:
+        print(
+            f"HOLD: Package G {args.assurance_phase} release acceptance is valid but incomplete.",
+            file=sys.stderr,
+        )
+        return 3
     for command in ("git", "gh", "curl", "cargo"):
-        if shutil.which(command) is None:
+        if command_finder(command) is None:
             print(f"error: required command is unavailable: {command}", file=sys.stderr)
             return 1
     assert args.version is not None
@@ -2946,7 +3779,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     try:
         verify_release_gate(
-            LiveEvidenceProvider(
+            provider_factory(
                 PROJECT_ROOT,
                 require_local_archives=args.require_local_archives,
             ),

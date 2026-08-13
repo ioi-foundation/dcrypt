@@ -14,6 +14,7 @@ NC='\033[0m'
 EXPECTED_VERSION=""
 REQUIRE_UNPUBLISHED=false
 CHECK_AUTH=true
+ASSURANCE_PHASE="foundation"
 ERRORS=0
 WARNINGS=0
 
@@ -42,6 +43,9 @@ Options:
                           version reported by Cargo.
   --require-unpublished   Fail if VERSION already exists for any publishable
                           crate on crates.io.
+  --assurance-phase PHASE
+                          Run Package G release acceptance for foundation,
+                          prepublish, or postpublish (default: foundation).
   --skip-auth-check       Do not check whether Cargo credentials are configured.
   -h, --help              Show this help.
 EOF
@@ -98,6 +102,11 @@ while (($# > 0)); do
             REQUIRE_UNPUBLISHED=true
             shift
             ;;
+        --assurance-phase)
+            [[ $# -ge 2 ]] || { echo "--assurance-phase requires a value" >&2; exit 2; }
+            ASSURANCE_PHASE=$2
+            shift 2
+            ;;
         --skip-auth-check)
             CHECK_AUTH=false
             shift
@@ -114,131 +123,117 @@ while (($# > 0)); do
     esac
 done
 
+case "$ASSURANCE_PHASE" in
+    foundation|prepublish|postpublish)
+        ;;
+    *)
+        echo "--assurance-phase must be foundation, prepublish, or postpublish" >&2
+        exit 2
+        ;;
+esac
+
 cd "$PROJECT_ROOT"
 
 printf "${BLUE}=== Verifying dcrypt publish readiness ===${NC}\n"
+
+if ! command -v python3 >/dev/null 2>&1; then
+    fail "required command is unavailable: python3"
+    exit 1
+fi
+
+printf "\n${BLUE}Package G release-acceptance foundation${NC}\n"
+if PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/release-acceptance/generate.py" --check; then
+    pass "Package G generated artifacts are current"
+else
+    fail "Package G generation check failed"
+    exit 1
+fi
+if PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/release-acceptance/selftest.py"; then
+    pass "Package G adversarial self-tests passed"
+else
+    fail "Package G adversarial self-tests failed"
+    exit 1
+fi
+if PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
+    --ci --phase foundation; then
+    pass "Package G foundation structure passed"
+else
+    fail "Package G foundation structure failed"
+    exit 1
+fi
+
+printf "\n${BLUE}Threat-model release foundation${NC}\n"
+if PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/threat-models/generate-threat-models.py" --check; then
+    pass "threat-model generated artifacts are current"
+else
+    fail "threat-model generation check failed"
+    exit 1
+fi
+if PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/threat-models/verify-threat-models.py" --self-test; then
+    pass "threat-model adversarial self-tests passed"
+else
+    fail "threat-model adversarial self-tests failed"
+    exit 1
+fi
+if PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/threat-models/verify-threat-models.py" --mode ci; then
+    pass "threat-model foundation structure passed"
+else
+    fail "threat-model foundation structure failed"
+    exit 1
+fi
+set +e
+PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/threat-models/verify-threat-models.py" --mode release
+threat_model_release_rc=$?
+set -e
+if [[ "$threat_model_release_rc" -ne 1 ]]; then
+    fail "threat-model release verifier returned $threat_model_release_rc; expected blocked rc 1"
+    exit 1
+fi
+pass "threat-model release blockers remain explicit"
+
+set +e
+PYTHONDONTWRITEBYTECODE=1 python3 -B \
+    "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
+    --release --phase "$ASSURANCE_PHASE"
+release_acceptance_rc=$?
+set -e
+case "$release_acceptance_rc" in
+    3)
+        fail "Package G $ASSURANCE_PHASE release HOLD remains explicit and release-blocking"
+        exit 3
+        ;;
+    0)
+        fail "Package G $ASSURANCE_PHASE release verifier returned forbidden rc 0 under the v1 HOLD contract"
+        exit 1
+        ;;
+    *)
+        fail "Package G $ASSURANCE_PHASE release verifier returned unexpected rc $release_acceptance_rc"
+        exit 1
+        ;;
+esac
 
 require_command cargo || true
 require_command jq || true
 require_command curl || true
 require_command git || true
-require_command python3 || true
 require_command rustdoc || true
 require_command rustup || true
 if ((ERRORS > 0)); then
     exit 1
 fi
 
-printf "\n${BLUE}Atomic public API assurance ledger${NC}\n"
+printf "\n${BLUE}Locked dependency closure${NC}\n"
 if cargo fetch --locked; then
-    pass "exact locked dependency closure fetched for offline assurance replay"
+    pass "exact locked dependency closure fetched"
 else
     fail "failed to fetch the exact locked dependency closure"
-    exit 1
-fi
-release_assurance_failed=false
-if python3 -B "$PROJECT_ROOT/assurance/verify-assurance-ledger.py" --mode release; then
-    pass "assurance ledger and live public API inventory passed"
-else
-    fail "assurance ledger or live public API inventory failed"
-    release_assurance_failed=true
-fi
-
-printf "\n${BLUE}Package B interoperability completeness and protocol controls${NC}\n"
-if python3 -B "$PROJECT_ROOT/assurance/interoperability/generate-interoperability-matrix.py" --check \
-    && python3 -B "$PROJECT_ROOT/assurance/interoperability/verify-interoperability.py" --mode ci \
-    && python3 -B "$PROJECT_ROOT/assurance/interoperability/interoperability-selftest.py" \
-    && python3 -B "$PROJECT_ROOT/assurance/interoperability/protocol-specs/verify-protocol-specs.py" \
-        --require-final-subject --check-current-subject \
-    && python3 -B "$PROJECT_ROOT/assurance/interoperability/protocol-specs/protocol-specs-selftest.py" \
-    && python3 -B "$PROJECT_ROOT/verification/clean-room-protocol-reference/verify-scaffold.py" \
-    && python3 -B "$PROJECT_ROOT/verification/clean-room-protocol-reference/scaffold-selftest.py"; then
-    pass "Package B structural controls reproduced without promoting candidate evidence"
-else
-    fail "Package B structural interoperability controls failed"
-    release_assurance_failed=true
-fi
-if python3 -B "$PROJECT_ROOT/assurance/interoperability/verify-interoperability.py" --mode release; then
-    pass "interoperability release completeness passed"
-else
-    fail "interoperability completeness remains release-blocking"
-    release_assurance_failed=true
-fi
-printf "\n${BLUE}Package F supply-chain and reproducibility foundations${NC}\n"
-if python3 -B "$PROJECT_ROOT/assurance/supply-chain/generate.py" --check \
-    && python3 -B "$PROJECT_ROOT/assurance/supply-chain/verify.py" --ci \
-    && python3 -B "$PROJECT_ROOT/assurance/supply-chain/selftest.py"; then
-    pass "Package F structural supply-chain controls reproduced without promoting artifact evidence"
-else
-    fail "Package F structural supply-chain controls failed"
-    release_assurance_failed=true
-fi
-set +e
-python3 -B "$PROJECT_ROOT/assurance/supply-chain/verify.py" --release
-supply_chain_release_rc=$?
-set -e
-if [[ "$supply_chain_release_rc" -eq 3 ]]; then
-    fail "Package F release HOLD remains explicit and release-blocking"
-    release_assurance_failed=true
-else
-    fail "Package F release verifier returned $supply_chain_release_rc; expected HOLD rc 3"
-    release_assurance_failed=true
-fi
-printf "\n${BLUE}Package E v4 error API removal and migration controls${NC}\n"
-if python3 -B "$PROJECT_ROOT/assurance/error-api-v4/generate.py" --check \
-    && python3 -B "$PROJECT_ROOT/assurance/error-api-v4/verify.py" --ci \
-    && python3 -B "$PROJECT_ROOT/assurance/error-api-v4/selftest.py" \
-    && cargo test --locked --offline --manifest-path "$PROJECT_ROOT/Cargo.toml" \
-        -p dcrypt-tests --test error_api_v4_migration; then
-    pass "Package E structural removal and downstream migration controls reproduced"
-else
-    fail "Package E structural removal or downstream migration controls failed"
-    release_assurance_failed=true
-fi
-set +e
-python3 -B "$PROJECT_ROOT/assurance/error-api-v4/verify.py" --release
-error_api_v4_release_rc=$?
-set -e
-if [[ "$error_api_v4_release_rc" -eq 3 ]]; then
-    fail "Package E release HOLD remains explicit and release-blocking"
-    release_assurance_failed=true
-else
-    fail "Package E release verifier returned $error_api_v4_release_rc; expected HOLD rc 3"
-    release_assurance_failed=true
-fi
-printf "\n${BLUE}Package D side-channel and secret-lifecycle foundations${NC}\n"
-if python3 -B "$PROJECT_ROOT/assurance/side-channel/generate.py" --check \
-    && python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --ci \
-    && python3 -B "$PROJECT_ROOT/assurance/side-channel/selftest.py"; then
-    pass "Package D structural controls reproduced without promoting operational evidence"
-else
-    fail "Package D structural side-channel controls failed"
-    release_assurance_failed=true
-fi
-if python3 -B "$PROJECT_ROOT/assurance/side-channel/verify.py" --release; then
-    pass "dedicated side-channel, lifecycle, and physical evidence passed"
-else
-    fail "dedicated side-channel, lifecycle, and physical evidence remain release-blocking"
-    release_assurance_failed=true
-fi
-printf "\n${BLUE}Package C persistent semantic fuzz controls${NC}\n"
-if python3 -B "$PROJECT_ROOT/assurance/fuzzing/generate.py" --check \
-    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/verify.py" --ci \
-    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/selftest.py" \
-    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/sanitizer_positive.py" --execute \
-    && python3 -B "$PROJECT_ROOT/assurance/fuzzing/crash_lifecycle.py" --execute; then
-    pass "Package C structural and live local controls reproduced without promoting campaign evidence"
-else
-    fail "Package C structural or live local controls failed"
-    release_assurance_failed=true
-fi
-if python3 -B "$PROJECT_ROOT/assurance/fuzzing/verify.py" --release; then
-    pass "persistent fuzz operational evidence passed"
-else
-    fail "persistent fuzz campaigns remain release-blocking"
-    release_assurance_failed=true
-fi
-if [[ "$release_assurance_failed" == true ]]; then
     exit 1
 fi
 

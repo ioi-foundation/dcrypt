@@ -218,10 +218,71 @@ save_state() {
         >"$STATE_FILE"
 }
 
+run_release_acceptance_gate() {
+    local phase=$1
+    case "$phase" in
+        foundation|prepublish|postpublish)
+            ;;
+        *)
+            die "unknown Package G assurance phase: $phase"
+            ;;
+    esac
+
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/release-acceptance/generate.py" --check \
+        || die "Package G generated artifacts are stale or invalid"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/release-acceptance/selftest.py" \
+        || die "Package G adversarial self-tests failed"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
+        --ci --phase foundation \
+        || die "Package G foundation structure failed"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/threat-models/generate-threat-models.py" --check \
+        || die "threat-model generated artifacts are stale or invalid"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/threat-models/verify-threat-models.py" --self-test \
+        || die "threat-model adversarial self-tests failed"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/threat-models/verify-threat-models.py" --mode ci \
+        || die "threat-model foundation structure failed"
+
+    local threat_model_release_rc
+    set +e
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/threat-models/verify-threat-models.py" --mode release
+    threat_model_release_rc=$?
+    set -e
+    [[ "$threat_model_release_rc" -eq 1 ]] \
+        || die "threat-model release verifier returned $threat_model_release_rc; expected blocked rc 1"
+
+    local release_acceptance_rc
+    set +e
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
+        --release --phase "$phase"
+    release_acceptance_rc=$?
+    set -e
+    case "$release_acceptance_rc" in
+        3)
+            printf "${YELLOW}HOLD: Package G %s release acceptance is valid but incomplete.${NC}\n" \
+                "$phase" >&2
+            exit 3
+            ;;
+        0)
+            die "Package G $phase release verifier returned forbidden rc 0 under the v1 HOLD contract"
+            ;;
+        *)
+            die "Package G $phase release verifier returned unexpected rc $release_acceptance_rc"
+            ;;
+    esac
+}
+
 run_publish_verifier() {
     local version=$1
     local require_unpublished=${2:-false}
-    local -a args=(--version "$version")
+    local -a args=(--version "$version" --assurance-phase prepublish)
     if [[ "$require_unpublished" == true ]]; then
         args+=(--require-unpublished)
     fi
@@ -625,40 +686,99 @@ release_self_test() {
     if grep -Fq "$reviewed_seed_bypass" "$0"; then
         die "self-test: release tooling writes directly to reviewed fuzz seeds"
     fi
-    grep -Fq 'assurance/fuzzing/verify.py' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package C fuzz controls"
-    grep -Fq 'assurance/fuzzing/verify.py" --release' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package C release mode"
-    grep -Fq 'assurance/fuzzing/sanitizer_positive.py" --execute' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted the live sanitizer controls"
-    grep -Fq 'assurance/fuzzing/crash_lifecycle.py" --execute' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted the live private crash lifecycle"
-    # Package F release wiring assertions begin.
-    grep -Fq 'assurance/supply-chain/generate.py" --check' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package F generation check"
-    grep -Fq 'assurance/supply-chain/verify.py" --ci' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package F structural verification"
-    grep -Fq 'assurance/supply-chain/selftest.py' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package F adversarial controls"
-    grep -Fq 'assurance/supply-chain/verify.py" --release' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package F release mode"
-    grep -Fq 'if [[ "$supply_chain_release_rc" -eq 3 ]]; then' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package F HOLD rc 3"
-    grep -Fq 'fail "Package F release HOLD remains explicit and release-blocking"' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier did not propagate Package F HOLD"
-    grep -Fq 'test "$supply_chain_release_rc" -eq 3' \
-        "$PROJECT_ROOT/.github/workflows/security-validation.yml" \
-        || die "self-test: CI omitted Package F HOLD rc 3"
+    # Package G release wiring assertions begin.
+    local release_gate_section publish_gate_section workflow_gate_section
+    release_gate_section=$(sed -n \
+        '/^run_release_acceptance_gate() {$/,/^}$/p' "$0")
+    publish_gate_section=$(sed -n \
+        '/Package G release-acceptance foundation/,/require_command cargo/p' \
+        "$SCRIPT_DIR/verify-publish-ready.sh" | sed '$d')
+    workflow_gate_section=$(sed -n \
+        '/Verify Package G release-acceptance and threat-model foundations/,/  implementation-boundary:/p' \
+        "$PROJECT_ROOT/.github/workflows/security-validation.yml")
+
+    assert_ordered_once() {
+        local label=$1
+        local source=$2
+        shift 2
+        local needle matches line previous=0
+        for needle in "$@"; do
+            matches=$(grep -nF -- "$needle" <<<"$source" || true)
+            [[ "$(wc -l <<<"$matches")" -eq 1 && -n "$matches" ]] \
+                || die "self-test: $label command is absent or ambiguous: $needle"
+            line=${matches%%:*}
+            ((line > previous)) \
+                || die "self-test: $label command order differs at: $needle"
+            previous=$line
+        done
+    }
+
+    assert_ordered_once "release runner Package G" "$release_gate_section" \
+        'assurance/release-acceptance/generate.py' \
+        'assurance/release-acceptance/selftest.py' \
+        '--ci --phase foundation' \
+        'assurance/threat-models/generate-threat-models.py' \
+        'assurance/threat-models/verify-threat-models.py" --self-test' \
+        'assurance/threat-models/verify-threat-models.py" --mode ci' \
+        'assurance/threat-models/verify-threat-models.py" --mode release' \
+        '--release --phase "$phase"'
+    assert_ordered_once "publish verifier Package G" "$publish_gate_section" \
+        'assurance/release-acceptance/generate.py' \
+        'assurance/release-acceptance/selftest.py' \
+        '--ci --phase foundation' \
+        'assurance/threat-models/generate-threat-models.py' \
+        'assurance/threat-models/verify-threat-models.py" --self-test' \
+        'assurance/threat-models/verify-threat-models.py" --mode ci' \
+        'assurance/threat-models/verify-threat-models.py" --mode release' \
+        '--release --phase "$ASSURANCE_PHASE"'
+    assert_ordered_once "CI Package G" "$workflow_gate_section" \
+        'assurance/release-acceptance/generate.py --check' \
+        'assurance/release-acceptance/selftest.py' \
+        'assurance/release-acceptance/verify.py --ci --phase foundation' \
+        'assurance/threat-models/generate-threat-models.py --check' \
+        'assurance/threat-models/verify-threat-models.py --self-test' \
+        'assurance/threat-models/verify-threat-models.py --mode ci' \
+        'assurance/threat-models/verify-threat-models.py --mode release' \
+        'assurance/release-acceptance/verify.py --release --phase foundation' \
+        'bash tools/release-dcrypt.sh --self-test'
+    for source in "$release_gate_section" "$publish_gate_section" "$workflow_gate_section"; do
+        if grep -Eq 'continue-on-error:|\|\|[[:space:]]+true|exit[[:space:]]+0|return[[:space:]]+0' \
+            <<<"$source"; then
+            die "self-test: Package G wiring contains a soft-success bypass"
+        fi
+    done
+    grep -Fq '[[ "$threat_model_release_rc" -eq 1 ]]' <<<"$release_gate_section" \
+        || die "self-test: release runner omitted exact threat-model rc 1"
+    grep -Fq 'exit 3' <<<"$release_gate_section" \
+        || die "self-test: release runner does not propagate Package G HOLD rc 3"
+    grep -Fq 'exit 3' <<<"$publish_gate_section" \
+        || die "self-test: publish verifier does not propagate Package G HOLD rc 3"
+    grep -Fq 'test "$threat_model_release_rc" -eq 1' <<<"$workflow_gate_section" \
+        || die "self-test: CI omitted exact threat-model rc 1"
+    grep -Fq 'test "$release_acceptance_rc" -eq 3' <<<"$workflow_gate_section" \
+        || die "self-test: CI omitted exact Package G HOLD rc 3"
+    grep -Fq 'local -a args=(--version "$version" --assurance-phase prepublish)' "$0" \
+        || die "self-test: publish verifier phase is not explicit prepublish"
+    local remote_phase_routing_section
+    remote_phase_routing_section=$(sed -n \
+        '/^run_remote_release_gate() {$/,/^}$/p' "$0")
+    [[ "$(grep -Fc 'assurance_phase=prepublish' <<<"$remote_phase_routing_section")" -eq 2 ]] \
+        || die "self-test: remote prepublish phase routing differs"
+    [[ "$(grep -Fc 'assurance_phase=postpublish' <<<"$remote_phase_routing_section")" -eq 1 ]] \
+        || die "self-test: remote complete state is not routed to postpublish"
+    local acceptance_line cargo_line release_entry_section
+    release_entry_section=$(sed -n '/^cd "$PROJECT_ROOT"$/,$p' "$0")
+    acceptance_line=$(grep -nF 'run_release_acceptance_gate prepublish' \
+        <<<"$release_entry_section")
+    cargo_line=$(grep -nF 'require_command cargo' <<<"$release_entry_section")
+    [[ "$(wc -l <<<"$acceptance_line")" -eq 1 ]] \
+        || die "self-test: early Package G prepublish gate is absent or ambiguous"
+    [[ "$(wc -l <<<"$cargo_line")" -eq 1 ]] \
+        || die "self-test: Cargo requirement is absent or ambiguous"
+    (( ${acceptance_line%%:*} < ${cargo_line%%:*} )) \
+        || die "self-test: Package G HOLD is not checked before Cargo access"
+    # Package G release wiring assertions end.
+
     local exact_stable_selectors
     exact_stable_selectors=$(grep -Ec \
         '^[[:space:]]+toolchain:[[:space:]]+1\.93\.1[[:space:]]*$' \
@@ -669,57 +789,19 @@ release_self_test() {
         "$PROJECT_ROOT/.github/workflows/security-validation.yml"; then
         die "self-test: moving stable toolchain selector is forbidden"
     fi
-    # Package F release wiring assertions end.
-    # Package E release wiring assertions begin.
-    grep -Fq 'assurance/error-api-v4/generate.py" --check' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package E generation check"
-    grep -Fq 'assurance/error-api-v4/verify.py" --ci' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package E structural verification"
-    grep -Fq 'assurance/error-api-v4/selftest.py' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package E adversarial controls"
-    grep -Fq 'cargo test --locked --offline --manifest-path "$PROJECT_ROOT/Cargo.toml"' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package E downstream migration fixture"
-    grep -Fq 'assurance/error-api-v4/verify.py" --release' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package E release mode"
-    grep -Fq 'if [[ "$error_api_v4_release_rc" -eq 3 ]]; then' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package E HOLD rc 3"
-    grep -Fq 'fail "Package E release HOLD remains explicit and release-blocking"' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier did not propagate Package E HOLD"
-    grep -Fq 'test "$error_api_v4_release_rc" -eq 3' \
-        "$PROJECT_ROOT/.github/workflows/security-validation.yml" \
-        || die "self-test: CI omitted Package E HOLD rc 3"
-    # Package E release wiring assertions end.
-    # Package D release wiring assertions begin.
-    grep -Fq 'assurance/side-channel/generate.py" --check' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package D generation check"
-    grep -Fq 'assurance/side-channel/verify.py" --ci' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package D structural verification"
-    grep -Fq 'assurance/side-channel/selftest.py' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package D adversarial controls"
-    grep -Fq 'assurance/side-channel/verify.py" --release' \
-        "$SCRIPT_DIR/verify-publish-ready.sh" \
-        || die "self-test: publish verifier omitted Package D release mode"
     grep -Fq 'cargo +nightly-2026-08-07 miri --version' "$0" \
         || die "self-test: exact Miri toolchain selector drifted"
     if grep -Eq 'cargo[[:space:]]+\+nightly[[:space:]]+miri' "$0"; then
         die "self-test: moving nightly Miri selector is forbidden"
     fi
-    # Package D release wiring assertions end.
     local forbidden_oracle_claim='excluded independent interoperability'
     forbidden_oracle_claim+=' oracles'
     if grep -Fq "$forbidden_oracle_claim" "$0"; then
         die "self-test: release tooling still claims comparator independence"
     fi
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$SCRIPT_DIR/verify-remote-release-ready.py" --self-test \
+        || die "self-test: remote Package G and immutable A_F source audit failed"
     self_test_ambiguous_publish_resolution
     info "release-dcrypt self-test passed"
 }
@@ -768,7 +850,25 @@ self_test_ambiguous_publish_resolution() {
 run_remote_release_gate() {
     local mode=${1:-preflight}
     local expected_prefix=${2:-}
-    local -a args=(--version "$VERSION")
+    local assurance_phase
+    case "$mode" in
+        preflight)
+            assurance_phase=prepublish
+            if [[ -n "$RESUME_FROM" ]]; then
+                :
+            fi
+            ;;
+        verified-prefix)
+            assurance_phase=prepublish
+            ;;
+        complete)
+            assurance_phase=postpublish
+            ;;
+        *)
+            die "unknown remote release-gate mode: $mode"
+            ;;
+    esac
+    local -a args=(--version "$VERSION" --assurance-phase "$assurance_phase")
     case "$mode" in
         preflight)
             if [[ -n "$RESUME_FROM" ]]; then
@@ -784,9 +884,6 @@ run_remote_release_gate() {
         complete)
             args+=(--resume auto --require-local-archives --allow-complete \
                 --expected-prefix "${#PUBLISH_ORDER[@]}")
-            ;;
-        *)
-            die "unknown remote release-gate mode: $mode"
             ;;
     esac
     "$SCRIPT_DIR/verify-remote-release-ready.py" "${args[@]}"
@@ -1106,11 +1203,12 @@ if [[ "$MODE" != "dry-run" && ("$SKIP_TESTS" == true || "$SKIP_CHECKS" == true) 
 fi
 
 cd "$PROJECT_ROOT"
+require_command python3
+run_release_acceptance_gate prepublish
 require_command cargo
 require_command git
 require_command jq
 require_command curl
-require_command python3
 require_command awk
 require_command sha256sum
 if [[ "$SKIP_TESTS" == false ]]; then

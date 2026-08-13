@@ -1,0 +1,389 @@
+schema-version = 1
+content-policy = "dcrypt-package-g-release-acceptance-foundation-v1"
+status = "HOLD"
+release-gate = "HOLD"
+release-exit-code = 3
+workspace-version = "3.0.0"
+target-version = "4.0.0"
+version-preparation-authorized = false
+publish-eligible = false
+promotion-eligible = false
+acceptance-enabled = false
+
+[scope]
+path-count = 14
+path-list-sha256 = "31f865655ce1eda985d50d1e0ca46d578468eba0c4bdbc066800d91f190fcde0"
+mode-path-list-sha256 = "043175aa5d4c14c5c28243902fa7a4edb38d97a93a775a2502f70914d2aeacf2"
+regular-path-count = 11
+executable-path-count = 3
+
+[topology]
+a-f-commit = "56d837d72467cd78d696218dabf016fb6dd6c457"
+a-f-tree = "c1183ca6480655cd253e6e3527eef69b9d6607e8"
+r-f-commit = "889cb8c4dc13a78679dc8a7677916484a9966f65"
+r-f-tree = "0d44b68b186913de68844d09b7e498bcda14d109"
+s-f-commit = "ac91913afee3b91c823a1448e6200de26fdd1c8a"
+s-f-tree = "6952979606c28f739fca1aeb9bb14b1ca042d09d"
+required-g-parent = "56d837d72467cd78d696218dabf016fb6dd6c457"
+final-g-identity-claim = false
+construction-head = "56d837d72467cd78d696218dabf016fb6dd6c457"
+construction-g-path-state = "untracked-g10-and-tracked-consumer4"
+final-parent-count = 1
+final-diff-path-count = 14
+final-diff-path-list-sha256 = "31f865655ce1eda985d50d1e0ca46d578468eba0c4bdbc066800d91f190fcde0"
+
+[protected-state]
+path = ".gitignore"
+committed-sha256 = "f34512e77a7cf5fdfd465243dbb286d8e16bfd698cad264bdb1360f008915f26"
+live-sha256 = "e4887e3f444e25b7baad39bd6ff3da3ae770f8dc5b3f7cf2c87a117219a8fe2c"
+live-size = 720
+git-mode = "100644"
+allowed-states = ["clean-committed", "protected-preexisting-delta-unchanged"]
+clean-size = 711
+
+[immutable-projection]
+commit = "56d837d72467cd78d696218dabf016fb6dd6c457"
+tree = "c1183ca6480655cd253e6e3527eef69b9d6607e8"
+parent = "889cb8c4dc13a78679dc8a7677916484a9966f65"
+replacement-objects-allowed = false
+
+[[immutable-projection.subtree]]
+path = "assurance/interoperability"
+git-object = "c7c7858973631746a41c84264bf8088e7ff95f7f"
+
+[[immutable-projection.subtree]]
+path = "assurance/fuzzing"
+git-object = "19a8ee6506471d38f7ea3bd15c1d0bb562522b65"
+
+[[immutable-projection.subtree]]
+path = "assurance/side-channel"
+git-object = "d0c1544d0560e40a336265522869eb37d2f67fb0"
+
+[[immutable-projection.subtree]]
+path = "assurance/error-api-v4"
+git-object = "d57913804568c66114bc7e4a36dee1bf2d04c5b0"
+
+[[immutable-projection.subtree]]
+path = "assurance/supply-chain"
+git-object = "632f03f75141c0a59abbe243067288f05a3cf481"
+
+[[immutable-projection.subtree]]
+path = "assurance/threat-models"
+git-object = "1c50a55deaf424678e28f6dd881ad3d31399cdac"
+
+[[immutable-projection.subtree]]
+path = "assurance/audit"
+git-object = "a11f344fdd8e08ace083e62c14f2100c4c083ae7"
+
+[[immutable-projection.blob]]
+path = "assurance/ledger.toml"
+git-object = "b6ba707f0c8cb74af4d90b25d2e465ad734982c5"
+sha256 = "049d524b5cbea96a18bcf901f95e83fdf1f02093aef0542012e78882aba8d8dd"
+
+[[immutable-projection.blob]]
+path = "assurance/atomic-operations.toml"
+git-object = "bf6f9afa7828de87b663ccb9a699762336202008"
+sha256 = "8e745ab16086aa50e265ad79189375270c5906df8545f540d96426bc348ca11a"
+
+[[immutable-projection.blob]]
+path = "assurance/public-api-snapshot.json"
+git-object = "22ff7a129184fe4187aad81538bf365ec5cf8ce2"
+sha256 = "5fa59a0218c2be98ef653d85da35c616c75b1499cb376f2b12c99eb6813e553d"
+
+[[immutable-projection.blob]]
+path = "assurance/subject-manifest.json"
+git-object = "15742ca9d33e21b2c4ba927bca71dfdf08fe7540"
+sha256 = "95902d2ff4a2f99808ba5d404fbce3175b787b93fdc1538cb55ad350e69505c7"
+
+[release-contract]
+phase-order = ["foundation", "prepublish", "registry-prefix", "postpublish"]
+roles = ["foundation", "prepublish-candidate", "registry-prefix-candidate", "postpublish-candidate", "acceptance"]
+generation-command = ["python3", "-B", "assurance/release-acceptance/generate.py", "--check"]
+ci-command = ["python3", "-B", "assurance/release-acceptance/verify.py", "--ci", "--phase", "foundation"]
+release-command-prefix = ["python3", "-B", "assurance/release-acceptance/verify.py", "--release", "--phase"]
+release-cli-phases = ["foundation", "prepublish", "postpublish"]
+threat-model-release-command = ["python3", "-B", "assurance/threat-models/verify-threat-models.py", "--mode", "release"]
+threat-model-current-exit-code = 1
+threat-model-g-mapped-exit-code = 3
+ci-foundation-exit-code = 0
+release-hold-exit-code = 3
+malformed-exit-code = 1
+misuse-exit-code = 2
+top-level-wiring-deferred = false
+
+[threat-known-blocker]
+threat-models-sha256 = "16b787d2eb100837b61b54f25f6e5ad96de696b4cd4274f09a3b5e511b41539e"
+coverage-sha256 = "253bf52dba0b5cecb149b9c6f5a282d9c3d37f0101ba2ff8a8b1c75794b9daf1"
+candidate-models = 11
+independent-review-required = 11
+critical-residual = 10
+high-residual = 1
+planned-mitigations = 22
+implemented-unverified-mitigations = 9
+verified-mitigations = 0
+active-mitigations = 0
+expected-upstream-release-exit-code = 1
+mapped-g-release-exit-code = 3
+
+[deadlines]
+dependency-exception-valid-before = "2026-09-10"
+dependency-exception-reject-on-or-after = "2026-09-10"
+historical-advisory-review-deadline = "2026-09-10"
+historical-advisory-replay-required = true
+ledger-evidence-valid-through = "2026-11-09"
+threat-model-valid-through = "2026-11-09"
+evidence-reject-after = "2026-11-09"
+
+[publication]
+publish-order = [
+  "dcrypt-internal",
+  "dcrypt-params",
+  "dcrypt-api",
+  "dcrypt-common",
+  "dcrypt-algorithms",
+  "dcrypt-symmetric",
+  "dcrypt-kem",
+  "dcrypt-sign",
+  "dcrypt-pke",
+  "dcrypt-utils",
+  "dcrypt-hybrid",
+  "dcrypt",
+]
+
+[phase.foundation]
+role = "foundation"
+required-domains = ["antecedents", "commands", "deadlines", "protected-state", "scope", "topology", "versions"]
+forbidden-domains = ["candidate-artifacts", "downloaded-artifacts", "registry-artifacts", "review-decisions"]
+registry-state = "absent"
+trusted = false
+promotion-eligible = false
+
+[phase.prepublish]
+role = "prepublish-candidate"
+required-domains = ["candidate-artifacts", "independent-comparisons", "producer-obligations", "review-decisions"]
+forbidden-domains = ["downloaded-artifacts", "registry-artifacts"]
+registry-state = "deferred-empty"
+registry-count = 0
+trusted = false
+promotion-eligible = false
+
+[phase.registry-prefix]
+role = "registry-prefix-candidate"
+required-domains = ["candidate-artifacts", "registry-artifacts", "review-decisions"]
+forbidden-domains = ["downloaded-artifacts"]
+registry-state = "exact-publish-order-prefix"
+registry-prefix-min = 0
+registry-prefix-max = 12
+trusted = false
+promotion-eligible = false
+
+[phase.postpublish]
+role = "postpublish-candidate"
+required-domains = ["candidate-artifacts", "downloaded-artifacts", "registry-artifacts", "review-decisions"]
+forbidden-domains = []
+registry-state = "complete-12"
+registry-count = 12
+require-downloaded-equals-candidate = true
+require-downloaded-equals-registry-checksum = true
+require-unyanked = true
+trusted = false
+promotion-eligible = false
+
+[phase.acceptance]
+role = "acceptance"
+enabled = false
+validation = "always-reject"
+trusted = false
+promotion-eligible = false
+
+[[producer-class]]
+id = "first-party"
+required-subject-count = 18
+completed-subject-count = 0
+accepted = false
+
+[[producer-class]]
+id = "administratively-independent"
+required-subject-count = 18
+completed-subject-count = 0
+accepted = false
+
+[[artifact-subject]]
+id = "sbom-production"
+class = "sbom"
+
+[[artifact-subject]]
+id = "sbom-verification"
+class = "sbom"
+
+[[artifact-subject]]
+id = "sbom-fuzz"
+class = "sbom"
+
+[[artifact-subject]]
+id = "sbom-migration"
+class = "sbom"
+
+[[artifact-subject]]
+id = "sbom-bench"
+class = "sbom"
+
+[[artifact-subject]]
+id = "crate-dcrypt-internal"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-params"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-api"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-common"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-algorithms"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-symmetric"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-kem"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-sign"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-pke"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-utils"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt-hybrid"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "crate-dcrypt"
+class = "candidate-crate-archive"
+
+[[artifact-subject]]
+id = "canonical-source-archive"
+class = "source-archive"
+
+[record-contract]
+schema-version = 1
+subject-count = 18
+producer-class-count = 2
+producer-obligation-count = 36
+independent-comparison-count = 18
+candidate-crate-count = 12
+registry-crate-count = 12
+downloaded-crate-count = 12
+artifact-required-fields = ["acquisition_sha256", "artifact_class", "build_environment_sha256", "path", "producer_class", "producer_identity", "provenance_sha256", "role", "sha256", "signature_sha256", "size", "subject", "subject_id"]
+crate-artifact-extra-fields = ["cargo_vcs_info_sha1", "name", "version"]
+registry-required-fields = ["checksum", "name", "prefix_index", "registry_version_id", "subject", "unyanked", "version"]
+download-required-fields = ["acquired_at", "acquisition_identity", "acquisition_provenance_sha256", "cargo_vcs_info_sha1", "name", "path", "sha256", "size", "subject", "subject_id", "version"]
+review-required-fields = ["artifact_sha256", "decision", "independent", "review_evidence_sha256", "reviewed_at", "reviewer", "reviewed_producer_identities", "subject", "subject_id", "valid_through"]
+lineage-required-fields = ["candidate_set_sha256", "prepublish_record_sha256", "prefix_predecessor_sha256", "final_prefix_record_sha256"]
+producer-obligation-required-fields = ["accepted", "acquisition_sha256", "artifact_path", "artifact_sha256", "build_environment_sha256", "producer_class", "producer_identity", "provenance_sha256", "signature_sha256", "status", "subject", "subject_id"]
+comparison-required-fields = ["accepted", "byte_equal", "first_party_producer_identity", "first_party_sha256", "independent_producer_identity", "independent_sha256", "review_evidence_sha256", "reviewer", "subject", "subject_id"]
+digest-equality-rules = ["postpublish.local-candidate.sha256==postpublish.registry.checksum", "postpublish.local-candidate.sha256==postpublish.downloaded.sha256"]
+strict-json-rules = ["canonical-utf8-nfc", "duplicate-keys-rejected", "floats-rejected", "nonfinite-rejected", "bool-not-integer", "unknown-fields-rejected", "exact-array-order"]
+
+[[antecedent]]
+id = "assurance-ledger"
+path = "assurance/ledger.toml"
+sha256 = "049d524b5cbea96a18bcf901f95e83fdf1f02093aef0542012e78882aba8d8dd"
+schema-version = 2
+document-status = "not-applicable"
+release-gate = "informational-only"
+blocked-rows = 9198
+temporal-bound = "2026-11-09"
+temporal-rule = "valid-through-inclusive"
+
+[[antecedent]]
+id = "package-b-interoperability"
+path = "assurance/interoperability/matrix.json"
+sha256 = "307e3ef67b596ba1ffe06cec0e58629f498d2ca4555458fbb8d6d313524fbadd"
+schema-version = 1
+document-status = "not-applicable"
+release-gate = "blocked"
+blocked-rows = 14816
+temporal-bound = "2026-11-09"
+temporal-rule = "deadline-and-expiry-bound"
+
+[[antecedent]]
+id = "package-c-fuzzing"
+path = "assurance/fuzzing/row-mapping.json"
+sha256 = "9feedae461b99e46cda1556a0eb13749fb65cfb53c495b77e1130e158835cc79"
+schema-version = 1
+document-status = "STABLE-final-subject-bound"
+release-gate = "HOLD"
+blocked-rows = 9198
+temporal-bound = "2026-11-09"
+temporal-rule = "antecedent-evidence-bound"
+
+[[antecedent]]
+id = "package-d-side-channel"
+path = "assurance/side-channel/package-d.json"
+sha256 = "59e9961813ac4fa0bc3ab186268889073cb89036b967f81619ab5e1f294ee22e"
+schema-version = 1
+document-status = "HOLD-structural-foundation-only"
+release-gate = "HOLD"
+blocked-rows = 9198
+temporal-bound = "2026-11-09"
+temporal-rule = "antecedent-evidence-bound"
+
+[[antecedent]]
+id = "package-e-migration"
+path = "assurance/error-api-v4/package-e.json"
+sha256 = "110cf0dc0c0993c59cf2b9b53a4985873a0e85914d544022e87caedccf1f8411"
+schema-version = 1
+document-status = "local-breaking-removal-complete"
+release-gate = "HOLD"
+blocked-rows = 9198
+temporal-bound = "2026-11-09"
+temporal-rule = "antecedent-evidence-bound"
+
+[[antecedent]]
+id = "package-f-supply-chain"
+path = "assurance/supply-chain/package-f.json"
+sha256 = "da052c4bad734d58e471ffe71db55009ba10ddf1d92423dbf28e3a02995f5e8c"
+schema-version = 1
+document-status = "local-foundation-complete-operational-evidence-absent"
+release-gate = "HOLD"
+blocked-rows = 9198
+temporal-bound = "2026-09-10"
+temporal-rule = "dependency-exception-reject-on-or-after"
+
+[[antecedent]]
+id = "threat-model-release"
+path = "assurance/threat-models/threat-models.toml"
+sha256 = "16b787d2eb100837b61b54f25f6e5ad96de696b4cd4274f09a3b5e511b41539e"
+schema-version = 1
+document-status = "11-candidate-models"
+release-gate = "blocked-current-release-rc1"
+blocked-rows = 9198
+temporal-bound = "2026-11-09"
+temporal-rule = "valid-through-inclusive"
+
+[[antecedent]]
+id = "historical-advisory-replay"
+path = "assurance/audit/historical-advisory-regressions.toml"
+sha256 = "ce6fa84b1a8de37d938e51b82806e67b8cc6c7dcb4d3234cdcd44c76cf96acc7"
+schema-version = 1
+document-status = "inventory-only-replay-required"
+release-gate = "blocked-replay-required"
+blocked-rows = 11
+temporal-bound = "2026-09-10"
+temporal-rule = "review-deadline-metadata-no-expiry-invented"
