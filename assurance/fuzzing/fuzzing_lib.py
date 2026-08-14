@@ -44,12 +44,12 @@ EXPECTED_CRITICAL_ROWS = 372
 EXPECTED_EXPLICIT_BLOCKERS = EXPECTED_TOTAL_ROWS - EXPECTED_CRITICAL_ROWS
 
 PACKAGE_C_CONTROL_INPUTS = {
-    ".github/workflows/security-validation.yml": ("17554d1950785e358c56147fd0352a8a4754b1e1886ff2707b56c40f42543396", "100644"),
-    "tools/release-dcrypt.sh": ("76d67dc13035b5b118c24095a5b4db4b2aacbaf2836e48a552611fce3bff1caa", "100755"),
-    "tools/verify-publish-ready.sh": ("de89affbd7c58fa31678716947b15a8904ddc77095477645ef01d8e2451f7c29", "100755"),
-    "tools/verify-remote-release-ready.py": ("80f8dd937ef94d38f36078e9e4a3f9595902853d61ddeab1d1404d39a31042ed", "100755"),
+    ".github/workflows/security-validation.yml": ("b5055f0aeabff29774263d951854beac6620eca96a768a38a53619559993736a", "100644"),
+    "tools/release-dcrypt.sh": ("fe732ceb09161ccb3e82c81d608e6ea91ac0345b765fe36ad1eb4903f0a0da33", "100755"),
+    "tools/verify-publish-ready.sh": ("07a590c21549cd0351b8a62f90d60fb40972f1bda2580fc7bcccbd17cfd71a76", "100755"),
+    "tools/verify-remote-release-ready.py": ("c6b0a3e1df1ec1b617f75d07e2f7af689b73e00b53e6903f9f8cdc7cacf96941", "100755"),
 }
-CONTROL_INPUTS_SHA256 = "e37be66d9bdd6c90b571f4a690247b641fd2e6fe835d7804e462d2f81c5a19c1"
+CONTROL_INPUTS_SHA256 = "2aef59e8739839edb0ce2f67cd799e29647947b203f08c8602ed662c6ac91301"
 
 WEEKLY_CRITICAL_CORE_SECONDS = 72 * 60 * 60
 WEEKLY_SECONDARY_CORE_SECONDS = 24 * 60 * 60
