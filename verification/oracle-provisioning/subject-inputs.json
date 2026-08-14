@@ -15,11 +15,11 @@
   "file_count": 264,
   "files": [
     {
-      "git_blob": "967d098b70468a0a30f8d4a9ef0f6192dee3c7b6",
+      "git_blob": "f6bbe914efe9c77b7e80bf7cc1dd61e1cbc81b07",
       "git_mode": "100644",
       "path": "Cargo.lock",
-      "sha256": "0f4a81042e4d73f6313e30d80668606e8528124e97936f669585669e4ce06736",
-      "size": 28598
+      "sha256": "78cad495d212c02641b268592648db0020425a43675fab8d7a33ef314ef58a57",
+      "size": 28397
     },
     {
       "git_blob": "c6a940f33c10e50e6d02dab2851eb224cf238871",
@@ -1632,11 +1632,11 @@
       "size": 5893
     },
     {
-      "git_blob": "3f6e892584ca2b7920aaa96446c4dd61426ae100",
+      "git_blob": "3302077f16226d0cc58c56603738b1226c570aa6",
       "git_mode": "100644",
       "path": "tests/Cargo.toml",
-      "sha256": "266300fe450bfd324afe029f39f49e51a8b499aedd973fb0b50c706b7273e511",
-      "size": 1395
+      "sha256": "64d80d9c90871821830549482cab03acb8cc63f29f0ac67f0009f41387bf42e0",
+      "size": 1382
     },
     {
       "git_blob": "2ca16360a689b972a463780899a28d86cd905187",
@@ -1991,8 +1991,8 @@
       "policy": "all_tracked_regular_files_except_generated_target"
     }
   ],
-  "source_commit": "ac91913afee3b91c823a1448e6200de26fdd1c8a",
-  "source_tree": "6952979606c28f739fca1aeb9bb14b1ca042d09d",
+  "source_commit": "3a7b8977aa04b82b38c362eca1194c4f265e1d84",
+  "source_tree": "d4787be9c3da5f5fe860955f17cf569e71434ac2",
   "vector_set": {
     "data_yaml_count": 20,
     "data_yaml_paths": [
