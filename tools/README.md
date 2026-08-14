@@ -80,6 +80,22 @@ LLVM transformations that replace a source-level masked addend with a branch
 on a secret-derived GHASH accumulator bit. Set
 `DCRYPT_KEEP_GHASH_ASSEMBLY=1` to retain the emitted files for manual review.
 
+## v4 portable-software laboratory
+
+`run-v4-lab-simulation.py` is the non-skippable evidence producer for the v4
+portable release profile. It replays all eleven historical advisory commands,
+generates and verifies five deterministic CycloneDX SBOMs, packages all twelve
+publishable crates twice, runs the implementation/target and compiler-shape
+gates, and requires two complete statistical timing-family passes on a
+qualified pinned CPU. Deterministic positive/negative TVLA controls and an
+exhaustive single-bit artifact-fault control test the named simulation models.
+
+The runner writes a canonical evidence manifest, signs it with an ephemeral
+Ed25519 key, immediately verifies that signature, and destroys the private key.
+The public key and signature establish one coherent run; they are not an
+external identity or independent-attestation claim. See
+`assurance/release-lab/README.md` for reproduction and verification commands.
+
 ## Release model
 
 Releases use three explicit phases. Uploading is never combined with versioning
@@ -88,7 +104,7 @@ or pushing source, and the default mode is non-mutating.
 ### 1. Rehearse
 
 ```bash
-tools/release-dcrypt.sh --version 3.0.0
+tools/release-dcrypt.sh --version 4.0.0
 ```
 
 The rehearsal checks the target version on crates.io, verifies Cargo metadata
@@ -104,7 +120,7 @@ version changes. It does not edit, commit, tag, push, or publish anything.
 For a quick script-only rehearsal while developing the workflow:
 
 ```bash
-tools/release-dcrypt.sh --version 3.0.0 --skip-tests --skip-checks
+tools/release-dcrypt.sh --version 4.0.0 --skip-tests --skip-checks
 ```
 
 Skipped gates are always reported. Do not use skipped gates as the evidence for

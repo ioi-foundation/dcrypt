@@ -1,0 +1,91 @@
+schema-version = 1
+profile = "dcrypt-v4-portable-software-release"
+target-version = "4.0.0"
+status = "AUTHORIZED-WHEN-SOFTWARE-GATES-PASS"
+package-g-foundation = "088b2d2fe1e7d7cc3591cfde5040d447010a74bd"
+package-g-foundation-status = "HOLD-by-design-superseded-for-portable-release"
+authorization = "reviewed-merge-of-this-policy-on-the-release-candidate"
+
+mandatory-consumers = [
+  "tools/release-dcrypt.sh",
+  "tools/verify-publish-ready.sh",
+  "tools/verify-remote-release-ready.py",
+  ".github/workflows/security-validation.yml",
+]
+
+mandatory-tools = [
+  "tools/replay-historical-advisories.py",
+  "tools/generate-release-sboms.py",
+  "tools/verify-repeatable-packages.py",
+  "tools/run-v4-lab-simulation.py",
+]
+
+mandatory-evidence = [
+  "assurance/release-lab/DAYBREAK-THREAT-REVIEW.md",
+]
+
+[claims]
+portable-source-release = true
+known-critical-or-high-code-findings-allowed = false
+full-repository-release-gates-required = true
+historical-advisory-replay-required = true
+deterministic-sboms-required = true
+repeatable-package-bytes-required = true
+registry-checksum-equality-required = true
+trusted-candidate-checks-required = true
+open-simulated-laboratory-required = true
+
+[nonclaims]
+physical-leakage-resistance = true
+fault-injection-resistance = true
+physical-erasure = true
+untested-native-platform-runtime = true
+independent-cryptographic-audit = true
+formal-verification = true
+fips-validation = true
+independent-reproducible-build-certification = true
+
+[[disposition]]
+id = "package-a-atomic-ledger"
+decision = "certification-evidence-gap-nonblocking"
+condition = "no assurance-ledger promotion is claimed"
+
+[[disposition]]
+id = "package-b-independent-interoperability"
+decision = "independent-audit-gap-disclosed-nonblocking"
+condition = "first-party vectors and comparator results are not described as independent evidence"
+
+[[disposition]]
+id = "package-c-persistent-fuzz"
+decision = "campaign-certification-gap-nonblocking"
+condition = "the bounded release fuzz campaign and all discovered targets remain mandatory"
+
+[[disposition]]
+id = "package-d-platform-physical"
+decision = "excluded-claim-nonblocking"
+condition = "release notes make no physical, fault, erasure, or untested native-runtime claim"
+
+[[disposition]]
+id = "package-e-error-api-v4"
+decision = "software-release-gate"
+condition = "the migration tests and removal checks pass"
+
+[[disposition]]
+id = "package-f-sbom-signature-rebuild"
+decision = "software-supply-chain-gate"
+condition = "deterministic SBOMs, repeatable local package bytes, reviewed archive hashes, protected checks, immutable tag, and registry checksum equality pass; independent rebuild certification remains unclaimed"
+
+[[disposition]]
+id = "threat-model-review"
+decision = "risk-register-with-explicit-nonclaims"
+condition = "no known concrete Critical or High code finding is open; candidate model evidence gaps are not described as completed independent review"
+
+[[disposition]]
+id = "historical-advisory-replay"
+decision = "software-release-gate"
+condition = "all eleven source-bound commands pass on the exact release candidate"
+
+[[disposition]]
+id = "terminal-a-g"
+decision = "superseded-foundation"
+condition = "Package G HOLD remains visible as the stronger-certification state and is not presented as passing evidence"

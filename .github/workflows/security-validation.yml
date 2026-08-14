@@ -27,11 +27,14 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Verify Package G release-acceptance and threat-model foundations
+      - name: Verify v4 release profile and preserved certification foundations
         run: |
-          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/generate.py --check
-          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/selftest.py
-          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --ci --phase foundation
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-profile/selftest.py
+          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-profile/verify.py --phase foundation
+          PYTHONDONTWRITEBYTECODE=1 python3 -B tools/replay-historical-advisories.py --check
+          PYTHONDONTWRITEBYTECODE=1 python3 -B tools/generate-release-sboms.py --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 -B tools/verify-repeatable-packages.py --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 -B tools/run-v4-lab-simulation.py --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/generate-threat-models.py --check
           PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --mode ci
@@ -40,11 +43,6 @@ jobs:
           threat_model_release_rc=$?
           set -e
           test "$threat_model_release_rc" -eq 1
-          set +e
-          PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/release-acceptance/verify.py --release --phase foundation
-          release_acceptance_rc=$?
-          set -e
-          test "$release_acceptance_rc" -eq 3
           bash tools/release-dcrypt.sh --self-test
 
   implementation-boundary:

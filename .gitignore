@@ -11,6 +11,10 @@ tools/*
 !tools/verify-implementation-boundary.sh
 !tools/update-benchmarks.sh
 !tools/update-isolated-workspace-versions.py
+!tools/replay-historical-advisories.py
+!tools/generate-release-sboms.py
+!tools/verify-repeatable-packages.py
+!tools/run-v4-lab-simulation.py
 !tools/bench-processor/
 tree.md
 Cargo.lock

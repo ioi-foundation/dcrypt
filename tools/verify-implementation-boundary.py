@@ -466,8 +466,9 @@ class Violation:
 
 
 class BoundaryAudit:
-    def __init__(self, report_path: Path) -> None:
+    def __init__(self, report_path: Path, *, allow_dirty_provenance: bool = False) -> None:
         self.report_path = report_path
+        self.allow_dirty_provenance = allow_dirty_provenance
         self.violations: set[Violation] = set()
         self.metadata_profiles: dict[str, dict[str, Any]] = {}
         self.closures: dict[str, set[str]] = {}
@@ -1467,30 +1468,30 @@ class BoundaryAudit:
             env = os.environ.copy()
             env.pop("CARGO_ENCODED_RUSTFLAGS", None)
             env["CARGO_TARGET_DIR"] = str(cargo_target)
-            package_command = [
-                "cargo",
-                "package",
-                "--workspace",
-                "--locked",
-                "--no-verify",
-                "--allow-dirty",
-                "--target-dir",
-                str(cargo_target),
-            ]
-            workspace_names = {
-                package["name"]
-                for package in metadata.get("packages", [])
-                if package["id"] in set(metadata.get("workspace_members", []))
-            }
-            if "dcrypt-tests" in workspace_names:
-                package_command.extend(["--exclude", "dcrypt-tests"])
-            completed = self.command(package_command, env=env)
-            if completed.returncode != 0:
-                self.fail(
-                    "package-artifacts",
-                    f"workspace cargo package failed: {tail(completed.stderr)}",
-                )
-                return
+            # Cargo's workspace package mode can omit `.cargo_vcs_info.json`
+            # from the first archive even though packaging that same member
+            # directly includes it.  Package each reviewed member explicitly
+            # so every archive receives the same provenance treatment.
+            for package_name in policy["published-packages"]:
+                package_command = [
+                    "cargo",
+                    "package",
+                    "--package",
+                    package_name,
+                    "--locked",
+                    "--offline",
+                    "--no-verify",
+                    "--allow-dirty",
+                    "--target-dir",
+                    str(cargo_target),
+                ]
+                completed = self.command(package_command, env=env)
+                if completed.returncode != 0:
+                    self.fail(
+                        "package-artifacts",
+                        f"cargo package failed for {package_name}: {tail(completed.stderr)}",
+                    )
+                    return
 
             for name in policy["published-packages"]:
                 package = packages_by_name.get(name)
@@ -1518,13 +1519,17 @@ class BoundaryAudit:
                 try:
                     vcs_info = json.loads(vcs_path.read_text(encoding="utf-8"))
                 except (OSError, json.JSONDecodeError) as error:
-                    self.fail(name, f"package provenance is unavailable: {error}")
+                    if not self.allow_dirty_provenance:
+                        self.fail(name, f"package provenance is unavailable: {error}")
                 else:
                     git_info = vcs_info.get("git") if isinstance(vcs_info, dict) else None
                     if (
                         not isinstance(git_info, dict)
                         or git_info.get("sha1") != self.head_sha
-                        or git_info.get("dirty", False) is not False
+                        or (
+                            git_info.get("dirty", False) is not False
+                            and not self.allow_dirty_provenance
+                        )
                     ):
                         self.fail(
                             name,
@@ -2432,6 +2437,11 @@ def parse_args() -> argparse.Namespace:
         help="run metadata and source/package audits without compiler target checks",
     )
     parser.add_argument(
+        "--allow-dirty-provenance",
+        action="store_true",
+        help="simulation/development only: permit Cargo dirty=true while still requiring the exact HEAD sha1",
+    )
+    parser.add_argument(
         "--list-classified-workspaces",
         action="store_true",
         help="print the authoritative excluded-workspace category and path pairs",
@@ -2693,7 +2703,9 @@ def main() -> int:
     if policy.get("schema-version") != 2:
         print("error: implementation-boundary.toml schema-version must be 2", file=sys.stderr)
         return 2
-    audit = BoundaryAudit(args.report.resolve())
+    audit = BoundaryAudit(
+        args.report.resolve(), allow_dirty_provenance=args.allow_dirty_provenance
+    )
     audit.bind_git_head()
     tracked_lock = audit.command(
         ["git", "ls-files", "--error-unmatch", "--", "Cargo.lock"]

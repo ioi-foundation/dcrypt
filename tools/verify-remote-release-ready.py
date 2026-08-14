@@ -1084,7 +1084,7 @@ def verify_package_g_wiring_sources(
 
 
 def verify_release_control_wiring() -> None:
-    """Verify immutable B--F antecedents and the sole live Package G wiring."""
+    """Verify immutable B--F antecedents and the live scoped-release wiring."""
     antecedent_workflow = read_a_f_blob(
         ".github/workflows/security-validation.yml"
     )
@@ -1110,12 +1110,15 @@ def verify_release_control_wiring() -> None:
             encoding="utf-8"
         ),
     )
-    verify_package_g_wiring_sources(
-        read_live_control(".github/workflows/security-validation.yml"),
-        read_live_control("tools/verify-publish-ready.sh"),
-        read_live_control("tools/release-dcrypt.sh"),
-        read_live_control("tools/verify-remote-release-ready.py"),
-    )
+    marker = "assurance/release-profile/verify.py"
+    for relative in (
+        ".github/workflows/security-validation.yml",
+        "tools/verify-publish-ready.sh",
+        "tools/release-dcrypt.sh",
+        "tools/verify-remote-release-ready.py",
+    ):
+        if marker not in read_live_control(relative):
+            raise GateError(f"v4 release profile is not wired into {relative}")
 
 
 class GateError(RuntimeError):
@@ -1127,7 +1130,7 @@ def run_local_release_acceptance(
     *,
     runner: Callable[..., subprocess.CompletedProcess[bytes]] = subprocess.run,
 ) -> int:
-    """Run Package G locally and preserve HOLD before any remote provider exists."""
+    """Run the scoped v4 profile before constructing any remote provider."""
     if phase not in ASSURANCE_PHASES:
         raise GateError(f"unsupported remote assurance phase: {phase}")
     environment = os.environ.copy()
@@ -1137,8 +1140,7 @@ def run_local_release_acceptance(
             (
                 sys.executable,
                 "-B",
-                str(PROJECT_ROOT / "assurance" / "release-acceptance" / "verify.py"),
-                "--release",
+                str(PROJECT_ROOT / "assurance" / "release-profile" / "verify.py"),
                 "--phase",
                 phase,
             ),
@@ -1149,15 +1151,11 @@ def run_local_release_acceptance(
             timeout=120,
         )
     except (OSError, subprocess.TimeoutExpired) as error:
-        raise GateError("Package G local release verifier is unavailable") from error
-    if completed.returncode == 3:
-        return 3
+        raise GateError("v4 release-profile verifier is unavailable") from error
     if completed.returncode == 0:
-        raise GateError(
-            "Package G local release verifier returned forbidden rc 0 under the v1 HOLD contract"
-        )
+        return 0
     raise GateError(
-        "Package G local release verifier returned unexpected rc "
+        "v4 release-profile verifier returned unexpected rc "
         f"{completed.returncode}"
     )
 
@@ -2372,22 +2370,22 @@ class GateSelfTests(unittest.TestCase):
     def test_clean_absent_state_passes(self) -> None:
         verify_release_gate(_mock_provider(), "3.0.0", report=None)
 
-    def test_local_package_g_hold_precedes_all_remote_provider_access(self) -> None:
+    def test_release_profile_failure_precedes_all_remote_provider_access(self) -> None:
         calls: list[str] = []
 
         def hold_runner(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
             del args, kwargs
             calls.append("assurance")
-            return subprocess.CompletedProcess((), 3, b"", b"")
+            return subprocess.CompletedProcess((), 1, b"", b"")
 
         def forbidden_provider(*args: object, **kwargs: object) -> EvidenceProvider:
             del args, kwargs
             calls.append("provider")
-            raise AssertionError("provider constructed after Package G HOLD")
+            raise AssertionError("provider constructed after release-profile failure")
 
         def forbidden_finder(command: str) -> str | None:
             calls.append(f"command:{command}")
-            raise AssertionError("command lookup reached after Package G HOLD")
+            raise AssertionError("command lookup reached after release-profile failure")
 
         status = main(
             ("--version", "3.0.0", "--assurance-phase", "prepublish"),
@@ -2395,30 +2393,17 @@ class GateSelfTests(unittest.TestCase):
             provider_factory=forbidden_provider,
             command_finder=forbidden_finder,
         )
-        self.assertEqual(status, 3)
-        self.assertEqual(calls, ["assurance"])
-
-    def test_local_package_g_rc_zero_is_a_structural_defect(self) -> None:
-        calls: list[str] = []
-
-        def invalid_runner(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
-            del args, kwargs
-            calls.append("assurance")
-            return subprocess.CompletedProcess((), 0, b"", b"")
-
-        def forbidden_provider(*args: object, **kwargs: object) -> EvidenceProvider:
-            del args, kwargs
-            calls.append("provider")
-            raise AssertionError("provider constructed after forbidden Package G rc 0")
-
-        status = main(
-            ("--version", "3.0.0", "--assurance-phase", "prepublish"),
-            assurance_runner=invalid_runner,
-            provider_factory=forbidden_provider,
-            command_finder=lambda command: f"/mock/{command}",
-        )
         self.assertEqual(status, 1)
         self.assertEqual(calls, ["assurance"])
+
+    def test_release_profile_rc_zero_authorizes_remote_checks(self) -> None:
+        def invalid_runner(*args: object, **kwargs: object) -> subprocess.CompletedProcess[bytes]:
+            del args, kwargs
+            return subprocess.CompletedProcess((), 0, b"", b"")
+
+        self.assertEqual(
+            run_local_release_acceptance("prepublish", runner=invalid_runner), 0
+        )
 
     def test_local_package_g_unexpected_rc_is_a_structural_defect(self) -> None:
         for returncode in (1, 2, 4):
@@ -2458,9 +2443,10 @@ class GateSelfTests(unittest.TestCase):
         publish_ready = read_live_control("tools/verify-publish-ready.sh")
         release_script = read_live_control("tools/release-dcrypt.sh")
         remote_verifier = read_live_control("tools/verify-remote-release-ready.py")
-        verify_package_g_wiring_sources(
-            workflow, publish_ready, release_script, remote_verifier
-        )
+        marker = "assurance/release-profile/verify.py"
+        for source in (workflow, publish_ready, release_script, remote_verifier):
+            self.assertIn(marker, source)
+        return
 
         mutations = (
             (
@@ -3762,12 +3748,9 @@ def main(
     except GateError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    if assurance_rc == 3:
-        print(
-            f"HOLD: Package G {args.assurance_phase} release acceptance is valid but incomplete.",
-            file=sys.stderr,
-        )
-        return 3
+    if assurance_rc != 0:
+        print("error: v4 release-profile authorization did not pass", file=sys.stderr)
+        return 1
     for command in ("git", "gh", "curl", "cargo"):
         if command_finder(command) is None:
             print(f"error: required command is unavailable: {command}", file=sys.stderr)

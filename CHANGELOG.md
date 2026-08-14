@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-08-14
+
 ### Removed
 
 - Removed the process-global error registry and legacy `Result` compatibility
@@ -15,6 +17,35 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   diagnostics, and invoke the existing explicit symmetric error converters.
   See `docs/migration/V4-ERROR-API.md`. This source change does not itself bump
   package versions or authorize a release.
+
+### Security
+
+- Added an explicit portable-software release profile that supersedes Package
+  G's deliberately non-accepting v1 certification policy for the bounded v4
+  source release while preserving the stronger certification HOLD.
+- Added an OpenAI Daybreak adversarial review and explicit nonclaims for
+  physical leakage/fault/erasure resistance, untested native runtimes,
+  independent cryptographic audit, formal/FIPS validation, and independent
+  reproducible-build certification.
+- Removed an unused differential-oracle dependency from the non-published test
+  workspace and retained the strict zero-unsafe, zero-native-code, zero-FFI,
+  caller-owned-randomness implementation boundary.
+
+### Validation
+
+- Added exact replay of all eleven historical advisory regressions, with
+  command, output, Git commit, and tree bindings.
+- Added deterministic CycloneDX 1.6 SBOM generation for all five classified
+  lockfiles and byte-for-byte repeatability checks for all twelve publishable
+  crate archives.
+- Added an openly reproducible software/simulated laboratory covering the
+  supported target matrix, `no_std`, BLS/GHASH compiler shape, two complete
+  timing-family passes on a qualified pinned CPU, deterministic TVLA
+  positive/negative controls, and exhaustive single-bit artifact fault
+  detection.
+- Added an ephemeral Ed25519 signature over the canonical laboratory artifact
+  manifest. It proves bundle integrity for one lab run and intentionally makes
+  no external signer-identity or administrative-independence claim.
 
 ## [3.0.0] - 2026-08-09
 

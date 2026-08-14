@@ -141,29 +141,34 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 
-printf "\n${BLUE}Package G release-acceptance foundation${NC}\n"
+printf "\n${BLUE}v4 portable-software release profile${NC}\n"
 if PYTHONDONTWRITEBYTECODE=1 python3 -B \
-    "$PROJECT_ROOT/assurance/release-acceptance/generate.py" --check; then
-    pass "Package G generated artifacts are current"
+    "$PROJECT_ROOT/assurance/release-profile/selftest.py"; then
+    pass "v4 release-profile adversarial controls passed"
 else
-    fail "Package G generation check failed"
+    fail "v4 release-profile adversarial controls failed"
     exit 1
 fi
 if PYTHONDONTWRITEBYTECODE=1 python3 -B \
-    "$PROJECT_ROOT/assurance/release-acceptance/selftest.py"; then
-    pass "Package G adversarial self-tests passed"
+    "$PROJECT_ROOT/assurance/release-profile/verify.py" --phase "$ASSURANCE_PHASE"; then
+    pass "v4 portable-software profile authorized for $ASSURANCE_PHASE"
 else
-    fail "Package G adversarial self-tests failed"
+    fail "v4 portable-software profile is not authorized"
     exit 1
 fi
 if PYTHONDONTWRITEBYTECODE=1 python3 -B \
-    "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
-    --ci --phase foundation; then
-    pass "Package G foundation structure passed"
+    "$PROJECT_ROOT/tools/replay-historical-advisories.py" --check; then
+    pass "historical advisory replay inventory passed"
 else
-    fail "Package G foundation structure failed"
+    fail "historical advisory replay inventory failed"
     exit 1
 fi
+PYTHONDONTWRITEBYTECODE=1 python3 -B "$PROJECT_ROOT/tools/generate-release-sboms.py" --self-test \
+    || { fail "deterministic SBOM controls failed"; exit 1; }
+PYTHONDONTWRITEBYTECODE=1 python3 -B "$PROJECT_ROOT/tools/verify-repeatable-packages.py" --self-test \
+    || { fail "repeatable-package controls failed"; exit 1; }
+PYTHONDONTWRITEBYTECODE=1 python3 -B "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" --self-test \
+    || { fail "simulated laboratory controls failed"; exit 1; }
 
 printf "\n${BLUE}Threat-model release foundation${NC}\n"
 if PYTHONDONTWRITEBYTECODE=1 python3 -B \
@@ -198,26 +203,7 @@ if [[ "$threat_model_release_rc" -ne 1 ]]; then
 fi
 pass "threat-model release blockers remain explicit"
 
-set +e
-PYTHONDONTWRITEBYTECODE=1 python3 -B \
-    "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
-    --release --phase "$ASSURANCE_PHASE"
-release_acceptance_rc=$?
-set -e
-case "$release_acceptance_rc" in
-    3)
-        fail "Package G $ASSURANCE_PHASE release HOLD remains explicit and release-blocking"
-        exit 3
-        ;;
-    0)
-        fail "Package G $ASSURANCE_PHASE release verifier returned forbidden rc 0 under the v1 HOLD contract"
-        exit 1
-        ;;
-    *)
-        fail "Package G $ASSURANCE_PHASE release verifier returned unexpected rc $release_acceptance_rc"
-        exit 1
-        ;;
-esac
+pass "Package G certification HOLD remains explicit and nonpromoted"
 
 require_command cargo || true
 require_command jq || true

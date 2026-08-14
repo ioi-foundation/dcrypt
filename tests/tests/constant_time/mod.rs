@@ -150,7 +150,11 @@ fn timing_harness_contract_guard() {
         .join("target");
     let profile_path = TestConfig::default().noise_profile_path;
     assert!(profile_path.is_absolute());
-    assert_eq!(profile_path.parent(), Some(workspace_target.as_path()));
+    if let Some(configured) = std::env::var_os("DCRYPT_CT_NOISE_PROFILE") {
+        assert_eq!(profile_path, std::path::PathBuf::from(configured));
+    } else {
+        assert_eq!(profile_path.parent(), Some(workspace_target.as_path()));
+    }
 
     let nonce = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

@@ -8,6 +8,14 @@ const PAIRED_NOISE_PROFILE_FILE: &str = "ct_noise_profile_paired_v1.json";
 /// process cwd. Cargo runs this crate's integration binaries from `tests/`, so
 /// a relative `target/...` path would silently select `tests/target`.
 pub fn paired_noise_profile_path() -> PathBuf {
+    if let Some(configured) = std::env::var_os("DCRYPT_CT_NOISE_PROFILE") {
+        let path = PathBuf::from(configured);
+        assert!(
+            path.is_absolute(),
+            "DCRYPT_CT_NOISE_PROFILE must be an absolute path"
+        );
+        return path;
+    }
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("dcrypt-tests must remain directly inside the workspace")
@@ -58,6 +66,11 @@ pub struct TestConfig {
     /// If true, loads/saves noise profiles to disk to detect environment degradation.
     pub use_noise_profile: bool,
 
+    /// If true, excessive profile drift aborts the timing case. The open
+    /// simulation laboratory records uncontrolled host drift observationally;
+    /// both complete statistical family passes still gate.
+    pub enforce_noise_profile: bool,
+
     /// Path to the noise profile store (JSON).
     pub noise_profile_path: PathBuf,
 
@@ -69,6 +82,15 @@ pub struct TestConfig {
 
 impl Default for TestConfig {
     fn default() -> Self {
+        let enforce_noise_profile = match std::env::var("DCRYPT_CT_NOISE_POLICY") {
+            Ok(value) if value == "observe" => false,
+            Ok(value) if value == "enforce" => true,
+            Ok(value) => panic!("unsupported DCRYPT_CT_NOISE_POLICY value: {value}"),
+            Err(std::env::VarError::NotPresent) => true,
+            Err(std::env::VarError::NotUnicode(_)) => {
+                panic!("DCRYPT_CT_NOISE_POLICY must be valid Unicode")
+            }
+        };
         Self {
             significance_level: 0.01, // 99% Confidence
             // Fixed paired-bootstrap budget. This is large enough for stable
@@ -83,6 +105,7 @@ impl Default for TestConfig {
             num_iterations: 500, // Lower iterations/sample to catch interruptions
 
             use_noise_profile: true,
+            enforce_noise_profile,
             // The paired-v1 harness is statistically incomparable with the
             // legacy independent-sample engine and must not consume its keys.
             noise_profile_path: paired_noise_profile_path(),
@@ -169,6 +192,9 @@ mod tests {
 
     #[test]
     fn default_uses_paired_v1_noise_namespace() {
+        if std::env::var_os("DCRYPT_CT_NOISE_PROFILE").is_some() {
+            return;
+        }
         let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let expected = workspace_root
             .join("target")

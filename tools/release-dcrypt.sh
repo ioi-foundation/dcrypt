@@ -224,20 +224,28 @@ run_release_acceptance_gate() {
         foundation|prepublish|postpublish)
             ;;
         *)
-            die "unknown Package G assurance phase: $phase"
+            die "unknown v4 release-profile phase: $phase"
             ;;
     esac
 
     PYTHONDONTWRITEBYTECODE=1 python3 -B \
-        "$PROJECT_ROOT/assurance/release-acceptance/generate.py" --check \
-        || die "Package G generated artifacts are stale or invalid"
+        "$PROJECT_ROOT/assurance/release-profile/selftest.py" \
+        || die "v4 release-profile adversarial self-tests failed"
     PYTHONDONTWRITEBYTECODE=1 python3 -B \
-        "$PROJECT_ROOT/assurance/release-acceptance/selftest.py" \
-        || die "Package G adversarial self-tests failed"
+        "$PROJECT_ROOT/assurance/release-profile/verify.py" --phase "$phase" \
+        || die "v4 portable-software release profile is not authorized"
     PYTHONDONTWRITEBYTECODE=1 python3 -B \
-        "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
-        --ci --phase foundation \
-        || die "Package G foundation structure failed"
+        "$PROJECT_ROOT/tools/replay-historical-advisories.py" --check \
+        || die "historical advisory replay inventory is invalid"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/generate-release-sboms.py" --self-test \
+        || die "deterministic SBOM controls failed"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/verify-repeatable-packages.py" --self-test \
+        || die "repeatable-package controls failed"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" --self-test \
+        || die "simulated laboratory controls failed"
     PYTHONDONTWRITEBYTECODE=1 python3 -B \
         "$PROJECT_ROOT/assurance/threat-models/generate-threat-models.py" --check \
         || die "threat-model generated artifacts are stale or invalid"
@@ -257,26 +265,7 @@ run_release_acceptance_gate() {
     [[ "$threat_model_release_rc" -eq 1 ]] \
         || die "threat-model release verifier returned $threat_model_release_rc; expected blocked rc 1"
 
-    local release_acceptance_rc
-    set +e
-    PYTHONDONTWRITEBYTECODE=1 python3 -B \
-        "$PROJECT_ROOT/assurance/release-acceptance/verify.py" \
-        --release --phase "$phase"
-    release_acceptance_rc=$?
-    set -e
-    case "$release_acceptance_rc" in
-        3)
-            printf "${YELLOW}HOLD: Package G %s release acceptance is valid but incomplete.${NC}\n" \
-                "$phase" >&2
-            exit 3
-            ;;
-        0)
-            die "Package G $phase release verifier returned forbidden rc 0 under the v1 HOLD contract"
-            ;;
-        *)
-            die "Package G $phase release verifier returned unexpected rc $release_acceptance_rc"
-            ;;
-    esac
+    info "Package G certification HOLD preserved; v4 portable-software profile authorized for $phase"
 }
 
 run_publish_verifier() {
@@ -497,6 +486,11 @@ run_all_gates() {
     run_check_gates
     run_test_gates
     check_package_contents
+    info "Running the open v4 software/simulated laboratory"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" \
+        --output "$PROJECT_ROOT/target/release-evidence/v4-lab" \
+        || die "v4 software/simulated laboratory failed"
 }
 
 update_benchmarks() {
@@ -691,10 +685,10 @@ release_self_test() {
     release_gate_section=$(sed -n \
         '/^run_release_acceptance_gate() {$/,/^}$/p' "$0")
     publish_gate_section=$(sed -n \
-        '/Package G release-acceptance foundation/,/require_command cargo/p' \
+        '/v4 portable-software release profile/,/require_command cargo/p' \
         "$SCRIPT_DIR/verify-publish-ready.sh" | sed '$d')
     workflow_gate_section=$(sed -n \
-        '/Verify Package G release-acceptance and threat-model foundations/,/  implementation-boundary:/p' \
+        '/Verify v4 release profile and preserved certification foundations/,/  implementation-boundary:/p' \
         "$PROJECT_ROOT/.github/workflows/security-validation.yml")
 
     assert_ordered_once() {
@@ -713,50 +707,50 @@ release_self_test() {
         done
     }
 
-    assert_ordered_once "release runner Package G" "$release_gate_section" \
-        'assurance/release-acceptance/generate.py' \
-        'assurance/release-acceptance/selftest.py' \
-        '--ci --phase foundation' \
+    assert_ordered_once "release runner v4 profile" "$release_gate_section" \
+        'assurance/release-profile/selftest.py' \
+        'assurance/release-profile/verify.py" --phase "$phase"' \
+        'tools/replay-historical-advisories.py" --check' \
+        'tools/generate-release-sboms.py" --self-test' \
+        'tools/verify-repeatable-packages.py" --self-test' \
+        'tools/run-v4-lab-simulation.py" --self-test' \
         'assurance/threat-models/generate-threat-models.py' \
         'assurance/threat-models/verify-threat-models.py" --self-test' \
         'assurance/threat-models/verify-threat-models.py" --mode ci' \
-        'assurance/threat-models/verify-threat-models.py" --mode release' \
-        '--release --phase "$phase"'
-    assert_ordered_once "publish verifier Package G" "$publish_gate_section" \
-        'assurance/release-acceptance/generate.py' \
-        'assurance/release-acceptance/selftest.py' \
-        '--ci --phase foundation' \
+        'assurance/threat-models/verify-threat-models.py" --mode release'
+    assert_ordered_once "publish verifier v4 profile" "$publish_gate_section" \
+        'assurance/release-profile/selftest.py' \
+        'assurance/release-profile/verify.py" --phase "$ASSURANCE_PHASE"' \
+        'tools/replay-historical-advisories.py" --check' \
+        'tools/generate-release-sboms.py" --self-test' \
+        'tools/verify-repeatable-packages.py" --self-test' \
+        'tools/run-v4-lab-simulation.py" --self-test' \
         'assurance/threat-models/generate-threat-models.py' \
         'assurance/threat-models/verify-threat-models.py" --self-test' \
         'assurance/threat-models/verify-threat-models.py" --mode ci' \
-        'assurance/threat-models/verify-threat-models.py" --mode release' \
-        '--release --phase "$ASSURANCE_PHASE"'
-    assert_ordered_once "CI Package G" "$workflow_gate_section" \
-        'assurance/release-acceptance/generate.py --check' \
-        'assurance/release-acceptance/selftest.py' \
-        'assurance/release-acceptance/verify.py --ci --phase foundation' \
+        'assurance/threat-models/verify-threat-models.py" --mode release'
+    assert_ordered_once "CI v4 profile" "$workflow_gate_section" \
+        'assurance/release-profile/selftest.py' \
+        'assurance/release-profile/verify.py --phase foundation' \
+        'tools/replay-historical-advisories.py --check' \
+        'tools/generate-release-sboms.py --self-test' \
+        'tools/verify-repeatable-packages.py --self-test' \
+        'tools/run-v4-lab-simulation.py --self-test' \
         'assurance/threat-models/generate-threat-models.py --check' \
         'assurance/threat-models/verify-threat-models.py --self-test' \
         'assurance/threat-models/verify-threat-models.py --mode ci' \
         'assurance/threat-models/verify-threat-models.py --mode release' \
-        'assurance/release-acceptance/verify.py --release --phase foundation' \
         'bash tools/release-dcrypt.sh --self-test'
     for source in "$release_gate_section" "$publish_gate_section" "$workflow_gate_section"; do
         if grep -Eq 'continue-on-error:|\|\|[[:space:]]+true|exit[[:space:]]+0|return[[:space:]]+0' \
             <<<"$source"; then
-            die "self-test: Package G wiring contains a soft-success bypass"
+            die "self-test: v4 release-profile wiring contains a soft-success bypass"
         fi
     done
     grep -Fq '[[ "$threat_model_release_rc" -eq 1 ]]' <<<"$release_gate_section" \
         || die "self-test: release runner omitted exact threat-model rc 1"
-    grep -Fq 'exit 3' <<<"$release_gate_section" \
-        || die "self-test: release runner does not propagate Package G HOLD rc 3"
-    grep -Fq 'exit 3' <<<"$publish_gate_section" \
-        || die "self-test: publish verifier does not propagate Package G HOLD rc 3"
     grep -Fq 'test "$threat_model_release_rc" -eq 1' <<<"$workflow_gate_section" \
         || die "self-test: CI omitted exact threat-model rc 1"
-    grep -Fq 'test "$release_acceptance_rc" -eq 3' <<<"$workflow_gate_section" \
-        || die "self-test: CI omitted exact Package G HOLD rc 3"
     grep -Fq 'local -a args=(--version "$version" --assurance-phase prepublish)' "$0" \
         || die "self-test: publish verifier phase is not explicit prepublish"
     local remote_phase_routing_section

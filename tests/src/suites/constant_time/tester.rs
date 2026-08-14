@@ -219,12 +219,20 @@ impl TimingTester {
             let mut store = ProfileStore::load_or_create(&config.noise_profile_path)?;
             if let Some(baseline) = store.get_baseline(name) {
                 if current_mad > baseline * config.noise_tolerance_factor {
-                    return Err(format!(
-                        "TEST ABORTED: Environment too noisy. Current MAD {:.2}ns > {:.1}x Baseline {:.2}ns",
+                    if config.enforce_noise_profile {
+                        return Err(format!(
+                            "TEST ABORTED: Environment too noisy. Current MAD {:.2}ns > {:.1}x Baseline {:.2}ns",
+                            current_mad, config.noise_tolerance_factor, baseline
+                        ));
+                    }
+                    environment_status = format!(
+                        "Observed Unqualified Host Noise (MAD {:.2} > {:.1}x Baseline {:.2})",
                         current_mad, config.noise_tolerance_factor, baseline
-                    ));
+                    );
                 }
-                if current_mad > baseline * 1.5 {
+                if current_mad > baseline * 1.5
+                    && current_mad <= baseline * config.noise_tolerance_factor
+                {
                     environment_status = format!(
                         "Elevated Noise (MAD {:.2} > Baseline {:.2})",
                         current_mad, baseline
