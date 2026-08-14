@@ -292,6 +292,30 @@ def _regular_exact(path: Path, expected_sha256: str, *, label: str) -> bytes:
     return raw
 
 
+def _select_exact_pinned_executable(
+    candidates: list[tuple[str, str]], expected_sha256: str, *, label: str
+) -> tuple[str, list[str]]:
+    """Select the first exact artifact while retaining every valid discovery method.
+
+    Rustup can install the same pinned toolchain under both its dated name and
+    the moving ``nightly`` alias. Those are distinct files but are not distinct
+    compiler artifacts once each file has passed the exact SHA-256, ownership,
+    mode, link-count, and stable-read checks. Candidate order is the explicit
+    deterministic tie-breaker; nonmatching candidates never become eligible.
+    """
+
+    validated: list[tuple[str, str]] = []
+    for method, candidate in candidates:
+        try:
+            _regular_exact(Path(candidate), expected_sha256, label=f"pinned {label} candidate")
+        except FuzzingError:
+            continue
+        validated.append((method, str(Path(candidate).resolve(strict=True))))
+    if not validated:
+        raise FuzzingError(f"{label} discovery did not resolve an exact pinned binary")
+    return validated[0][1], sorted({method for method, _ in validated})
+
+
 def _open_absolute_nofollow(path: Path, *, directory: bool, label: str) -> int:
     """Open an absolute path without following any component symlink."""
 
@@ -750,16 +774,9 @@ def pinned_toolchain() -> dict[str, Any]:
         )
         if result.returncode == 0:
             candidates.append((f"rustup:{alias}", result.stdout.decode("utf-8").strip()))
-    validated: list[tuple[str, str]] = []
-    for method, path in candidates:
-        try:
-            _regular_exact(Path(path), PINNED_RUSTC_SHA256, label="pinned rustc candidate")
-        except FuzzingError:
-            continue
-        validated.append((method, path))
-    if not validated or len({str(Path(path).resolve(strict=True)) for _, path in validated}) != 1:
-        raise FuzzingError("rustc discovery did not resolve one exact pinned binary")
-    rustc_path = str(Path(validated[0][1]).resolve(strict=True))
+    rustc_path, rustc_discovery_methods = _select_exact_pinned_executable(
+        candidates, PINNED_RUSTC_SHA256, label="rustc"
+    )
     _regular_exact(Path(rustc_path), PINNED_RUSTC_SHA256, label="pinned rustc")
     cc_resolved = Path("/usr/bin/cc").resolve(strict=True)
     readelf_resolved = Path("/usr/bin/readelf").resolve(strict=True)
@@ -796,7 +813,7 @@ def pinned_toolchain() -> dict[str, Any]:
         "readelf_sha256": readelf_identity["executable_sha256"],
         "readelf_path": str(readelf_resolved),
         "rustc_path": rustc_path,
-        "rustc_discovery_methods": sorted(method for method, _ in validated),
+        "rustc_discovery_methods": rustc_discovery_methods,
         "rustc_sha256": PINNED_RUSTC_SHA256,
         "rustc_version": rustc_version,
         "rustup_discovery_path": str(rustup_path),
@@ -828,16 +845,9 @@ def pinned_cargo_tools(private_root: Path) -> dict[str, Any]:
         )
         if result.returncode == 0:
             cargo_candidates.append((f"rustup:{alias}", result.stdout.decode().strip()))
-    valid_cargo = []
-    for method, candidate in cargo_candidates:
-        try:
-            _regular_exact(Path(candidate), PINNED_CARGO_SHA256, label="pinned cargo candidate")
-        except FuzzingError:
-            continue
-        valid_cargo.append((method, str(Path(candidate).resolve(strict=True))))
-    if not valid_cargo or len({path for _, path in valid_cargo}) != 1:
-        raise FuzzingError("cargo discovery did not resolve one exact pinned binary")
-    cargo_path = valid_cargo[0][1]
+    cargo_path, cargo_discovery_methods = _select_exact_pinned_executable(
+        cargo_candidates, PINNED_CARGO_SHA256, label="cargo"
+    )
     fuzz_candidates = []
     explicit_fuzz = os.environ.get("DCRYPT_FUZZ_CARGO_FUZZ")
     candidate_paths = [
@@ -946,7 +956,7 @@ def pinned_cargo_tools(private_root: Path) -> dict[str, Any]:
     if not cargo_version.startswith(PINNED_CARGO_VERSION_PREFIX.encode()) or fuzz_version.decode() != PINNED_CARGO_FUZZ_VERSION:
         raise FuzzingError("cargo or cargo-fuzz identity differs from exact Package C pin")
     return {
-        "cargo_discovery_methods": sorted(method for method, _ in valid_cargo),
+        "cargo_discovery_methods": cargo_discovery_methods,
         "cargo_fuzz_original_executed": False,
         "cargo_fuzz_path": str(cargo_fuzz_snapshot),
         "cargo_fuzz_crate_sha256": PINNED_CARGO_FUZZ_CRATE_SHA256,

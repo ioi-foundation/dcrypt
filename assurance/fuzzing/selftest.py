@@ -23,6 +23,7 @@ from compiler_probe import (
     _validate_exact_candidates,
     _resolve_discovery_executable,
     _require_stable_metadata,
+    _select_exact_pinned_executable,
     _snapshot_home_file,
     _snapshot_home_tree,
     _validate_host_tool_identity,
@@ -866,6 +867,26 @@ def main() -> int:
         checked(_verify_cargo_fuzz_source, archive, source_copy)
         checked(_validate_exact_candidates, [], label="missing archive")
         checked(_validate_exact_candidates, [archive, archive], label="ambiguous archive")
+        pinned_a = private / "pinned-a"
+        pinned_b = private / "pinned-b"
+        pinned_a.write_bytes(b"same-pinned-tool")
+        pinned_b.write_bytes(b"same-pinned-tool")
+        os.chmod(pinned_a, 0o700)
+        os.chmod(pinned_b, 0o700)
+        pinned_sha256 = __import__("hashlib").sha256(b"same-pinned-tool").hexdigest()
+        selected, methods = _select_exact_pinned_executable(
+            [("dated", str(pinned_a)), ("alias", str(pinned_b))],
+            pinned_sha256,
+            label="fixture",
+        )
+        assert selected == str(pinned_a)
+        assert methods == ["alias", "dated"]
+        checked(
+            _select_exact_pinned_executable,
+            [("wrong", str(pinned_a))],
+            "0" * 64,
+            label="fixture",
+        )
         missing_discovery = private / "missing-rustup"
         checked(_resolve_discovery_executable, [missing_discovery], label="missing rustup")
         discovery_a = private / "rustup-a"
