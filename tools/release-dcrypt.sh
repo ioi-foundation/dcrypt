@@ -305,7 +305,7 @@ run_candidate_comparator_replay() {
             --lock "$PROJECT_ROOT/$workspace/Cargo.lock" \
             --archives "$replay_root/archives" \
             --materialized "$replay_root/materialized" \
-            --toolchain-root "$(rustc --print sysroot)"
+            --toolchain-root "$(rustc +1.93.1 --print sysroot)"
     )
 }
 
@@ -667,6 +667,8 @@ release_self_test() {
         || die "self-test: release test gate omitted the exact candidate comparator runner"
     grep -Fq 'not independent assurance evidence' "$0" \
         || die "self-test: candidate comparator status is not explicit"
+    grep -Fq -- '--toolchain-root "$(rustc +1.93.1 --print sysroot)"' "$0" \
+        || die "self-test: candidate comparator toolchain is not the exact normative stable"
     grep -Fq 'assurance/fuzzing/run-fuzz-smoke.py"' "$0" \
         || die "self-test: sealed private-corpus fuzz runner is missing"
     grep -Fq 'cargo +nightly-2026-08-08 fetch --locked' "$0" \

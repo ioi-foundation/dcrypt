@@ -26,7 +26,7 @@ REPO = FRAMEWORK.parent.parent
 MODEL = FRAMEWORK / "fuzzing_lib.py"
 MANIFEST = REPO / "assurance/subject-manifest.json"
 FINAL_STATUS = "STABLE-final-subject-bound"
-NORMALIZED_MODEL_SHA256 = "d637fe4ad204fbccf5a7ff36c2d133a4e47a73d991f7bbbc57ddcbd7a07e4834"
+NORMALIZED_MODEL_SHA256 = "db3e31fecfdd6023c6955aaba42738bb7370f2e60cfabc3be8aba5d28e1bfff6"
 ALLOWLISTED_ASSIGNMENTS = (
     "STATUS",
     "FRAMEWORK_SUBJECT_COMMIT",

@@ -45,11 +45,11 @@ EXPECTED_EXPLICIT_BLOCKERS = EXPECTED_TOTAL_ROWS - EXPECTED_CRITICAL_ROWS
 
 PACKAGE_C_CONTROL_INPUTS = {
     ".github/workflows/security-validation.yml": ("b5055f0aeabff29774263d951854beac6620eca96a768a38a53619559993736a", "100644"),
-    "tools/release-dcrypt.sh": ("fe732ceb09161ccb3e82c81d608e6ea91ac0345b765fe36ad1eb4903f0a0da33", "100755"),
+    "tools/release-dcrypt.sh": ("2c5829b1006240fc4fdbd36d2463575ccc9dccb27dbe39dd616cac0ed1d7de06", "100755"),
     "tools/verify-publish-ready.sh": ("07a590c21549cd0351b8a62f90d60fb40972f1bda2580fc7bcccbd17cfd71a76", "100755"),
     "tools/verify-remote-release-ready.py": ("c6b0a3e1df1ec1b617f75d07e2f7af689b73e00b53e6903f9f8cdc7cacf96941", "100755"),
 }
-CONTROL_INPUTS_SHA256 = "2aef59e8739839edb0ce2f67cd799e29647947b203f08c8602ed662c6ac91301"
+CONTROL_INPUTS_SHA256 = "defe8f20191755db9780f2c5e12aed3f7c9e9494d88593c6564e045ac2270db2"
 
 WEEKLY_CRITICAL_CORE_SECONDS = 72 * 60 * 60
 WEEKLY_SECONDARY_CORE_SECONDS = 24 * 60 * 60
