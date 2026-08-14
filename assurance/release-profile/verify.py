@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import pathlib
 import subprocess
 import sys
@@ -13,6 +15,9 @@ import tomllib
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / "assurance/release-profile/policy.toml"
 G_COMMIT = "088b2d2fe1e7d7cc3591cfde5040d447010a74bd"
+ORACLE_REBIND_COMMIT = "836bc99d5100925797f7de6d02e719caee3f77cb"
+ORACLE_MANIFEST_SHA256 = "d9c6086f020d8453bdc7c6bd33bf1886a8520d08037c09521a78ea0086efbf34"
+ORACLE_SUBJECT_COMMIT = "3a7b8977aa04b82b38c362eca1194c4f265e1d84"
 DISPOSITIONS = (
     "package-a-atomic-ledger",
     "package-b-independent-interoperability",
@@ -66,6 +71,7 @@ def verify_policy(policy: dict) -> None:
     expected_top = {
         "schema-version", "profile", "target-version", "status",
         "package-g-foundation", "package-g-foundation-status", "authorization",
+        "oracle-subject-rebind-commit", "oracle-normative-manifest-sha256",
         "claims", "nonclaims", "disposition", "mandatory-consumers", "mandatory-tools",
         "mandatory-evidence",
     }
@@ -75,6 +81,11 @@ def verify_policy(policy: dict) -> None:
         raise InvalidProfile("policy identity differs")
     if policy["target-version"] != "4.0.0" or policy["package-g-foundation"] != G_COMMIT:
         raise InvalidProfile("target version or Package G foundation differs")
+    if (
+        policy["oracle-subject-rebind-commit"] != ORACLE_REBIND_COMMIT
+        or policy["oracle-normative-manifest-sha256"] != ORACLE_MANIFEST_SHA256
+    ):
+        raise InvalidProfile("oracle subject rebind authority differs")
     if policy["status"] != "AUTHORIZED-WHEN-SOFTWARE-GATES-PASS":
         raise InvalidProfile("release decision is not authorized")
 
@@ -125,6 +136,25 @@ def verify_repository(policy: dict) -> None:
         "assurance/release-acceptance/verify.py",
     ):
         _git("cat-file", "-e", f"{G_COMMIT}:{path}")
+
+    if _git("merge-base", "--is-ancestor", ORACLE_REBIND_COMMIT, "HEAD") != "":
+        raise InvalidProfile("unexpected output while resolving oracle-rebind ancestry")
+    oracle_manifest_path = ROOT / "verification/oracle-provisioning/manifest.json"
+    oracle_manifest_raw = oracle_manifest_path.read_bytes()
+    if hashlib.sha256(oracle_manifest_raw).hexdigest() != ORACLE_MANIFEST_SHA256:
+        raise InvalidProfile("oracle normative manifest digest differs")
+    oracle_manifest = json.loads(oracle_manifest_raw)
+    if (
+        oracle_manifest.get("subject", {}).get("source_commit") != ORACLE_SUBJECT_COMMIT
+        or oracle_manifest.get("subject", {}).get("subsequent_assurance_binding_required") is not True
+    ):
+        raise InvalidProfile("oracle prior-subject binding differs")
+    for path in (
+        "verification/oracle-provisioning/bundle_lib.py",
+        "verification/oracle-provisioning/manifest.json",
+        "verification/oracle-provisioning/subject-inputs.json",
+    ):
+        _git("cat-file", "-e", f"{ORACLE_REBIND_COMMIT}:{path}")
 
     strategy = (ROOT / "VERSION_STRATEGY.md").read_text(encoding="utf-8")
     required_strategy = (

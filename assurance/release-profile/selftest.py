@@ -34,6 +34,7 @@ def main() -> int:
     rejected(lambda p: p["disposition"].pop())
     rejected(lambda p: p["mandatory-tools"].pop())
     rejected(lambda p: p.__setitem__("target-version", "3.0.0"))
+    rejected(lambda p: p.__setitem__("oracle-subject-rebind-commit", "0" * 40))
     print("v4 release profile self-test passed")
     return 0
 
