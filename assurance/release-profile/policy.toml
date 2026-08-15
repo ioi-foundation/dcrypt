@@ -4,8 +4,8 @@ target-version = "4.0.0"
 status = "AUTHORIZED-WHEN-SOFTWARE-GATES-PASS"
 package-g-foundation = "088b2d2fe1e7d7cc3591cfde5040d447010a74bd"
 package-g-foundation-status = "HOLD-by-design-superseded-for-portable-release"
-oracle-subject-rebind-commit = "d26b39b6c4ab355510a3c1f8ed1a36b863aefd07"
-oracle-normative-manifest-sha256 = "b6c4805560f10c09764c80ee2f3126455b424d50527d029e5145dda721cf92db"
+oracle-subject-rebind-commit = "6c4828414709e7bb0f6b02e7000865d92f476e85"
+oracle-normative-manifest-sha256 = "fd8f621219c77989bc07edcc6f018682a35fd5f8d1b584fea2711473a9add264"
 authorization = "reviewed-merge-of-this-policy-on-the-release-candidate"
 
 mandatory-consumers = [

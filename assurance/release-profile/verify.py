@@ -15,9 +15,9 @@ import tomllib
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / "assurance/release-profile/policy.toml"
 G_COMMIT = "088b2d2fe1e7d7cc3591cfde5040d447010a74bd"
-ORACLE_REBIND_COMMIT = "d26b39b6c4ab355510a3c1f8ed1a36b863aefd07"
-ORACLE_MANIFEST_SHA256 = "b6c4805560f10c09764c80ee2f3126455b424d50527d029e5145dda721cf92db"
-ORACLE_SUBJECT_COMMIT = "9d3e5d6ae8657f37bd1294fb230bc5ad04a7412b"
+ORACLE_REBIND_COMMIT = "6c4828414709e7bb0f6b02e7000865d92f476e85"
+ORACLE_MANIFEST_SHA256 = "fd8f621219c77989bc07edcc6f018682a35fd5f8d1b584fea2711473a9add264"
+ORACLE_SUBJECT_COMMIT = "ef7106c34c79a69ab659f1c89522371d521bbd67"
 DISPOSITIONS = (
     "package-a-atomic-ledger",
     "package-b-independent-interoperability",
