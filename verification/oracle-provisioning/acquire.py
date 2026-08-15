@@ -11,6 +11,8 @@ import ssl
 import stat
 import sys
 import tempfile
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -25,7 +27,12 @@ def main() -> int:
     parser.add_argument("--lock", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--timeout", default=60, type=int)
+    parser.add_argument("--attempts", default=4, type=int)
     args = parser.parse_args()
+    if args.timeout <= 0:
+        parser.error("--timeout must be positive")
+    if args.attempts <= 0:
+        parser.error("--attempts must be positive")
     stage: Path | None = None
     try:
         manifest = load_manifest(args.manifest)
@@ -54,30 +61,47 @@ def main() -> int:
                 },
                 method="GET",
             )
-            digest = hashlib.sha256()
-            total = 0
-            with opener.open(request, timeout=args.timeout) as response:
-                if response.status != 200 or response.geturl() != url:
-                    raise BundleError(
-                        f"unexpected HTTP response for {url}: "
-                        f"status={response.status} final_url={response.geturl()!r}"
+            for attempt in range(1, args.attempts + 1):
+                digest = hashlib.sha256()
+                total = 0
+                try:
+                    with opener.open(request, timeout=args.timeout) as response:
+                        if response.status != 200 or response.geturl() != url:
+                            raise BundleError(
+                                f"unexpected HTTP response for {url}: "
+                                f"status={response.status} final_url={response.geturl()!r}"
+                            )
+                        descriptor = os.open(
+                            destination,
+                            os.O_WRONLY
+                            | os.O_CREAT
+                            | os.O_EXCL
+                            | getattr(os, "O_NOFOLLOW", 0),
+                            0o600,
+                        )
+                        os.fchmod(descriptor, 0o600)
+                        with os.fdopen(descriptor, "wb") as stream:
+                            while True:
+                                chunk = response.read(1024 * 1024)
+                                if not chunk:
+                                    break
+                                total += len(chunk)
+                                if total > archive["size"]:
+                                    raise BundleError(f"oversized response for {url}")
+                                digest.update(chunk)
+                                stream.write(chunk)
+                    break
+                except (OSError, urllib.error.URLError) as error:
+                    destination.unlink(missing_ok=True)
+                    if attempt == args.attempts:
+                        raise
+                    delay = min(2 ** (attempt - 1), 8)
+                    print(
+                        f"retrying {url} after transport failure "
+                        f"({attempt}/{args.attempts}): {error}",
+                        file=sys.stderr,
                     )
-                descriptor = os.open(
-                    destination,
-                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
-                    0o600,
-                )
-                os.fchmod(descriptor, 0o600)
-                with os.fdopen(descriptor, "wb") as stream:
-                    while True:
-                        chunk = response.read(1024 * 1024)
-                        if not chunk:
-                            break
-                        total += len(chunk)
-                        if total > archive["size"]:
-                            raise BundleError(f"oversized response for {url}")
-                        digest.update(chunk)
-                        stream.write(chunk)
+                    time.sleep(delay)
             if total != archive["size"] or digest.hexdigest() != archive["sha256"]:
                 raise BundleError(
                     f"download differs for {url}: size={total} sha256={digest.hexdigest()}"
