@@ -4748,7 +4748,7 @@
     },
     "manifest": {
       "path": "verification/Cargo.toml",
-      "sha256": "e88738240a5f80a0232c0ca01e57710db23a15103ccd5f04a37a8faf43b024c8"
+      "sha256": "9c1f35023481774783e2739dc196fb1bbfa52423b70ef918f7be1e9ed62c1fe3"
     }
   }
 }

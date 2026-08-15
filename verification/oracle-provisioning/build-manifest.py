@@ -27,6 +27,7 @@ from subject_lib import load_subject_inputs
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lock", required=True, type=Path)
+    parser.add_argument("--workspace-manifest", type=Path)
     parser.add_argument("--archives", required=True, type=Path)
     parser.add_argument(
         "--template", default=Path(__file__).with_name("manifest.json"), type=Path
@@ -38,6 +39,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     try:
+        workspace_manifest = args.workspace_manifest or args.lock.with_name("Cargo.toml")
         records = lock_records(args.lock)
         packages = []
         for record in records:
@@ -57,6 +59,7 @@ def main() -> int:
         }:
             raise BundleError("template does not bind the exact subject-input manifest")
         result["workspace"]["lockfile"]["sha256"] = sha256_file(args.lock)
+        result["workspace"]["manifest"]["sha256"] = sha256_file(workspace_manifest)
         result["package_count"] = len(packages)
         result["packages"] = packages
         result["acquisition"]["aggregate_totals"] = {
