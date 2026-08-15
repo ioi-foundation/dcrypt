@@ -12,18 +12,18 @@ keywords.workspace = true
 
 [dependencies]
 # Core dependencies (always included)
-dcrypt-api = { version = "=3.0.0", path = "crates/api", default-features = false }
-dcrypt-common = { version = "=3.0.0", path = "crates/common", default-features = false }
-dcrypt-internal = { version = "=3.0.0", path = "crates/internal", default-features = false }
-dcrypt-params = { version = "=3.0.0", path = "crates/params" }
+dcrypt-api = { version = "=4.0.0", path = "crates/api", default-features = false }
+dcrypt-common = { version = "=4.0.0", path = "crates/common", default-features = false }
+dcrypt-internal = { version = "=4.0.0", path = "crates/internal", default-features = false }
+dcrypt-params = { version = "=4.0.0", path = "crates/params" }
 
 # Optional algorithm crates
-dcrypt-algorithms = { version = "=3.0.0", path = "crates/algorithms", optional = true, default-features = false }
-dcrypt-symmetric = { version = "=3.0.0", path = "crates/symmetric", optional = true, default-features = false }
-dcrypt-kem = { version = "=3.0.0", path = "crates/kem", optional = true, default-features = false }
-dcrypt-sign = { version = "=3.0.0", path = "crates/sign", optional = true, default-features = false }
-dcrypt-pke = { version = "=3.0.0", path = "crates/pke", optional = true, default-features = false }
-dcrypt-hybrid = { version = "=3.0.0", path = "crates/hybrid", optional = true, default-features = false }
+dcrypt-algorithms = { version = "=4.0.0", path = "crates/algorithms", optional = true, default-features = false }
+dcrypt-symmetric = { version = "=4.0.0", path = "crates/symmetric", optional = true, default-features = false }
+dcrypt-kem = { version = "=4.0.0", path = "crates/kem", optional = true, default-features = false }
+dcrypt-sign = { version = "=4.0.0", path = "crates/sign", optional = true, default-features = false }
+dcrypt-pke = { version = "=4.0.0", path = "crates/pke", optional = true, default-features = false }
+dcrypt-hybrid = { version = "=4.0.0", path = "crates/hybrid", optional = true, default-features = false }
 
 [features]
 # Default includes common traditional algorithms
@@ -107,7 +107,7 @@ exclude = ["fuzz", "verification", "migration/legacy-xchacha20poly1305"]
 resolver = "2"
 
 [workspace.package]
-version     = "3.0.0"
+version     = "4.0.0"
 edition     = "2021"
 authors     = ["Heath Ledger"]
 description = "Rust APIs for classical, post-quantum, and hybrid cryptographic primitives"

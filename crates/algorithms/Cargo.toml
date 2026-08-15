@@ -45,10 +45,10 @@ pairings = ["groups"]
 
 [dependencies]
 # Internal dependencies
-dcrypt-api = { path = "../api", version = "=3.0.0", default-features = false }
-dcrypt-common = { path = "../common", version = "=3.0.0", default-features = false }
-dcrypt-internal = { path = "../internal", version = "=3.0.0", default-features = false }
-dcrypt-params = { path = "../params", version = "=3.0.0" }
+dcrypt-api = { path = "../api", version = "=4.0.0", default-features = false }
+dcrypt-common = { path = "../common", version = "=4.0.0", default-features = false }
+dcrypt-internal = { path = "../internal", version = "=4.0.0", default-features = false }
+dcrypt-params = { path = "../params", version = "=4.0.0" }
 
 # Encoding/serialization
 hex = { version = "=0.4.3", default-features = false, features = ["alloc"] }

@@ -14,10 +14,10 @@ unsafe_code = "forbid"
 
 [dev-dependencies]
 bls12_381 = { version = "=0.8.0", default-features = false, features = ["alloc", "experimental", "groups", "pairings"] }
-dcrypt-algorithms = { version = "=3.0.0", path = "../crates/algorithms" }
-dcrypt-api = { version = "=3.0.0", path = "../crates/api" }
-dcrypt-internal = { version = "=3.0.0", path = "../crates/internal" }
-dcrypt-sign = { version = "=3.0.0", path = "../crates/sign" }
+dcrypt-algorithms = { version = "=4.0.0", path = "../crates/algorithms" }
+dcrypt-api = { version = "=4.0.0", path = "../crates/api" }
+dcrypt-internal = { version = "=4.0.0", path = "../crates/internal" }
+dcrypt-sign = { version = "=4.0.0", path = "../crates/sign" }
 chacha20poly1305 = { version = "=0.10.1", default-features = false, features = ["alloc"] }
 chacha20 = { version = "=0.9.1", default-features = false }
 dcrypt-legacy-xchacha20poly1305-migration = { version = "=0.0.0", path = "../migration/legacy-xchacha20poly1305" }
