@@ -1991,8 +1991,8 @@
       "policy": "all_tracked_regular_files_except_generated_target"
     }
   ],
-  "source_commit": "9d3e5d6ae8657f37bd1294fb230bc5ad04a7412b",
-  "source_tree": "158aefede6a02926d2780857490090b5e2993719",
+  "source_commit": "ef7106c34c79a69ab659f1c89522371d521bbd67",
+  "source_tree": "2c1177cfbb8f019a6717b6ec592731abd963f807",
   "vector_set": {
     "data_yaml_count": 20,
     "data_yaml_paths": [
