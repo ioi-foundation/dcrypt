@@ -39,26 +39,26 @@ COMPILER_PROFILES: dict[str, dict[str, object]] = {
         "version": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
         "hashes": {
             "x86_64-unknown-linux-gnu":
-                "826f4b279ad95274f18c9c816cbceee21867e6f1f49c07a31b4ea52fb6af7398",
+                "3bc0993b20f0f5d2a57e18a1e317158040828b9c68f7406bb4132f3ebc160382",
             "aarch64-unknown-linux-gnu":
-                "40671f0204ffdeff45d7b0a5fb9956f5f74eedab21f286626e1f078b886f9401",
+                "f41c29bece26d7cd42071ac8a3037fd6bb8af2333d67257ed009dd231e9e79ad",
             "thumbv7em-none-eabihf":
-                "075495bf71d75b5704ccfe7e64dbde9cb2b0347dda96dca5113d1a42a43e5aa6",
+                "97ec647cc1c209f54e700c3a9a6bb8d9158061c17542199a758cb32d4276e2d1",
             "wasm32-unknown-unknown":
-                "2f5dcb4b658514298d03d18797f9dbfca4fecb9292bb7b29736ac8e575751242",
+                "b2926b10987a94919c1cf51930d4cd77a20f266f532851fc2ffc2d86922ca29a",
         },
     },
     "rust-1.97.1": {
         "version": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
         "hashes": {
             "x86_64-unknown-linux-gnu":
-                "4881e81e8c6fbb86a4c554ddfb18e0d8b0e31321356d47c3d09fd63d86298f3e",
+                "bb2d80dae4ba710a33e672aeb4fba9d4d1547efeefcaf4bc138103d35f134546",
             "aarch64-unknown-linux-gnu":
-                "318bc73bd59e254876307cccba62114c1d0c8ab808df33040ab5730fe7936b3c",
+                "94097ce0bced9f000c0daa89de1716e259f28a8c1ff6b16272757d805ca69cf1",
             "thumbv7em-none-eabihf":
-                "c869f95ca2645a6de23fdac69a26c92f92cfc680e37cee37dbc6291ce8237ad6",
+                "5ddfe428104e16a6b13a74c01abe9fdcc53c6a3193f4da50d5486790ac975d5e",
             "wasm32-unknown-unknown":
-                "1e680f70b1345650b822b0f37032c94d91d8cd5861522ebc070f80f46f1b884e",
+                "5950bc2cf310615bfba7ead04b125d87c534320af36bf694eec7ea6e4076c759",
         },
     },
 }
@@ -96,42 +96,42 @@ EXPECTED_BRANCHES = {
 EXPECTED_FUNCTION_CLOSURE_SHA256: dict[str, dict[str, frozenset[str]]] = {
     "x86_64-unknown-linux-gnu": {
         "G1Projective": frozenset({
-            "e92c6c395f02f0e76e3dbda060973f366dc028743fd07518bab724314b06a4ae",
-            "d477e22a9014b403348cc1070105f6a99c557e74c6a41c08b076f040449a12e3",
+            "6ddb2ea16c5a1aa71914e06da50580afe61f991962f3f4d27887e4c83ab4fb65",
+            "f98bdee3e9e7585392b91d74da0333d2e4e735b9fa62330f9233a5b7c9dcd854",
         }),
         "G2Projective": frozenset({
-            "29d9f5bb2473df4b3a42eaa4eca6a4511d7bcc2d5ef90df10beb4caffbbf763b",
-            "d9ae6e96cfaa59b4b479f1d639cefa0841fcdfbc8beac67d39c9552686cffd63",
+            "17f1b2fbc6da8c19aa86f4b001520cbe13c344a6e1b78d3a21dfaf531dea5249",
+            "dbfd6016eaaa04c2a6bc049ba47e9e2af93483b585b5de6a5eab45e127d0bd68",
         }),
     },
     "aarch64-unknown-linux-gnu": {
         "G1Projective": frozenset({
-            "de5eab46ccc550a12cae06c6d6310614e65da9f7036f8adee25b7264a08185b4",
-            "7eb0c92e79e980bdb164becfa6c9de234fd45fba09865a2c7fa3fcf2361f8167",
+            "dfbf25aa2f997f73e2b98abc488d8b9b3f3c6c73ef6a4dc7b13078acb8fe7c03",
+            "aec9d927950ce119c68bf387674ce237844b735a83c7466e9daab41603c0a9a3",
         }),
         "G2Projective": frozenset({
-            "2532f0a9eaa0140b88921bf5978640891d2a84274c0973ffafa50c2e7d24a93e",
-            "49f66a5d5bff77231e03c72238f97aa25e8d206ee0e0b19614bba8f176267242",
+            "8dc39086819ce0ae5f61b28c93e1d8e607675bf8079f0167ae57411fabafcffe",
+            "6382934e780235a60ebed56bb0ec18a54dfb458053300a47be0f2a08785dfc7f",
         }),
     },
     "thumbv7em-none-eabihf": {
         "G1Projective": frozenset({
-            "feb9d58e497ae2456c48e056fa86137df713f2f2f845a723b871500c37ca04c3",
-            "c4016959f8dd48d883011c3896458a2235c4e306d2ade547c8adfecbe994d7e7",
+            "3bf6726d8964edba92d97ebc2631dff9949dae6a636d3790a0cfebac43135399",
+            "05554abba7b9a3b5dadd931c28d257813cfb59780514c842551938905178833b",
         }),
         "G2Projective": frozenset({
-            "19a1d7dcc58c7e2658c327a9a20c793ced9605b6497151a2bde824009d9354ac",
-            "047c9fec54b5baa84bf301f1eac302cec247e200f461d2fd23d8ef2851b2250e",
+            "32a5eae054cd0e033a05d862e36f88cdd2d43f0727f1e792ab032e5c689209c7",
+            "0bb056404fe06f52cf17284fcc0a8acb226b05165a19d09e384471acf51aaad6",
         }),
     },
     "wasm32-unknown-unknown": {
         "G1Projective": frozenset({
-            "2dd58d94ac2adaf78d934619186478d70f5e73c8642f5251a97291225cee8fdb",
-            "9cab0644738cfaaf7b78e800f249f68512c87bd01094bcb7a25389e0e4ac1eb0",
+            "c6bffd9321f16ba0f9f2db4f655d400d30cba90c1e1f2cba75ce73a1be0c3b09",
+            "28ec6407396c9a76ba1b63cf6c47c4a2b484d3d18d96c5c55720532ba499c7b1",
         }),
         "G2Projective": frozenset({
-            "4f6724cbdf71851633dd428fda8d8b51afa1bf887245edb80ab8b32a42cb5cca",
-            "18b7843ee639470921bb62e61d1217240177513ce6ffa2acb0faf5231c71332e",
+            "e36d4f8dec49037e4f7ab11a255005e48e7fe462dd011f71d12dd9e4b772bc6b",
+            "907d12294feb2927e72d6f8c737dc23063d89e39a185762cfd09d225c1ee8b60",
         }),
     },
 }
@@ -142,20 +142,20 @@ EXPECTED_FUNCTION_CLOSURE_SHA256: dict[str, dict[str, frozenset[str]]] = {
 # each independently reviewed compiler profile.
 EXPECTED_ASSIGNMENT_SHA256: dict[str, frozenset[str]] = {
     "x86_64-unknown-linux-gnu": frozenset({
-        "021cf42afe533ba3093d3d264bfcc34b9ef31f586e7ea5602b2363ae6c37f306",
-        "a9538eb8637e9d4810685768a32b75dc2865a35956471fb428afaef999aaaac8",
+        "4a72469a169670da606f9f68a19fac353307ff0d3b03e4a9530f0ffff09daad6",
+        "914688057462993b33c247d17cb778cf53dafc65b2badfa54f8e60bc4db95acf",
     }),
     "aarch64-unknown-linux-gnu": frozenset({
-        "bede8afa8a682cb83955707d92b242d92bbd449cfe4c2510235c7a43ea66da4c",
-        "2d9c77a48398d972472eada688d6974c9ea0966b75a553a2ac292ea3f94f444b",
+        "077b775bf87ceff168b461e1c56635a2eaab3f5f4a236e3fb0a66e635e17888a",
+        "74b62e2ed731766ff77a66de8d321b75a071c6ea8f617d9bf93c1d047b821341",
     }),
     "thumbv7em-none-eabihf": frozenset({
-        "2f4da425f05b77a9d777c45b29c2139c51d9002e45ebc60f85dd63243cb85bd6",
-        "1ca62f67028a89497e4c3ff64f3e8e962a186151ec50b836dcb62301197e478f",
+        "8b3341e7c961490a0d27304d7e34cde48bf3f132ca7fa4742feb1848387833bc",
+        "1e537dc6925661ac5a02eb923039442b2be90565c128edd0bb6d5ff21012127e",
     }),
     "wasm32-unknown-unknown": frozenset({
-        "e0c8ce71b5ff300bd47fcda571dd6def1dce59a63bf26dd99f65c3c30de3911a",
-        "06afe94e8d4c469dea39fbda7cb19903f3c4921c98850771d13b53a320c2ad28",
+        "1c382af66b001615da3442166471426e4253f7325ace7cfef374f9e9cb454ca6",
+        "24d462bd7723a8920fce0e4bd98885ef1ba728360b3f809d7a0cfd8f3d2b722e",
     }),
 }
 
