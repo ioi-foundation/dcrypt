@@ -54,19 +54,18 @@ def build_set(target: pathlib.Path, version: str) -> dict[str, pathlib.Path]:
         "CARGO_INCREMENTAL": "0", "CARGO_NET_OFFLINE": "true",
         "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "TZ": "UTC",
     })
-    for package in PACKAGES:
-        command = [
-            "cargo", "+1.93.1", "package", "--package", package,
-            "--allow-dirty", "--no-verify", "--locked", "--offline",
-            "--target-dir", str(target),
-        ]
-        result = subprocess.run(
-            command, cwd=ROOT, env=environment, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, check=False,
-        )
-        if result.returncode != 0:
-            sys.stderr.buffer.write(result.stdout[-16384:])
-            raise RebuildError(f"cargo package failed for {package}")
+    command = [
+        "cargo", "+1.93.1", "package", "--workspace",
+        "--exclude", "dcrypt-tests", "--allow-dirty", "--no-verify",
+        "--locked", "--offline", "--target-dir", str(target),
+    ]
+    result = subprocess.run(
+        command, cwd=ROOT, env=environment, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, check=False,
+    )
+    if result.returncode != 0:
+        sys.stderr.buffer.write(result.stdout[-16384:])
+        raise RebuildError("cargo workspace package failed")
     archives = {}
     for package in PACKAGES:
         path = target / "package" / f"{package}-{version}.crate"

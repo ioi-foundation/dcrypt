@@ -1468,30 +1468,38 @@ class BoundaryAudit:
             env = os.environ.copy()
             env.pop("CARGO_ENCODED_RUSTFLAGS", None)
             env["CARGO_TARGET_DIR"] = str(cargo_target)
-            # Cargo's workspace package mode can omit `.cargo_vcs_info.json`
-            # from the first archive even though packaging that same member
-            # directly includes it.  Package each reviewed member explicitly
-            # so every archive receives the same provenance treatment.
-            for package_name in policy["published-packages"]:
-                package_command = [
-                    "cargo",
-                    "package",
-                    "--package",
-                    package_name,
-                    "--locked",
-                    "--offline",
-                    "--no-verify",
-                    "--allow-dirty",
-                    "--target-dir",
-                    str(cargo_target),
-                ]
-                completed = self.command(package_command, env=env)
-                if completed.returncode != 0:
-                    self.fail(
-                        "package-artifacts",
-                        f"cargo package failed for {package_name}: {tail(completed.stderr)}",
-                    )
-                    return
+            # Package the publishable workspace as one dependency-aware set.
+            # Packaging members individually cannot prepare a new coordinated
+            # release offline: Cargo resolves a packaged path dependency from
+            # crates.io, where the new version correctly does not exist yet.
+            # Workspace packaging keeps those dependencies local while still
+            # producing the exact per-crate archives reviewed below.
+            unpublished_names = sorted(
+                package["name"]
+                for package in metadata.get("packages", [])
+                if package["id"] in workspace_members
+                if package["name"] not in set(policy["published-packages"])
+            )
+            package_command = [
+                "cargo",
+                "package",
+                "--workspace",
+                "--locked",
+                "--offline",
+                "--no-verify",
+                "--allow-dirty",
+                "--target-dir",
+                str(cargo_target),
+            ]
+            for package_name in unpublished_names:
+                package_command.extend(["--exclude", package_name])
+            completed = self.command(package_command, env=env)
+            if completed.returncode != 0:
+                self.fail(
+                    "package-artifacts",
+                    f"cargo workspace package failed: {tail(completed.stderr)}",
+                )
+                return
 
             for name in policy["published-packages"]:
                 package = packages_by_name.get(name)
