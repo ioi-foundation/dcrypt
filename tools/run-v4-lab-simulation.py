@@ -25,6 +25,17 @@ SEED = 0xD4C7_4A8
 SAMPLES = 20_000
 TVLA_THRESHOLD = 4.5
 EXPECTED_TIMING_CASES = 29
+GENERATED_OUTPUTS = (
+    "assurance-report",
+    "evidence-manifest.json",
+    "evidence-manifest.sig",
+    "historical-advisory-replay.json",
+    "lab-report.json",
+    "packages",
+    "sboms",
+    "simulation-signing-public.pem",
+    "timing-noise-profile.json",
+)
 
 
 class LabError(RuntimeError):
@@ -325,20 +336,18 @@ def sign_evidence_manifest(output: pathlib.Path, environment: dict[str, str]) ->
     }
 
 
+def clean_generated_output(output: pathlib.Path) -> None:
+    for generated_name in GENERATED_OUTPUTS:
+        generated_path = output / generated_name
+        if generated_path.is_symlink() or generated_path.is_file():
+            generated_path.unlink()
+        elif generated_path.is_dir():
+            shutil.rmtree(generated_path)
+
+
 def run_lab(output: pathlib.Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
-    generated_report = output / "assurance-report"
-    if generated_report.is_symlink() or generated_report.is_file():
-        generated_report.unlink()
-    elif generated_report.is_dir():
-        shutil.rmtree(generated_report)
-    for generated_name in (
-        "evidence-manifest.json", "evidence-manifest.sig", "lab-report.json",
-        "simulation-signing-public.pem", "timing-noise-profile.json",
-    ):
-        generated_path = output / generated_name
-        if generated_path.is_file() or generated_path.is_symlink():
-            generated_path.unlink()
+    clean_generated_output(output)
     environment = os.environ.copy()
     environment.update({
         "CARGO_INCREMENTAL": "0", "CARGO_NET_OFFLINE": "true",
@@ -486,6 +495,19 @@ def self_test() -> None:
         raise AssertionError("negative control failed")
     if standards_evidence()["total_cases"] != 855:
         raise AssertionError("post-quantum vector closure differs")
+    with tempfile.TemporaryDirectory(prefix="dcrypt-v4-lab-cleanup-") as temporary:
+        output = pathlib.Path(temporary)
+        (output / "packages").mkdir()
+        (output / "packages" / "dcrypt-3.0.0.crate").write_bytes(b"stale")
+        (output / "sboms").mkdir()
+        (output / "sboms" / "production.cdx.json").write_bytes(b"stale")
+        (output / "historical-advisory-replay.json").write_bytes(b"stale")
+        (output / "preserve.txt").write_bytes(b"caller-owned")
+        clean_generated_output(output)
+        if any((output / name).exists() for name in GENERATED_OUTPUTS):
+            raise AssertionError("generated laboratory output cleanup is incomplete")
+        if (output / "preserve.txt").read_bytes() != b"caller-owned":
+            raise AssertionError("laboratory cleanup removed an unknown output member")
     case_lines = []
     for index in range(EXPECTED_TIMING_CASES):
         name = f"fixture-{index:02d}"
