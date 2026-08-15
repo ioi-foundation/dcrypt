@@ -1,6 +1,11 @@
-# dcrypt: A Cryptographic Library in Rust
+# dcrypt
 
-**Evidence-carrying cryptography for a world where assurance expires.**
+## Built to be attacked before it is trusted.
+
+**dcrypt is evidence-native cryptography.** Every release is exercised through
+an openly reproducible security laboratory that injects faults, calibrates
+leakage detection, replays historical vulnerabilities, probes timing-sensitive
+operations, rebuilds packages, and verifies the artifacts users install.
 
 [![Crates.io](https://img.shields.io/crates/v/dcrypt.svg?style=flat-square)](https://crates.io/crates/dcrypt)
 [![Docs.rs](https://img.shields.io/docsrs/dcrypt?style=flat-square)](https://docs.rs/dcrypt)
@@ -16,22 +21,51 @@
 > See the [v2.0.0 withdrawal notice](docs/security/V2.0.0-WITHDRAWAL.md) and
 > [SECURITY.md](SECURITY.md).
 
+The result is not another “security tested” badge. It is a machine-readable
+**Assurance Profile** bound to an exact source tree, dependency closure,
+toolchain, target set, and release artifact collection.
+
+[Explore the assurance model](docs/assurance/README.md) ·
+[Reproduce the open laboratory](docs/assurance/REPRODUCE.md) ·
+[Understand every metric](docs/assurance/METRICS.md)
+
+### The v4 Assurance Profile
+
+The final v4 release run automatically produces both `assurance-profile.json`
+and a self-contained visual report. The profile is regenerated after version
+preparation so it describes the exact versioned release subject—not an earlier
+rehearsal.
+
+| Security signal | v4 release gate | Evidence class |
+| :--- | ---: | :--- |
+| Injected artifact faults | **432 / 432 detected** | Calibrated simulation |
+| Leakage-detector calibration | **20,000 samples per class** | Calibrated simulation |
+| Timing-sensitive paths | **29 cases × 2 complete passes** | Measured product evidence |
+| Historical vulnerability classes | **11 / 11 replayed** | Measured product evidence |
+| Post-quantum vector cases | **855 exact cases** | Repository-corpus correctness |
+| Publishable packages | **12 / 12 byte-equal rebuilds** | Measured product evidence |
+| Software inventories | **5 deterministic SBOMs** | Measured product evidence |
+| Configured build targets | **4 target profiles** | Build and compiler-shape evidence |
+
+These are separate, inspectable signals—not inputs to an opaque security score.
+The simulation metrics demonstrate the declared simulation models and calibrate
+the analysis pipeline. Statistical timing results remain scoped evidence rather
+than a universal constant-time proof, and passing the repository's byte-bound
+ACVP-format corpus is not NIST validation or authenticated upstream provenance.
+
 **dcrypt** (Decentralized Cryptography) is a Rust workspace for classical,
-post-quantum, and hybrid cryptographic APIs. Version 3 is released under a
-strict contract: published dcrypt code and its normal/build
-dependency closure must contain no unsafe Rust, native code, or FFI. External
-implementations may be used only as isolated test oracles. These constraints
-reduce implementation risk but do not by themselves prove cryptographic
-correctness, side-channel resistance, or suitability for production.
+post-quantum, and hybrid cryptographic APIs. Published dcrypt code and its
+normal/build dependency closure are required to contain no unsafe Rust, native
+code, or FFI. External implementations may be used only as isolated test
+oracles. This boundary is mechanically enforced; it is not treated as a
+substitute for cryptographic evidence.
 
-## 🧭 Why dcrypt exists
+## Why dcrypt exists
 
-**An audit is a snapshot, not a security invariant.** An algorithm may be
-standardized, an implementation audited, and a binary signed — yet none of
-those facts makes security permanent. New cryptanalysis, compiler
-transformations, dependency changes, hardware behavior, and previously
-undisclosed vulnerabilities can invalidate yesterday's assurance. dcrypt
-exists to make cryptographic assurance reproducible rather than inherited:
+**The release is the unit of trust.** Algorithms, audits, project reputation,
+and signatures each answer useful questions, but none describes the complete
+software subject a user deploys. dcrypt makes its security posture observable
+at release time:
 
 *   **Minimize and expose the trusted computing base.** No unsafe Rust, native
     code, or FFI in the published code or its normal/build dependency closure
@@ -42,15 +76,18 @@ exists to make cryptographic assurance reproducible rather than inherited:
     and signatures, so no system makes one irreversible bet on one algorithm
     family or one era of cryptanalysis. Separate implementations are still
     required when implementation diversity is part of the threat model.
+*   **Measure the implementation.** Controlled fault and leakage signals
+    calibrate the laboratory; product executions replay known failures and
+    probe timing-sensitive paths.
 *   **Scope every claim.** Release evidence records the applicable release,
     configuration, toolchain, target, property, and threat model. Replay of the
     repository's byte-bound ACVP-format corpus is a correctness gate, not FIPS
     validation or authenticated upstream provenance; statistical timing results
     are evidence, not a constant-time proof. A claim without enough scope to
     evaluate it is treated as a defect.
-*   **Revoke claims when the evidence fails.** When a release violates the
-    assurance contract, the release is withdrawn rather than the contract
-    weakened — as practiced in the
+*   **Preserve assurance continuity.** Evidence is regenerated when the release
+    subject changes. When a release violates the contract, it is withdrawn
+    rather than weakening the contract—as practiced in the
     [v2.0.0 withdrawal](docs/security/V2.0.0-WITHDRAWAL.md) and the
     [eleven advisories](docs/security/README.md) documented for this
     corrective-release campaign.
@@ -59,9 +96,8 @@ exists to make cryptographic assurance reproducible rather than inherited:
     runnable by anyone. No maintainer, auditor, or institution — including
     this project — should become an unquestioned root of trust.
 
-dcrypt's goal is not to ask the world to trust it. Its goal is to be the
-cryptographic library that asks for the least unexamined trust — and supplies
-the most independently reproducible evidence.
+dcrypt does not ask users to inherit a conclusion. It publishes the profile,
+the evidence behind it, and the command that reproduces both.
 
 ## 🚀 Capabilities
 

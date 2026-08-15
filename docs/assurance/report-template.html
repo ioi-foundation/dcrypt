@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>dcrypt v4 Assurance Profile</title>
+  <style>
+    :root {
+      --ink: #eef8f0;
+      --muted: #9ab0a1;
+      --dim: #607469;
+      --ground: #07100c;
+      --ground-2: #0b1610;
+      --line: #1d3125;
+      --signal: #83f7a8;
+      --signal-dim: #286a42;
+      --warm: #f2ca74;
+      --danger: #ff8f78;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--ground); scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 82% 10%, rgba(51, 140, 82, .17), transparent 30rem),
+        linear-gradient(180deg, #08120d 0, var(--ground) 42rem);
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+    a { color: inherit; }
+    button { font: inherit; }
+    .wrap { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
+    .mono { font-family: var(--mono); }
+    .eyebrow {
+      color: var(--signal);
+      font-family: var(--mono);
+      font-size: .72rem;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    header {
+      position: absolute;
+      z-index: 5;
+      inset: 0 0 auto;
+      border-bottom: 1px solid rgba(131, 247, 168, .12);
+    }
+    nav {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand { font-size: 1.3rem; font-weight: 760; letter-spacing: -.04em; text-decoration: none; }
+    .nav-meta { color: var(--muted); display: flex; gap: 24px; font: .72rem var(--mono); }
+
+    .hero {
+      min-height: 100svh;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      align-items: end;
+      border-bottom: 1px solid var(--line);
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: .21;
+      background-image:
+        linear-gradient(rgba(131, 247, 168, .09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(131, 247, 168, .09) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: linear-gradient(to bottom, transparent, black 24%, black 72%, transparent);
+    }
+    .hero-signal {
+      position: absolute;
+      width: min(900px, 72vw);
+      right: -4vw;
+      top: 11vh;
+      opacity: .72;
+      filter: drop-shadow(0 0 28px rgba(131, 247, 168, .12));
+    }
+    .hero-inner {
+      position: relative;
+      z-index: 2;
+      padding: 136px 0 64px;
+    }
+    .hero-copy { width: min(800px, 78vw); }
+    h1 {
+      margin: 17px 0 20px;
+      max-width: 850px;
+      font-size: clamp(3.5rem, 7.8vw, 7.6rem);
+      font-weight: 720;
+      letter-spacing: -.075em;
+      line-height: .9;
+    }
+    .lede { max-width: 660px; margin: 0; color: #c0d1c5; font-size: clamp(1rem, 1.6vw, 1.35rem); }
+    .actions { display: flex; gap: 13px; margin-top: 34px; flex-wrap: wrap; }
+    .action {
+      display: inline-flex;
+      min-height: 47px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 19px;
+      border: 1px solid var(--signal);
+      color: var(--ground);
+      background: var(--signal);
+      text-decoration: none;
+      font: 700 .76rem var(--mono);
+      letter-spacing: .02em;
+      transition: transform .18s ease, background .18s ease;
+    }
+    .action:hover { transform: translateY(-2px); background: #a6ffc1; }
+    .action.secondary { color: var(--ink); background: transparent; border-color: #385142; }
+    .action.secondary:hover { border-color: var(--signal); }
+    .hero-foot {
+      margin-top: 74px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      gap: 40px;
+      color: var(--muted);
+      font: .72rem var(--mono);
+    }
+    .status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 9px; border-radius: 50%; background: var(--signal); box-shadow: 0 0 16px var(--signal); }
+
+    section { padding: 112px 0; border-bottom: 1px solid var(--line); }
+    .section-head { display: grid; grid-template-columns: 1fr 2fr; gap: 40px; margin-bottom: 62px; }
+    h2 { margin: 0; max-width: 740px; font-size: clamp(2.4rem, 5vw, 5rem); line-height: .98; letter-spacing: -.06em; }
+    .section-intro { align-self: end; max-width: 610px; margin: 0; color: var(--muted); font-size: 1.04rem; }
+
+    .metric-ledger { border-top: 1px solid var(--line); }
+    .metric-row {
+      display: grid;
+      grid-template-columns: minmax(180px, 1.1fr) minmax(230px, 1fr) 2fr;
+      gap: 30px;
+      align-items: center;
+      min-height: 136px;
+      border-bottom: 1px solid var(--line);
+      transition: background .2s ease, padding .2s ease;
+    }
+    .metric-row:hover { background: rgba(131, 247, 168, .035); padding-inline: 12px; }
+    .metric-value { font-size: clamp(2.2rem, 4vw, 4.4rem); font-weight: 720; letter-spacing: -.065em; white-space: nowrap; }
+    .metric-name { font-weight: 700; }
+    .metric-class { margin-top: 6px; color: var(--signal); font: .68rem var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+    .metric-copy { color: var(--muted); max-width: 570px; }
+
+    .simulation-layout { display: grid; grid-template-columns: .9fr 1.1fr; gap: 80px; align-items: start; }
+    .fault-number { margin-top: 8px; font-size: clamp(4rem, 9vw, 8.8rem); line-height: .9; font-weight: 750; letter-spacing: -.08em; }
+    .fault-caption { color: var(--muted); max-width: 390px; margin: 23px 0 33px; }
+    .fault-grid { display: grid; grid-template-columns: repeat(24, 1fr); gap: 3px; max-width: 540px; }
+    .fault-bit { aspect-ratio: 1; background: var(--signal-dim); opacity: .9; }
+    .fault-grid.visible .fault-bit { animation: bit-in .35s ease both; animation-delay: calc(var(--i) * 1.2ms); }
+    @keyframes bit-in { from { transform: scale(.25); } to { transform: scale(1); } }
+
+    .calibration { border-top: 1px solid var(--line); }
+    .calibration-row { display: grid; grid-template-columns: 160px 1fr 95px; gap: 16px; align-items: center; min-height: 88px; border-bottom: 1px solid var(--line); }
+    .calibration-label { color: var(--muted); font: .72rem var(--mono); text-transform: uppercase; }
+    .bar-track { height: 10px; position: relative; background: #102019; overflow: visible; }
+    .bar { height: 100%; width: 0; background: var(--signal); transition: width 1s cubic-bezier(.2,.8,.2,1); }
+    .bar.threshold { background: var(--warm); }
+    .bar.negative { background: #718a79; }
+    .calibration-value { text-align: right; font: 700 .86rem var(--mono); }
+    .calibration-note { margin-top: 25px; color: var(--dim); font-size: .78rem; }
+
+    .timing-controls { display: flex; gap: 8px; margin-bottom: 28px; }
+    .timing-toggle { border: 1px solid var(--line); background: transparent; color: var(--muted); padding: 9px 13px; cursor: pointer; font: .72rem var(--mono); }
+    .timing-toggle.active { border-color: var(--signal); color: var(--signal); }
+    .timing-summary { display: flex; align-items: baseline; gap: 14px; margin-bottom: 37px; }
+    .timing-summary strong { font-size: clamp(3.2rem, 7vw, 6.5rem); line-height: 1; letter-spacing: -.07em; }
+    .timing-summary span { color: var(--muted); }
+    .timing-list { border-top: 1px solid var(--line); }
+    .timing-row { display: grid; grid-template-columns: minmax(210px, 1.2fr) 2fr 110px; gap: 24px; align-items: center; min-height: 58px; border-bottom: 1px solid var(--line); font-size: .77rem; }
+    .timing-name { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .timing-track { height: 4px; background: #112119; }
+    .timing-bar { height: 100%; width: 0; background: var(--signal); transition: width .7s ease; }
+    .timing-result { color: var(--signal); text-align: right; font: .7rem var(--mono); }
+
+    .scope-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; }
+    .scope-column h3 { margin: 0 0 25px; font-size: 1.25rem; }
+    .scope-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+    .scope-list li { padding: 15px 0; border-bottom: 1px solid var(--line); color: var(--muted); font: .76rem var(--mono); }
+    .scope-list.claim li::before { content: "+"; color: var(--signal); margin-right: 12px; }
+    .scope-list.boundary li::before { content: "—"; color: var(--warm); margin-right: 12px; }
+
+    .final { min-height: 70vh; display: grid; align-items: center; }
+    .final h2 { max-width: 820px; }
+    .final-copy { max-width: 640px; margin: 25px 0 0; color: var(--muted); font-size: 1.05rem; }
+    .command { margin-top: 34px; padding: 22px 0; border-block: 1px solid var(--line); color: var(--signal); font: .78rem/1.7 var(--mono); overflow-x: auto; }
+    footer { padding: 34px 0 50px; color: var(--dim); font: .7rem var(--mono); }
+    .footer-inner { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+    .reveal { transform: translateY(24px); transition: transform .7s ease; }
+    .reveal.visible { transform: none; }
+    .hero .eyebrow, .hero h1, .hero .lede, .hero .actions, .hero-foot { animation: hero-in .8s ease both; }
+    .hero h1 { animation-delay: .08s; }
+    .hero .lede { animation-delay: .18s; }
+    .hero .actions { animation-delay: .28s; }
+    .hero-foot { animation-delay: .4s; }
+    @keyframes hero-in { from { transform: translateY(20px); } to { transform: none; } }
+
+    @media (max-width: 760px) {
+      .wrap { width: min(100% - 28px, 1180px); }
+      .nav-meta span:not(:last-child) { display: none; }
+      .hero-inner { padding: 102px 0 24px; }
+      .hero-copy { width: 100%; }
+      h1 { font-size: clamp(3.25rem, 14vw, 5.5rem); }
+      .hero-signal { width: 125vw; right: -60vw; top: 14vh; opacity: .42; }
+      .hero-foot { gap: 15px; flex-direction: column; margin-top: 42px; padding-top: 15px; }
+      section { padding: 78px 0; }
+      .section-head, .simulation-layout, .scope-layout { grid-template-columns: 1fr; gap: 30px; }
+      .metric-row { grid-template-columns: 1fr 1fr; gap: 12px; padding: 23px 0; }
+      .metric-copy { grid-column: 1 / -1; }
+      .fault-grid { grid-template-columns: repeat(18, 1fr); }
+      .calibration-row { grid-template-columns: 110px 1fr 70px; }
+      .timing-row { grid-template-columns: minmax(150px, 1fr) 1fr 60px; gap: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="wrap" aria-label="Report navigation">
+      <a class="brand" href="#top">dcrypt</a>
+      <div class="nav-meta"><span id="release-label">v4</span><span id="subject-short">subject</span><span id="nav-status">evidence current</span></div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <svg class="hero-signal" viewBox="0 0 1000 600" fill="none" aria-hidden="true">
+        <path d="M0 342 C70 340 74 337 120 341 S190 344 230 339 S290 348 340 340 S405 336 448 341 S515 347 565 339 S630 343 680 340 S755 337 810 341 S900 338 1000 342" stroke="#365b43" stroke-width="2"/>
+        <path d="M0 375 C115 374 160 371 242 376 C310 380 332 118 382 375 C415 532 457 247 498 375 C550 472 578 325 621 375 C688 395 764 368 1000 375" stroke="#83f7a8" stroke-width="3"/>
+        <circle cx="382" cy="375" r="8" fill="#83f7a8"/><circle cx="498" cy="375" r="5" fill="#83f7a8"/>
+      </svg>
+      <div class="hero-inner wrap">
+        <div class="hero-copy">
+          <div class="eyebrow">Evidence-native cryptography / v4 Assurance Profile</div>
+          <h1>Built to be attacked before it is trusted.</h1>
+          <p class="lede">One exact dcrypt release, exercised through an open laboratory and published with the evidence required to reproduce the result.</p>
+          <div class="actions">
+            <a class="action" href="#profile">Explore evidence</a>
+            <a class="action secondary" href="#reproduce">Reproduce</a>
+          </div>
+        </div>
+        <div class="hero-foot">
+          <span><i class="status-dot"></i><span id="status-label">Evidence current for this subject</span></span>
+          <span>Generated <span id="generated-date">—</span></span>
+          <span>Commit <span id="hero-subject">—</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="profile">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="eyebrow">The Assurance Profile</div>
+          <div><h2>Security signals you can inspect.</h2><p class="section-intro">No composite score and no ornamental badge. Each number represents a distinct model, execution, or artifact set.</p></div>
+        </div>
+        <div class="metric-ledger reveal" id="metric-ledger"></div>
+      </div>
+    </section>
+
+    <section id="simulation">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="eyebrow">Open Security Lab</div>
+          <div><h2>Test the detection system, too.</h2><p class="section-intro">Controlled signals establish that the laboratory can see what it is designed to detect. Product executions and simulation controls remain visibly distinct.</p></div>
+        </div>
+        <div class="simulation-layout">
+          <div class="reveal">
+            <div class="eyebrow">Artifact fault model</div>
+            <div class="fault-number"><span id="fault-detected">—</span>/<span id="fault-injected">—</span></div>
+            <p class="fault-caption">Single-bit mutations detected across the declared artifact subject. Every square below is one injected fault.</p>
+            <div class="fault-grid" id="fault-grid" aria-label="Injected artifact faults"></div>
+          </div>
+          <div class="reveal">
+            <div class="eyebrow">Leakage-detector calibration</div>
+            <div class="calibration" id="calibration"></div>
+            <p class="calibration-note">Absolute Welch t statistic. The positive control contains a seeded Hamming-weight signal; the negative control contains seeded noise. This calibrates the analysis pipeline and is not a physical-device measurement.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="timing">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="eyebrow">Measured product evidence</div>
+          <div><h2>Twenty-nine timing-sensitive paths. Twice.</h2><p class="section-intro">A fresh baseline and a complete reproduction each pass one suite-wide Holm-corrected family decision.</p></div>
+        </div>
+        <div class="reveal">
+          <div class="timing-summary"><strong id="timing-score">29/29</strong><span>non-blocking under the declared statistical policy</span></div>
+          <div class="timing-controls" id="timing-controls"></div>
+          <div class="timing-list" id="timing-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="scope">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="eyebrow">Claim boundary</div>
+          <div><h2>Precise enough to challenge.</h2><p class="section-intro">The report says what the evidence demonstrates and preserves the boundary around claims requiring a particular device, laboratory, or independent identity.</p></div>
+        </div>
+        <div class="scope-layout reveal">
+          <div class="scope-column"><h3>Demonstrated in this profile</h3><ul class="scope-list claim" id="demonstrates"></ul></div>
+          <div class="scope-column"><h3>Outside this profile</h3><ul class="scope-list boundary" id="boundaries"></ul></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="final" id="reproduce">
+      <div class="wrap reveal">
+        <div class="eyebrow">Reproduce it</div>
+        <h2>Do not inherit the result. Run it.</h2>
+        <p class="final-copy">The same command replays the vulnerability history, standards corpus, timing families, build matrix, package rebuilds, SBOM production, and calibrated simulations—then regenerates this report.</p>
+        <div class="command">python3 -B tools/run-v4-lab-simulation.py \<br>&nbsp;&nbsp;--output target/release-evidence/v4-lab</div>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="wrap footer-inner"><span>dcrypt / evidence-native cryptography</span><span id="footer-digest">profile subject —</span></div></footer>
+
+  <script id="assurance-profile" type="application/json">__DCRYPT_ASSURANCE_PROFILE__</script>
+  <script>
+    const profile = JSON.parse(document.getElementById('assurance-profile').textContent);
+    const metrics = profile.metrics;
+    const short = value => value.slice(0, 12);
+    const clean = value => value.replaceAll('-', ' ');
+    const number = value => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
+
+    document.getElementById('release-label').textContent = profile.release.label + ' / ' + profile.release.channel;
+    document.getElementById('subject-short').textContent = short(profile.release.subject.commit);
+    document.getElementById('nav-status').textContent = profile.status.result.toUpperCase();
+    document.getElementById('status-label').textContent = profile.status.label;
+    document.getElementById('generated-date').textContent = profile.release.generated_at_utc.slice(0, 10);
+    document.getElementById('hero-subject').textContent = short(profile.release.subject.commit);
+    document.getElementById('footer-digest').textContent = 'subject ' + profile.release.subject.commit;
+
+    const ledger = [
+      [metrics.artifact_faults.detected + '/' + metrics.artifact_faults.injected, 'Injected faults detected', metrics.artifact_faults.classification, 'Every single-bit mutation in the declared artifact model changed the bound digest.'],
+      [number(metrics.leakage_calibration.positive_control_abs_t), 'Positive-control |t|', metrics.leakage_calibration.classification, number(metrics.leakage_calibration.samples_per_class) + ' traces per class calibrated the detector against a known seeded signal.'],
+      [metrics.timing.blocking_cases + ' × ' + metrics.timing.complete_passes, 'Timing-path executions', metrics.timing.classification, 'Two complete familywise passes across secret-bearing and rejection-sensitive operations.'],
+      [metrics.historical_replay.passed + '/' + metrics.historical_replay.total, 'Historical failures closed', metrics.historical_replay.classification, 'Every documented dcrypt vulnerability class is replayed against this exact subject.'],
+      [metrics.standards.total_cases.toLocaleString(), 'Post-quantum vector cases', metrics.standards.classification, metrics.standards.ml_dsa_cases + ' ML-DSA and ' + metrics.standards.ml_kem_cases + ' ML-KEM repository-corpus cases.'],
+      [metrics.packages.byte_equal + '/' + metrics.packages.total, 'Byte-equal packages', metrics.packages.classification, 'Every publishable crate is assembled in two separate clean target directories.'],
+      [String(metrics.sboms.deterministic), 'Deterministic SBOMs', metrics.sboms.classification, 'Separate inventories cover production, verification, fuzzing, migration, and benchmark closures.'],
+      [String(metrics.platforms.configured_targets), 'Configured targets', metrics.platforms.classification, 'Linux x86-64, Linux AArch64, WebAssembly, and embedded no_std build profiles.'],
+    ];
+    document.getElementById('metric-ledger').innerHTML = ledger.map(row => `
+      <div class="metric-row">
+        <div class="metric-value">${row[0]}</div>
+        <div><div class="metric-name">${row[1]}</div><div class="metric-class">${clean(row[2])}</div></div>
+        <div class="metric-copy">${row[3]}</div>
+      </div>`).join('');
+
+    const faults = metrics.artifact_faults;
+    document.getElementById('fault-detected').textContent = faults.detected;
+    document.getElementById('fault-injected').textContent = faults.injected;
+    const faultGrid = document.getElementById('fault-grid');
+    for (let index = 0; index < faults.injected; index += 1) {
+      const bit = document.createElement('i'); bit.className = 'fault-bit'; bit.style.setProperty('--i', index); faultGrid.appendChild(bit);
+    }
+
+    const leakage = metrics.leakage_calibration;
+    const calibrationRows = [
+      ['Negative control', leakage.negative_control_abs_t, 'negative'],
+      ['Threshold', leakage.threshold, 'threshold'],
+      ['Positive control', leakage.positive_control_abs_t, 'positive'],
+    ];
+    const visualMax = Math.max(leakage.threshold * 2.5, leakage.negative_control_abs_t);
+    document.getElementById('calibration').innerHTML = calibrationRows.map(row => {
+      const width = row[2] === 'positive' ? 100 : Math.max(2, Math.min(100, row[1] / visualMax * 100));
+      return `<div class="calibration-row"><div class="calibration-label">${row[0]}</div><div class="bar-track"><div class="bar ${row[2]}" data-width="${width}%"></div></div><div class="calibration-value">|t| ${number(row[1])}</div></div>`;
+    }).join('');
+
+    const timingControls = document.getElementById('timing-controls');
+    const timingList = document.getElementById('timing-list');
+    function renderTiming(runIndex) {
+      [...timingControls.children].forEach((button, index) => button.classList.toggle('active', index === runIndex));
+      timingList.innerHTML = metrics.timing.runs[runIndex].cases.map(row => {
+        const ratio = Math.min(1, Math.abs(row.mean_diff_ns) / Math.max(row.practical_threshold_ns, .000001));
+        return `<div class="timing-row" title="mean ${row.mean_diff_ns} ns; threshold ${row.practical_threshold_ns} ns; p ${row.primary_p_value}"><div class="timing-name">${row.name}</div><div class="timing-track"><div class="timing-bar" data-width="${Math.max(1, ratio * 100)}%"></div></div><div class="timing-result">CLEAR</div></div>`;
+      }).join('');
+      requestAnimationFrame(() => document.querySelectorAll('.timing-bar').forEach(bar => bar.style.width = bar.dataset.width));
+    }
+    metrics.timing.runs.forEach((run, index) => {
+      const button = document.createElement('button'); button.className = 'timing-toggle'; button.textContent = run.label; button.addEventListener('click', () => renderTiming(index)); timingControls.appendChild(button);
+    });
+    renderTiming(0);
+
+    document.getElementById('demonstrates').innerHTML = profile.scope.demonstrates.map(value => `<li>${clean(value)}</li>`).join('');
+    document.getElementById('boundaries').innerHTML = profile.scope.does_not_claim.map(value => `<li>${clean(value)}</li>`).join('');
+
+    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add('visible');
+      if (entry.target.id === 'fault-grid') entry.target.classList.add('visible');
+      entry.target.querySelectorAll?.('.bar').forEach(bar => bar.style.width = bar.dataset.width);
+      observer.unobserve(entry.target);
+    }), { threshold: .14 });
+    document.querySelectorAll('.reveal, #fault-grid, #calibration').forEach(element => observer.observe(element));
+  </script>
+</body>
+</html>

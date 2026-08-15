@@ -46,6 +46,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added an ephemeral Ed25519 signature over the canonical laboratory artifact
   manifest. It proves bundle integrity for one lab run and intentionally makes
   no external signer-identity or administrative-independence claim.
+- Added an automatically generated, machine-readable v4 Assurance Profile and
+  self-contained visual evidence report. The generator fails closed on artifact
+  drift, command-set drift, incomplete timing families, simulation-control
+  failure, advisory/vector/package/SBOM count drift, or signature failure.
+- Added structured case-level extraction for both complete 29-case timing
+  families and the complete 855-case ML-DSA/ML-KEM repository-corpus replay to
+  the laboratory report.
+- Made release preparation rerun the laboratory after the versioned commit is
+  created, verify that the profile/report reproduce byte-for-byte, and attach
+  both artifacts to the reviewed GitHub release draft handoff.
 
 ## [3.0.0] - 2026-08-09
 
@@ -441,7 +451,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   identified allocation-lifecycle and ownership gaps; v3 uses exact-size
   protected ownership while retaining bounded slice access.
 
-[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v3.0.0...v4.0.0
 [3.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.3...v2.0.0
 [1.2.3]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.2...v1.2.3  

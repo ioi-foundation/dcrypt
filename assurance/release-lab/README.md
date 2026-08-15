@@ -5,6 +5,8 @@ software release and for explicitly named simulation models.  It combines
 real product executions with deterministic synthetic controls:
 
 - all historical advisory regressions run against the candidate;
+- the complete post-quantum standards-vector target runs and the laboratory
+  records the exact 615 ML-DSA and 240 ML-KEM repository-corpus case closure;
 - the full statistical timing suite runs twice on one disclosed host CPU: a
   fresh lab-local baseline followed by a complete statistical reproduction;
   both suite-wide family decisions must pass, while host-noise drift is recorded
@@ -21,7 +23,9 @@ real product executions with deterministic synthetic controls:
 - an OpenAI Daybreak adversarial review records the claim boundary and known
   risk disposition; and
 - an ephemeral Ed25519 key signs a canonical manifest of the generated lab
-  artifacts, and the runner immediately verifies the signature.
+  artifacts, and the runner immediately verifies the signature; and
+- the passing report automatically produces a machine-readable Assurance
+  Profile plus a self-contained visual report.
 
 The report is laboratory proof for those exact models and executions.  It is
 not a claim that a simulated Hamming-weight trace is a measurement from a
@@ -34,6 +38,22 @@ Run the complete lab with:
 ```text
 python3 -B tools/run-v4-lab-simulation.py \
   --output target/release-evidence/v4-lab
+```
+
+Open the generated report at
+`target/release-evidence/v4-lab/assurance-report/assurance-report.html`, or
+consume
+`target/release-evidence/v4-lab/assurance-report/assurance-profile.json`.
+Neither file contains independently maintained marketing values: both are
+deterministic projections of `lab-report.json` and its verified artifacts.
+
+Confirm that the projection remains byte-for-byte reproducible with:
+
+```text
+python3 -B tools/generate-v4-assurance-report.py \
+  --check \
+  --lab-output target/release-evidence/v4-lab \
+  --output target/release-evidence/v4-lab/assurance-report
 ```
 
 The runner uses fixed commands, toolchain selectors, random seeds, statistical

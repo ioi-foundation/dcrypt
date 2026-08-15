@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ioi-foundation/dcrypt/blob/master/docs/assurance/assurance-profile.schema.json",
+  "title": "dcrypt v4 Assurance Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "content_policy",
+    "product",
+    "release",
+    "status",
+    "positioning",
+    "metrics",
+    "evidence",
+    "scope"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "content_policy": { "const": "dcrypt-v4-assurance-profile-v1" },
+    "product": { "const": "dcrypt" },
+    "release": {
+      "type": "object",
+      "required": ["version", "label", "channel", "subject", "generated_at_utc"],
+      "properties": {
+        "version": { "type": "string" },
+        "label": { "type": "string" },
+        "channel": { "enum": ["release-candidate", "working-tree rehearsal"] },
+        "generated_at_utc": { "type": "string", "format": "date-time" },
+        "subject": {
+          "type": "object",
+          "required": ["commit", "tree", "working_tree_clean", "working_tree_status_sha256"],
+          "properties": {
+            "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "tree": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "working_tree_clean": { "type": "boolean" },
+            "working_tree_status_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "required": ["result", "label", "commands_passed", "commands_total"],
+      "properties": {
+        "result": { "const": "pass" },
+        "label": { "type": "string" },
+        "commands_passed": { "type": "integer", "minimum": 1 },
+        "commands_total": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "positioning": { "type": "object" },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "artifact_faults",
+        "leakage_calibration",
+        "timing",
+        "historical_replay",
+        "packages",
+        "sboms",
+        "standards",
+        "platforms"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["lab_report_sha256", "manifest_sha256", "manifest_signature", "threat_review"]
+    },
+    "scope": {
+      "type": "object",
+      "required": ["demonstrates", "does_not_claim"],
+      "properties": {
+        "demonstrates": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "does_not_claim": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

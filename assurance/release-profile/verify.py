@@ -40,6 +40,7 @@ TOOLS = (
     "tools/generate-release-sboms.py",
     "tools/verify-repeatable-packages.py",
     "tools/run-v4-lab-simulation.py",
+    "tools/generate-v4-assurance-report.py",
 )
 EVIDENCE = (
     "assurance/release-lab/DAYBREAK-THREAT-REVIEW.md",

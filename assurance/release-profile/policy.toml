@@ -20,6 +20,7 @@ mandatory-tools = [
   "tools/generate-release-sboms.py",
   "tools/verify-repeatable-packages.py",
   "tools/run-v4-lab-simulation.py",
+  "tools/generate-v4-assurance-report.py",
 ]
 
 mandatory-evidence = [

@@ -84,17 +84,25 @@ on a secret-derived GHASH accumulator bit. Set
 
 `run-v4-lab-simulation.py` is the non-skippable evidence producer for the v4
 portable release profile. It replays all eleven historical advisory commands,
-generates and verifies five deterministic CycloneDX SBOMs, packages all twelve
-publishable crates twice, runs the implementation/target and compiler-shape
-gates, and requires two complete statistical timing-family passes on a
-qualified pinned CPU. Deterministic positive/negative TVLA controls and an
-exhaustive single-bit artifact-fault control test the named simulation models.
+runs the complete 855-case ML-DSA/ML-KEM repository corpus, generates and
+verifies five deterministic CycloneDX SBOMs, packages all twelve publishable
+crates twice, runs the implementation/target and compiler-shape gates, and
+requires two complete statistical timing-family passes on a qualified pinned
+CPU. Deterministic positive/negative TVLA controls and an exhaustive single-bit
+artifact-fault control test the named simulation models.
 
 The runner writes a canonical evidence manifest, signs it with an ephemeral
 Ed25519 key, immediately verifies that signature, and destroys the private key.
 The public key and signature establish one coherent run; they are not an
 external identity or independent-attestation claim. See
 `assurance/release-lab/README.md` for reproduction and verification commands.
+
+`generate-v4-assurance-report.py` validates the lab artifact digests, exact
+command closure, structured 29-case timing results, simulation controls,
+historical replay, vector count, packages, SBOMs, and signature result. It then
+emits `assurance-profile.json` and a self-contained `assurance-report.html`.
+The complete lab invokes it automatically. Use `--check` to prove an existing
+presentation still reproduces byte-for-byte from the lab evidence.
 
 ## Release model
 

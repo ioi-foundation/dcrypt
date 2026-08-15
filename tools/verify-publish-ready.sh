@@ -169,6 +169,8 @@ PYTHONDONTWRITEBYTECODE=1 python3 -B "$PROJECT_ROOT/tools/verify-repeatable-pack
     || { fail "repeatable-package controls failed"; exit 1; }
 PYTHONDONTWRITEBYTECODE=1 python3 -B "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" --self-test \
     || { fail "simulated laboratory controls failed"; exit 1; }
+PYTHONDONTWRITEBYTECODE=1 python3 -B "$PROJECT_ROOT/tools/generate-v4-assurance-report.py" --self-test \
+    || { fail "Assurance Profile generation controls failed"; exit 1; }
 
 printf "\n${BLUE}Threat-model release foundation${NC}\n"
 if PYTHONDONTWRITEBYTECODE=1 python3 -B \

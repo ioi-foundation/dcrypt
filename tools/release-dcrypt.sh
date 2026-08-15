@@ -247,6 +247,9 @@ run_release_acceptance_gate() {
         "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" --self-test \
         || die "simulated laboratory controls failed"
     PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/generate-v4-assurance-report.py" --self-test \
+        || die "Assurance Profile generation controls failed"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
         "$PROJECT_ROOT/assurance/threat-models/generate-threat-models.py" --check \
         || die "threat-model generated artifacts are stale or invalid"
     PYTHONDONTWRITEBYTECODE=1 python3 -B \
@@ -478,6 +481,20 @@ check_package_contents() {
     done
 }
 
+run_v4_laboratory() {
+    local evidence_root="$PROJECT_ROOT/target/release-evidence/v4-lab"
+    info "Running the open v4 software/simulated laboratory"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" \
+        --output "$evidence_root" \
+        || die "v4 software/simulated laboratory failed"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/generate-v4-assurance-report.py" \
+        --check --lab-output "$evidence_root" \
+        --output "$evidence_root/assurance-report" \
+        || die "generated v4 Assurance Profile did not reproduce"
+}
+
 run_all_gates() {
     local version
     version=$(current_version)
@@ -486,11 +503,7 @@ run_all_gates() {
     run_check_gates
     run_test_gates
     check_package_contents
-    info "Running the open v4 software/simulated laboratory"
-    PYTHONDONTWRITEBYTECODE=1 python3 -B \
-        "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" \
-        --output "$PROJECT_ROOT/target/release-evidence/v4-lab" \
-        || die "v4 software/simulated laboratory failed"
+    run_v4_laboratory
 }
 
 update_benchmarks() {
@@ -596,6 +609,9 @@ prepare_release() {
     assert_clean_tree
     run_publish_verifier "$VERSION" true
     check_package_contents
+    # The rehearsal laboratory ran before version preparation. Re-run it on the
+    # exact versioned commit so release assets cannot describe the prior subject.
+    run_v4_laboratory
 
     local tag="v$VERSION"
     if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
@@ -636,9 +652,12 @@ print_release_handoff() {
         "$RELEASE_BRANCH" "$head_commit"
     printf '  git ls-remote origin %q %q %q\n' \
         "refs/heads/$RELEASE_BRANCH" "refs/tags/$tag" "refs/tags/$tag^{}"
-    printf '5. Create and review a GitHub draft from reviewed RELEASE_NOTES.md:\n'
-    printf '  gh release create %q --draft --verify-tag --title %q --notes-file RELEASE_NOTES.md\n' \
-        "$tag" "dcrypt $tag"
+    printf '5. Create and review a GitHub draft with the generated Assurance Profile:\n'
+    printf '  gh release create %q %q %q --draft --verify-tag --title %q --notes-file RELEASE_NOTES.md\n' \
+        "$tag" \
+        "target/release-evidence/v4-lab/assurance-report/assurance-profile.json" \
+        "target/release-evidence/v4-lab/assurance-report/assurance-report.html" \
+        "dcrypt $tag"
     printf '6. Only after that draft exists, run:\n'
     printf '  tools/release-dcrypt.sh --version %q --execute\n' "$VERSION"
 }
@@ -660,6 +679,10 @@ release_self_test() {
     if grep -Fq 'refs/heads/agent/' <<<"$handoff"; then
         die "self-test: handoff used a feature branch as the release branch"
     fi
+    grep -Fq 'assurance-report/assurance-profile.json' <<<"$handoff" \
+        || die "self-test: release handoff omitted the machine Assurance Profile"
+    grep -Fq 'assurance-report/assurance-report.html' <<<"$handoff" \
+        || die "self-test: release handoff omitted the visual assurance report"
     grep -Fq 'RELEASE_BRANCH = "master"' \
         "$SCRIPT_DIR/verify-remote-release-ready.py" \
         || die "self-test: shell and remote gate release branches differ"
@@ -716,6 +739,7 @@ release_self_test() {
         'tools/generate-release-sboms.py" --self-test' \
         'tools/verify-repeatable-packages.py" --self-test' \
         'tools/run-v4-lab-simulation.py" --self-test' \
+        'tools/generate-v4-assurance-report.py" --self-test' \
         'assurance/threat-models/generate-threat-models.py' \
         'assurance/threat-models/verify-threat-models.py" --self-test' \
         'assurance/threat-models/verify-threat-models.py" --mode ci' \
@@ -727,6 +751,7 @@ release_self_test() {
         'tools/generate-release-sboms.py" --self-test' \
         'tools/verify-repeatable-packages.py" --self-test' \
         'tools/run-v4-lab-simulation.py" --self-test' \
+        'tools/generate-v4-assurance-report.py" --self-test' \
         'assurance/threat-models/generate-threat-models.py' \
         'assurance/threat-models/verify-threat-models.py" --self-test' \
         'assurance/threat-models/verify-threat-models.py" --mode ci' \
@@ -738,6 +763,7 @@ release_self_test() {
         'tools/generate-release-sboms.py --self-test' \
         'tools/verify-repeatable-packages.py --self-test' \
         'tools/run-v4-lab-simulation.py --self-test' \
+        'tools/generate-v4-assurance-report.py --self-test' \
         'assurance/threat-models/generate-threat-models.py --check' \
         'assurance/threat-models/verify-threat-models.py --self-test' \
         'assurance/threat-models/verify-threat-models.py --mode ci' \

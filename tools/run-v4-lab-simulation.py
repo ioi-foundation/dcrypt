@@ -11,6 +11,8 @@ import math
 import os
 import pathlib
 import random
+import re
+import shutil
 import statistics
 import subprocess
 import sys
@@ -22,6 +24,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SEED = 0xD4C7_4A8
 SAMPLES = 20_000
 TVLA_THRESHOLD = 4.5
+EXPECTED_TIMING_CASES = 29
 
 
 class LabError(RuntimeError):
@@ -93,6 +96,69 @@ def synthetic_controls() -> dict:
     }
 
 
+def parse_timing_family(raw: bytes) -> dict:
+    text = raw.decode("utf-8", errors="replace")
+    diagnostics: dict[str, dict] = {}
+    current: dict | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("Timing diagnostics: "):
+            name = stripped.removeprefix("Timing diagnostics: ")
+            current = {"name": name}
+            diagnostics[name] = current
+        elif current is not None and stripped.startswith("Mean A-B: "):
+            current["mean_diff_ns"] = float(stripped.removeprefix("Mean A-B: ").removesuffix(" ns"))
+        elif current is not None and stripped.startswith("99% paired-bootstrap CI (descriptive): "):
+            match = re.fullmatch(
+                r"99% paired-bootstrap CI \(descriptive\): \[([-+0-9.eE]+), ([-+0-9.eE]+)\] ns",
+                stripped,
+            )
+            if match is None:
+                raise LabError("could not parse timing confidence interval")
+            current["ci_lower_ns"] = float(match.group(1))
+            current["ci_upper_ns"] = float(match.group(2))
+        elif current is not None and stripped.startswith("Practical threshold: "):
+            current["practical_threshold_ns"] = float(
+                stripped.removeprefix("Practical threshold: ").removesuffix(" ns")
+            )
+
+    family_match = re.search(
+        r"Blocking timing family: ([0-9]+) cases, Holm FWER alpha=([-+0-9.eE]+)", text
+    )
+    if family_match is None:
+        raise LabError("timing output omitted the blocking family summary")
+    family_count = int(family_match.group(1))
+    decisions = []
+    decision_pattern = re.compile(
+        r"^  (.+): primary_p=([-+0-9.eE]+), holm_reject=(true|false), "
+        r"practical=(true|false), blocks=(true|false)$",
+        re.MULTILINE,
+    )
+    for match in decision_pattern.finditer(text):
+        name = match.group(1)
+        diagnostic = diagnostics.get(name)
+        required = {"name", "mean_diff_ns", "ci_lower_ns", "ci_upper_ns", "practical_threshold_ns"}
+        if diagnostic is None or set(diagnostic) != required:
+            raise LabError(f"timing output omitted structured diagnostics for {name}")
+        decisions.append({
+            **diagnostic,
+            "primary_p_value": float(match.group(2)),
+            "holm_reject": match.group(3) == "true",
+            "exceeds_practical_threshold": match.group(4) == "true",
+            "blocks_release": match.group(5) == "true",
+        })
+    if family_count != EXPECTED_TIMING_CASES or len(decisions) != EXPECTED_TIMING_CASES:
+        raise LabError(
+            f"timing output contained {family_count} declared and {len(decisions)} parsed cases; "
+            f"expected {EXPECTED_TIMING_CASES}"
+        )
+    return {
+        "cases": decisions,
+        "family_alpha": float(family_match.group(2)),
+        "family_passed": not any(row["blocks_release"] for row in decisions),
+    }
+
+
 def run_command(command_id: str, argv: list[str], environment: dict[str, str]) -> dict:
     completed = subprocess.run(
         argv, cwd=ROOT, env=environment, stdout=subprocess.PIPE,
@@ -101,11 +167,44 @@ def run_command(command_id: str, argv: list[str], environment: dict[str, str]) -
     if completed.returncode != 0:
         sys.stderr.buffer.write(completed.stdout[-32768:])
         raise LabError(f"laboratory command failed: {command_id}")
-    return {
+    result = {
         "argv": argv,
         "id": command_id,
         "output_sha256": sha256_bytes(completed.stdout),
         "passed": True,
+    }
+    if command_id in {"empirical-host-timing-baseline", "empirical-host-timing-reproduction"}:
+        result["timing_family"] = parse_timing_family(completed.stdout)
+        if result["timing_family"]["family_passed"] is not True:
+            raise LabError(f"timing family blocked the release: {command_id}")
+    return result
+
+
+def count_expected_tests(path: pathlib.Path) -> int:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return sum(len(group.get("tests", [])) for group in data.get("testGroups", []))
+
+
+def standards_evidence() -> dict:
+    vector_root = ROOT / "tests/src/vectors/acvp_json"
+    ml_dsa = sum(
+        count_expected_tests(vector_root / name / "expectedResults.json")
+        for name in (
+            "ML-DSA-keyGen-FIPS204", "ML-DSA-sigGen-FIPS204", "ML-DSA-sigVer-FIPS204",
+        )
+    )
+    ml_kem = sum(
+        count_expected_tests(vector_root / name / "expectedResults.json")
+        for name in ("ML-KEM-keyGen-FIPS203", "ML-KEM-encapDecap-FIPS203")
+    )
+    if ml_dsa != 615 or ml_kem != 240:
+        raise LabError(f"post-quantum vector case closure differs: ML-DSA={ml_dsa} ML-KEM={ml_kem}")
+    return {
+        "ml_dsa_cases": ml_dsa,
+        "ml_kem_cases": ml_kem,
+        "passed": True,
+        "provenance": "repository-byte-bound-corpus-upstream-acquisition-unverified",
+        "total_cases": ml_dsa + ml_kem,
     }
 
 
@@ -228,6 +327,11 @@ def sign_evidence_manifest(output: pathlib.Path, environment: dict[str, str]) ->
 
 def run_lab(output: pathlib.Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
+    generated_report = output / "assurance-report"
+    if generated_report.is_symlink() or generated_report.is_file():
+        generated_report.unlink()
+    elif generated_report.is_dir():
+        shutil.rmtree(generated_report)
     for generated_name in (
         "evidence-manifest.json", "evidence-manifest.sig", "lab-report.json",
         "simulation-signing-public.pem", "timing-noise-profile.json",
@@ -253,6 +357,10 @@ def run_lab(output: pathlib.Path) -> dict:
         ("historical-advisory-replay", [
             "python3", "-B", "tools/replay-historical-advisories.py", "--run",
             "--output", str(output / "historical-advisory-replay.json"),
+        ]),
+        ("standards-vector-replay", [
+            "cargo", "test", "--release", "--locked", "--offline",
+            "-p", "dcrypt-tests", "--test", "acvp_tests",
         ]),
         ("generate-release-sboms", [
             "python3", "-B", "tools/generate-release-sboms.py", "--generate",
@@ -289,6 +397,7 @@ def run_lab(output: pathlib.Path) -> dict:
     ]
     results = [run_command(command_id, argv, environment) for command_id, argv in commands]
     controls = synthetic_controls()
+    standards = standards_evidence()
     threat_review = ROOT / "assurance/release-lab/DAYBREAK-THREAT-REVIEW.md"
     review_evidence = {
         "administratively_independent": False,
@@ -305,6 +414,10 @@ def run_lab(output: pathlib.Path) -> dict:
         ["git", "rev-parse", "HEAD^{tree}"], cwd=ROOT, text=True,
         stdout=subprocess.PIPE, check=True,
     ).stdout.strip()
+    working_tree_status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=all"], cwd=ROOT,
+        stdout=subprocess.PIPE, check=True,
+    ).stdout
     report = {
         "artifacts": artifact_rows(output),
         "claims": {
@@ -339,12 +452,29 @@ def run_lab(output: pathlib.Path) -> dict:
         "schema_version": 1,
         "signature_evidence": signature_evidence,
         "simulation_controls": controls,
-        "subject": {"commit": head, "tree": tree},
+        "standards_evidence": standards,
+        "subject": {
+            "commit": head,
+            "tree": tree,
+            "working_tree_clean": not bool(working_tree_status),
+            "working_tree_status_sha256": sha256_bytes(working_tree_status),
+        },
         "threat_review": review_evidence,
     }
     (output / "lab-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+    report_output = output / "assurance-report"
+    completed = subprocess.run(
+        [
+            sys.executable, "-B", str(ROOT / "tools/generate-v4-assurance-report.py"),
+            "--generate", "--lab-output", str(output), "--output", str(report_output),
+        ],
+        cwd=ROOT, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
+    )
+    if completed.returncode != 0:
+        sys.stderr.buffer.write(completed.stdout)
+        raise LabError("Assurance Profile generation failed")
     return report
 
 
@@ -354,6 +484,26 @@ def self_test() -> None:
         raise AssertionError("positive control failed")
     if not controls["hamming_weight_tvla"]["negative_control_passed"]:
         raise AssertionError("negative control failed")
+    if standards_evidence()["total_cases"] != 855:
+        raise AssertionError("post-quantum vector closure differs")
+    case_lines = []
+    for index in range(EXPECTED_TIMING_CASES):
+        name = f"fixture-{index:02d}"
+        case_lines.extend([
+            f"Timing diagnostics: {name}",
+            "Mean A-B: 0.050 ns",
+            "99% paired-bootstrap CI (descriptive): [-0.100, 0.200] ns",
+            "Practical threshold: 0.500 ns",
+        ])
+    case_lines.append("Blocking timing family: 29 cases, Holm FWER alpha=0.01")
+    for index in range(EXPECTED_TIMING_CASES):
+        case_lines.append(
+            f"  fixture-{index:02d}: primary_p=0.50000000, "
+            "holm_reject=false, practical=false, blocks=false"
+        )
+    parsed = parse_timing_family("\n".join(case_lines).encode("utf-8"))
+    if not parsed["family_passed"] or len(parsed["cases"]) != EXPECTED_TIMING_CASES:
+        raise AssertionError("structured timing parser failed")
 
 
 def main() -> int:
@@ -371,7 +521,8 @@ def main() -> int:
         report = run_lab(args.output)
         print(
             f"v4 simulated laboratory passed: commands={len(report['commands'])} "
-            f"artifacts={len(report['artifacts'])} report={args.output / 'lab-report.json'}"
+            f"artifacts={len(report['artifacts'])} report={args.output / 'lab-report.json'} "
+            f"profile={args.output / 'assurance-report/assurance-profile.json'}"
         )
         return 0
     except (OSError, UnicodeError, ValueError, LabError, subprocess.SubprocessError) as error:

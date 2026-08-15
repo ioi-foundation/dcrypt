@@ -15,6 +15,8 @@ The main areas are:
 - `hybrid`: ECDH/ML-KEM combiners and ECDSA-P384/ML-DSA-65 signatures.
 - `params`: constants only for implemented algorithms.
 - `security`: advisories, withdrawal notices, and legacy migration boundaries.
+- `assurance`: the evidence-native release model, Open Security Lab, metric
+  definitions, and reproduction guide.
 
 ## Randomness boundary
 

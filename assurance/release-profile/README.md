@@ -15,6 +15,10 @@ release.
 The separately reproducible laboratory in `assurance/release-lab/` supplies
 empirical product checks and calibrated simulation evidence for every claim
 that can be tested without a particular device or administrative identity.
+It automatically projects a passing run into the v4 Assurance Profile JSON and
+visual report. Release preparation reruns the laboratory after the versioned
+commit is created, preventing an attached profile from describing the earlier
+rehearsal subject.
 
 This distinction follows `VERSION_STRATEGY.md`, which requires disclosure that
 independent review remains outstanding instead of claiming that local gates are

@@ -35,6 +35,7 @@ jobs:
           PYTHONDONTWRITEBYTECODE=1 python3 -B tools/generate-release-sboms.py --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 -B tools/verify-repeatable-packages.py --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 -B tools/run-v4-lab-simulation.py --self-test
+          PYTHONDONTWRITEBYTECODE=1 python3 -B tools/generate-v4-assurance-report.py --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/generate-threat-models.py --check
           PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --self-test
           PYTHONDONTWRITEBYTECODE=1 python3 -B assurance/threat-models/verify-threat-models.py --mode ci
