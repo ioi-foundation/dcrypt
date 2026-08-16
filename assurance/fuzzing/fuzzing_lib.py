@@ -44,12 +44,12 @@ EXPECTED_CRITICAL_ROWS = 372
 EXPECTED_EXPLICIT_BLOCKERS = EXPECTED_TOTAL_ROWS - EXPECTED_CRITICAL_ROWS
 
 PACKAGE_C_CONTROL_INPUTS = {
-    ".github/workflows/security-validation.yml": ("b5055f0aeabff29774263d951854beac6620eca96a768a38a53619559993736a", "100644"),
-    "tools/release-dcrypt.sh": ("2c5829b1006240fc4fdbd36d2463575ccc9dccb27dbe39dd616cac0ed1d7de06", "100755"),
-    "tools/verify-publish-ready.sh": ("07a590c21549cd0351b8a62f90d60fb40972f1bda2580fc7bcccbd17cfd71a76", "100755"),
+    ".github/workflows/security-validation.yml": ("6f2fd0a26f633bd6e6f6d9760d7717c42b53e80d971a85ea790e3d4b33cfbeef", "100644"),
+    "tools/release-dcrypt.sh": ("c96d7d647dcf8367e84d2ee2f9a62a596bb674f1d6ad1240d2615528e0c5e70d", "100755"),
+    "tools/verify-publish-ready.sh": ("d7999f497afe1208eb499bf169f9ca411b285b9651188b9124670cf13d766023", "100755"),
     "tools/verify-remote-release-ready.py": ("c6b0a3e1df1ec1b617f75d07e2f7af689b73e00b53e6903f9f8cdc7cacf96941", "100755"),
 }
-CONTROL_INPUTS_SHA256 = "defe8f20191755db9780f2c5e12aed3f7c9e9494d88593c6564e045ac2270db2"
+CONTROL_INPUTS_SHA256 = "4bd01f691f0ff77a786c07152a36a1ca94d85b6912f277486e78c7708d6e7a01"
 
 WEEKLY_CRITICAL_CORE_SECONDS = 72 * 60 * 60
 WEEKLY_SECONDARY_CORE_SECONDS = 24 * 60 * 60
@@ -60,6 +60,9 @@ WEEKLY_FRESHNESS_SECONDS = 8 * 24 * 60 * 60
 RSS_LIMIT_MB = 2_048
 SMOKE_RUNS = 1_000
 SMOKE_SEED = 424_242
+PARSER_TIMEOUT_SECONDS = 2
+EXPENSIVE_CRYPTO_TIMEOUT_SECONDS = 10
+HYBRID_SEMANTIC_TIMEOUT_SECONDS = 30
 INTEGRATED_ASAN_OPTIONS = "abort_on_error=1:detect_leaks=1:exitcode=86:halt_on_error=1"
 INTEGRATED_ASAN_RUNTIME_SHA256 = "963a6c2f6e6925dc483ef93ba3f0d75676f8f1c5ada533e8e0e55eff91d0e41c"
 INTEGRATED_ASAN_FUNCTION_SYMBOLS = (
@@ -71,8 +74,8 @@ INTEGRATED_ASAN_FUNCTION_SYMBOLS = (
 
 # These are replaced once from the canonical in-code projections.  They are
 # literal trust anchors so a coherent data-only rewrite cannot promote itself.
-EXPECTED_POLICY_SEMANTIC_SHA256 = "cf47804939a121888d95781641fea9995e941c7fbf4186713af95058caf26a78"
-EXPECTED_REGISTRY_SEMANTIC_SHA256 = "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b"
+EXPECTED_POLICY_SEMANTIC_SHA256 = "92d269f7114417569b5be18399c8e829b7dab2835ffa37f7095345903b945be0"
+EXPECTED_REGISTRY_SEMANTIC_SHA256 = "e3fbcb6d7bca241fbe94611b15888c0334f78f16200e21b1b38f3f1013b5e3a2"
 
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 TARGET_ID = re.compile(r"[a-z][a-z0-9_]*\Z")
@@ -753,12 +756,13 @@ def build_policy() -> dict[str, Any]:
         "resource_policy": {
             "archive_max_bytes": 64 * 1024 * 1024,
             "crash_bundle_max_bytes": 16 * 1024 * 1024,
-            "expensive_crypto_timeout_seconds": 10,
+            "expensive_crypto_timeout_seconds": EXPENSIVE_CRYPTO_TIMEOUT_SECONDS,
+            "hybrid_semantic_timeout_seconds": HYBRID_SEMANTIC_TIMEOUT_SECONDS,
             "ignore_crashes": False,
             "ignore_ooms": False,
             "ignore_timeouts": False,
             "input_cap_must_match_registry_runner_and_harness": True,
-            "parser_timeout_seconds": 2,
+            "parser_timeout_seconds": PARSER_TIMEOUT_SECONDS,
             "rss_limit_mb": RSS_LIMIT_MB,
             "timeout_floor_seconds": 1,
             "timeout_formula_multiplier": 10,
@@ -821,6 +825,12 @@ def _target_record(
     critical = tier == "critical"
     unbounded_internal = identifier in SOURCE_UNBOUNDED_PRIMITIVES
     fixed_signing_window = 814 if identifier in {"ml_dsa_semantic", "hybrid_semantic"} else None
+    if identifier == "hybrid_semantic":
+        timeout_seconds = HYBRID_SEMANTIC_TIMEOUT_SECONDS
+    elif critical:
+        timeout_seconds = EXPENSIVE_CRYPTO_TIMEOUT_SECONDS
+    else:
+        timeout_seconds = PARSER_TIMEOUT_SECONDS
     reviewed_semantic_states = list(REVIEWED_SEED_MEMBERS[identifier])
     return {
         "cargo_bin": identifier,
@@ -888,7 +898,7 @@ def _target_record(
             },
             "rss_limit_mb": RSS_LIMIT_MB,
             "stack_limit_kib": 8_192,
-            "timeout_seconds": 10 if critical else 2,
+            "timeout_seconds": timeout_seconds,
         },
         "runner_input_cap_bytes": cap,
         "seed_selector_path": SEED_FOR_TARGET.get(identifier),

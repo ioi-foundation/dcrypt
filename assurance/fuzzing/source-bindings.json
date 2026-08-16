@@ -11,19 +11,19 @@
     {
       "git_mode": "100644",
       "path": ".github/workflows/security-validation.yml",
-      "sha256": "17554d1950785e358c56147fd0352a8a4754b1e1886ff2707b56c40f42543396",
-      "size": 17383
+      "sha256": "6f2fd0a26f633bd6e6f6d9760d7717c42b53e80d971a85ea790e3d4b33cfbeef",
+      "size": 15086
     },
     {
       "git_mode": "100644",
       "path": "fuzz/Cargo.lock",
-      "sha256": "0e9d1f305014ad49d91dc9796246b5559fc002d67b5ec728275abd256c75511d",
+      "sha256": "9d8b7fa7927068beb69633cb82abea741947dcfa3e762ceaabc372e3b1b33af5",
       "size": 4323
     },
     {
       "git_mode": "100644",
       "path": "fuzz/Cargo.toml",
-      "sha256": "801fdc93a650c0426efefc8f373cce3d0c8819c41bf4836fc60c3d9099e5d3ed",
+      "sha256": "c0861106d585e6cf265fb6d80695fd9ed1188a3a9912c769472f994af9b8fc95",
       "size": 2812
     },
     {
@@ -137,24 +137,24 @@
     {
       "git_mode": "100755",
       "path": "tools/release-dcrypt.sh",
-      "sha256": "76d67dc13035b5b118c24095a5b4db4b2aacbaf2836e48a552611fce3bff1caa",
-      "size": 44625
+      "sha256": "c96d7d647dcf8367e84d2ee2f9a62a596bb674f1d6ad1240d2615528e0c5e70d",
+      "size": 50180
     },
     {
       "git_mode": "100755",
       "path": "tools/verify-publish-ready.sh",
-      "sha256": "de89affbd7c58fa31678716947b15a8904ddc77095477645ef01d8e2451f7c29",
-      "size": 14708
+      "sha256": "d7999f497afe1208eb499bf169f9ca411b285b9651188b9124670cf13d766023",
+      "size": 12790
     },
     {
       "git_mode": "100755",
       "path": "tools/verify-remote-release-ready.py",
-      "sha256": "80f8dd937ef94d38f36078e9e4a3f9595902853d61ddeab1d1404d39a31042ed",
-      "size": 117643
+      "sha256": "c6b0a3e1df1ec1b617f75d07e2f7af689b73e00b53e6903f9f8cdc7cacf96941",
+      "size": 152002
     }
   ],
-  "files_sha256": "5c6dec96e5090e2dd77f59d8004604d5a3f3aac0c1529a5570d6dc277a9d9a17",
-  "registry_semantic_sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
+  "files_sha256": "efe780b532898a2ade6cf8b31ae6fe82d71865963d2ac7238a5976749c217491",
+  "registry_semantic_sha256": "e3fbcb6d7bca241fbe94611b15888c0334f78f16200e21b1b38f3f1013b5e3a2",
   "schema_version": 1,
   "status": "STABLE-final-subject-bound"
 }

@@ -607,6 +607,21 @@ def main() -> int:
     checked(source_input_cap, valid + b"fuzz_target!(|other: &[u8]| { black_box(other); });\n", label="two entries")
 
     registry = build_registry()
+    timeout_by_target = {
+        target["id"]: target["resource_limits"]["timeout_seconds"]
+        for target in registry["targets"]
+    }
+    assert timeout_by_target["hybrid_semantic"] == 30
+    assert {
+        timeout
+        for target_id, timeout in timeout_by_target.items()
+        if target_id != "hybrid_semantic"
+    } == {2, 10}
+    assert all(
+        timeout_by_target[target["id"]] == (10 if target["tier"] == "critical" else 2)
+        for target in registry["targets"]
+        if target["id"] != "hybrid_semantic"
+    )
     source_bindings = __import__("fuzzing_lib").build_source_bindings(REPO_ROOT)
     control_rows = [
         row

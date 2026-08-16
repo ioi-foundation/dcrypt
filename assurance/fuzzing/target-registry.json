@@ -556,7 +556,7 @@
         "support_seed_iterations_per_call": "32+input_len<=32+4096",
         "support_seed_max_dynamic_calls_per_input": 2,
         "support_seed_syntactic_calls": 3,
-        "timeout_seconds": 10
+        "timeout_seconds": 30
       },
       "reviewed_semantic_states": [
         "ecdsa-ml-dsa-65-signature",

@@ -56,7 +56,7 @@
     "reviewer": null,
     "status": "blocked-unprovisioned"
   },
-  "registry_semantic_sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
+  "registry_semantic_sha256": "e3fbcb6d7bca241fbe94611b15888c0334f78f16200e21b1b38f3f1013b5e3a2",
   "schema_version": 1,
   "source_binding": {
     "framework_subject_commit": "889cb8c4dc13a78679dc8a7677916484a9966f65",

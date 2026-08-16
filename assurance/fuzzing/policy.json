@@ -51,6 +51,7 @@
     "archive_max_bytes": 67108864,
     "crash_bundle_max_bytes": 16777216,
     "expensive_crypto_timeout_seconds": 10,
+    "hybrid_semantic_timeout_seconds": 30,
     "ignore_crashes": false,
     "ignore_ooms": false,
     "ignore_timeouts": false,

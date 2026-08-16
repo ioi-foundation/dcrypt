@@ -22,13 +22,13 @@
     {
       "kind": "reviewed-source",
       "path": "compiler_probe.py",
-      "sha256": "191e00c205b11ebaed71464b46628786f5122e1de9d51d37a5e8bf44f463cefd",
-      "size": 49700
+      "sha256": "436485a4372f307075e27c905d058867c2c23a0ee68ac161981513e2a7369ee9",
+      "size": 50048
     },
     {
       "kind": "generated",
       "path": "corpus-manifest.json",
-      "sha256": "5cc64302bbfcac55259b4354af5b5f16dec60e0711bf27b7d02583d1331b574c",
+      "sha256": "bd3d80255b85d7e2ff452dca4782d4c8723a6148c082374982c4e7026e778b0d",
       "size": 172485
     },
     {
@@ -52,8 +52,8 @@
     {
       "kind": "reviewed-source",
       "path": "fuzzing_lib.py",
-      "sha256": "6636d2cd2a53a4500aa3b70338c845268e8547cb6726a5748d270db61cc8d3fd",
-      "size": 118755
+      "sha256": "c2a5ae7f8a41bc72260aa0b26333ae0bb8d4f47cbdd0ce0b16d15aff59bc6549",
+      "size": 119217
     },
     {
       "kind": "reviewed-source",
@@ -70,19 +70,19 @@
     {
       "kind": "generated",
       "path": "policy.json",
-      "sha256": "cf47804939a121888d95781641fea9995e941c7fbf4186713af95058caf26a78",
-      "size": 3844
+      "sha256": "92d269f7114417569b5be18399c8e829b7dab2835ffa37f7095345903b945be0",
+      "size": 3887
     },
     {
       "kind": "reviewed-source",
       "path": "rebind-final-subject.py",
-      "sha256": "bab2d71a3d63db2bd79f8c93b3a8609e9a705c2d2d1a459376bee4df37b14f5e",
+      "sha256": "47985ddba410ad242959ac82bd8ff9ea1c8d73199859c4a6d57e1cf6f1c8a10d",
       "size": 83549
     },
     {
       "kind": "generated",
       "path": "row-mapping.json",
-      "sha256": "9feedae461b99e46cda1556a0eb13749fb65cfb53c495b77e1130e158835cc79",
+      "sha256": "d846aa3eda71f5f4d47f77bdd106257aad75dc96f93ed82c0fed5fc747ec892a",
       "size": 7422246
     },
     {
@@ -148,8 +148,8 @@
     {
       "kind": "generated",
       "path": "schemas/policy.schema.json",
-      "sha256": "7cb6d07031d58ec0f4c8e10a9eba894b5db2f784d3d88e33e0ba3e6797ee51c6",
-      "size": 13671
+      "sha256": "e470e61b68b2ea953e422fc320d04efa023454c24d6406ed9cd3c0dcac2334da",
+      "size": 13864
     },
     {
       "kind": "generated",
@@ -184,19 +184,19 @@
     {
       "kind": "reviewed-source",
       "path": "selftest.py",
-      "sha256": "3f09c3e0d891e3fbe13c41f5fc949d73bca7209ab600a2f6e4d312bcb9eec7c6",
-      "size": 80544
+      "sha256": "8174823080de1a8749f15b3c33c32006f80044b1b9a50157e734c2a2626b0bc0",
+      "size": 81896
     },
     {
       "kind": "generated",
       "path": "source-bindings.json",
-      "sha256": "aee8ecfaab95d09ef193089b7ce00ce5e6e4077d4414ea0a92169c34d29269fb",
+      "sha256": "c77f60bbe5fc9126eaa403a966f8ae1f79ffd37f5ca15b8588fe3ac9fb06f29a",
       "size": 5200
     },
     {
       "kind": "generated",
       "path": "target-registry.json",
-      "sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
+      "sha256": "e3fbcb6d7bca241fbe94611b15888c0334f78f16200e21b1b38f3f1013b5e3a2",
       "size": 34504
     },
     {

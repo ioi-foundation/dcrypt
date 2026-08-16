@@ -62,8 +62,8 @@
       "target_id": "ml_kem_semantic"
     }
   ],
-  "policy_semantic_sha256": "cf47804939a121888d95781641fea9995e941c7fbf4186713af95058caf26a78",
-  "registry_semantic_sha256": "f9182aa95ff3e7d4db93f15c04a17f593273453d069df496dd2dd4bdeef1772b",
+  "policy_semantic_sha256": "92d269f7114417569b5be18399c8e829b7dab2835ffa37f7095345903b945be0",
+  "registry_semantic_sha256": "e3fbcb6d7bca241fbe94611b15888c0334f78f16200e21b1b38f3f1013b5e3a2",
   "rows": [
     {
       "accepted_differential_evidence": "none",

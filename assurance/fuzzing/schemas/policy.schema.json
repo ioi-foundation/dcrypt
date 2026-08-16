@@ -252,6 +252,11 @@
           "minimum": 0,
           "type": "integer"
         },
+        "hybrid_semantic_timeout_seconds": {
+          "maximum": 9223372036854775807,
+          "minimum": 0,
+          "type": "integer"
+        },
         "ignore_crashes": {
           "type": "boolean"
         },
@@ -289,6 +294,7 @@
         "archive_max_bytes",
         "crash_bundle_max_bytes",
         "expensive_crypto_timeout_seconds",
+        "hybrid_semantic_timeout_seconds",
         "ignore_crashes",
         "ignore_ooms",
         "ignore_timeouts",
