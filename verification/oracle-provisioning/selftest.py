@@ -619,6 +619,8 @@ def network_trace_tests(root: Path) -> int:
                 f'{pid} recvfrom(15<UNIX:[{first}]>, "", 8, 0, NULL, NULL) = 0',
             ]
         )
+    setup[seqpacket_start] = setup[seqpacket_start].replace(" socketpair", "   socketpair")
+    setup[seqpacket_start + 1] = setup[seqpacket_start + 1].replace(" recvfrom", "   recvfrom")
     if len(setup) != EXPECTED_NETWORK_CALL_COUNT:
         raise RuntimeError("synthetic exact network trace has wrong call count")
     valid = root / "network-valid.trace"
@@ -645,6 +647,12 @@ def network_trace_tests(root: Path) -> int:
             7,
             "9 socket(AF_UNIX, SOCK_STREAM, 0) = 3<UNIX:[3]>",
             "not an exact allowlisted form",
+        ),
+        (
+            "tab PID/call separator",
+            7,
+            setup[7].replace(" socketpair", "\tsocketpair"),
+            "exact ASCII-space PID/call separator",
         ),
         (
             "forged namespace bind arguments and return",
