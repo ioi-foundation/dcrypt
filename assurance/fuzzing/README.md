@@ -60,7 +60,11 @@ The four ledger-compatible groups are `kem`, `signatures`, `symmetric`, and
 nonexecuting private-path plan. The runner validates the canonical manifest,
 stages reviewed seed bytes into a 0700 private temporary corpus with 0600 files,
 keeps dictionaries read-only, applies exact caps and ignore=0 controls, and
-requires exactly 1,000 executions. Deterministic smoke is not campaign evidence.
+requires exactly 1,000 executions. The runner sets libFuzzer's slow-unit report
+threshold to the same reviewed per-target timeout, preventing the engine's
+independent 10-second default from creating a nonfatal artifact below that
+target's bound; reaching the actual timeout still fails closed. Deterministic
+smoke is not campaign evidence.
 
 Workflow consumers may query the code-pinned registry:
 

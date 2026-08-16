@@ -279,6 +279,10 @@
           "minimum": 0,
           "type": "integer"
         },
+        "slow_unit_report_threshold": {
+          "maxLength": 16384,
+          "type": "string"
+        },
         "timeout_floor_seconds": {
           "maximum": 9223372036854775807,
           "minimum": 0,
@@ -301,6 +305,7 @@
         "input_cap_must_match_registry_runner_and_harness",
         "parser_timeout_seconds",
         "rss_limit_mb",
+        "slow_unit_report_threshold",
         "timeout_floor_seconds",
         "timeout_formula_multiplier"
       ],

@@ -622,6 +622,12 @@ def main() -> int:
         for target in registry["targets"]
         if target["id"] != "hybrid_semantic"
     )
+    hybrid_target = next(
+        target for target in registry["targets"] if target["id"] == "hybrid_semantic"
+    )
+    hybrid_argv = canonical_fuzz_argv(hybrid_target, artifact_prefix="/private/artifacts/")
+    assert "-timeout=30" in hybrid_argv
+    assert "-report_slow_units=30" in hybrid_argv
     source_bindings = __import__("fuzzing_lib").build_source_bindings(REPO_ROOT)
     control_rows = [
         row

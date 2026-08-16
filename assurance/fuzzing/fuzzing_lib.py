@@ -74,7 +74,7 @@ INTEGRATED_ASAN_FUNCTION_SYMBOLS = (
 
 # These are replaced once from the canonical in-code projections.  They are
 # literal trust anchors so a coherent data-only rewrite cannot promote itself.
-EXPECTED_POLICY_SEMANTIC_SHA256 = "92d269f7114417569b5be18399c8e829b7dab2835ffa37f7095345903b945be0"
+EXPECTED_POLICY_SEMANTIC_SHA256 = "ce2ac39ee4fad182ebade006ae7c3171125e4737fe4f942e9346ec9d33da8e47"
 EXPECTED_REGISTRY_SEMANTIC_SHA256 = "e3fbcb6d7bca241fbe94611b15888c0334f78f16200e21b1b38f3f1013b5e3a2"
 
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -764,6 +764,7 @@ def build_policy() -> dict[str, Any]:
             "input_cap_must_match_registry_runner_and_harness": True,
             "parser_timeout_seconds": PARSER_TIMEOUT_SECONDS,
             "rss_limit_mb": RSS_LIMIT_MB,
+            "slow_unit_report_threshold": "per-target-timeout-seconds",
             "timeout_floor_seconds": 1,
             "timeout_formula_multiplier": 10,
         },
@@ -1387,6 +1388,7 @@ def canonical_fuzz_argv(
         f"-seed={SMOKE_SEED}",
         f"-max_len={target['runner_input_cap_bytes']}",
         f"-timeout={target['resource_limits']['timeout_seconds']}",
+        f"-report_slow_units={target['resource_limits']['timeout_seconds']}",
         f"-rss_limit_mb={target['resource_limits']['rss_limit_mb']}",
         f"-malloc_limit_mb={target['resource_limits']['malloc_limit_mb']}",
         "-jobs=1",

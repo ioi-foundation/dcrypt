@@ -58,6 +58,7 @@
     "input_cap_must_match_registry_runner_and_harness": true,
     "parser_timeout_seconds": 2,
     "rss_limit_mb": 2048,
+    "slow_unit_report_threshold": "per-target-timeout-seconds",
     "timeout_floor_seconds": 1,
     "timeout_formula_multiplier": 10
   },
