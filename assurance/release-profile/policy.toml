@@ -5,8 +5,8 @@ release-major = 4
 status = "AUTHORIZED-WHEN-SOFTWARE-GATES-PASS"
 package-g-foundation = "088b2d2fe1e7d7cc3591cfde5040d447010a74bd"
 package-g-foundation-status = "HOLD-by-design-superseded-for-portable-release"
-oracle-subject-rebind-commit = "f39dbf9d21cd15582633e1da76c367458bd07d64"
-oracle-normative-manifest-sha256 = "d91401060642def5d266e3df48d3338b4945787afbbe451c20c19adcd84580b6"
+oracle-subject-rebind-commit = "42ec67c1ebf31cb2d13a511845078add66a69c43"
+oracle-normative-manifest-sha256 = "f229c497df6f73b13c2cb7cba71080dfd83af685aacc517008bdc0aec81cef9e"
 authorization = "reviewed-merge-of-this-policy-on-the-release-candidate"
 
 mandatory-consumers = [
