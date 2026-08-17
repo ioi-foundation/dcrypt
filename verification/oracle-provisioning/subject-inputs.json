@@ -22,11 +22,11 @@
       "size": 28397
     },
     {
-      "git_blob": "a582d1533eb98ec8ce8522e4f6348bcb6ba82cef",
+      "git_blob": "a7caf447952beb1363bb5f6e2965908ec4ff6c0a",
       "git_mode": "100644",
       "path": "Cargo.toml",
-      "sha256": "c39deafd09b4391fcb659388e7bf2462c893505ef8bb621e41f24ee6501644d0",
-      "size": 4592
+      "sha256": "5ac1ccbb3029120e48c343e9ac8f6cfac503e4db299f01194b3ac4592ee128fa",
+      "size": 5050
     },
     {
       "git_blob": "0744006cac976a24a6bd2f78aa1857f8462d835e",
@@ -1991,8 +1991,8 @@
       "policy": "all_tracked_regular_files_except_generated_target"
     }
   ],
-  "source_commit": "1f2c138942271938580671c4046566e68a3b79c8",
-  "source_tree": "d1d9c1d98fe8cf76ce66453365c636aae5aca993",
+  "source_commit": "0f20c37f7a08178a8b91fa9841f2c9ec7cee76f2",
+  "source_tree": "dc2b05c30233e012d206c5e15d2048470ab3cee2",
   "vector_set": {
     "data_yaml_count": 20,
     "data_yaml_paths": [
