@@ -4744,11 +4744,11 @@
   "workspace": {
     "lockfile": {
       "path": "verification/Cargo.lock",
-      "sha256": "d2a25e19832979740fd163c5df83fa673a6d3327eb7efd961c0aa31221f75850"
+      "sha256": "67f0aac25de283ac2a5fb6a67faa6864a840e08788edf70ea87294254ec43483"
     },
     "manifest": {
       "path": "verification/Cargo.toml",
-      "sha256": "9c1f35023481774783e2739dc196fb1bbfa52423b70ef918f7be1e9ed62c1fe3"
+      "sha256": "03c314479fd34e4011a4240fd44c2bf2c16fdb73c4b8e28998ffdea37790c2f3"
     }
   }
 }
