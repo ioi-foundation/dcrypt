@@ -7,6 +7,38 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [4.0.1] - 2026-08-17
+
+### Documentation
+
+- Added a release-linked v4 assurance ledger, deterministic Markdown and SVG
+  projections of the public Assurance Profile, and a dedicated CI check that
+  fails when the tracked evidence tables or graphics drift from the released
+  machine profile.
+- Updated the repository front door and security documentation for the public
+  v4.0.0 release, with direct paths from headline metrics to report artifacts,
+  evidence classes, model definitions, and reproduction commands.
+- Replaced decorative evidence graphics with light/dark, GitHub-native charts
+  generated from released measurements: leakage calibration on a logarithmic
+  scale, the exact ML-DSA/ML-KEM corpus split, and every timing case's primary
+  p-value from both complete passes.
+
+### Changed
+
+- Made release preparation generate and attach the evidence ledger plus all six
+  theme-aware SVGs from the exact post-versioning Assurance Profile.
+- Scoped the top-level crates.io package to the facade source and end-user
+  documentation. The complete laboratory, corpora, and raw assurance inputs
+  remain in the repository, while standard Cargo publication now produces a
+  compact archive without custom recompression.
+- Generalized the portable-software release authorization to fail closed over
+  stable dcrypt v4 subjects at or after 4.0.0. Every release still requires a
+  fresh laboratory run and subject-bound profile; the stronger Package G
+  certification foundation remains fixed and on HOLD.
+
+This patch does not change cryptographic implementation, public API, algorithm
+behavior, wire format, or the normal/build dependency closure.
+
 ## [4.0.0] - 2026-08-14
 
 ### Removed
@@ -451,7 +483,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   identified allocation-lifecycle and ownership gaps; v3 uses exact-size
   protected ownership while retaining bounded slice access.
 
-[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/ioi-foundation/dcrypt/compare/v4.0.1...HEAD
+[4.0.1]: https://github.com/ioi-foundation/dcrypt/compare/v4.0.0...v4.0.1
 [4.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v3.0.0...v4.0.0
 [3.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v2.0.0...v3.0.0
 [2.0.0]: https://github.com/ioi-foundation/dcrypt/compare/v1.2.3...v2.0.0

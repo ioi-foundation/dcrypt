@@ -104,6 +104,17 @@ emits `assurance-profile.json` and a self-contained `assurance-report.html`.
 The complete lab invokes it automatically. Use `--check` to prove an existing
 presentation still reproduces byte-for-byte from the lab evidence.
 
+`generate-assurance-docs.py` is the release-facing documentation projection.
+It consumes a validated, versioned Assurance Profile and emits the linked
+Markdown evidence ledger plus three GitHub-renderable graphics, each in matched
+light and dark themes. It refuses
+incomplete profiles, unreconciled metric totals, failed controls, unverified
+manifest signatures, and timing release blocks. Use `--check` to make generated
+tables and graphics fail closed on drift; the dedicated Assurance documentation
+workflow runs that check for the tracked v4.0.0 historical profile. The release
+laboratory also generates a fresh ledger and all six SVGs from the exact
+post-versioning subject for attachment to each GitHub release.
+
 ## Release model
 
 Releases use three explicit phases. Uploading is never combined with versioning
@@ -112,7 +123,7 @@ or pushing source, and the default mode is non-mutating.
 ### 1. Rehearse
 
 ```bash
-tools/release-dcrypt.sh --version 4.0.0
+tools/release-dcrypt.sh --version 4.0.1
 ```
 
 The rehearsal checks the target version on crates.io, verifies Cargo metadata
@@ -128,7 +139,7 @@ version changes. It does not edit, commit, tag, push, or publish anything.
 For a quick script-only rehearsal while developing the workflow:
 
 ```bash
-tools/release-dcrypt.sh --version 4.0.0 --skip-tests --skip-checks
+tools/release-dcrypt.sh --version 4.0.1 --skip-tests --skip-checks
 ```
 
 Skipped gates are always reported. Do not use skipped gates as the evidence for

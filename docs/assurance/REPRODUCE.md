@@ -46,3 +46,23 @@ openssl pkeyutl -verify -pubin \
 The private signing key is temporary and is destroyed after the laboratory
 verifies the signature. See the [metric definitions](METRICS.md) and
 [laboratory model](OPEN-SECURITY-LAB.md) before interpreting the results.
+
+## Verify the released documentation projections
+
+The Markdown ledger and static SVG graphics are generated from the exact
+`v4.0.0` profile attachment preserved in the repository. Verify that they have
+not drifted with:
+
+```sh
+python3 -B tools/generate-assurance-docs.py \
+  --profile docs/assurance/releases/v4.0.0/assurance-profile.json \
+  --summary docs/assurance/V4-SUMMARY.md \
+  --assets-dir docs/assurance/assets \
+  --source-ref v4.0.0 \
+  --check
+```
+
+This check is fast, offline, and runs in the dedicated Assurance documentation
+workflow. A new release should add its exact public profile as a versioned input
+and deliberately regenerate the ledger and graphics; it should not overwrite a
+historical release snapshot.

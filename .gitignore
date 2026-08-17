@@ -16,6 +16,7 @@ tools/*
 !tools/verify-repeatable-packages.py
 !tools/run-v4-lab-simulation.py
 !tools/generate-v4-assurance-report.py
+!tools/generate-assurance-docs.py
 !tools/bench-processor/
 tree.md
 Cargo.lock

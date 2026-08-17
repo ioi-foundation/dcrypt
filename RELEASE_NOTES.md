@@ -1,133 +1,80 @@
-# dcrypt 4.0.0 — Cryptography, measured
+# dcrypt 4.0.1 — Assurance you can inspect
 
-## Built to be attacked before it is trusted.
+## Evidence, presented as evidence
 
-dcrypt 4 introduces **evidence-native cryptography**: the release is
-accompanied by a machine-readable Assurance Profile and a self-contained visual
-report generated directly from its release laboratory.
+dcrypt 4.0.1 turns the v4 Assurance Profile into a clearer public product
+surface. The release ships a linked evidence ledger and quiet, theme-aware
+graphics generated from the same machine profile that gates publication.
 
-The profile is bound to the exact source, dependency closure, toolchain, target
-set, and package artifacts users install. It exposes each result separately—no
-opaque security score and no manually maintained dashboard.
+The charts show measurements instead of decorative completion meters:
 
-`4.0.0` becomes the supported dcrypt release when this reviewed candidate is
-published. Until then, `3.0.0` remains the supported corrective release. Every
-pre-v3 release remains unsupported; withdrawn `2.0.0` is not a safe replacement.
+- the leakage positive control, negative control, and decision threshold on a
+  logarithmic t-statistic scale;
+- the exact ML-DSA and ML-KEM composition of the 855-case repository corpus;
+- every timing-sensitive case's released primary p-value from both complete
+  passes against the family-wise Holm policy; and
+- the path from exact source subject through laboratory execution, signed
+  manifest, public profile, and report.
 
-## The v4 Assurance Profile
+[Download the visual report](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/assurance-report.html) ·
+[Download the machine profile](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/assurance-profile.json) ·
+[Download the evidence ledger](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/V4-SUMMARY.md)
 
-The final versioned release subject must satisfy:
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/v4-assurance-overview-dark.svg">
+  <img src="https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/v4-assurance-overview-light.svg" alt="dcrypt 4.0.1 Assurance Profile overview — four separate evidence panels">
+</picture>
 
-| Security signal | v4 result | Evidence class |
-| :--- | ---: | :--- |
-| Injected artifact faults | **432 / 432 detected** | Calibrated simulation |
-| Leakage-detector calibration | **20,000 samples per class** | Calibrated simulation |
-| Timing-sensitive paths | **29 cases × 2 complete passes** | Measured product evidence |
-| Historical vulnerability classes | **11 / 11 replayed** | Measured product evidence |
-| Post-quantum vector cases | **855 exact cases** | Repository-corpus correctness |
-| Publishable packages | **12 / 12 byte-equal rebuilds** | Measured product evidence |
-| Software inventories | **5 deterministic SBOMs** | Measured product evidence |
-| Configured build targets | **4 target profiles** | Build and compiler-shape evidence |
+## Automated from the exact release subject
 
-The release workflow regenerates these outputs after version preparation, then
-checks that the presentation reproduces byte-for-byte from the laboratory
-evidence. The JSON profile and interactive HTML report are attached to the
-GitHub release draft automatically by the reviewed handoff command.
+The release laboratory now generates the evidence ledger and all six light/dark
+SVGs from the post-versioning Assurance Profile. The GitHub draft handoff
+attaches those files alongside the machine-readable profile and self-contained
+HTML report. Profile validation fails closed on incomplete command results,
+metric drift, missing cases, failed simulation controls, release-blocking timing
+decisions, or an unverified evidence-manifest signature.
 
-## The dcrypt Open Security Lab
+The top-level crates.io package is also scoped to the facade source and useful
+end-user documentation. Large corpora and raw laboratory inputs remain public
+in the Git repository and reproducible through the documented laboratory, but
+they no longer force a custom-compressed upload. All twelve crates can use the
+ordinary reviewed Cargo publication path.
 
-The v4 laboratory executes the product and calibrates the detection machinery
-used to evaluate it:
+## No cryptographic behavior change
 
-- replays all eleven documented dcrypt vulnerability classes;
-- executes the complete post-quantum standards-vector target;
-- performs a fresh 29-case timing baseline and complete reproduction on a
-  disclosed, qualified CPU;
-- checks optimized BLS secret-scalar and GHASH compiler shapes;
-- builds the supported Linux, WebAssembly, and embedded `no_std` profiles;
-- produces deterministic CycloneDX inventories for five classified workspaces;
-- assembles all twelve publishable packages twice and requires byte equality;
-- introduces deterministic positive and negative leakage controls;
-- injects every single-bit mutation in the declared artifact-fault model; and
-- signs and immediately verifies a canonical manifest of the emitted evidence.
+This is a documentation, presentation, release-automation, and package-layout
+patch. It does not change cryptographic implementation, public API, algorithm
+behavior, wire format, or the published normal/build dependency closure.
 
-Simulation and measured product evidence remain visibly distinct. The positive
-leakage control establishes that the deterministic analysis pipeline detects a
-known seeded signal; the negative control guards against a false positive. The
-432-fault campaign exhausts its declared single-bit artifact model. Neither is
-presented as measurement on a particular physical device.
-
-## A smaller implementation boundary
-
-The published implementation and its normal/build dependency closure remain
-subject to dcrypt's fail-closed policy: no unsafe Rust, native code, or FFI.
-Randomized operations receive caller-owned `CryptoRng + RngCore`; the library
-does not silently select an operating-system RNG.
-
-External implementations remain confined to excluded verification workspaces.
-Comparator results with unresolved independence or shared lineage are not
-presented as independent assurance evidence.
-
-## Breaking v4 API change
-
-v4 removes the process-global error registry and the legacy `Result`
-compatibility extension traits. Applications should use ordinary `Result`
-propagation, standard combinators, caller-owned diagnostics,
-`Error::with_context`, `Error::with_message`, and the explicit symmetric error
-converters.
-
-This removes global mutable error state and the misleading `secure_unwrap`
-naming. It does not change historical advisory ranges or silently preserve
-legacy compatibility behavior. See
-[`docs/migration/V4-ERROR-API.md`](https://github.com/ioi-foundation/dcrypt/blob/v4.0.0/docs/migration/V4-ERROR-API.md).
-
-Applications upgrading from a pre-v3 release must also follow the full v3
-cryptographic migration boundary: caller-owned randomness, corrected
-ML-KEM/ML-DSA names and encodings, explicit AEAD nonces, strict parsing, removed
-B-283/P-192 surfaces, corrected XChaCha20-Poly1305, and versioned streaming
-formats. Do not relabel historical keys, signatures, or ciphertext.
-
-## Security continuity
-
-v4 preserves the supported remediations for the eleven findings disclosed by
-the v3 corrective campaign and turns every one into a mandatory release replay.
-Those regressions cover memory unsafety, Ed25519 forgery, GCM nonce handling,
-stream framing, B-283 validation, BLS subgroup validation and hash-to-curve,
-pre-standard Kyber behavior, XChaCha nonce/construction defects, and optimized
-GHASH branching.
-
-Updating software does not retroactively restore the confidentiality,
-authenticity, or provenance of data processed by an affected historical
-release. Review [SECURITY.md](https://github.com/ioi-foundation/dcrypt/blob/v4.0.0/SECURITY.md)
-and the published advisories when migrating historical deployments.
+The 4.0.1 candidate is nevertheless treated as a new subject. It must pass the
+complete software release gate, produce byte-equal package rebuilds, receive a
+new immutable tag, pass trusted checks at the exact tag commit, and publish a
+fresh Assurance Profile before it becomes current.
 
 ## Claim boundary
 
-The Assurance Profile demonstrates the exact software executions and calibrated
-simulation models it records. dcrypt 4.0.0 does not claim:
+The profile demonstrates the exact software executions and calibrated
+simulation models it records. It does not claim physical-device leakage,
+fault-injection, or erasure resistance; validation on an untested native
+runtime; an independent cryptographic audit; independent rebuild certification;
+formal verification; or FIPS validation. The stronger Package G certification
+foundation remains visible and on HOLD.
 
-- FIPS module validation;
-- formal verification;
-- completion of an independent cryptographic audit;
-- physical leakage, fault-injection, or erasure resistance;
-- native runtime validation on an untested platform; or
-- administrative independence of the first-party laboratory producer.
-
-The repository corpus's ML-DSA and ML-KEM expected fields pass exactly, but its
+The repository's ML-DSA and ML-KEM expected fields pass exactly, but their
 upstream fixture acquisition history remains unauthenticated. This is
-correctness evidence, not NIST validation.
+repository-corpus correctness evidence, not NIST validation.
 
 ## Install
 
 ```toml
-dcrypt = "4.0.0"
+dcrypt = "4.0.1"
 ```
 
 Start with the
-[Assurance Profile model](https://github.com/ioi-foundation/dcrypt/blob/v4.0.0/docs/assurance/README.md),
-[Open Security Lab](https://github.com/ioi-foundation/dcrypt/blob/v4.0.0/docs/assurance/OPEN-SECURITY-LAB.md),
-and [reproduction guide](https://github.com/ioi-foundation/dcrypt/blob/v4.0.0/docs/assurance/REPRODUCE.md).
+[Assurance Profile model](https://github.com/ioi-foundation/dcrypt/blob/v4.0.1/docs/assurance/README.md),
+[Open Security Lab](https://github.com/ioi-foundation/dcrypt/blob/v4.0.1/docs/assurance/OPEN-SECURITY-LAB.md),
+and [reproduction guide](https://github.com/ioi-foundation/dcrypt/blob/v4.0.1/docs/assurance/REPRODUCE.md).
 
 Full changes:
-[CHANGELOG.md](https://github.com/ioi-foundation/dcrypt/blob/v4.0.0/CHANGELOG.md) ·
-[v3.0.0...v4.0.0](https://github.com/ioi-foundation/dcrypt/compare/v3.0.0...v4.0.0)
+[CHANGELOG.md](https://github.com/ioi-foundation/dcrypt/blob/v4.0.1/CHANGELOG.md) ·
+[v4.0.0...v4.0.1](https://github.com/ioi-foundation/dcrypt/compare/v4.0.0...v4.0.1)

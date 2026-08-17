@@ -1,7 +1,7 @@
 # dcrypt documentation
 
 This directory documents only the algorithms and public surfaces implemented by
-the v3 codebase. Placeholder documentation for unimplemented schemes has been
+the v4 codebase. Placeholder documentation for unimplemented schemes has been
 removed so a documentation path cannot be mistaken for algorithm support.
 
 The main areas are:
@@ -16,7 +16,9 @@ The main areas are:
 - `params`: constants only for implemented algorithms.
 - `security`: advisories, withdrawal notices, and legacy migration boundaries.
 - `assurance`: the evidence-native release model, Open Security Lab, metric
-  definitions, and reproduction guide.
+  definitions, [archived v4.0.0 evidence ledger](assurance/V4-SUMMARY.md),
+  graphics, and reproduction guide. Each later release attaches its own exact
+  ledger and profile to the GitHub release.
 
 ## Randomness boundary
 
@@ -55,6 +57,6 @@ allocation-backed `no_std` builds use `default-features = false` plus `alloc`
 and the required categories. The ML-KEM example above requires the
 `post-quantum` or `hybrid` facade feature.
 
-Version 3.0.0 is the supported corrective release; every pre-v3 release is
-unsupported. Review the root README, `SECURITY.md`, and migration notes before
-deployment.
+Version 4.0.1 is the current supported portable-software release. Version 3.0.0
+remains the prior corrective line; every pre-v3 release is unsupported. Review
+the root README, `SECURITY.md`, and migration notes before deployment.

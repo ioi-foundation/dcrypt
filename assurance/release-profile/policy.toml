@@ -1,6 +1,7 @@
 schema-version = 1
 profile = "dcrypt-v4-portable-software-release"
-target-version = "4.0.0"
+minimum-version = "4.0.0"
+release-major = 4
 status = "AUTHORIZED-WHEN-SOFTWARE-GATES-PASS"
 package-g-foundation = "088b2d2fe1e7d7cc3591cfde5040d447010a74bd"
 package-g-foundation-status = "HOLD-by-design-superseded-for-portable-release"
@@ -21,6 +22,7 @@ mandatory-tools = [
   "tools/verify-repeatable-packages.py",
   "tools/run-v4-lab-simulation.py",
   "tools/generate-v4-assurance-report.py",
+  "tools/generate-assurance-docs.py",
 ]
 
 mandatory-evidence = [

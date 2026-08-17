@@ -6,6 +6,25 @@ Security testing is strongest when the test apparatus is itself exercised.
 The dcrypt laboratory runs the product and introduces controlled signals, then
 publishes both kinds of result in one reproducible bundle.
 
+## Released v4.0.0 result
+
+The public v4.0.0 run completed all 11 laboratory commands for commit
+[`0d014c306c371b4d42d85001affb036f9fe4d3c3`](https://github.com/ioi-foundation/dcrypt/commit/0d014c306c371b4d42d85001affb036f9fe4d3c3).
+
+| Read it as | Artifact |
+| :--- | :--- |
+| Human, interactive | [Self-contained visual report download](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.0/assurance-report.html) |
+| Machine and policy | [Public Assurance Profile JSON](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.0/assurance-profile.json) |
+| Markdown and procurement review | [Generated evidence ledger](V4-SUMMARY.md) |
+| Independent reproduction | [Step-by-step reproduction guide](REPRODUCE.md) |
+
+<a href="V4-SUMMARY.md">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/v4-evidence-flow-dark.svg">
+    <img src="assets/v4-evidence-flow-light.svg" alt="v4 evidence production path — the four-step reproducible path">
+  </picture>
+</a>
+
 ## Adversarial sequence
 
 Every complete v4 laboratory run performs the following sequence and stops at

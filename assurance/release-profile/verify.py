@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import pathlib
+import re
 import subprocess
 import sys
 import tomllib
@@ -41,6 +42,7 @@ TOOLS = (
     "tools/verify-repeatable-packages.py",
     "tools/run-v4-lab-simulation.py",
     "tools/generate-v4-assurance-report.py",
+    "tools/generate-assurance-docs.py",
 )
 EVIDENCE = (
     "assurance/release-lab/DAYBREAK-THREAT-REVIEW.md",
@@ -70,7 +72,7 @@ def load_policy(path: pathlib.Path = POLICY_PATH) -> dict:
 
 def verify_policy(policy: dict) -> None:
     expected_top = {
-        "schema-version", "profile", "target-version", "status",
+        "schema-version", "profile", "minimum-version", "release-major", "status",
         "package-g-foundation", "package-g-foundation-status", "authorization",
         "oracle-subject-rebind-commit", "oracle-normative-manifest-sha256",
         "claims", "nonclaims", "disposition", "mandatory-consumers", "mandatory-tools",
@@ -80,8 +82,12 @@ def verify_policy(policy: dict) -> None:
         raise InvalidProfile("policy top-level closure differs")
     if policy["schema-version"] != 1 or policy["profile"] != "dcrypt-v4-portable-software-release":
         raise InvalidProfile("policy identity differs")
-    if policy["target-version"] != "4.0.0" or policy["package-g-foundation"] != G_COMMIT:
-        raise InvalidProfile("target version or Package G foundation differs")
+    if (
+        policy["minimum-version"] != "4.0.0"
+        or policy["release-major"] != 4
+        or policy["package-g-foundation"] != G_COMMIT
+    ):
+        raise InvalidProfile("release-series scope or Package G foundation differs")
     if (
         policy["oracle-subject-rebind-commit"] != ORACLE_REBIND_COMMIT
         or policy["oracle-normative-manifest-sha256"] != ORACLE_MANIFEST_SHA256
@@ -137,6 +143,16 @@ def verify_repository(policy: dict) -> None:
         "assurance/release-acceptance/verify.py",
     ):
         _git("cat-file", "-e", f"{G_COMMIT}:{path}")
+
+    manifest = tomllib.loads((ROOT / "Cargo.toml").read_text(encoding="utf-8"))
+    workspace_version = manifest.get("workspace", {}).get("package", {}).get("version")
+    match = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)", str(workspace_version))
+    if match is None:
+        raise InvalidProfile("workspace version is not stable semantic versioning")
+    version_tuple = tuple(int(component) for component in match.groups())
+    minimum_tuple = tuple(int(component) for component in policy["minimum-version"].split("."))
+    if version_tuple[0] != policy["release-major"] or version_tuple < minimum_tuple:
+        raise InvalidProfile("workspace version is outside the authorized v4 release series")
 
     if _git("merge-base", "--is-ancestor", ORACLE_REBIND_COMMIT, "HEAD") != "":
         raise InvalidProfile("unexpected output while resolving oracle-rebind ancestry")

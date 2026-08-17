@@ -483,6 +483,9 @@ check_package_contents() {
 
 run_v4_laboratory() {
     local evidence_root="$PROJECT_ROOT/target/release-evidence/v4-lab"
+    local documentation_root="$evidence_root/assurance-docs"
+    local version
+    version=$(current_version)
     info "Running the open v4 software/simulated laboratory"
     PYTHONDONTWRITEBYTECODE=1 python3 -B \
         "$PROJECT_ROOT/tools/run-v4-lab-simulation.py" \
@@ -493,6 +496,13 @@ run_v4_laboratory() {
         --check --lab-output "$evidence_root" \
         --output "$evidence_root/assurance-report" \
         || die "generated v4 Assurance Profile did not reproduce"
+    PYTHONDONTWRITEBYTECODE=1 python3 -B \
+        "$PROJECT_ROOT/tools/generate-assurance-docs.py" \
+        --profile "$evidence_root/assurance-report/assurance-profile.json" \
+        --summary "$documentation_root/V4-SUMMARY.md" \
+        --assets-dir "$documentation_root" \
+        --source-ref "v$version" \
+        || die "release-facing Assurance Profile graphics were not generated"
 }
 
 run_all_gates() {
@@ -652,11 +662,19 @@ print_release_handoff() {
         "$RELEASE_BRANCH" "$head_commit"
     printf '  git ls-remote origin %q %q %q\n' \
         "refs/heads/$RELEASE_BRANCH" "refs/tags/$tag" "refs/tags/$tag^{}"
-    printf '5. Create and review a GitHub draft with the generated Assurance Profile:\n'
-    printf '  gh release create %q %q %q --draft --verify-tag --title %q --notes-file RELEASE_NOTES.md\n' \
-        "$tag" \
+    printf '5. Create and review a GitHub draft with the generated Assurance Profile and graphics:\n'
+    printf '  gh release create %q \\\n' "$tag"
+    printf '    %q \\\n' \
         "target/release-evidence/v4-lab/assurance-report/assurance-profile.json" \
         "target/release-evidence/v4-lab/assurance-report/assurance-report.html" \
+        "target/release-evidence/v4-lab/assurance-docs/V4-SUMMARY.md" \
+        "target/release-evidence/v4-lab/assurance-docs/v4-assurance-overview-light.svg" \
+        "target/release-evidence/v4-lab/assurance-docs/v4-assurance-overview-dark.svg" \
+        "target/release-evidence/v4-lab/assurance-docs/v4-evidence-flow-light.svg" \
+        "target/release-evidence/v4-lab/assurance-docs/v4-evidence-flow-dark.svg" \
+        "target/release-evidence/v4-lab/assurance-docs/v4-timing-family-light.svg"
+    printf '    %q --draft --verify-tag --title %q --notes-file RELEASE_NOTES.md\n' \
+        "target/release-evidence/v4-lab/assurance-docs/v4-timing-family-dark.svg" \
         "dcrypt $tag"
     printf '6. Only after that draft exists, run:\n'
     printf '  tools/release-dcrypt.sh --version %q --execute\n' "$VERSION"
@@ -683,6 +701,8 @@ release_self_test() {
         || die "self-test: release handoff omitted the machine Assurance Profile"
     grep -Fq 'assurance-report/assurance-report.html' <<<"$handoff" \
         || die "self-test: release handoff omitted the visual assurance report"
+    grep -Fq 'assurance-docs/v4-assurance-overview-light.svg' <<<"$handoff" \
+        || die "self-test: release handoff omitted generated assurance graphics"
     grep -Fq 'RELEASE_BRANCH = "master"' \
         "$SCRIPT_DIR/verify-remote-release-ready.py" \
         || die "self-test: shell and remote gate release branches differ"

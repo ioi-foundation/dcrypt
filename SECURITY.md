@@ -4,19 +4,24 @@ At IOI Foundation, we take the security of our software products seriously. This
 
 ## Current security status
 
-`v4.0.0` is the prepared successor to `v3.0.0` and becomes the supported
-portable-software release when its exact reviewed candidate is published.
-Its release gate requires all software tests, the eleven historical advisory
-replays, supported target builds, deterministic SBOMs, repeatable package
-bytes, trusted candidate checks, and registry checksum equality. Its open
-simulation laboratory is proof only for the named software executions and
-deterministic leakage/fault models. It does not claim physical leakage,
+`v4.0.1` is the current supported portable-software release. Its exact reviewed
+candidate is published on
+[GitHub](https://github.com/ioi-foundation/dcrypt/releases/tag/v4.0.1) and
+[crates.io](https://crates.io/crates/dcrypt/4.0.1). The release gate required
+all software tests, the eleven historical advisory replays, supported target
+builds, deterministic SBOMs, repeatable package bytes, trusted candidate
+checks, and post-publication registry verification. The public
+[Assurance Profile](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/assurance-profile.json)
+and [visual report](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/assurance-report.html)
+bind those results to the released subject.
+
+The open simulation laboratory is proof only for the named software executions
+and deterministic leakage/fault models. It does not claim physical leakage,
 physical fault or erasure resistance, an untested native runtime, independent
 cryptographic audit, formal/FIPS validation, or independent rebuild
 certification.
 
-Until that publication, `v3.0.0` remains the current supported release. It is
-the first release whose
+`v3.0.0` remains the prior supported corrective line. It is the first release whose
 published dcrypt implementation and normal/build dependency closure satisfy the
 project's zero-unsafe, zero-native-code, and zero-FFI boundary. All randomness
 is caller supplied. External implementations are confined to non-published test
@@ -47,8 +52,9 @@ release.
 
 | Version | Security status |
 | ------- | --------------- |
-| `v4.0.0` | Prepared portable-software successor; supported upon publication of the reviewed candidate |
-| `v3.0.0` | Supported corrective release |
+| `v4.0.1` | Current supported portable-software release; public Assurance Profile and graphics attached |
+| `v4.0.0` | Superseded v4 portable-software release; historical Assurance Profile retained |
+| `v3.0.0` | Prior supported corrective line |
 | `v2.0.0` | Withdrawn; important fixes present, implementation policy violated |
 | `v1.2.3` | Confirmed critically affected; not a safe fallback |
 | Earlier releases | Unsupported and not cleared |

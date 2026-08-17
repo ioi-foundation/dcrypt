@@ -1,12 +1,20 @@
 # v4 portable-software release profile
 
+The profile first authorized the public
+[`v4.0.0` release](https://github.com/ioi-foundation/dcrypt/releases/tag/v4.0.0)
+and now governs each stable v4 release subject at or after that foundation.
+The v4.0.0 historical results are indexed in the generated
+[Assurance Profile ledger](../../docs/assurance/V4-SUMMARY.md).
+
 This profile is the release decision that succeeds Package G's deliberately
 nonterminal foundation.  It does not rewrite or promote Packages A through G.
 Those packages remain the evidence ledger for a stronger, independently
 reviewed assurance claim.
 
-The profile permits a dcrypt 4.0.0 source release after the repository's full
-software release gates pass.  It makes no claim of physical leakage or fault
+The profile permits portable-source releases in the stable dcrypt v4 series,
+starting at 4.0.0, only after the repository's full software release gates pass
+for each exact release subject. Evidence is never inherited from an earlier
+release. It makes no claim of physical leakage or fault
 resistance, native runtime validation on an untested platform, FIPS validation,
 formal verification, or an independent cryptographic audit.  Those are
 deployment/certification claims, not claims made by this portable Rust crate

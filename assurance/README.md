@@ -1,5 +1,13 @@
 # Assurance ledger
 
+> [!NOTE]
+> This ledger is the foundation for stronger, independently reviewed
+> certification claims. The supported v4 portable-software release is governed
+> by the separate [release profile](release-profile/README.md) and publishes a
+> [machine-readable profile, evidence ledger, and graphics](../docs/assurance/V4-SUMMARY.md).
+> A deliberate certification HOLD here does not erase the narrower evidence the
+> v4 release actually demonstrates.
+
 `ledger.toml` binds the repository commit/tree, all in-scope lockfiles, the
 implementation-boundary policy, pinned rustdoc toolchain, evidence artifacts,
 the independently curated semantic map, derived atomic operations, complete
@@ -75,8 +83,10 @@ source-policy gate rejects public target-conditioned exports not represented by
 those profiles. Native macOS/Windows runtime evidence remains a later assurance
 leg and is not claimed here.
 
-The current ledger intentionally blocks release readiness for every atomic row
-until the declared external-audit, independent-oracle, persistent-fuzz, and
-dedicated side-channel gaps are closed with independently replayable evidence.
-That deliberate blocked state is an honest result: classification completeness
-does not mean assurance evidence is complete.
+The current ledger intentionally blocks stronger certification readiness for
+every atomic row until the declared external-audit, independent-oracle,
+persistent-fuzz, and dedicated side-channel gaps are closed with independently
+replayable evidence. That deliberate blocked state is an honest result:
+classification completeness does not mean every higher-assurance claim is
+complete, and it does not invalidate the separately scoped portable-software
+release evidence.

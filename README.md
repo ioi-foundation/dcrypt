@@ -13,7 +13,9 @@ operations, rebuilds packages, and verifies the artifacts users install.
 [![Security validation](https://img.shields.io/github/actions/workflow/status/ioi-foundation/dcrypt/security-validation.yml?branch=master&style=flat-square)](https://github.com/ioi-foundation/dcrypt/actions/workflows/security-validation.yml)
 
 > [!IMPORTANT]
-> `v3.0.0` is the supported corrective release. `v2.0.0` contains important
+> [`v4.0.1`](https://github.com/ioi-foundation/dcrypt/releases/tag/v4.0.1) is
+> the current supported portable-software release. `v3.0.0` remains the prior
+> corrective line. `v2.0.0` contains important
 > security remediations, but remains withdrawn because its implementation and
 > normal/build dependency closure violate the project's zero-unsafe,
 > zero-native-code, and zero-FFI policy. `v1.2.3` contains critical defects and
@@ -23,29 +25,36 @@ operations, rebuilds packages, and verifies the artifacts users install.
 
 The result is not another “security tested” badge. It is a machine-readable
 **Assurance Profile** bound to an exact source tree, dependency closure,
-toolchain, target set, and release artifact collection.
+toolchain, target set, and release artifact collection. Security claims have an
+address: a release, a subject commit, a metric, an evidence class, and a public
+path to the result.
 
-[Explore the assurance model](docs/assurance/README.md) ·
+[Download the v4.0.1 visual report](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/assurance-report.html) ·
+[Inspect every v4.0.1 metric](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/V4-SUMMARY.md) ·
+[Download the v4.0.1 machine profile](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/assurance-profile.json) ·
 [Reproduce the open laboratory](docs/assurance/REPRODUCE.md) ·
-[Understand every metric](docs/assurance/METRICS.md)
+[Understand the evidence model](docs/assurance/README.md)
+
+<a href="https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/assurance-report.html">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/v4-assurance-overview-dark.svg">
+    <img src="https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/v4-assurance-overview-light.svg" alt="dcrypt 4.0.1 Assurance Profile overview — four separate evidence panels">
+  </picture>
+</a>
 
 ### The v4 Assurance Profile
 
-The final v4 release run automatically produces both `assurance-profile.json`
-and a self-contained visual report. The profile is regenerated after version
-preparation so it describes the exact versioned release subject—not an earlier
-rehearsal.
+The released v4 profile and self-contained report were generated from the same
+laboratory evidence that gated publication. The tracked
+[v4.0.1 evidence index](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/V4-SUMMARY.md) links every headline result to
+its machine field, interpretation, and source model.
 
-| Security signal | v4 release gate | Evidence class |
-| :--- | ---: | :--- |
-| Injected artifact faults | **432 / 432 detected** | Calibrated simulation |
-| Leakage-detector calibration | **20,000 samples per class** | Calibrated simulation |
-| Timing-sensitive paths | **29 cases × 2 complete passes** | Measured product evidence |
-| Historical vulnerability classes | **11 / 11 replayed** | Measured product evidence |
-| Post-quantum vector cases | **855 exact cases** | Repository-corpus correctness |
-| Publishable packages | **12 / 12 byte-equal rebuilds** | Measured product evidence |
-| Software inventories | **5 deterministic SBOMs** | Measured product evidence |
-| Configured build targets | **4 target profiles** | Build and compiler-shape evidence |
+| Security signal | Released v4 result | Inspect |
+| :--- | :--- | :--- |
+| Detection calibration | **432 / 432** injected artifact faults detected; **20,000 samples/class** in leakage controls | [Simulation model](docs/assurance/OPEN-SECURITY-LAB.md) · [v4.0.1 profile fields](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/V4-SUMMARY.md) |
+| Product execution | **29 cases × 2** timing passes; **11 / 11** historical vulnerability classes replayed | [Timing policy](docs/assurance/METRICS.md#timing-visualization) · [advisories](docs/security/README.md) |
+| Correctness corpus | **855** exact post-quantum vector cases | [Terminology and boundary](docs/assurance/METRICS.md#standards-vector-terminology) |
+| Supply and build surface | **12 / 12** byte-equal packages; **5** deterministic SBOMs; **4** target profiles | [Full v4.0.1 evidence ledger](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.1/V4-SUMMARY.md) |
 
 These are separate, inspectable signals—not inputs to an opaque security score.
 The simulation metrics demonstrate the declared simulation models and calibrate
@@ -110,7 +119,7 @@ dcrypt provides capabilities for the transition to quantum-safe and decentralize
 
 ## 🛡️ Key Design Principles
 
-*   **Safe-Rust implementation boundary**: The published v3 implementation and its normal/build dependency closure contain no unsafe Rust, native code, or FFI. This is an enforceable implementation policy, not by itself a security proof.
+*   **Safe-Rust implementation boundary**: The published v4 implementation and its normal/build dependency closure contain no unsafe Rust, native code, or FFI. This is an enforceable implementation policy, not by itself a security proof.
 *   **Post-Quantum APIs**: Exposes ML-DSA and ML-KEM parameter sets for interoperability testing and evaluation.
 *   **Defense-in-Depth**: Hybrid schemes combine battle-tested classical algorithms (ECDH/ECDSA) with modern PQC primitives.
 *   **Timing Analysis**: Security-sensitive paths are tested with a built-in statistical **Constant-Time Verification Suite** where applicable; passing statistical tests is not presented as a proof of constant-time execution.
@@ -119,12 +128,12 @@ dcrypt provides capabilities for the transition to quantum-safe and decentralize
 
 ## 📦 Quick Start
 
-Use `dcrypt = { version = "3.0.0", features = ["hybrid"] }` for the examples
+Use `dcrypt = { version = "4.0.1", features = ["hybrid"] }` for the examples
 below. Do not select `v1.2.3`; it contains critical defects.
 Do not select `v2.0.0` as a replacement; it has been withdrawn for violating
 the project's implementation policy. Every earlier release is unsupported.
-The examples below describe the v3 API. Review [SECURITY.md](SECURITY.md) and
-the migration notes before deployment; the release has not received an
+The examples below describe the v4 API. Review [SECURITY.md](SECURITY.md) and
+the [v4 migration notes](docs/migration/V4-ERROR-API.md) before deployment; the release has not received an
 independent post-remediation security audit or FIPS validation.
 
 ### Example 1: Hybrid Post-Quantum Key Exchange

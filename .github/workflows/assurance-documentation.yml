@@ -1,0 +1,38 @@
+name: Assurance documentation
+
+on:
+  push:
+    paths:
+      - ".github/workflows/assurance-documentation.yml"
+      - "docs/assurance/**"
+      - "tools/generate-assurance-docs.py"
+  pull_request:
+    paths:
+      - ".github/workflows/assurance-documentation.yml"
+      - "docs/assurance/**"
+      - "tools/generate-assurance-docs.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assurance-documentation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generated-evidence:
+    name: Generated evidence tables and graphics
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify generated assurance documentation
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 -B tools/generate-assurance-docs.py \
+            --profile docs/assurance/releases/v4.0.0/assurance-profile.json \
+            --summary docs/assurance/V4-SUMMARY.md \
+            --assets-dir docs/assurance/assets \
+            --source-ref v4.0.0 \
+            --check

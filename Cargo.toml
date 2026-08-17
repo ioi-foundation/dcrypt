@@ -10,6 +10,21 @@ readme.workspace = true
 categories.workspace = true
 keywords.workspace = true
 
+# Keep the published facade crate focused on the library and the documentation
+# that crates.io/docs.rs can render. The full repository retains the release
+# laboratory, corpora, and generated evidence used to qualify these bytes.
+include = [
+    "/src/**",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/RELEASE_NOTES.md",
+    "/SECURITY.md",
+    "/VERSION_STRATEGY.md",
+    "/CONSTANT_TIME_POLICY.md",
+    "/implementation-boundary.toml",
+    "/docs/**",
+]
+
 [dependencies]
 # Core dependencies (always included)
 dcrypt-api = { version = "=4.0.0", path = "crates/api", default-features = false }

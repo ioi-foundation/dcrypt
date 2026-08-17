@@ -1,12 +1,13 @@
 # Release and Version Strategy
 
-## Future v4 error API boundary (unreleased)
+## v4 release boundary
 
 The removal of the process-global error registry and the legacy `Result`
-compatibility extension traits is source-breaking and may ship only on a future
-SemVer-major v4 line. The repository remains at its current package versions
-until a separately authorized release-preparation step updates all twelve
-published crates together.
+compatibility extension traits shipped in `v4.0.0` as a SemVer-major boundary.
+`v4.0.1` is a patch release for assurance presentation, release automation, and
+package layout; it does not change cryptographic behavior or the public API.
+Every v4 release still updates all twelve published crates together and creates
+new subject-bound release evidence.
 
 Callers must migrate to ordinary `Result` propagation and combinators,
 caller-owned diagnostics, the inherent `Error::with_context` and
@@ -23,12 +24,13 @@ stop-ship remediations but was withdrawn after the v3 audit found additional
 algorithm, validation, and implementation-policy failures. Its immutable tag is
 historical provenance, not a supported upgrade target.
 
-The supported corrective release is versioned `3.0.0` and must remain on the
-new SemVer-major line. It must not be published as `2.0.1`, `1.2.x`, or another
-backwards-compatible update. This boundary is required because the correction
-changes randomness ownership and public APIs, removes affected algorithms, and
-rejects legacy serialized formats. Passing repository gates is not an
-independent cryptographic audit, formal verification, or FIPS validation.
+The current supported portable-software release is `v4.0.1`; `v3.0.0` remains
+the prior supported corrective line. Neither may be published as `2.0.1`,
+`1.2.x`, or another backwards-compatible replacement for an affected line. The
+major-version boundary is required because the correction changes randomness
+ownership and public APIs, removes affected algorithms, and rejects legacy
+serialized formats. Passing repository gates is not an independent
+cryptographic audit, formal verification, or FIPS validation.
 
 ## Required migration notes
 
@@ -62,7 +64,7 @@ Every release candidate must document these breaking changes:
 
 ## Release gates
 
-The new major release is gated on:
+Every supported v4 release is gated on:
 
 1. Complete the full workspace test and lint matrix, Miri coverage for public
    APIs, parser fuzzing, interoperability/KAT suites, and side-channel checks

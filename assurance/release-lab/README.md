@@ -33,6 +33,12 @@ particular board, probe, power rail, or electromagnetic environment.  Real
 device certification can consume the same report format later without changing
 the v4 portable-source release claim.
 
+The exact public v4.0.0 output is available as the
+[machine profile](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.0/assurance-profile.json)
+and [self-contained report](https://github.com/ioi-foundation/dcrypt/releases/download/v4.0.0/assurance-report.html).
+The generated [Markdown evidence ledger and graphics](../../docs/assurance/V4-SUMMARY.md)
+map each released headline result back to its machine field and model.
+
 Run the complete lab with:
 
 ```text
