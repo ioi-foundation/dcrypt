@@ -36,7 +36,7 @@ MAX_PATH_COMPONENT_BYTES = 255
 # This is intentionally updated by rebind-final-subject.py together with the
 # canonical manifest.  A canonical but coherently rewritten manifest is not a
 # trusted root unless reviewed code pins its exact bytes here.
-EXPECTED_NORMATIVE_MANIFEST_SHA256 = "92eff5866172c13c299e57c36e17c0844550c8b68bb97845ec606143dd91b4c8"
+EXPECTED_NORMATIVE_MANIFEST_SHA256 = "53321b639ee85015d3cee052a3c08e0500053bdd281879bf6cf8f62b9067a3a3"
 # Independent of the rebindable normative-root pin: exact six target IDs,
 # source paths/digests, and ordered 30-name inventory are frozen semantics.
 # rebind-final-subject.py deliberately cannot rewrite this constant.
