@@ -629,6 +629,56 @@ def network_trace_tests(root: Path) -> int:
     if counts["calls"] != len(setup):
         raise RuntimeError("valid network trace count differs")
     print("PASS accept exact namespace-local network syscall trace")
+
+    split = root / "network-split-valid.trace"
+    split_lines = setup.copy()
+    split_pid = split_lines[seqpacket_start + 1].split(maxsplit=1)[0]
+    split_lines[seqpacket_start + 1 : seqpacket_start + 2] = [
+        f'{split_pid} recvfrom(15<UNIX:[20000]>, "", 8, 0,  <unfinished ...>',
+        f"{split_pid} <... recvfrom resumed>NULL, NULL) = 0",
+    ]
+    split.write_text("\n".join(split_lines) + "\n", encoding="utf-8")
+    split_counts = verify_network_trace(split)
+    if split_counts != counts:
+        raise RuntimeError("split syscall trace did not normalize to the exact logical trace")
+    print("PASS accept exact unfinished/resumed rendering of an allowlisted syscall")
+
+    split_mutations = [
+        (
+            "resumed syscall with wrong PID",
+            1,
+            f"{int(split_pid) + 1} <... recvfrom resumed>NULL, NULL) = 0",
+            "resumes without a matching unfinished syscall",
+        ),
+        (
+            "resumed syscall with wrong name",
+            1,
+            f"{split_pid} <... socketpair resumed>NULL, NULL) = 0",
+            "resumed syscall name differs",
+        ),
+        (
+            "unfinished syscall without completion",
+            1,
+            None,
+            "has no resumed completion",
+        ),
+        (
+            "new syscall before resumed completion",
+            1,
+            f"{split_pid} socket(AF_INET, SOCK_STREAM, 0) = -1 EPERM",
+            "starts a new syscall before resuming",
+        ),
+    ]
+    for index, (label, relative_index, replacement, fragment) in enumerate(split_mutations):
+        changed = split_lines.copy()
+        target_index = seqpacket_start + 1 + relative_index
+        if replacement is None:
+            del changed[target_index]
+        else:
+            changed[target_index] = replacement
+        path = root / f"network-split-malicious-{index}.trace"
+        path.write_text("\n".join(changed) + "\n", encoding="utf-8")
+        expect_failure(label, lambda path=path: verify_network_trace(path), fragment)
     replacements = [
         (
             "internet socket syscall",
@@ -726,7 +776,7 @@ def network_trace_tests(root: Path) -> int:
         lambda: verify_network_trace(missing),
         "call count differs",
     )
-    return 1 + len(replacements) + 3
+    return 2 + len(split_mutations) + len(replacements) + 3
 
 
 def main() -> int:

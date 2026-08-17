@@ -36,6 +36,12 @@ EXPECTED_SEQPACKET_SOCKETPAIR_COUNT = 114
 TRACE_LINE = re.compile(
     r"(?P<pid>[1-9][0-9]*)(?P<separator> +)(?P<call>[^ ].*)\Z"
 )
+UNFINISHED_CALL = re.compile(
+    r"(?P<prefix>(?P<name>[a-z][a-z0-9_]*)\(.*) <unfinished \.\.\.>\Z"
+)
+RESUMED_CALL = re.compile(
+    r"<\.\.\. (?P<name>[a-z][a-z0-9_]*) resumed>(?P<suffix>.*)\Z"
+)
 SETUP_UNIX_SOCKET = re.compile(
     r"(?P<pid>[1-9][0-9]*) socket\(AF_UNIX, SOCK_DGRAM\|SOCK_CLOEXEC, 0\) "
     r"= 5<UNIX:\[(?P<inode>[1-9][0-9]*)\]>\Z"
@@ -124,19 +130,59 @@ def verify_network_trace(path: Path) -> dict[str, int]:
     if not text or not text.endswith("\n") or "\r" in text or "\x00" in text:
         raise BundleError("external network trace must be nonempty canonical LF text")
     raw_lines = text.splitlines()
-    if len(raw_lines) != EXPECTED_NETWORK_CALL_COUNT:
-        raise BundleError(
-            "external network trace call count differs: "
-            f"expected {EXPECTED_NETWORK_CALL_COUNT}, got {len(raw_lines)}"
-        )
-    lines: list[str] = []
+    if len(raw_lines) > EXPECTED_NETWORK_CALL_COUNT * 2:
+        raise BundleError("external network trace exceeds its reviewed line-count cap")
+    pending: dict[str, tuple[str, str, int]] = {}
+    normalized: list[str] = []
     for number, line in enumerate(raw_lines, 1):
         parsed_line = TRACE_LINE.fullmatch(line)
         if parsed_line is None:
             raise BundleError(
                 f"network trace line {number} lacks an exact ASCII-space PID/call separator"
             )
-        lines.append(f"{parsed_line.group('pid')} {parsed_line.group('call')}")
+        pid = parsed_line.group("pid")
+        call = parsed_line.group("call")
+        unfinished = UNFINISHED_CALL.fullmatch(call)
+        resumed = RESUMED_CALL.fullmatch(call)
+        if unfinished is not None:
+            if pid in pending:
+                raise BundleError(
+                    f"network trace line {number} nests an unfinished syscall for PID {pid}"
+                )
+            pending[pid] = (
+                unfinished.group("name"),
+                unfinished.group("prefix"),
+                number,
+            )
+            continue
+        if resumed is not None:
+            if pid not in pending:
+                raise BundleError(
+                    f"network trace line {number} resumes without a matching unfinished syscall"
+                )
+            name, prefix, _start = pending.pop(pid)
+            if resumed.group("name") != name:
+                raise BundleError(
+                    f"network trace line {number} resumed syscall name differs from its unfinished record"
+                )
+            normalized.append(f"{pid} {prefix}{resumed.group('suffix')}")
+            continue
+        if pid in pending:
+            raise BundleError(
+                f"network trace line {number} starts a new syscall before resuming PID {pid}"
+            )
+        normalized.append(f"{pid} {call}")
+    if pending:
+        first_pid, (_name, _prefix, start) = next(iter(pending.items()))
+        raise BundleError(
+            f"network trace line {start} has no resumed completion for PID {first_pid}"
+        )
+    if len(normalized) != EXPECTED_NETWORK_CALL_COUNT:
+        raise BundleError(
+            "external network trace call count differs: "
+            f"expected {EXPECTED_NETWORK_CALL_COUNT}, got {len(normalized)}"
+        )
+    lines = normalized
     counts = {
         "af_netlink_socket": 0,
         "af_unix_socket": 0,
