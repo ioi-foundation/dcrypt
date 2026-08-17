@@ -126,6 +126,21 @@ or pushing source, and the default mode is non-mutating.
 tools/release-dcrypt.sh --version 4.0.1
 ```
 
+For an enforced host-noise profile, pin only the statistical timing phase to a
+qualified CPU. The rest of the release gates remain free to use the host:
+
+```bash
+DCRYPT_CT_NOISE_PROFILE=/absolute/path/to/timing-profile.json \
+DCRYPT_TIMING_CPU=17 \
+tools/release-dcrypt.sh --version 4.0.1 --prepare
+```
+
+`DCRYPT_TIMING_CPU` is validated as a nonnegative CPU index and requires
+`taskset`; an unavailable CPU or failed affinity operation stops the release.
+Do not wrap the complete release command in `taskset`, because the preceding
+build, Miri, and vector phases would then contend with and thermally bias the
+measurement core.
+
 The rehearsal checks the target version on crates.io, verifies Cargo metadata
 and exact internal dependency versions, runs the complete ACVP target, the
 AES-CBC property target, the separate statistical timing target, and the other

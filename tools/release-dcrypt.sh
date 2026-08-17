@@ -358,8 +358,18 @@ run_test_gates() {
     done < <(classified_workspace_records)
 
     info "Running isolated statistical timing regressions"
-    cargo test -p dcrypt-tests --test constant_time_tests -- \
-        --test-threads=1 --nocapture
+    if [[ -n "${DCRYPT_TIMING_CPU:-}" ]]; then
+        [[ "$DCRYPT_TIMING_CPU" =~ ^[0-9]+$ ]] \
+            || die "DCRYPT_TIMING_CPU must be a nonnegative CPU index"
+        require_command taskset
+        info "Pinning only the statistical timing regressions to CPU $DCRYPT_TIMING_CPU"
+        taskset -c "$DCRYPT_TIMING_CPU" \
+            cargo test -p dcrypt-tests --test constant_time_tests -- \
+            --test-threads=1 --nocapture
+    else
+        cargo test -p dcrypt-tests --test constant_time_tests -- \
+            --test-threads=1 --nocapture
+    fi
 }
 
 require_security_subcommand() {
