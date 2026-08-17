@@ -32,11 +32,11 @@ no_std = [
 ]
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=4.0.0", default-features = false }
-dcrypt-common = { path = "../common", version = "=4.0.0", default-features = false }
-dcrypt-algorithms = { path = "../algorithms", version = "=4.0.0", default-features = false, features = ["alloc", "ec", "kdf", "aead", "hash", "mac", "stream"] }
-dcrypt-internal = { path = "../internal", version = "=4.0.0", default-features = false }
-dcrypt-params = { path = "../params", version = "=4.0.0" }
+dcrypt-api = { path = "../api", version = "=4.0.1", default-features = false }
+dcrypt-common = { path = "../common", version = "=4.0.1", default-features = false }
+dcrypt-algorithms = { path = "../algorithms", version = "=4.0.1", default-features = false, features = ["alloc", "ec", "kdf", "aead", "hash", "mac", "stream"] }
+dcrypt-internal = { path = "../internal", version = "=4.0.1", default-features = false }
+dcrypt-params = { path = "../params", version = "=4.0.1" }
 
 [package.metadata.release]
 publish = true

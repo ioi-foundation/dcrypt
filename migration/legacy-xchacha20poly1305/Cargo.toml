@@ -8,8 +8,8 @@ license = "Apache-2.0"
 
 [dependencies]
 base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
-dcrypt-algorithms = { version = "=4.0.0", path = "../../crates/algorithms", default-features = false, features = ["alloc", "aead", "stream"] }
-dcrypt-internal = { version = "=4.0.0", path = "../../crates/internal", default-features = false, features = ["alloc"] }
+dcrypt-algorithms = { version = "=4.0.1", path = "../../crates/algorithms", default-features = false, features = ["alloc", "aead", "stream"] }
+dcrypt-internal = { version = "=4.0.1", path = "../../crates/internal", default-features = false, features = ["alloc"] }
 
 [workspace]
 members = ["."]

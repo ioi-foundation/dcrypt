@@ -33,10 +33,10 @@ traditional = ["alloc"] # ECDH KEMs
 post-quantum = ["alloc"] # FIPS 203 ML-KEM
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=4.0.0", default-features = false }
-dcrypt-common = { path = "../common", version = "=4.0.0", default-features = false }
-dcrypt-internal = { path = "../internal", version = "=4.0.0", default-features = false }
-dcrypt-algorithms = { path = "../algorithms", version = "=4.0.0", default-features = false, features = ["alloc", "ec", "hash", "mac", "xof"] }
+dcrypt-api = { path = "../api", version = "=4.0.1", default-features = false }
+dcrypt-common = { path = "../common", version = "=4.0.1", default-features = false }
+dcrypt-internal = { path = "../internal", version = "=4.0.1", default-features = false }
+dcrypt-algorithms = { path = "../algorithms", version = "=4.0.1", default-features = false, features = ["alloc", "ec", "hash", "mac", "xof"] }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }

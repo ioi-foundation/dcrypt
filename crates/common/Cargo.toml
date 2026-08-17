@@ -15,8 +15,8 @@ alloc = ["dcrypt-api/alloc", "dcrypt-internal/alloc"]
 no_std = []
 
 [dependencies]
-dcrypt-internal = { path = "../internal", version = "=4.0.0", default-features = false, features = ["alloc"] }
-dcrypt-api = { path = "../api", version = "=4.0.0", default-features = false, features = ["alloc"] }
+dcrypt-internal = { path = "../internal", version = "=4.0.1", default-features = false, features = ["alloc"] }
+dcrypt-api = { path = "../api", version = "=4.0.1", default-features = false, features = ["alloc"] }
 
 [package.metadata.release]
 publish = true

@@ -30,11 +30,11 @@ traditional = ["alloc", "dcrypt-algorithms/kdf"] # ECDSA, Ed25519, and BLS12-381
 post-quantum = ["alloc"] # FIPS 204 ML-DSA
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=4.0.0", default-features = false }
-dcrypt-common = { path = "../common", version = "=4.0.0", default-features = false }
-dcrypt-internal = { path = "../internal", version = "=4.0.0", default-features = false }
-dcrypt-params = { path = "../params", version = "=4.0.0" }
-dcrypt-algorithms = { path = "../algorithms", version = "=4.0.0", default-features = false, features = ["alloc", "ec", "hash", "mac", "xof"] }
+dcrypt-api = { path = "../api", version = "=4.0.1", default-features = false }
+dcrypt-common = { path = "../common", version = "=4.0.1", default-features = false }
+dcrypt-internal = { path = "../internal", version = "=4.0.1", default-features = false }
+dcrypt-params = { path = "../params", version = "=4.0.1" }
+dcrypt-algorithms = { path = "../algorithms", version = "=4.0.1", default-features = false, features = ["alloc", "ec", "hash", "mac", "xof"] }
 
 [dev-dependencies]
 hex = "0.4"

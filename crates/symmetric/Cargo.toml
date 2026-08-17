@@ -24,10 +24,10 @@ alloc = [
 no_std = ["alloc"]
 
 [dependencies]
-dcrypt-api = { path = "../api", version = "=4.0.0", default-features = false, features = ["alloc"] }
-dcrypt-internal = { path = "../internal", version = "=4.0.0", default-features = false, features = ["alloc"] }
-dcrypt-params = { path = "../params", version = "=4.0.0" }
-dcrypt-algorithms = { path = "../algorithms", version = "=4.0.0", default-features = false, features = ["aead", "block", "hash", "kdf", "mac", "stream"] }
+dcrypt-api = { path = "../api", version = "=4.0.1", default-features = false, features = ["alloc"] }
+dcrypt-internal = { path = "../internal", version = "=4.0.1", default-features = false, features = ["alloc"] }
+dcrypt-params = { path = "../params", version = "=4.0.1" }
+dcrypt-algorithms = { path = "../algorithms", version = "=4.0.1", default-features = false, features = ["aead", "block", "hash", "kdf", "mac", "stream"] }
 base64 = { version = "=0.22.1", default-features = false, features = ["alloc"] }
 
 [package.metadata.release]

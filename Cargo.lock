@@ -201,7 +201,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "dcrypt"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "dcrypt-algorithms",
  "dcrypt-api",
@@ -217,7 +217,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-algorithms"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "base64",
  "criterion",
@@ -232,14 +232,14 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-api"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "dcrypt-internal",
 ]
 
 [[package]]
 name = "dcrypt-common"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "dcrypt-api",
  "dcrypt-internal",
@@ -247,7 +247,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-hybrid"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "criterion",
  "dcrypt-algorithms",
@@ -261,11 +261,11 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-internal"
-version = "4.0.0"
+version = "4.0.1"
 
 [[package]]
 name = "dcrypt-kem"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "criterion",
  "dcrypt-algorithms",
@@ -276,11 +276,11 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-params"
-version = "4.0.0"
+version = "4.0.1"
 
 [[package]]
 name = "dcrypt-pke"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "dcrypt-algorithms",
  "dcrypt-api",
@@ -291,7 +291,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-sign"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "criterion",
  "dcrypt-algorithms",
@@ -304,7 +304,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-symmetric"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "base64",
  "dcrypt-algorithms",
@@ -315,7 +315,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-tests"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "arrayref",
  "base64",
@@ -343,7 +343,7 @@ dependencies = [
 
 [[package]]
 name = "dcrypt-utils"
-version = "4.0.0"
+version = "4.0.1"
 dependencies = [
  "base64",
  "hex",

@@ -10,13 +10,13 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "=0.4.13"
-dcrypt-api = { version = "=4.0.0", path = "../crates/api" }
-dcrypt-algorithms = { version = "=4.0.0", path = "../crates/algorithms", features = ["ec"] }
-dcrypt-hybrid = { version = "=4.0.0", path = "../crates/hybrid" }
-dcrypt-kem = { version = "=4.0.0", path = "../crates/kem", features = ["post-quantum", "traditional"] }
-dcrypt-pke = { version = "=4.0.0", path = "../crates/pke" }
-dcrypt-sign = { version = "=4.0.0", path = "../crates/sign" }
-dcrypt-symmetric = { version = "=4.0.0", path = "../crates/symmetric" }
+dcrypt-api = { version = "=4.0.1", path = "../crates/api" }
+dcrypt-algorithms = { version = "=4.0.1", path = "../crates/algorithms", features = ["ec"] }
+dcrypt-hybrid = { version = "=4.0.1", path = "../crates/hybrid" }
+dcrypt-kem = { version = "=4.0.1", path = "../crates/kem", features = ["post-quantum", "traditional"] }
+dcrypt-pke = { version = "=4.0.1", path = "../crates/pke" }
+dcrypt-sign = { version = "=4.0.1", path = "../crates/sign" }
+dcrypt-symmetric = { version = "=4.0.1", path = "../crates/symmetric" }
 dcrypt-legacy-xchacha20poly1305-migration = { version = "=0.0.0", path = "../migration/legacy-xchacha20poly1305" }
 
 [[bin]]
